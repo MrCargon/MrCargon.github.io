@@ -1,103 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Template</title>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Style the header */
-header {
-  background-color: #666;
-  padding: 30px;
-  text-align: center;
-  font-size: 35px;
-  color: white;
-}
-
-/* Create two columns/boxes that floats next to each other */
-nav {
-  float: left;
-  width: 30%;
-  height: 300px; /* only for demonstration, should be removed */
-  background: #ccc;
-  padding: 20px;
-}
-
-/* Style the list inside the menu */
-nav ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-article {
-  float: left;
-  padding: 20px;
-  width: 70%;
-  background-color: #f1f1f1;
-  height: 300px; /* only for demonstration, should be removed */
-}
-
-/* Clear floats after the columns */
-section::after {
-  content: "";
-  display: table;
-  clear: both;
-}
-
-/* Style the footer */
-footer {
-  background-color: #777;
-  padding: 10px;
-  text-align: center;
-  color: white;
-}
-
-/* Responsive layout - makes the two columns/boxes stack on top of each other instead of next to each other, on small screens */
-@media (max-width: 600px) {
-  nav, article {
-    width: 100%;
-    height: auto;
-  }
-}
-</style>
+    <title>Template</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Include header -->
+    <div id="header-container"></div>
 
-<h2>Place_Holder</h2>
-<p>Place_Holder</p>
-<p>Place_Holder</p>
+    <!-- Include section -->
+    <div id="section-container"></div>
 
-<header>
-  <h2>Place_Holder</h2>
-</header>
+    <!-- Include footer -->
+    <div id="footer-container"></div>
 
-<section>
-  <nav>
-    <ul>
-      <li><a href="#">Place_Holder</a></li>
-      <li><a href="#">Place_Holder</a></li>
-      <li><a href="#">Place_Holder</a></li>
-    </ul>
-  </nav>
-  
-  <article>
-    <h1>Place_Holder</h1>
-    <p>Place_Holder</p>
-    <p>Place_Holder</p>
-  </article>
-</section>
+    <script>
+        // Function to load HTML components
+        async function loadComponent(url, containerId) {
+            try {
+                const response = await fetch(url);
+                const html = await response.text();
+                document.getElementById(containerId).innerHTML = html;
+            } catch (error) {
+                console.error('Error loading component:', error);
+            }
+        }
 
-<footer>
-  <p>Place_Holder</p>
-</footer>
-
+        // Load all components
+        window.addEventListener('DOMContentLoaded', () => {
+            loadComponent('./public/header.html', 'header-container');
+            loadComponent('./public/section.html', 'section-container');
+            loadComponent('./public/footer.html', 'footer-container');
+        });
+    </script>
 </body>
 </html>

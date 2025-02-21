@@ -25,6 +25,7 @@ class ComponentLoader {
                 await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
             }
         }
+        
     }
 
     static updateLoadingProgress(progress) {

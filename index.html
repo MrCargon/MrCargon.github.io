@@ -1,64 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Andrejs Koladenko - Portfolio showcasing creative work and projects">
-    <title>Andrejs Koladenko - Portfolio</title>
-    <link rel="stylesheet" href="src/components/styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="bubble-container">
-            <div class="bubble"></div>
+
+    <!-- Base html head -->
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Andrejs Koladenko - Portfolio">
+        <title>Andrejs Koladenko - Portfolio</title>
+        
+        <!-- Base styles first -->
+        <link rel="stylesheet" href="src/components/base.css">
+        
+        <!-- Component-specific styles -->
+        <link rel="stylesheet" href="src/components/header/header.css">
+        <link rel="stylesheet" href="src/components/section/section.css">
+        <link rel="stylesheet" href="src/components/footer/footer.css">
+        
+    </head>
+
+    <!-- Base html body -->
+    <body>
+        <!-- Loading Screen -->
+        <div id="loading-screen">
+            <div class="bubble-container">
+                <div class="bubble"></div>
+            </div>
+            <div id="loading-text">Loading components...</div>
+            <div id="loading-progress" class="progress-bar"></div>
         </div>
-        <div id="loading-text">Loading your experience...</div>
-    </div>
-
-    <!-- Main Content -->
-    <div id="content" class="hidden">
-        <div id="header-container"></div>
-        <div id="section-container"></div>
-        <div id="footer-container"></div>
-    </div>
-
-    <script>
-        // Loading screen handler
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                document.getElementById('loading-screen').style.opacity = '0';
-                document.getElementById('content').classList.remove('hidden');
-                setTimeout(() => {
-                    document.getElementById('loading-screen').style.display = 'none';
-                }, 500);
-            }, 1000);
-        });
-
-        // Component loader
-        async function loadComponent(url, containerId) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const html = await response.text();
-                document.getElementById(containerId).innerHTML = html;
-            } catch (error) {
-                console.error('Error loading component:', error);
-                document.getElementById(containerId).innerHTML = '<p>Error loading content. Please refresh the page.</p>';
-            }
-        }
-
-        // Load all components
-        window.addEventListener('DOMContentLoaded', () => {
-            Promise.all([
-                loadComponent('src/components/header.html', 'header-container'),
-                loadComponent('src/components/section.html', 'section-container'),
-                loadComponent('src/components/footer.html', 'footer-container')
-            ]).catch(error => console.error('Error loading components:', error));
-        });
-    </script>
-</body>
+    
+        <!-- Main Content -->
+        <div id="content" class="hidden">
+            <div id="header-container"></div>
+            <div id="section-container"></div>
+            <div id="footer-container"></div>
+        </div>
+    
+        <script src="src/main.js" defer></script>
+    </body>
 </html>

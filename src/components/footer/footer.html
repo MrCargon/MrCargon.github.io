@@ -1,21 +1,41 @@
 <footer class="main-footer">
     <div class="footer-content">
-        <div class="footer-section">
+        <section class="footer-section">
             <h3>Let's Connect</h3>
             <p>Interested in working together? Let's talk about your project.</p>
-            <a href="#contact" class="contact-button">Get in Touch</a>
-        </div>
+            <a href="#contact" class="contact-button">
+                Get in Touch
+                <span class="sr-only">Contact us</span>
+            </a>
+        </section>
         
-        <div class="footer-section">
-            <div class="social-links">
-                <a href="https://github.com/yourusername" target="_blank" rel="noopener noreferrer">GitHub</a>
-                <a href="https://discord.com/yourusername" target="_blank" rel="noopener noreferrer">Discord</a>
-                <a href="mailto:your.email@domain.com">Email</a>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            <p>&copy; 2024 Andrejs K. All rights reserved.</p>
-        </div>
+        <section class="footer-section">
+            <h3>Follow Us</h3>
+            <nav class="social-links" aria-label="Social media links">
+                <a href="https://github.com/yourusername" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   aria-label="Visit our GitHub profile">
+                    <i class="icon-github" aria-hidden="true"></i>
+                    GitHub
+                </a>
+                <a href="https://discord.com/yourusername" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   aria-label="Join us on Discord">
+                    <i class="icon-discord" aria-hidden="true"></i>
+                    Discord
+                </a>
+                <a href="mailto:your.email@domain.com"
+                   aria-label="Send us an email">
+                    <i class="icon-email" aria-hidden="true"></i>
+                    Email
+                </a>
+            </nav>
+        </section>
+    </div>
+    
+    <div class="footer-bottom">
+        <p>&copy; <time datetime="2024">2024</time> Andrejs K. All rights reserved.</p>
     </div>
 </footer>

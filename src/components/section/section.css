@@ -8,6 +8,11 @@
     margin: 0 auto;
 }
 
+.main-section.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* Side Navigation */
 .side-nav {
     width: 300px;

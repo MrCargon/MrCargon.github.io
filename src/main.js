@@ -22,10 +22,9 @@ class ComponentLoader {
                         </div>
                     `;
                 }
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
             }
         }
-        
     }
 
     static updateLoadingProgress(progress) {
@@ -56,6 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
         )
     ).then(() => {
+        // Initialize PageManager after components are loaded
+        window.pageManager = new PageManager();
+        
         // Hide loading screen with smooth transition
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
@@ -69,7 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 500);
         }, 300);
     }).catch(error => {
-        console.error('Error loading components:', error);
+        console.error('Failed to initialize application:', error);
+        const loadingScreen = document.getElementById('loading-screen');
+        loadingScreen.innerHTML = '<div class="error-container">Failed to load application. Please refresh.</div>';
     });
 });
-

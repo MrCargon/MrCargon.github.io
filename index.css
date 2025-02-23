@@ -44,6 +44,11 @@ body, html {
   transition: opacity 0.5s ease;
 }
 
+#loading-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .bubble-container {
   width: 150px;
   height: 150px;
@@ -77,6 +82,13 @@ body, html {
   width: 0;
   background: var(--primary-color);
   transition: width 0.3s ease;
+}
+
+#section-container {
+  min-height: 60vh;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .error-container {
@@ -117,8 +129,24 @@ body, html {
 .fade-out {
   opacity: 0;
   pointer-events: none;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.main-nav a.active {
+  color: var(--primary-color);
+  background: var(--overlay-bg);
+}
+
+.main-nav a.active::after {
+  width: 80%;
+}
 
 @media print {
   .main-nav, .social-links {
@@ -128,6 +156,30 @@ body, html {
     background: white;
     color: black;
   }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+  .fade-out,
+
+  .fade-in,
+
+  .bubble {
+    animation: none;
+  }
+
+  #loading-progress::after,
+
+  #loading-screen {
+      transition: none;
+  }
+
+  #section-container {
+      transition: none;
+      transform: none;
+  }
+  
 }
 
 /* Performance optimizations */

@@ -45,11 +45,19 @@ class PageManager {
             const link = e.target.closest('.main-nav a');
             if (link) {
                 e.preventDefault();
+                
+                // Check if the link is disabled
+                if (link.classList.contains('disabled')) {
+                    // Do not navigate if the link is disabled
+                    console.log('Navigation prevented: This feature is coming soon.');
+                    return;
+                }
+                
                 const pageName = link.getAttribute('href').substring(1);
                 this.navigateToPage(pageName);
             }
         });
-
+    
         // Handle browser back/forward
         window.addEventListener('popstate', (e) => {
             const pageName = e.state?.page || 'main';
@@ -58,7 +66,7 @@ class PageManager {
     }
 
     handleInitialRoute() {
-        const hash = window.location.hash.substring(1) || 'main';
+        const hash = window.location.hash.substring(1) || 'about';
         this.navigateToPage(hash, false);
     }
 

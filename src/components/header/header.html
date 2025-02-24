@@ -1,14 +1,44 @@
-<header class="main-header">
+<!-- Header with enhanced accessibility and disabled states -->
+<header class="main-header" role="banner">
     <div class="header-content">
-        <h1>Andrejs K</h1>
-        <p class="subtitle">Creative Developer & Designer</p>
-        <nav class="main-nav">
+        <nav class="main-nav" role="navigation" aria-label="Main navigation">
             <ul>
-                <li><a href="#main">Main</a></li>
-                <li><a href="#projects">Projects</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#store">Store</a></li>
-                <li><a href="#contact">Contact</a></li>
+                <li>
+                    <a href="#main" 
+                       class="nav-link disabled" 
+                       aria-disabled="true" 
+                       tabindex="-1">
+                        <span>Main</span>
+                        <span class="status-badge">Coming Soon</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#projects" 
+                       class="nav-link">
+                        <span>Projects</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#about" 
+                       class="nav-link">
+                        <span>About</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#store" 
+                       class="nav-link disabled" 
+                       aria-disabled="true" 
+                       tabindex="-1">
+                        <span>Store</span>
+                        <span class="status-badge">Coming Soon</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#contact" 
+                       class="nav-link">
+                        <span>Contact</span>
+                    </a>
+                </li>
             </ul>
         </nav>
     </div>

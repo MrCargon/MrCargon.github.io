@@ -1,0 +1,91 @@
+<!-- contactPage.html -->
+<section class="main-section contact-section">
+    <div class="contact-content">
+        <h2 class="section-title" id="contact-title">Get in Touch</h2>
+        <div class="contact-grid">
+            <div class="contact-info">
+                <h3>Let's Connect</h3>
+                <p>Interested in working together? Have questions about my projects? I'd love to hear from you!</p>
+                
+                <!--<div class="social-connect">
+                    <h4>Find me on</h4>
+                    <div class="social-links">
+                        <a href="https://github.com/MrCargon"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="social-link"
+                            aria-label="Visit my GitHub profile">
+                            <i class="icon-github" aria-hidden="true"></i>
+                            <span>GitHub</span>
+                        </a>
+                        <a href="http://discord.gg/UaWrbXkfTK"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="social-link"
+                            aria-label="Join our Discord server">
+                            <i class="icon-discord" aria-hidden="true"></i>
+                            <span>Discord</span>
+                        </a>
+                        <a href="http://youtube.com/@hoot_works_entertainment"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="social-link"
+                            aria-label="Subscribe to my YouTube channel">
+                            <i class="icon-youtube" aria-hidden="true"></i>
+                            <span>YouTube</span>
+                        </a>
+                        <a href="http://twitch.tv/@hoot_works_entertainment"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="social-link"
+                            aria-label="Follow me on Twitch">
+                            <i class="icon-twitch" aria-hidden="true"></i>
+                            <span>Twitch</span>
+                        </a>
+                    </div>
+                </div> -->
+            </div>
+            
+            <form class="contact-form" id="contact-form" novalidate>
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text"
+                        id="name"
+                        name="name"
+                        required
+                        aria-required="true"
+                        aria-describedby="name-error"
+                        placeholder="Your name"
+                        autocomplete="name">
+                    <div id="name-error" class="error-message" aria-live="polite"></div>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email"
+                        id="email"
+                        name="email"
+                        required
+                        aria-required="true"
+                        aria-describedby="email-error"
+                        placeholder="Your email"
+                        autocomplete="email">
+                    <div id="email-error" class="error-message" aria-live="polite"></div>
+                </div>
+                <div class="form-group">
+                    <label for="message">Message</label>
+                    <textarea id="message"
+                        name="message"
+                        rows="5"
+                        required
+                        aria-required="true"
+                        aria-describedby="message-error"
+                        placeholder="Your message"></textarea>
+                    <div id="message-error" class="error-message" aria-live="polite"></div>
+                </div>
+                <button type="submit" class="submit-button">
+                    <span>Send Message</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</section>

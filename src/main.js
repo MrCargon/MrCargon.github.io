@@ -39,7 +39,7 @@ class ComponentLoader {
 document.addEventListener('DOMContentLoaded', () => {
     const components = [
         { url: 'src/components/header/header.html', id: 'header-container' },
-        { url: 'src/components/section/section.html', id: 'section-container' },
+        { url: 'src/components/pages/mainPage.html', id: 'page-container' },
         { url: 'src/components/footer/footer.html', id: 'footer-container' }
     ];
     

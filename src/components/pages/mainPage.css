@@ -1,0 +1,279 @@
+/* mainPage.css */
+
+.hero-section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl) var(--spacing-lg);
+}
+
+.hero-content {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.hero-title {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    line-height: 1.2;
+}
+
+.hero-subtitle {
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: var(--text-color);
+    opacity: 0.9;
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Space Exploration Container */
+.space-exploration-container {
+    background: var(--overlay-bg);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xl);
+    margin-top: var(--spacing-xl);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Planet Selector */
+.planet-selector-wrapper {
+    position: relative;
+    margin-bottom: var(--spacing-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.planet-selector {
+    display: flex;
+    gap: var(--spacing-md);
+    overflow-x: auto;
+    padding: var(--spacing-md);
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--overlay-bg);
+    flex-grow: 1;
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
+.planet-selector::-webkit-scrollbar {
+    height: 6px;
+}
+
+.planet-selector::-webkit-scrollbar-track {
+    background: var(--overlay-bg);
+    border-radius: 3px;
+}
+
+.planet-selector::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+}
+
+/* Planet Buttons */
+.planet-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    border: none;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.planet-btn:hover {
+    background: rgba(255, 165, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.planet-btn.active {
+    background: var(--primary-color);
+    color: var(--bg-color);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(255, 165, 0, 0.2);
+}
+
+.planet-icon {
+    font-size: 1.2em;
+}
+
+/* Scroll Indicators */
+.scroll-indicator {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-color);
+}
+
+.scroll-indicator:hover {
+    background: var(--primary-color);
+    color: var(--bg-color);
+}
+
+/* Planet Info Panel */
+.planet-info-panel {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xl);
+    margin-top: var(--spacing-lg);
+    transition: var(--transition);
+}
+
+.info-header {
+    text-align: left;
+    margin-bottom: var(--spacing-xl);
+}
+
+.planet-title {
+    color: var(--primary-color);
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    margin-bottom: var(--spacing-md);
+}
+
+.planet-description {
+    color: var(--text-color);
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+/* Planet Stats */
+.planet-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.stat-card label {
+    color: var(--secondary-color);
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+/* Camera Controls */
+.camera-controls {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    margin-top: var(--spacing-xl);
+}
+
+.control-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:hover {
+    background: var(--primary-color);
+    color: var(--bg-color);
+    transform: translateY(-2px);
+}
+
+.control-btn.active {
+    background: var(--primary-color);
+    color: var(--bg-color);
+}
+
+.control-btn .icon {
+    font-size: 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 968px) {
+    .space-exploration-container {
+        padding: var(--spacing-lg);
+    }
+
+    .planet-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .planet-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .camera-controls {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .space-exploration-container {
+        padding: var(--spacing-md);
+    }
+
+    .planet-selector {
+        padding: var(--spacing-sm);
+    }
+
+    .planet-btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+}
+
+/* Accessibility and Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+    .planet-selector {
+        scroll-behavior: auto;
+    }
+
+    .planet-btn,
+    .control-btn,
+    .stat-card {
+        transition: none;
+    }
+}
+
+/* Focus States */
+.planet-btn:focus-visible,
+.control-btn:focus-visible,
+.scroll-indicator:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}

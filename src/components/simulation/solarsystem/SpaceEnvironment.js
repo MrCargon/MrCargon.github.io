@@ -1,247 +1,172 @@
-import * as THREE from 'three';
-
-/**
- * SpaceEnvironment class
- * Creates a dynamic space background with stars, nebulae, and distant galaxies
- */
-export default class SpaceEnvironment {
-    /**
-     * Initialize the space environment
-     */
+// SpaceEnvironment.js - Main controller class for the 3D background
+class SpaceEnvironment {
     constructor() {
-        this.createEnvironment();
-        this.createDistantGalaxies();
+        this.scene = null;
+        this.cameraController = null;
+        this.solarSystem = null;
+        this.initialized = false;
+        this.clock = null;
     }
-
-    /**
-     * Create the main space environment using a shader material
-     */
-    createEnvironment() {
-        const geometry = new THREE.SphereGeometry(500000, 64, 64);
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                time: { value: 0 },
-                resolution: { value: new THREE.Vector2() }
-            },
-            vertexShader: this.getVertexShader(),
-            fragmentShader: this.getFragmentShader(),
-            side: THREE.BackSide
-        });
-
-        this.mesh = new THREE.Mesh(geometry, material);
-    }
-
-    /**
-     * Create particle system to represent distant galaxies
-     */
-    createDistantGalaxies() {
-        const particleCount = 500;
-        const particles = new Float32Array(particleCount * 3);
-        const colors = new Float32Array(particleCount * 3);
-
-        for (let i = 0; i < particleCount; i++) {
-            this.setGalaxyParticle(particles, colors, i);
+    
+    async init() {
+        console.log("SpaceEnvironment initialization started");
+        
+        // Create THREE.Clock for animation timing
+        this.clock = new THREE.Clock();
+        
+        try {
+            // Create a container for the 3D scene
+            this.createContainer();
+            
+            // Basic Three.js setup
+            await this.setupThreeJS();
+            
+            // Initialize with basic stars
+            this.createStars();
+            
+            // Start animation loop
+            this.animate();
+            
+            console.log("SpaceEnvironment initialized successfully");
+            this.initialized = true;
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize Space Environment:', error);
+            return false;
         }
-
+    }
+    
+    createContainer() {
+        // Create a container for the 3D scene if it doesn't exist
+        const containerId = 'solar-system-container';
+        if (!document.getElementById(containerId)) {
+            const container = document.createElement('div');
+            container.id = containerId;
+            container.className = 'solar-system-background';
+            container.style.position = 'fixed';
+            container.style.top = '0';
+            container.style.left = '0';
+            container.style.width = '100%';
+            container.style.height = '100%';
+            container.style.zIndex = '-1';
+            container.style.overflow = 'hidden';
+            document.body.insertBefore(container, document.body.firstChild);
+        }
+        
+        this.container = document.getElementById(containerId);
+    }
+    
+    async setupThreeJS() {
+        // Create basic Three.js components
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        
+        // Scene
+        this.scene = new THREE.Scene();
+        
+        // Camera
+        this.camera = new THREE.PerspectiveCamera(60, this.width / this.height, 0.1, 10000);
+        this.camera.position.set(0, 30, 100);
+        this.camera.lookAt(0, 0, 0);
+        
+        // Renderer
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer.setSize(this.width, this.height);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setClearColor(0x000000, 0); // Transparent background
+        this.container.appendChild(this.renderer.domElement);
+        
+        // Controls - only add if OrbitControls is available
+        if (typeof THREE.OrbitControls === 'function') {
+            console.log("Creating OrbitControls");
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.enableZoom = true;
+        } else {
+            console.warn("OrbitControls not available");
+        }
+        
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        this.scene.add(ambientLight);
+        
+        // Handle window resize
+        window.addEventListener('resize', this.handleResize.bind(this));
+    }
+    
+    createStars() {
+        // Create a simple starfield as a placeholder
+        const count = 5000;
         const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(particles, 3));
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+        
+        for (let i = 0; i < count; i++) {
+            // Random position in a sphere
+            const radius = 500 + Math.random() * 1500;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            
+            positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = radius * Math.cos(phi);
+            
+            // White to blue-ish colors
+            colors[i * 3] = 0.8 + Math.random() * 0.2;       // R
+            colors[i * 3 + 1] = 0.8 + Math.random() * 0.2;   // G
+            colors[i * 3 + 2] = 0.8 + Math.random() * 0.2;   // B
+        }
+        
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
+        
         const material = new THREE.PointsMaterial({
-            size: 1000,
+            size: 1,
             vertexColors: true,
-            map: this.createGalaxyTexture(),
-            blending: THREE.AdditiveBlending,
             transparent: true,
-            depthWrite: false,
-            depthTest: true
+            opacity: 0.8
         });
-
-        this.galaxies = new THREE.Points(geometry, material);
-        this.galaxies.renderOrder = -2000;
-    }
-
-    /**
-     * Set position and color for a single galaxy particle
-     * @param {Float32Array} particles - Array to store particle positions
-     * @param {Float32Array} colors - Array to store particle colors
-     * @param {number} index - Index of the particle
-     */
-    setGalaxyParticle(particles, colors, index) {
-        const i = index * 3;
-        const radius = Math.random() * 400000 + 100000;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-
-        particles[i] = radius * Math.sin(phi) * Math.cos(theta);
-        particles[i + 1] = radius * Math.sin(phi) * Math.sin(theta);
-        particles[i + 2] = radius * Math.cos(phi);
-
-        colors[i] = Math.random() * 0.3 + 0.7;     // Red
-        colors[i + 1] = Math.random() * 0.3 + 0.4; // Green
-        colors[i + 2] = Math.random() * 0.3 + 0.4; // Blue
-    }
-
-    /**
-     * Create a texture for galaxy particles
-     * @returns {THREE.Texture} The created texture
-     */
-    createGalaxyTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 32;
-        const ctx = canvas.getContext('2d');
-        const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-        gradient.addColorStop(0, 'rgba(255,255,255,1)');
-        gradient.addColorStop(0.2, 'rgba(255,240,220,0.8)');
-        gradient.addColorStop(0.4, 'rgba(255,220,180,0.5)');
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 32, 32);
-        return new THREE.CanvasTexture(canvas);
-    }
-
-    /**
-     * Get the vertex shader code
-     * @returns {string} Vertex shader code
-     */
-    getVertexShader() {
-        return `
-            varying vec3 vPos;
-            varying vec2 vUv;
-            void main() {
-                vPos = position;
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `;
-    }
-
-    getFragmentShader() {
-        return `
-            uniform float time;
-            uniform vec2 resolution;
-            varying vec3 vPos;
-            varying vec2 vUv;
-    
-            // Optimized noise function using dot product instead of multiple operations
-            float noise(vec3 p) {
-                vec3 i = floor(p);
-                vec3 f = fract(p);
-                f = f * f * (3.0 - 2.0 * f); // Smoother step
-                
-                // Reduced number of random calculations
-                float n = dot(i, vec3(1.0, 157.0, 113.0));
-                vec4 v = fract(sin(vec4(n, n + 1.0, n + 157.0, n + 158.0)) * 43758.5453);
-                
-                // Simplified mixing
-                float result = mix(
-                    mix(v.x, v.y, f.x),
-                    mix(v.z, v.w, f.x),
-                    f.y
-                );
-                return result;
-            }
-    
-            // Optimized FBM with fewer iterations and precalculated values
-            float fbm(vec3 p) {
-                float sum = 0.0;
-                float amp = 0.5;
-                p *= 1.0; // Initial frequency
-    
-                // Reduced iterations from 6 to 4 for better performance
-                for(int i = 0; i < 4; i++) {
-                    sum += amp * abs(noise(p));
-                    p *= 2.1;
-                    amp *= 0.4;
-                }
-                return sum;
-            }
-    
-            // Simplified sparkle effect
-            float starSparkle(vec3 p, float brightness) {
-                return brightness * (0.85 + 0.15 * sin(time * 1.5 + noise(p * 80.0) * 8.0));
-            }
-    
-            void main() {
-                // Precalculate common values
-                vec2 uv = gl_FragCoord.xy / resolution.xy;
-                float timeFactor = time * 0.01;
-                
-                // Base space color
-                vec3 color = vec3(0.01, 0.012, 0.02);
-                
-                // Optimized star calculation
-                vec3 timeOffsetPos = vPos * 0.0003 + timeFactor;
-                float stars = smoothstep(0.87, 0.97, fbm(timeOffsetPos));
-                stars = starSparkle(vPos, stars);
-                
-                // Add smaller stars with less computation
-                stars += smoothstep(0.95, 0.98, fbm(vPos * 0.0005 - timeFactor)) * 0.2;
-                
-                // Add stars to color
-                color += vec3(0.9, 0.95, 1.0) * stars;
-                
-                // Simplified nebulae calculation
-                vec3 nebulaePos = vPos * 0.00002;
-                vec3 nebulae = vec3(0.1, 0.15, 0.3) * fbm(nebulaePos + timeFactor)
-                            + vec3(0.05, 0.1, 0.2) * fbm(nebulaePos * 1.5 - timeFactor)
-                            + vec3(0.15, 0.1, 0.25) * fbm(nebulaePos * 2.0 + timeFactor);
-                
-                // Add depth and combine
-                float depth = fbm(vPos * 0.00001);
-                nebulae *= 0.15 * smoothstep(0.2, 0.8, depth);
-                color += nebulae;
-                
-                // Final adjustments
-                color = pow(color, vec3(1.3));
-                color *= 0.6;
-                
-                // Optimized vignette
-                float vignette = 1.0 - length(uv - 0.5) * 0.7;
-                color *= vignette;
-                
-                gl_FragColor = vec4(color, 1.0);
-            }
-        `;
+        
+        this.stars = new THREE.Points(geometry, material);
+        this.scene.add(this.stars);
     }
     
-    /**
-     * Get the main environment mesh
-     * @returns {THREE.Mesh} The environment mesh
-     */
-    getMesh() {
-        return this.mesh;
+    handleResize() {
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        
+        this.camera.aspect = this.width / this.height;
+        this.camera.updateProjectionMatrix();
+        
+        this.renderer.setSize(this.width, this.height);
     }
-
-    /**
-     * Get the distant galaxies particle system
-     * @returns {THREE.Points} The galaxies particle system
-     */
-    getGalaxies() {
-        return this.galaxies;
-    }
-
-    /**
-     * Update the environment animation
-     * @param {number} time - The current time for animation
-     */
-    update(time) {
-        if (this.mesh.material.uniforms) {
-            this.mesh.material.uniforms.time.value = time * 0.1;
+    
+    animate() {
+        requestAnimationFrame(this.animate.bind(this));
+        
+        // Slow rotation of stars
+        if (this.stars) {
+            this.stars.rotation.y += 0.0001;
         }
-        if (this.galaxies) {
-            this.galaxies.rotation.y = time * 0.00001;
+        
+        // Update controls if they exist
+        if (this.controls) {
+            this.controls.update();
         }
+        
+        // Render scene
+        this.renderer.render(this.scene, this.camera);
     }
-
-    /**
-     * Set the resolution for the shader
-     * @param {number} width - The width of the viewport
-     * @param {number} height - The height of the viewport
-     */
-    setResolution(width, height) {
-        if (this.mesh.material.uniforms) {
-            this.mesh.material.uniforms.resolution.value.set(width, height);
+    
+    dispose() {
+        // Clean up resources
+        window.removeEventListener('resize', this.handleResize.bind(this));
+        if (this.container && this.renderer.domElement) {
+            this.container.removeChild(this.renderer.domElement);
         }
     }
 }
+
+// Make sure to expose the class to the window object
+window.SpaceEnvironment = SpaceEnvironment;

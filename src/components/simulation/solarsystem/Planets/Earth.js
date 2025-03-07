@@ -1,83 +1,64 @@
-import * as THREE from 'three';
-
-export default class Earth {
-    constructor() {
-        this.group = new THREE.Group();
-        this.createEarth();
-        this.createAtmosphere();
-        this.createClouds();
+// Earth.js - Example of a specialized planet class
+class Earth extends Planet {
+    constructor(scene, resourceLoader, data) {
+        super(scene, resourceLoader, data);
+        this.moonData = {
+            radius: 0.5,
+            distance: 5,
+            rotationSpeed: 0.02,
+            orbitSpeed: 0.05,
+            texturePath: "src/assets/textures/planets/earth/moon/moon_map.jpg",
+            bumpMapPath: "src/assets/textures/planets/earth/moon/moon_bump.jpg"
+        };
     }
-
-    createEarth() {
-        const geometry = new THREE.SphereGeometry(6371, 64, 64); // Earth radius in km
-        const material = new THREE.MeshPhongMaterial({
-            map: new THREE.TextureLoader().load('src/assets/textures/earth_daymap.jpg'),
-            bumpMap: new THREE.TextureLoader().load('src/assets/textures/earth_bumpmap.jpg'),
-            bumpScale: 0.05,
-            specularMap: new THREE.TextureLoader().load('src/assets/textures/earth_specular.jpg'),
-            specular: new THREE.Color('grey')
+    
+    async init() {
+        await super.init();
+        
+        // Create the moon
+        await this.createMoon();
+        
+        return true;
+    }
+    
+    async createMoon() {
+        // Create a group for the moon's orbit
+        this.moonGroup = new THREE.Group();
+        this.mesh.add(this.moonGroup);
+        
+        // Load moon textures
+        const moonTexture = await this.resourceLoader.loadTexture(this.moonData.texturePath);
+        const moonBumpMap = await this.resourceLoader.loadTexture(this.moonData.bumpMapPath);
+        
+        // Create moon geometry and material
+        const moonGeometry = new THREE.SphereGeometry(this.moonData.radius, 32, 32);
+        const moonMaterial = new THREE.MeshPhongMaterial({
+            map: moonTexture,
+            bumpMap: moonBumpMap,
+            bumpScale: 0.1
         });
-        this.earthMesh = new THREE.Mesh(geometry, material);
-        this.group.add(this.earthMesh);
-    }
-
-    createAtmosphere() {
-        const geometry = new THREE.SphereGeometry(6371 * 1.01, 64, 64);
-        const material = new THREE.ShaderMaterial({
-            vertexShader: `
-                varying vec3 vNormal;
-                void main() {
-                    vNormal = normalize(normalMatrix * normal);
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                varying vec3 vNormal;
-                void main() {
-                    float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
-                    gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
-                }
-            `,
-            blending: THREE.AdditiveBlending,
-            side: THREE.BackSide
+        
+        // Create moon mesh
+        const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+        
+        // Position moon
+        moonMesh.position.set(this.moonData.distance, 0, 0);
+        
+        // Add moon to its orbit group
+        this.moonGroup.add(moonMesh);
+        
+        // Store moon data for animation
+        this.moons.push({
+            mesh: moonMesh,
+            orbit: { angle: 0 },
+            data: this.moonData,
+            update: (deltaTime) => {
+                // Rotate moon
+                moonMesh.rotation.y += this.moonData.rotationSpeed * deltaTime;
+                
+                // Orbit moon around planet
+                this.moonGroup.rotation.y += this.moonData.orbitSpeed * deltaTime;
+            }
         });
-        const mesh = new THREE.Mesh(geometry, material);
-        this.group.add(mesh);
-    }
-
-    createClouds() {
-        const geometry = new THREE.SphereGeometry(6371 * 1.02, 64, 64);
-        const material = new THREE.MeshPhongMaterial({
-            map: new THREE.TextureLoader().load('src/assets/textures/earth_clouds.png'),
-            transparent: true,
-            opacity: 0.8
-        });
-        this.cloudsMesh = new THREE.Mesh(geometry, material);
-        this.group.add(this.cloudsMesh);
-    }
-
-    update(deltaTime) {
-        this.earthMesh.rotation.y += 0.05 * deltaTime;
-        this.cloudsMesh.rotation.y += 0.07 * deltaTime;
-    }
-
-    getGroup() {
-        return this.group;
-    }
-
-    setPosition(x, y, z) {
-        this.group.position.set(x, y, z);
-    }
-
-    getPosition() {
-        return this.group.position;
-    }
-
-    setRotation(x, y, z) {
-        this.earthMesh.rotation.set(x, y, z);
-    }
-
-    getRotation() {
-        return this.earthMesh.rotation;
     }
 }

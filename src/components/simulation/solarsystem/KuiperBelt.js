@@ -1,6 +1,3 @@
-import * as THREE from 'three';
-import { BELT_PROPERTIES } from './planetData';
-
 /**
  * Represents the Kuiper Belt - a region of the outer solar system beyond Neptune's orbit
  * containing numerous small, icy bodies.

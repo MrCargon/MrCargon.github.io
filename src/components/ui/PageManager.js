@@ -70,7 +70,7 @@ class PageManager {
         await this.initializeSpaceBackground();
         
         // Original code
-        const hash = window.location.hash.substring(1) || 'about';
+        const hash = window.location.hash.substring(1) || 'main';
         this.navigateToPage(hash, false);
     }
 

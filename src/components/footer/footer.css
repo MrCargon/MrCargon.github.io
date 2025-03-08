@@ -1,8 +1,10 @@
 .main-footer {
+    margin: 10px;
     background: var(--overlay-bg);
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px); /* Safari support */
-    padding: clamp(2rem, 5vw, var(--spacing-xl)) var(--spacing-lg);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
     margin-top: auto; /* Pushes footer to bottom */
     width: 100%;
 }

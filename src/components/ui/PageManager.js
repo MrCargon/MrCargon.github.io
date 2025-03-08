@@ -1,4 +1,4 @@
-// PageManager.js
+// PageManager.js - Optimized for GitHub Pages
 class PageManager {
     constructor() {
         this.contentContainer = document.getElementById('page-container');
@@ -35,7 +35,13 @@ class PageManager {
             }
         };
 
+        // Add custom styles for space background
+        this.addBackgroundStyles();
+        
+        // Setup event listeners
         this.setupRouting();
+        
+        // Handle initial route and space background
         this.handleInitialRoute();
     }
 
@@ -48,7 +54,6 @@ class PageManager {
                 
                 // Check if the link is disabled
                 if (link.classList.contains('disabled')) {
-                    // Do not navigate if the link is disabled
                     console.log('Navigation prevented: This feature is coming soon.');
                     return;
                 }
@@ -66,10 +71,10 @@ class PageManager {
     }
 
     async handleInitialRoute() {
-        // Initialize space background
+        // Initialize space background first
         await this.initializeSpaceBackground();
         
-        // Original code
+        // Navigate to initial page 
         const hash = window.location.hash.substring(1) || 'main';
         this.navigateToPage(hash, false);
     }
@@ -78,12 +83,11 @@ class PageManager {
         try {
             console.log("Starting space environment initialization...");
             
-            // Load Three.js
+            // Load Three.js library
             await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js');
             console.log("Three.js loaded successfully");
             
-            // Define SpaceEnvironment class directly in PageManager
-            // This avoids file loading issues
+            // Define SpaceEnvironment class directly to avoid loading issues
             class SpaceEnvironment {
                 constructor() {
                     this.scene = null;
@@ -93,6 +97,7 @@ class PageManager {
                     this.stars = null;
                     this.width = 0;
                     this.height = 0;
+                    this.clock = new THREE.Clock();
                     this.initialized = false;
                 }
                 
@@ -136,7 +141,7 @@ class PageManager {
                             left: 0 !important;
                             width: 100% !important;
                             height: 100% !important;
-                            z-index: 0 !important; /* Change from -1 to 0 to appear above body background */
+                            z-index: 0 !important;
                             overflow: hidden !important;
                             pointer-events: none !important;
                         `;
@@ -147,12 +152,7 @@ class PageManager {
                     }
                     
                     this.container = document.getElementById(containerId);
-                    
-                    if (!this.container) {
-                        console.error("Container not found after creation!");
-                    }
                 }
-                
                 
                 setupThreeJS() {
                     // Create basic Three.js components
@@ -167,14 +167,18 @@ class PageManager {
                     this.camera.position.set(0, 30, 100);
                     this.camera.lookAt(0, 0, 0);
                     
-                    // Renderer
-                    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                    // Renderer with alpha for transparent background
+                    this.renderer = new THREE.WebGLRenderer({ 
+                        antialias: true, 
+                        alpha: true,
+                        powerPreference: 'high-performance'
+                    });
                     this.renderer.setSize(this.width, this.height);
-                    this.renderer.setPixelRatio(window.devicePixelRatio);
+                    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
                     this.renderer.setClearColor(0x000000, 0); // Transparent background
                     this.container.appendChild(this.renderer.domElement);
                     
-                    // Lights
+                    // Lights - just a subtle ambient light
                     const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
                     this.scene.add(ambientLight);
                     
@@ -183,8 +187,8 @@ class PageManager {
                 }
                 
                 createStars() {
-                    // Create a simple starfield as a placeholder
-                    const count = 7000; // Increase number of stars
+                    // Create efficient stars
+                    const count = 7000;
                     const geometry = new THREE.BufferGeometry();
                     const positions = new Float32Array(count * 3);
                     const colors = new Float32Array(count * 3);
@@ -200,19 +204,20 @@ class PageManager {
                         positions[i * 3 + 2] = radius * Math.cos(phi);
                         
                         // Brighter stars (more white)
-                        colors[i * 3] = 0.9 + Math.random() * 0.1;       // R (higher values)
-                        colors[i * 3 + 1] = 0.9 + Math.random() * 0.1;   // G (higher values)
-                        colors[i * 3 + 2] = 1.0;                         // B (full blue)
+                        colors[i * 3] = 0.9 + Math.random() * 0.1;       // R
+                        colors[i * 3 + 1] = 0.9 + Math.random() * 0.1;   // G
+                        colors[i * 3 + 2] = 1.0;                         // B
                     }
                     
                     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
                     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
                     
                     const material = new THREE.PointsMaterial({
-                        size: 2, // Larger size for better visibility
+                        size: 2,
                         vertexColors: true,
                         transparent: true,
-                        opacity: 0.9 // Higher opacity
+                        opacity: 0.9,
+                        sizeAttenuation: true
                     });
                     
                     this.stars = new THREE.Points(geometry, material);
@@ -236,25 +241,45 @@ class PageManager {
                 animate() {
                     requestAnimationFrame(this.animate.bind(this));
                     
+                    const deltaTime = this.clock.getDelta();
+                    
                     // Slow rotation of stars
                     if (this.stars) {
-                        this.stars.rotation.y += 0.0001;
+                        this.stars.rotation.y += 0.0001 * deltaTime * 60;
                     }
                     
                     // Render scene
                     this.renderer.render(this.scene, this.camera);
                 }
                 
-                dispose() {
-                    // Clean up resources
-                    window.removeEventListener('resize', this.handleResize.bind(this));
-                    if (this.container && this.renderer.domElement) {
-                        this.container.removeChild(this.renderer.domElement);
+                checkVisibility() {
+                    // Check if the container is visible
+                    if (this.container) {
+                        const isVisible = window.getComputedStyle(this.container).display !== 'none';
+                        console.log("Space environment visibility:", isVisible ? "visible" : "hidden");
                     }
+                }
+                
+                dispose() {
+                    // Clean up resources to prevent memory leaks
+                    window.removeEventListener('resize', this.handleResize.bind(this));
+                    
+                    if (this.stars) {
+                        this.scene.remove(this.stars);
+                        this.stars.geometry.dispose();
+                        this.stars.material.dispose();
+                    }
+                    
+                    if (this.renderer && this.container) {
+                        this.container.removeChild(this.renderer.domElement);
+                        this.renderer.dispose();
+                    }
+                    
+                    this.initialized = false;
                 }
             }
             
-            // Create and initialize the space environment if it doesn't exist
+            // Create and initialize the space environment
             if (!window.spaceEnvironment) {
                 console.log("Creating SpaceEnvironment instance");
                 window.spaceEnvironment = new SpaceEnvironment();
@@ -265,8 +290,7 @@ class PageManager {
                 if (success) {
                     console.log("Space environment initialized successfully");
                 } else {
-                    console.error("Space environment initialization returned false");
-                    throw new Error("Space environment initialization failed");
+                    console.error("Space environment initialization failed");
                 }
             }
             
@@ -277,24 +301,14 @@ class PageManager {
         }
     }
 
-    async loadDependencies() {
-        console.log("Loading Three.js dependencies...");
-        
-        // Load Three.js
-        await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
-        console.log("Three.js loaded successfully");
-        
-        // Load OrbitControls - use the correct URL structure for r128
-        await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
-        console.log("OrbitControls loaded successfully");
-        
-        // Load SpaceEnvironment
-        await this.loadScript('src/simulation/solarsystem/SpaceEnvironment.js');
-        console.log("SpaceEnvironment loaded successfully");
-    }
-
     loadScript(src) {
         return new Promise((resolve, reject) => {
+            // Check if script is already loaded
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+            
             const script = document.createElement('script');
             script.src = src;
             script.async = true;
@@ -326,19 +340,19 @@ class PageManager {
         }
     
         try {
-            // Start transition
+            // Start transition animation
             await this.startPageTransition();
     
             // Load and render page content
             await this.loadAndRenderPage(pageName);
     
-            // Update UI state
+            // Update UI state - navigation and document title
             this.updateUIState(pageName);
             
             // Set page-specific body class
             this.setPageBodyClass(pageName);
     
-            // Complete transition
+            // Complete transition animation
             await this.completePageTransition();
         } catch (error) {
             console.error('Navigation error:', error);
@@ -367,21 +381,11 @@ class PageManager {
 
     enhanceSpaceBackground() {
         if (window.spaceEnvironment && window.spaceEnvironment.initialized) {
-            // Add extra stars or effects for the main page
+            // Make sure it's visible
             const container = document.getElementById('solar-system-container');
             if (container) {
-                // Make sure it's visible
                 container.style.opacity = '1';
-                
-                // Ensure it has pointer events on main page
-                if (this.currentPage === 'main') {
-                    container.style.pointerEvents = 'auto';
-                }
-                
-                // Check visibility after a short delay
-                if (window.spaceEnvironment.checkVisibility) {
-                    window.spaceEnvironment.checkVisibility();
-                }
+                container.style.pointerEvents = 'auto';
             }
         }
     }
@@ -392,6 +396,7 @@ class PageManager {
             this.contentContainer.style.transform = 'translateY(20px)';
             return new Promise(resolve => setTimeout(resolve, 300));
         }
+        return Promise.resolve();
     }
 
     async loadAndRenderPage(pageName) {
@@ -403,12 +408,17 @@ class PageManager {
             content = this.pageCache.get(pageName);
         } else {
             // Load page content
-            const response = await fetch(pageConfig.path);
-            if (!response.ok) {
-                throw new Error(`Failed to load ${pageName} page`);
+            try {
+                const response = await fetch(pageConfig.path);
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${pageName} page`);
+                }
+                content = await response.text();
+                this.pageCache.set(pageName, content);
+            } catch (error) {
+                console.error(`Error loading page content for ${pageName}:`, error);
+                throw error;
             }
-            content = await response.text();
-            this.pageCache.set(pageName, content);
         }
 
         // Render content
@@ -426,6 +436,7 @@ class PageManager {
         document.querySelectorAll('.main-nav a').forEach(link => {
             const href = link.getAttribute('href').substring(1);
             link.classList.toggle('active', href === pageName);
+            link.setAttribute('aria-current', href === pageName ? 'page' : 'false');
         });
 
         // Update document title
@@ -440,6 +451,7 @@ class PageManager {
             this.contentContainer.style.transform = 'translateY(0)';
             return new Promise(resolve => setTimeout(resolve, 300));
         }
+        return Promise.resolve();
     }
 
     handleNavigationError() {
@@ -452,29 +464,6 @@ class PageManager {
                 </div>
             `;
         }
-    }
-
-    // Page-specific initialization methods
-    async initMainPage() {
-        console.log('Initializing main page');
-        
-        // Make sure space environment is initialized and enhanced
-        if (!window.spaceEnvironment || !window.spaceEnvironment.initialized) {
-            await this.initializeSpaceBackground();
-        } else {
-            this.enhanceSpaceBackground();
-        }
-        
-        // Initialize planet selector if it exists
-        const planetSelector = document.querySelector('.planet-selector');
-        if (planetSelector) {
-            this.initPlanetSelector();
-        }
-        
-        // Add body class for main page
-        document.body.classList.add('page-main');
-        
-        console.log('Main page initialized');
     }
 
     addBackgroundStyles() {
@@ -490,22 +479,7 @@ class PageManager {
                     background: transparent !important;
                 }
                 
-                /* Override any :root or * styles that might set background */
-                #page-container, #header-container, #footer-container {
-                    background-color: transparent;
-                    position: relative;
-                    z-index: 1;
-                }
-                
-                /* Style main content to have semi-transparent background */
-                .main-section, .main-header, .main-footer {
-                    background-color: rgba(0, 0, 0, 0.7);
-                    border-radius: 8px;
-                    margin: 10px;
-                    backdrop-filter: blur(5px);
-                }
-                
-                /* Style for the space environment */
+                /* Ensure space background covers everything */
                 .solar-system-background {
                     position: fixed !important;
                     top: 0 !important;
@@ -515,18 +489,27 @@ class PageManager {
                     z-index: 0 !important;
                 }
                 
-                /* Make sure canvas is visible */
-                .solar-system-background canvas {
-                    display: block !important;
-                }
                 
-                /* Enable pointer events on main page */
-                body.page-main .solar-system-background {
-                    pointer-events: auto !important;
-                }
+                
+                
+                
             `;
             document.head.appendChild(style);
             console.log("Space environment styles added");
+        }
+    }
+
+    // Page-specific initialization methods
+    async initMainPage() {
+        console.log('Initializing main page');
+        
+        // Make sure space environment is visible
+        this.enhanceSpaceBackground();
+        
+        // Initialize planet selector if it exists
+        const planetSelector = document.querySelector('.planet-selector');
+        if (planetSelector) {
+            this.initPlanetSelector();
         }
     }
 
@@ -547,7 +530,7 @@ class PageManager {
             selector.scrollBy({ left: 200, behavior: 'smooth' });
         });
         
-        // Check if scroll indicators should be visible
+        // Update scroll buttons visibility based on scroll position
         const updateScrollButtons = () => {
             leftBtn.style.opacity = selector.scrollLeft > 0 ? '1' : '0.3';
             rightBtn.style.opacity = 
@@ -562,6 +545,102 @@ class PageManager {
         
         // Update on window resize
         window.addEventListener('resize', updateScrollButtons);
+        
+        // Add planet selection functionality
+        const planetButtons = document.querySelectorAll('.planet-btn');
+        planetButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons
+                planetButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-selected', 'false');
+                });
+                
+                // Add active class to clicked button
+                button.classList.add('active');
+                button.setAttribute('aria-selected', 'true');
+                
+                // Get planet name and update info panel
+                const planetName = button.getAttribute('data-planet');
+                this.updatePlanetInfo(planetName);
+            });
+        });
+        
+        // Select the first planet by default
+        if (planetButtons.length > 0) {
+            planetButtons[0].click();
+        }
+    }
+    
+    updatePlanetInfo(planetName) {
+        // Example planet data - in a real app, this would come from an API or data file
+        const planetData = {
+            Sun: {
+                description: "The star at the center of our Solar System.",
+                diameter: "1,392,700 km",
+                distance: "0 km",
+                orbitalPeriod: "N/A"
+            },
+            Mercury: {
+                description: "The smallest and innermost planet in the Solar System.",
+                diameter: "4,880 km",
+                distance: "57.9 million km",
+                orbitalPeriod: "88 days"
+            },
+            Venus: {
+                description: "The second planet from the Sun with a thick toxic atmosphere.",
+                diameter: "12,104 km",
+                distance: "108.2 million km",
+                orbitalPeriod: "225 days"
+            },
+            Earth: {
+                description: "Our home planet, the only known celestial body to harbor life.",
+                diameter: "12,742 km",
+                distance: "149.6 million km",
+                orbitalPeriod: "365.25 days"
+            },
+            Mars: {
+                description: "The Red Planet, known for its iron oxide surface.",
+                diameter: "6,779 km",
+                distance: "227.9 million km",
+                orbitalPeriod: "687 days"
+            },
+            Jupiter: {
+                description: "The largest planet in our Solar System, a gas giant.",
+                diameter: "139,820 km",
+                distance: "778.5 million km",
+                orbitalPeriod: "11.86 years"
+            },
+            Saturn: {
+                description: "Known for its prominent ring system composed of ice and rock particles.",
+                diameter: "116,460 km",
+                distance: "1.4 billion km",
+                orbitalPeriod: "29.46 years"
+            },
+            Uranus: {
+                description: "An ice giant with a tilted rotation axis of 97.8 degrees.",
+                diameter: "50,724 km",
+                distance: "2.9 billion km",
+                orbitalPeriod: "84.01 years"
+            },
+            Neptune: {
+                description: "The windiest planet in our Solar System, with winds up to 2,100 km/h.",
+                diameter: "49,244 km",
+                distance: "4.5 billion km",
+                orbitalPeriod: "164.8 years"
+            }
+        };
+        
+        // Get planet data
+        const planet = planetData[planetName];
+        if (!planet) return;
+        
+        // Update planet info panel
+        document.getElementById('planet-name').textContent = planetName;
+        document.getElementById('planet-description').textContent = planet.description;
+        document.getElementById('planet-diameter').textContent = planet.diameter;
+        document.getElementById('planet-distance').textContent = planet.distance;
+        document.getElementById('planet-orbital-period').textContent = planet.orbitalPeriod;
     }
 
     async initProjectsPage() {
@@ -569,16 +648,21 @@ class PageManager {
         
         // Add event listeners to project navigation buttons
         const projectNavButtons = document.querySelectorAll('.side-nav .nav-button');
+        const projectCards = document.querySelectorAll('.project-card');
         
         projectNavButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 
                 // Remove active class from all buttons
-                projectNavButtons.forEach(btn => btn.classList.remove('active'));
+                projectNavButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-current', 'false');
+                });
                 
                 // Add active class to clicked button
                 button.classList.add('active');
+                button.setAttribute('aria-current', 'true');
                 
                 // Get the target project ID from the href attribute
                 const targetId = button.getAttribute('href');
@@ -602,56 +686,151 @@ class PageManager {
             });
         });
 
-        // Add scroll spy functionality to update active button based on scroll position
-        const projectCards = document.querySelectorAll('.project-card');
-        
-        const updateActiveButton = () => {
-            let currentProject = null;
-            
-            projectCards.forEach(card => {
-                const rect = card.getBoundingClientRect();
-                if (rect.top <= window.innerHeight / 2 && rect.bottom >= window.innerHeight / 2) {
-                    currentProject = card.id;
-                }
+        // Add click events to project cards for details
+        projectCards.forEach(card => {
+            card.addEventListener('click', () => {
+                // In a real app, this would show project details
+                console.log(`Project clicked: ${card.id}`);
             });
             
-            if (currentProject) {
-                projectNavButtons.forEach(button => {
-                    const href = button.getAttribute('href').substring(1);
-                    button.classList.toggle('active', href === currentProject);
-                });
-            }
-        };
-
-        // Add scroll event listener with debounce
-        let scrollTimeout;
-        document.addEventListener('scroll', () => {
-            if (this.currentPage === 'projects') {
-                if (scrollTimeout) {
-                    window.cancelAnimationFrame(scrollTimeout);
+            // Add keyboard accessibility
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    card.click();
                 }
-                scrollTimeout = window.requestAnimationFrame(() => {
-                    updateActiveButton();
-                });
-            }
+            });
         });
-
-        // Initial update of active button
-        updateActiveButton();
     }
 
     async initAboutPage() {
         console.log('Initializing about page');
-        // Add about page specific initialization
+        // Simple initialization for about page
     }
 
     async initStorePage() {
         console.log('Initializing store page');
-        // Add store page specific initialization
+        
+        // Add event listeners to filter buttons if they exist
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        if (filterButtons.length > 0) {
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    // Add active class to clicked button
+                    button.classList.add('active');
+                    
+                    // Get category
+                    const category = button.getAttribute('data-category');
+                    
+                    // Filter products
+                    this.filterProducts(category);
+                });
+            });
+        }
+    }
+    
+    filterProducts(category) {
+        const products = document.querySelectorAll('.product-card');
+        
+        products.forEach(product => {
+            if (category === 'all' || product.getAttribute('data-category') === category) {
+                product.style.display = 'block';
+            } else {
+                product.style.display = 'none';
+            }
+        });
     }
 
     async initContactPage() {
         console.log('Initializing contact page');
-        // Add contact form initialization if needed
+        
+        // Add form validation if contact form exists
+        const contactForm = document.getElementById('contact-form');
+        if (contactForm) {
+            contactForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // Validate form
+                if (this.validateContactForm(contactForm)) {
+                    // In a real app, this would send the form data
+                    console.log('Form submitted successfully');
+                    contactForm.reset();
+                    
+                    // Show success message
+                    const formGroups = contactForm.querySelectorAll('.form-group');
+                    const submitButton = contactForm.querySelector('.submit-button');
+                    
+                    submitButton.innerHTML = '<span>Message Sent!</span>';
+                    submitButton.classList.add('success');
+                    
+                    setTimeout(() => {
+                        submitButton.innerHTML = '<span>Send Message</span>';
+                        submitButton.classList.remove('success');
+                    }, 3000);
+                }
+            });
+            
+            // Add input validation
+            const inputs = contactForm.querySelectorAll('input, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('blur', () => {
+                    this.validateInput(input);
+                });
+                
+                input.addEventListener('input', () => {
+                    const errorElement = document.getElementById(`${input.id}-error`);
+                    if (errorElement) {
+                        errorElement.textContent = '';
+                    }
+                });
+            });
+        }
+    }
+    
+    validateContactForm(form) {
+        const nameInput = form.querySelector('#name');
+        const emailInput = form.querySelector('#email');
+        const messageInput = form.querySelector('#message');
+        
+        let isValid = true;
+        
+        if (!this.validateInput(nameInput)) isValid = false;
+        if (!this.validateInput(emailInput)) isValid = false;
+        if (!this.validateInput(messageInput)) isValid = false;
+        
+        return isValid;
+    }
+    
+    validateInput(input) {
+        const errorElement = document.getElementById(`${input.id}-error`);
+        
+        // Reset error
+        if (errorElement) {
+            errorElement.textContent = '';
+        }
+        
+        // Check required
+        if (input.hasAttribute('required') && !input.value.trim()) {
+            if (errorElement) {
+                errorElement.textContent = 'This field is required';
+            }
+            return false;
+        }
+        
+        // Check email format
+        if (input.type === 'email' && input.value.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(input.value.trim())) {
+                if (errorElement) {
+                    errorElement.textContent = 'Please enter a valid email address';
+                }
+                return false;
+            }
+        }
+        
+        return true;
     }
 }

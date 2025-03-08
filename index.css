@@ -3,8 +3,8 @@
   --primary-color: #FFA500;
   --secondary-color: #FF8C00;
   --text-color: #fff;
-  --bg-color: #000;
-  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --bg-color: rgba(0, 0, 0, 0.97);
+  --overlay-bg: rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease;
   
   /* Adding some new variables for consistency */
@@ -35,7 +35,7 @@ body, html {
   position: fixed;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+  background: radial-gradient(circle at center, #1a1a2e 0%, rgba(0, 0, 0, 0.99) 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -154,7 +154,7 @@ body, html {
   }
   body {
     background: white;
-    color: black;
+    color: rgba(0, 0, 0, 0.95);
   }
 }
 

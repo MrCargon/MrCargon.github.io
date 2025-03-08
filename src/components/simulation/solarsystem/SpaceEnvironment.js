@@ -2,24 +2,25 @@
 class SpaceEnvironment {
     constructor() {
         this.scene = null;
-        this.cameraController = null;
-        this.solarSystem = null;
+        this.camera = null;
+        this.renderer = null;
+        this.container = null;
+        this.stars = null;
+        this.width = 0;
+        this.height = 0;
+        this.clock = new THREE.Clock();
         this.initialized = false;
-        this.clock = null;
     }
     
     async init() {
         console.log("SpaceEnvironment initialization started");
-        
-        // Create THREE.Clock for animation timing
-        this.clock = new THREE.Clock();
         
         try {
             // Create a container for the 3D scene
             this.createContainer();
             
             // Basic Three.js setup
-            await this.setupThreeJS();
+            this.setupThreeJS();
             
             // Initialize with basic stars
             this.createStars();
@@ -43,20 +44,28 @@ class SpaceEnvironment {
             const container = document.createElement('div');
             container.id = containerId;
             container.className = 'solar-system-background';
-            container.style.position = 'fixed';
-            container.style.top = '0';
-            container.style.left = '0';
-            container.style.width = '100%';
-            container.style.height = '100%';
-            container.style.zIndex = '-1';
-            container.style.overflow = 'hidden';
+            
+            // Set inline styles with !important to override any conflicting styles
+            container.style.cssText = `
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 0 !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+            `;
+            
+            // Insert at the beginning of body
             document.body.insertBefore(container, document.body.firstChild);
+            console.log("Space environment container created with ID:", containerId);
         }
         
         this.container = document.getElementById(containerId);
     }
     
-    async setupThreeJS() {
+    setupThreeJS() {
         // Create basic Three.js components
         this.width = window.innerWidth;
         this.height = window.innerHeight;
@@ -69,35 +78,36 @@ class SpaceEnvironment {
         this.camera.position.set(0, 30, 100);
         this.camera.lookAt(0, 0, 0);
         
-        // Renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // Renderer with alpha for transparent background
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: 'high-performance'
+        });
         this.renderer.setSize(this.width, this.height);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
         this.renderer.setClearColor(0x000000, 0); // Transparent background
         this.container.appendChild(this.renderer.domElement);
         
-        // Controls - only add if OrbitControls is available
-        if (typeof THREE.OrbitControls === 'function') {
-            console.log("Creating OrbitControls");
-            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-            this.controls.enableDamping = true;
-            this.controls.dampingFactor = 0.05;
-            this.controls.enableZoom = true;
-        } else {
-            console.warn("OrbitControls not available");
-        }
-        
-        // Lights
+        // Lights - just a subtle ambient light
         const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
         this.scene.add(ambientLight);
         
         // Handle window resize
         window.addEventListener('resize', this.handleResize.bind(this));
+        
+        // Optional: Add OrbitControls if available and needed
+        if (typeof THREE.OrbitControls === 'function') {
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.enableZoom = true;
+        }
     }
     
     createStars() {
-        // Create a simple starfield as a placeholder
-        const count = 5000;
+        // Create more efficient stars - using instancing for better performance
+        const count = 7000;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(count * 3);
         const colors = new Float32Array(count * 3);
@@ -112,24 +122,29 @@ class SpaceEnvironment {
             positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
             positions[i * 3 + 2] = radius * Math.cos(phi);
             
-            // White to blue-ish colors
-            colors[i * 3] = 0.8 + Math.random() * 0.2;       // R
-            colors[i * 3 + 1] = 0.8 + Math.random() * 0.2;   // G
-            colors[i * 3 + 2] = 0.8 + Math.random() * 0.2;   // B
+            // Brighter stars (more white) with size variation
+            colors[i * 3] = 0.9 + Math.random() * 0.1;       // R
+            colors[i * 3 + 1] = 0.9 + Math.random() * 0.1;   // G
+            colors[i * 3 + 2] = 1.0;                         // B
         }
         
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         
         const material = new THREE.PointsMaterial({
-            size: 1,
+            size: 2,
             vertexColors: true,
             transparent: true,
-            opacity: 0.8
+            opacity: 0.9,
+            sizeAttenuation: true
         });
         
         this.stars = new THREE.Points(geometry, material);
         this.scene.add(this.stars);
+        
+        // Add a subtle blue glow to the scene
+        const ambientLight = new THREE.AmbientLight(0x3366ff, 0.2);
+        this.scene.add(ambientLight);
     }
     
     handleResize() {
@@ -145,9 +160,11 @@ class SpaceEnvironment {
     animate() {
         requestAnimationFrame(this.animate.bind(this));
         
+        const deltaTime = this.clock.getDelta();
+        
         // Slow rotation of stars
         if (this.stars) {
-            this.stars.rotation.y += 0.0001;
+            this.stars.rotation.y += 0.0001 * deltaTime * 60;
         }
         
         // Update controls if they exist
@@ -159,14 +176,32 @@ class SpaceEnvironment {
         this.renderer.render(this.scene, this.camera);
     }
     
-    dispose() {
-        // Clean up resources
-        window.removeEventListener('resize', this.handleResize.bind(this));
-        if (this.container && this.renderer.domElement) {
-            this.container.removeChild(this.renderer.domElement);
+    checkVisibility() {
+        // Check if the container is visible
+        if (this.container) {
+            const isVisible = window.getComputedStyle(this.container).display !== 'none';
+            console.log("Space environment visibility:", isVisible ? "visible" : "hidden");
         }
+    }
+    
+    dispose() {
+        // Clean up resources to prevent memory leaks
+        window.removeEventListener('resize', this.handleResize.bind(this));
+        
+        if (this.stars) {
+            this.scene.remove(this.stars);
+            this.stars.geometry.dispose();
+            this.stars.material.dispose();
+        }
+        
+        if (this.renderer && this.container) {
+            this.container.removeChild(this.renderer.domElement);
+            this.renderer.dispose();
+        }
+        
+        this.initialized = false;
     }
 }
 
-// Make sure to expose the class to the window object
+// Make available globally for PageManager
 window.SpaceEnvironment = SpaceEnvironment;

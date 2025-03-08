@@ -1,14 +1,16 @@
 /* Enhanced Header Styles */
 
 .main-header {
+    margin: 10px;
     background: var(--overlay-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--border-radius);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding: var(--spacing-lg);
     position: sticky;
     top: 0;
     z-index: 1000;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-content {

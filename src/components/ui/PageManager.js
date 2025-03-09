@@ -61,7 +61,7 @@ class PageManager {
     
         // Handle browser back/forward
         window.addEventListener('popstate', (e) => {
-            const pageName = e.state?.page || 'main';
+            const pageName = e.state?.page || 'about';
             this.navigateToPage(pageName, false);
         });
     }

@@ -1,20 +1,20 @@
 /* Enhanced Header Styles */
-
 .main-header {
-    margin: 20px;
-    background: var(--overlay-bg);
-    backdrop-filter: blur(1px);
-    -webkit-backdrop-filter: blur(1px);
+    max-width: 900px;
+    width: 90%;
+    margin: 20px auto;
+    background-color: rgba(20, 20, 20, 0.95);
     border-radius: var(--border-radius);
-    border-bottom: 1px solid rgba(80, 76, 76, 0.15);
-    padding: var(--spacing-lg);
+    border: 1px solid rgba(255, 165, 0, 0.2);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    padding: var(--spacing-md);
     position: sticky;
-    top: 0;
+    top: 20px;
     z-index: 100;
 }
 
 .header-content {
-    max-width: 100px;
+    width: 100%;
     margin: 0 auto;
     padding: 0 var(--spacing-md);
 }
@@ -24,6 +24,7 @@
     list-style: none;
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     gap: var(--spacing-xl);
     margin: 0;
     padding: 0;
@@ -38,7 +39,7 @@
     text-decoration: none;
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--border-radius);
-    transition: var(--transition);
+    transition: background-color 0.3s ease, color 0.3s ease;
     position: relative;
     display: flex;
     align-items: center;
@@ -50,18 +51,13 @@
 .nav-link.active {
     color: var(--primary-color);
     background: rgba(255, 165, 0, 0.1);
-}
-
-.nav-link.active::after {
-    width: 80%;
-    opacity: 1;
+    border-bottom: 2px solid var(--primary-color);
 }
 
 /* Hover Effects */
 .nav-link:not(.disabled):hover {
     color: var(--primary-color);
     background: rgba(255, 165, 0, 0.1);
-    transform: translateY(-1px);
 }
 
 .nav-link::after {
@@ -72,7 +68,7 @@
     width: 0;
     height: 2px;
     background: var(--primary-color);
-    transition: var(--transition);
+    transition: width 0.3s ease, opacity 0.3s ease;
     transform: translateX(-50%);
     opacity: 0;
 }
@@ -115,18 +111,23 @@
 
 /* Mobile Navigation */
 @media (max-width: 768px) {
+    .main-header {
+        width: 95%;
+        padding: var(--spacing-sm);
+    }
+    
     .main-nav ul {
         flex-direction: column;
         align-items: center;
         gap: var(--spacing-md);
     }
-
+    
     .nav-link {
         padding: var(--spacing-sm) var(--spacing-lg);
         width: 100%;
         justify-content: center;
     }
-
+    
     .status-badge {
         position: absolute;
         right: var(--spacing-sm);
@@ -140,7 +141,7 @@
     .header-content {
         padding: 0 var(--spacing-sm);
     }
-
+    
     .main-nav ul {
         gap: var(--spacing-lg);
     }
@@ -151,7 +152,7 @@
     .nav-link {
         transition: none;
     }
-
+    
     .nav-link::after {
         transition: none;
     }
@@ -162,7 +163,7 @@
     .nav-link.disabled {
         color: rgba(255, 255, 255, 0.6);
     }
-
+    
     .status-badge {
         background: var(--primary-color);
         color: var(--bg-color);

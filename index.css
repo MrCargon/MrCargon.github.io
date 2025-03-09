@@ -3,8 +3,8 @@
   --primary-color: #FFA500;
   --secondary-color: #FF8C00;
   --text-color: #fff;
-  --bg-color: rgba(0, 0, 0, 0.97);
-  --overlay-bg: rgba(0, 0, 0, 0.1);
+  --bg-color: rgba(0, 0, 0, 0.99);
+  --overlay-bg: rgba(88, 88, 88, 0.1);
   --transition: all 0.3s ease;
   
   /* Adding some new variables for consistency */
@@ -12,7 +12,7 @@
   --spacing-md: 1rem;
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
-  --border-radius: 15px;
+  --border-radius: 35px;
 }
 
 /* Reset and Base Styles */

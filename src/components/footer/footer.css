@@ -1,8 +1,8 @@
 .main-footer {
     margin: 10px;
     background: var(--overlay-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
     border-radius: var(--border-radius);
     padding: var(--spacing-lg);
     margin-top: auto; /* Pushes footer to bottom */

@@ -1,4 +1,4 @@
-// SpaceEnvironment.js - Main controller class for the 3D background
+// SpaceEnvironment.js - Optimized background star field
 class SpaceEnvironment {
     constructor() {
         this.scene = null;

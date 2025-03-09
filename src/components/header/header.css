@@ -1,20 +1,20 @@
 /* Enhanced Header Styles */
 
 .main-header {
-    margin: 10px;
+    margin: 20px;
     background: var(--overlay-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
     border-radius: var(--border-radius);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(80, 76, 76, 0.15);
     padding: var(--spacing-lg);
     position: sticky;
     top: 0;
-    z-index: 1000;
+    z-index: 100;
 }
 
 .header-content {
-    max-width: 1200px;
+    max-width: 100px;
     margin: 0 auto;
     padding: 0 var(--spacing-md);
 }

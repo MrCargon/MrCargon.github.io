@@ -1,6 +1,3 @@
-// Optimized main.js - Component loading and application initialization
-
-// Component Loader Class - improved with better error handling and performance
 class ComponentLoader {
     static async loadComponent(url, containerId, retries = 3) {
         const container = document.getElementById(containerId);
@@ -57,8 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create loading screen instance
     window.loadingScreen = new LoadingScreen();
     
-    // Define components to load with GitHub Pages-friendly paths
-    // Make sure to use relative paths that work with your repository structure
+    // Define components to load
     const components = [
         { url: 'src/components/header/header.html', id: 'header-container' },
         { url: 'src/components/pages/mainPage.html', id: 'page-container' },
@@ -67,21 +63,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let loadedCount = 0;
     
-    // Load components with progress tracking and better error handling
+    // Load components with progress tracking
     Promise.all(
         components.map(comp => 
             ComponentLoader.loadComponent(comp.url, comp.id)
                 .then(success => {
                     loadedCount++;
-                    const progress = (loadedCount / components.length) * 100;
-                    ComponentLoader.updateLoadingProgress(progress);
-                    console.log(`Loaded ${comp.url}: ${success ? 'Success' : 'Failed'} (${progress.toFixed(0)}%)`);
+                    ComponentLoader.updateLoadingProgress((loadedCount / components.length) * 100);
                     return success;
-                })
-                .catch(error => {
-                    console.error(`Error loading ${comp.url}:`, error);
-                    // Return false to indicate failure but don't break the Promise.all
-                    return false;
                 })
         )
     ).then(results => {
@@ -89,24 +78,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const allLoaded = results.every(result => result === true);
         
         if (allLoaded) {
-            try {
-                // Initialize PageManager after components are loaded
-                window.pageManager = new PageManager();
-                
-                // Hide loading screen with smooth transition
-                setTimeout(() => {
-                    window.loadingScreen.hide();
-                    document.getElementById('content').classList.remove('hidden');
-                }, 300);
-            } catch (error) {
-                console.error('Error initializing PageManager:', error);
-                window.loadingScreen.setError('Failed to initialize application. Please refresh.');
-            }
+            // Initialize PageManager after components are loaded
+            window.pageManager = new PageManager();
+            
+            // Hide loading screen with smooth transition
+            setTimeout(() => {
+                window.loadingScreen.hide();
+                document.getElementById('content').classList.remove('hidden');
+            }, 300);
         } else {
-            // Some components didn't load
-            const failedComponents = components.filter((comp, index) => !results[index]);
-            console.error('Failed to load components:', failedComponents.map(c => c.url).join(', '));
-            window.loadingScreen.setError('Failed to load some components. Please refresh.');
+            throw new Error('Some components failed to load');
         }
     }).catch(error => {
         console.error('Failed to initialize application:', error);

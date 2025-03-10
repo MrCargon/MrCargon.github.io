@@ -4,15 +4,18 @@
 /* Main Section */
 .main-section {
     padding: var(--spacing-md);
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 /* Profile Panel Styles */
 .profile-panel {
     max-width: 900px;
-    width: 90%;
+    width: 92%;
     margin: var(--spacing-xl) auto;
     will-change: opacity;
     animation: fadeIn 0.8s ease-out;
+    contain: layout style;
 }
 
 .panel-container {
@@ -21,6 +24,9 @@
     border: 1px solid rgba(255, 165, 0, 0.2);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    contain: content;
 }
 
 .panel-header {
@@ -30,6 +36,7 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
+    gap: var(--spacing-md);
 }
 
 .panel-header h3 {
@@ -63,6 +70,37 @@
 
 .panel-content {
     padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh; /* Limit the panel height */
+}
+
+/* Scrollable content area */
+.scrollable-content {
+    overflow-y: auto; /* Enable vertical scrolling */
+    padding-right: var(--spacing-sm); /* Leave space for scrollbar */
+    max-height: 50vh; /* Fixed height to ensure scrolling */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--primary-color) rgba(30, 30, 30, 0.5); /* Firefox */
+}
+
+/* Webkit scrollbar styling */
+.scrollable-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+    background: rgba(30, 30, 30, 0.5);
+    border-radius: 10px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
 }
 
 /* Profile Top Section */
@@ -78,7 +116,7 @@
 /* Profile Header Styles */
 .profile-header {
     flex: 1;
-    min-width: 300px;
+    min-width: 280px;
 }
 
 .profile-header h1 {
@@ -110,7 +148,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-md);
-    min-width: 300px;
+    min-width: 200px;
 }
 
 .profile-image {
@@ -136,26 +174,7 @@
     transform: scale(1.05);
 }
 
-.profile-details {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: center;
-    width: 100%;
-}
-
-.profile-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-    justify-content: center;
-}
-
-/* Remove Social Section from profile details */
-.profile-details {
-    max-width: 300px;
-}
-
+/* Profile tag styling */
 .profile-tag {
     background-color: rgba(255, 165, 0, 0.1);
     color: var(--primary-color);
@@ -164,6 +183,7 @@
     font-size: 0.85rem;
     border: 1px solid rgba(255, 165, 0, 0.3);
     transition: background-color 0.3s ease;
+    display: inline-block;
     margin: 3px;
 }
 
@@ -229,6 +249,7 @@
     border-radius: 8px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid rgba(255, 165, 0, 0.1);
+    contain: content;
 }
 
 .skill-category:hover {
@@ -335,17 +356,6 @@
 }
 
 /* Social Links Section */
-.social-section {
-    margin-top: var(--spacing-xl);
-}
-
-.social-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-md);
-}
-
 .social-link {
     color: var(--text-color);
     text-decoration: none;
@@ -356,13 +366,7 @@
     padding: var(--spacing-sm);
     background-color: rgba(30, 30, 30, 0.6);
     border: 1px solid rgba(255, 165, 0, 0.1);
-}
-
-.profile-social .social-link {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: rgba(30, 30, 30, 0.2);
+    border-radius: 4px;
 }
 
 .social-link:hover, .social-link:focus-visible {
@@ -377,22 +381,45 @@
     outline-offset: 2px;
 }
 
-.social-link i {
-    font-size: 1.1rem;
-    color: var(--primary-color);
-}
-
 /* Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* Media Queries */
+/* Print styles for better printing */
+@media print {
+    .profile-panel {
+        box-shadow: none;
+        border: none;
+    }
+    
+    .panel-container {
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+    }
+    
+    .profile-header h1, .section-title, .skill-category h5, .timeline-content h5 {
+        color: #000;
+    }
+    
+    .highlight, .bio-highlight {
+        color: #555;
+    }
+    
+    .social-link, .header-social {
+        display: none;
+    }
+}
+
+/* Media Queries for Responsive Design */
 @media (max-width: 768px) {
     .profile-panel {
         width: 95%;
@@ -401,11 +428,17 @@
     
     .panel-content {
         padding: var(--spacing-md);
+        max-height: none; /* Remove fixed height on mobile */
+    }
+    
+    .scrollable-content {
+        max-height: 60vh; /* Adjust scrollable area height for tablets */
     }
     
     .profile-top {
         flex-direction: column;
         align-items: center;
+        text-align: center;
     }
     
     .profile-header {
@@ -413,23 +446,16 @@
         margin-bottom: var(--spacing-md);
     }
     
-    .profile-summary {
-        width: 100%;
-    }
-    
-    .profile-details {
-        max-width: 100%;
-    }
-    
-    .profile-tags {
-        justify-content: center;
-    }
-    
     .profile-placeholder {
         width: 80px;
         height: 80px;
         font-size: 1.5rem;
         margin-bottom: var(--spacing-md);
+    }
+    
+    .skills-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
     }
     
     .timeline-items {
@@ -447,29 +473,109 @@
         border-left-width: 2px;
     }
     
-    .social-links {
+    .panel-header {
         justify-content: center;
+        text-align: center;
+        flex-direction: column;
     }
     
-    .profile-social .social-link span {
-        display: none;
+    .panel-header h3::after {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
     }
 }
 
+/* Small mobile screens */
+@media (max-width: 480px) {
+    .profile-panel {
+        width: 98%;
+        margin: var(--spacing-md) auto;
+    }
+    
+    .panel-content {
+        padding: var(--spacing-sm);
+    }
+    
+    .scrollable-content {
+        max-height: 65vh; /* Increase scrollable area height for small screens */
+        padding-right: 0; /* Remove padding on small screens */
+    }
+    
+    .profile-header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .highlight {
+        font-size: 1.3rem;
+    }
+    
+    .tagline {
+        font-size: 1rem;
+    }
+    
+    .section-title {
+        font-size: 1.2rem;
+    }
+    
+    .bio-highlight {
+        font-size: 0.95rem;
+    }
+    
+    .timeline-marker {
+        width: 14px;
+        height: 14px;
+        left: -22px;
+    }
+    
+    .timeline-items {
+        padding-left: 22px;
+    }
+    
+    .social-links {
+        gap: var(--spacing-sm);
+    }
+}
+
+/* Enhanced accessibility for keyboard navigation and screen readers */
+a:focus, button:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 3px;
+}
+
+/* Accessibility improvement for reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .profile-panel {
         animation: none;
     }
     
-    .profile-placeholder, .timeline-content, .social-link, .skill-category, .skill-list li {
+    .profile-placeholder, 
+    .timeline-content, 
+    .social-link, 
+    .skill-category, 
+    .skill-list li {
         transition: none;
     }
     
-    .profile-placeholder:hover, .social-link:hover, .skill-category:hover, .skill-list li:hover, .profile-tag:hover {
+    .profile-placeholder:hover, 
+    .social-link:hover, 
+    .skill-category:hover, 
+    .skill-list li:hover, 
+    .profile-tag:hover {
         transform: none;
     }
     
     .timeline-content:hover {
         border-left: 2px solid var(--primary-color);
+        box-shadow: none;
+    }
+}
+
+/* Performance optimizations */
+@supports (content-visibility: auto) {
+    .skill-category, 
+    .timeline-item {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 100px;
     }
 }

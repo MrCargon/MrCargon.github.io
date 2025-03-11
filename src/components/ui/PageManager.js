@@ -1,15 +1,21 @@
 /**
- * PageManager - Handles SPA navigation, page transitions, and content loading
- * Optimized for GitHub Pages deployment
+ * PageManager - Single Page Application (SPA) navigation system
+ * Optimized for GitHub Pages deployment with progressive enhancement
+ * @version 1.1.0
  */
 class PageManager {
+    /**
+     * Creates a new PageManager instance
+     */
     constructor() {
+        // Core properties
         this.contentContainer = document.getElementById('page-container');
         this.pageCache = new Map();
         this.currentPage = null;
         this.isTransitioning = false;
+        this.headerManager = null;
         
-        // Define page templates and their metadata
+        // Configuration - page definitions
         this.pages = {
             main: {
                 path: 'src/components/pages/mainPage.html',
@@ -38,48 +44,154 @@ class PageManager {
             }
         };
         
-        // Setup event listeners for navigation
+        // Initialize the application
+        this.init();
+    }
+    
+    /**
+     * Initialize the PageManager
+     */
+    init() {
+        // Set up header management
+        this.initializeHeaderManager();
+        
+        // Setup event handlers for navigation
         this.setupRouting();
         
-        // Handle initial route
+        // Handle initial route based on URL hash
         this.handleInitialRoute();
+        
+        // Preload other pages for faster navigation
+        this.preloadPages();
     }
 
     /**
-     * Setup click event listeners for navigation and browser history handling
+     * Initialize HeaderManager if available
+     */
+    initializeHeaderManager() {
+        // Check if HeaderManager class is available
+        if (window.HeaderManager) {
+            this.headerManager = new HeaderManager();
+            console.log('HeaderManager initialized');
+        }
+    }
+
+    /**
+     * Set up event listeners for navigation and browser history
      */
     setupRouting() {
-        // Handle navigation clicks
-        document.addEventListener('click', (e) => {
-            const link = e.target.closest('.main-nav a');
-            if (!link) return;
-            
-            e.preventDefault();
+        // Use event delegation for all navigation clicks
+        document.addEventListener('click', this.handleNavigationClick.bind(this));
+    
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', this.handlePopState.bind(this));
+        
+        // Handle keyboard navigation accessibility
+        document.addEventListener('keydown', this.handleKeyboardNavigation.bind(this));
+    }
+    
+    /**
+     * Handle navigation click events with proper event delegation
+     * @param {MouseEvent} event - Click event
+     */
+    handleNavigationClick(event) {
+        const link = event.target.closest('.main-nav a');
+        if (!link) return;
+        
+        event.preventDefault();
+        
+        // Check if the link is disabled
+        if (link.classList.contains('disabled')) {
+            console.log('Navigation prevented: This feature is coming soon.');
+            return;
+        }
+        
+        const pageName = link.getAttribute('href').substring(1);
+        this.navigateToPage(pageName);
+    }
+    
+    /**
+     * Handle browser history navigation events
+     * @param {PopStateEvent} event - PopState event
+     */
+    handlePopState(event) {
+        const pageName = event.state?.page || 'main';
+        this.navigateToPage(pageName, false);
+    }
+    
+    /**
+     * Handle keyboard navigation for accessibility
+     * @param {KeyboardEvent} event - Keyboard event
+     */
+    handleKeyboardNavigation(event) {
+        // Only handle when focused on navigation links
+        const focusedLink = document.activeElement;
+        if (!focusedLink || !focusedLink.classList.contains('nav-link')) return;
+        
+        // Handle Enter or Space key
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
             
             // Check if the link is disabled
-            if (link.classList.contains('disabled')) {
-                console.log('Navigation prevented: This feature is coming soon.');
-                return;
-            }
+            if (focusedLink.classList.contains('disabled')) return;
             
-            const pageName = link.getAttribute('href').substring(1);
+            const pageName = focusedLink.getAttribute('href').substring(1);
             this.navigateToPage(pageName);
-        });
-    
-        // Handle browser back/forward
-        window.addEventListener('popstate', (e) => {
-            const pageName = e.state?.page || 'main';
-            this.navigateToPage(pageName, false);
-        });
+        }
     }
 
     /**
      * Handle initial routing when the page first loads
      */
     async handleInitialRoute() {
-        // Navigate to initial page based on URL hash
+        // Get the initial page from URL hash or default to about
         const hash = window.location.hash.substring(1) || 'about';
         await this.navigateToPage(hash, false);
+    }
+
+    /**
+     * Preload pages for faster navigation
+     */
+    preloadPages() {
+        // Use requestIdleCallback if available, or setTimeout as fallback
+        const preloader = window.requestIdleCallback || setTimeout;
+        
+        preloader(() => {
+            // Get current page to avoid preloading it
+            const currentPageName = this.currentPage || 'about';
+            
+            // Preload all other pages with low priority
+            Object.keys(this.pages).forEach(pageName => {
+                if (pageName !== currentPageName) {
+                    this.prefetchPage(pageName);
+                }
+            });
+        }, { timeout: 2000 });
+    }
+    
+    /**
+     * Prefetch a page in the background
+     * @param {string} pageName - Page to prefetch
+     */
+    async prefetchPage(pageName) {
+        // Skip if already cached
+        if (this.pageCache.has(pageName)) return;
+        
+        try {
+            const pageConfig = this.pages[pageName];
+            const response = await fetch(pageConfig.path, { 
+                priority: 'low', 
+                cache: 'force-cache' 
+            });
+            
+            if (!response.ok) return;
+            
+            const content = await response.text();
+            this.pageCache.set(pageName, content);
+        } catch (error) {
+            // Silently fail on prefetch - it's just an optimization
+            console.debug(`Background prefetch failed for ${pageName}:`, error);
+        }
     }
 
     /**
@@ -143,8 +255,11 @@ class PageManager {
         }
     
         this.isTransitioning = true;
+        
+        // Trigger navigation start event for potential analytics
+        this.triggerEvent('navigation:start', { from: this.currentPage, to: pageName });
     
-        // Update browser history
+        // Update browser history if needed
         if (updateHistory) {
             window.history.pushState({ page: pageName }, '', `#${pageName}`);
         }
@@ -164,12 +279,32 @@ class PageManager {
     
             // Complete transition animation
             await this.completePageTransition();
+            
+            // Trigger navigation complete event
+            this.triggerEvent('navigation:complete', { page: pageName });
         } catch (error) {
             console.error('Navigation error:', error);
             this.handleNavigationError();
+            
+            // Trigger navigation error event
+            this.triggerEvent('navigation:error', { page: pageName, error });
         } finally {
             this.isTransitioning = false;
         }
+    }
+
+    /**
+     * Trigger a custom event for extensibility
+     * @param {string} name - Event name
+     * @param {Object} detail - Event details
+     */
+    triggerEvent(name, detail = {}) {
+        const event = new CustomEvent(`pagemanager:${name}`, { 
+            detail,
+            bubbles: true
+        });
+        
+        this.contentContainer?.dispatchEvent(event);
     }
 
     /**
@@ -245,9 +380,13 @@ class PageManager {
             }
         }
 
+        // Cleanup previous page content (remove event listeners, etc.)
+        this.cleanupCurrentPage();
+
         // Render content
         if (this.contentContainer) {
             this.contentContainer.innerHTML = content;
+            
             // Initialize page-specific functionality
             if (pageConfig.init) {
                 try {
@@ -258,19 +397,42 @@ class PageManager {
             }
         }
     }
+    
+    /**
+     * Clean up resources from current page before loading new one
+     */
+    cleanupCurrentPage() {
+        // This is a placeholder for more specific cleanup
+        // In a larger app, you would remove event listeners, stop animations, etc.
+        
+        // Example: Clean up any data visualization charts
+        if (window.charts && window.charts.length) {
+            window.charts.forEach(chart => {
+                if (chart && typeof chart.destroy === 'function') {
+                    chart.destroy();
+                }
+            });
+            window.charts = [];
+        }
+    }
 
     /**
      * Update UI state after page navigation
      * @param {string} pageName - Current page name
      */
     updateUIState(pageName) {
-        // Update active navigation state
-        document.querySelectorAll('.main-nav a').forEach(link => {
-            const href = link.getAttribute('href')?.substring(1);
-            const isActive = href === pageName;
-            link.classList.toggle('active', isActive);
-            link.setAttribute('aria-current', isActive ? 'page' : 'false');
-        });
+        // Update header navigation if HeaderManager exists
+        if (this.headerManager && typeof this.headerManager.updateActiveLink === 'function') {
+            this.headerManager.updateActiveLink(pageName);
+        } else {
+            // Fallback to direct DOM manipulation
+            document.querySelectorAll('.main-nav a').forEach(link => {
+                const href = link.getAttribute('href')?.substring(1);
+                const isActive = href === pageName;
+                link.classList.toggle('active', isActive);
+                link.setAttribute('aria-current', isActive ? 'page' : 'false');
+            });
+        }
 
         // Update document title
         document.title = `${this.pages[pageName].title} - MrCargo Portfolio`;
@@ -299,7 +461,7 @@ class PageManager {
             <div class="error-container">
                 <h2>Navigation Error</h2>
                 <p>Failed to load the requested page. Please try again.</p>
-                <button onclick="window.location.reload()">Reload Page</button>
+                <button onclick="window.location.reload()" class="retry-button">Reload Page</button>
             </div>
         `;
     }
@@ -343,12 +505,12 @@ class PageManager {
             selector.scrollBy({ left: 200, behavior: 'smooth' });
         });
         
-        // Update scroll buttons visibility
-        const updateScrollButtons = () => {
+        // Use debounced scroll handler for better performance
+        const updateScrollButtons = this.debounce(() => {
             leftBtn.style.opacity = selector.scrollLeft > 0 ? '1' : '0.3';
             rightBtn.style.opacity = 
                 selector.scrollLeft < selector.scrollWidth - selector.clientWidth - 10 ? '1' : '0.3';
-        };
+        }, 50);
         
         // Set up event listeners
         selector.addEventListener('scroll', updateScrollButtons);
@@ -380,6 +542,24 @@ class PageManager {
         if (planetButtons.length > 0) {
             planetButtons[0].click();
         }
+    }
+    
+    /**
+     * Debounce function to limit frequent executions
+     * @param {Function} func - Function to debounce
+     * @param {number} wait - Debounce delay in milliseconds
+     * @returns {Function} - Debounced function
+     */
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
     
     /**
@@ -497,22 +677,26 @@ class PageManager {
             });
         });
 
-        // Project cards interaction
-        const projectCards = document.querySelectorAll('.project-card');
-        projectCards.forEach(card => {
-            // Click event
-            card.addEventListener('click', () => {
-                console.log(`Project clicked: ${card.id}`);
+        // Project cards interaction using event delegation
+        const projectContainer = document.querySelector('.projects-container');
+        if (projectContainer) {
+            projectContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.project-card');
+                if (card) {
+                    console.log(`Project clicked: ${card.id}`);
+                    // Here you would show project details or open a modal
+                }
             });
             
             // Keyboard accessibility
-            card.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+            projectContainer.addEventListener('keydown', (e) => {
+                const card = e.target.closest('.project-card');
+                if (card && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault();
                     card.click();
                 }
             });
-        });
+        }
     }
 
     /**
@@ -529,25 +713,29 @@ class PageManager {
     async initStorePage() {
         console.log('Initializing store page');
         
-        // Product filtering
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        if (filterButtons.length > 0) {
-            filterButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    // Update active state
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    
-                    // Filter products by category
-                    const category = button.getAttribute('data-category');
-                    this.filterProducts(category);
-                });
+        // Product filtering using event delegation
+        const filterContainer = document.querySelector('.filter-container');
+        if (!filterContainer) return;
+        
+        filterContainer.addEventListener('click', (e) => {
+            const button = e.target.closest('.filter-btn');
+            if (!button) return;
+            
+            // Update active state
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
             });
             
-            // Filter all products by default
-            const allButton = document.querySelector('.filter-btn[data-category="all"]');
-            if (allButton) allButton.click();
-        }
+            button.classList.add('active');
+            
+            // Filter products by category
+            const category = button.getAttribute('data-category');
+            this.filterProducts(category);
+        });
+        
+        // Filter all products by default
+        const allButton = document.querySelector('.filter-btn[data-category="all"]');
+        if (allButton) allButton.click();
     }
     
     /**
@@ -595,17 +783,19 @@ class PageManager {
             }
         });
         
-        // Input validation events
-        const inputs = contactForm.querySelectorAll('input, textarea');
-        inputs.forEach(input => {
-            // Validate on blur
-            input.addEventListener('blur', () => this.validateInput(input));
-            
-            // Clear error on input
-            input.addEventListener('input', () => {
-                const errorElement = document.getElementById(`${input.id}-error`);
+        // Input validation using event delegation
+        contactForm.addEventListener('blur', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                this.validateInput(e.target);
+            }
+        }, true);
+        
+        // Clear errors on input
+        contactForm.addEventListener('input', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                const errorElement = document.getElementById(`${e.target.id}-error`);
                 if (errorElement) errorElement.textContent = '';
-            });
+            }
         });
     }
     
@@ -656,4 +846,11 @@ class PageManager {
         
         return true;
     }
+}
+
+// Export PageManager to the global scope if used with ES modules
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PageManager;
+} else {
+    window.PageManager = PageManager;
 }

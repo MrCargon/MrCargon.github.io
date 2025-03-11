@@ -1,3 +1,7 @@
+/**
+ * PageManager - Handles SPA navigation, page transitions, and content loading
+ * Optimized for GitHub Pages deployment
+ */
 class PageManager {
     constructor() {
         this.contentContainer = document.getElementById('page-container');
@@ -34,29 +38,32 @@ class PageManager {
             }
         };
         
-        // Setup event listeners
+        // Setup event listeners for navigation
         this.setupRouting();
         
-        // Handle initial route and space background
+        // Handle initial route
         this.handleInitialRoute();
     }
 
+    /**
+     * Setup click event listeners for navigation and browser history handling
+     */
     setupRouting() {
         // Handle navigation clicks
         document.addEventListener('click', (e) => {
             const link = e.target.closest('.main-nav a');
-            if (link) {
-                e.preventDefault();
-                
-                // Check if the link is disabled
-                if (link.classList.contains('disabled')) {
-                    console.log('Navigation prevented: This feature is coming soon.');
-                    return;
-                }
-                
-                const pageName = link.getAttribute('href').substring(1);
-                this.navigateToPage(pageName);
+            if (!link) return;
+            
+            e.preventDefault();
+            
+            // Check if the link is disabled
+            if (link.classList.contains('disabled')) {
+                console.log('Navigation prevented: This feature is coming soon.');
+                return;
             }
+            
+            const pageName = link.getAttribute('href').substring(1);
+            this.navigateToPage(pageName);
         });
     
         // Handle browser back/forward
@@ -66,49 +73,20 @@ class PageManager {
         });
     }
 
+    /**
+     * Handle initial routing when the page first loads
+     */
     async handleInitialRoute() {
-        // Initialize space background first
-        await this.initializeSpaceBackground();
-        
-        // Navigate to initial page
+        // Navigate to initial page based on URL hash
         const hash = window.location.hash.substring(1) || 'about';
-        this.navigateToPage(hash, false);
+        await this.navigateToPage(hash, false);
     }
 
-    async initializeSpaceBackground() {
-        try {
-            console.log("Starting space environment initialization...");
-            
-            // Load Three.js library
-            await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js');
-            console.log("Three.js loaded successfully");
-            
-            // Load SpaceEnvironment script
-            await this.loadScript('src/components/simulation/solarsystem/SpaceEnvironment.js');
-            console.log("SpaceEnvironment script loaded");
-            
-            // Create and initialize the space environment
-            if (!window.spaceEnvironment) {
-                console.log("Creating SpaceEnvironment instance");
-                window.spaceEnvironment = new SpaceEnvironment();
-                
-                console.log("Initializing space environment...");
-                const success = await window.spaceEnvironment.init();
-                
-                if (success) {
-                    console.log("Space environment initialized successfully");
-                } else {
-                    console.error("Space environment initialization failed");
-                }
-            }
-            
-            return true;
-        } catch (error) {
-            console.error("Failed to initialize space environment:", error);
-            return false;
-        }
-    }
-
+    /**
+     * Load a JavaScript file asynchronously
+     * @param {string} src - Script source URL
+     * @returns {Promise} - Resolves when script is loaded
+     */
     loadScript(src) {
         return new Promise((resolve, reject) => {
             // Check if script is already loaded
@@ -121,21 +99,45 @@ class PageManager {
             script.src = src;
             script.async = true;
             
-            script.onload = () => {
-                console.log(`Loaded: ${src}`);
-                resolve();
-            };
-            
-            script.onerror = (error) => {
-                console.error(`Failed to load script: ${src}`, error);
-                reject(new Error(`Failed to load ${src}`));
-            };
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error(`Failed to load ${src}`));
             
             document.head.appendChild(script);
         });
     }
 
+    /**
+     * Initialize the space background for the main page
+     * Lazily loads Three.js and the SpaceEnvironment script
+     */
+    async initializeSpaceBackground() {
+        try {
+            // Load Three.js library
+            await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js');
+            
+            // Load SpaceEnvironment script
+            await this.loadScript('src/components/simulation/solarsystem/SpaceEnvironment.js');
+            
+            // Create and initialize the space environment if it doesn't exist
+            if (!window.spaceEnvironment) {
+                window.spaceEnvironment = new SpaceEnvironment();
+                await window.spaceEnvironment.init();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error("Failed to initialize space environment:", error);
+            return false;
+        }
+    }
+
+    /**
+     * Navigate to a specific page
+     * @param {string} pageName - Name of the page to navigate to
+     * @param {boolean} updateHistory - Whether to update browser history
+     */
     async navigateToPage(pageName, updateHistory = true) {
+        // Skip if already transitioning, invalid page, or same page
         if (this.isTransitioning || !this.pages[pageName] || pageName === this.currentPage) {
             return;
         }
@@ -165,11 +167,15 @@ class PageManager {
         } catch (error) {
             console.error('Navigation error:', error);
             this.handleNavigationError();
+        } finally {
+            this.isTransitioning = false;
         }
-    
-        this.isTransitioning = false;
     }
 
+    /**
+     * Set body class based on current page
+     * @param {string} pageName - Current page name
+     */
     setPageBodyClass(pageName) {
         // Remove all page-specific classes
         document.body.classList.forEach(className => {
@@ -181,15 +187,19 @@ class PageManager {
         // Add current page class
         document.body.classList.add(`page-${pageName}`);
         
-        // If we're on the main page, make sure space environment is visible
+        // If on main page, initialize space environment when needed
         if (pageName === 'main') {
-            this.enhanceSpaceBackground();
+            this.initializeSpaceBackground().then(() => {
+                this.enhanceSpaceBackground();
+            });
         }
     }
 
+    /**
+     * Make the space background visible
+     */
     enhanceSpaceBackground() {
-        if (window.spaceEnvironment && window.spaceEnvironment.initialized) {
-            // Make sure it's visible
+        if (window.spaceEnvironment?.initialized) {
             const container = document.getElementById('solar-system-container');
             if (container) {
                 container.style.opacity = '1';
@@ -198,15 +208,21 @@ class PageManager {
         }
     }
 
+    /**
+     * Begin page transition animation
+     */
     async startPageTransition() {
-        if (this.contentContainer) {
-            this.contentContainer.style.opacity = '0';
-            this.contentContainer.style.transform = 'translateY(20px)';
-            return new Promise(resolve => setTimeout(resolve, 300));
-        }
-        return Promise.resolve();
+        if (!this.contentContainer) return Promise.resolve();
+        
+        this.contentContainer.style.opacity = '0';
+        this.contentContainer.style.transform = 'translateY(20px)';
+        return new Promise(resolve => setTimeout(resolve, 300));
     }
 
+    /**
+     * Load page content and render it
+     * @param {string} pageName - Page name to load
+     */
     async loadAndRenderPage(pageName) {
         const pageConfig = this.pages[pageName];
         let content;
@@ -219,7 +235,7 @@ class PageManager {
             try {
                 const response = await fetch(pageConfig.path);
                 if (!response.ok) {
-                    throw new Error(`Failed to load ${pageName} page`);
+                    throw new Error(`Failed to load ${pageName} page (${response.status})`);
                 }
                 content = await response.text();
                 this.pageCache.set(pageName, content);
@@ -234,17 +250,26 @@ class PageManager {
             this.contentContainer.innerHTML = content;
             // Initialize page-specific functionality
             if (pageConfig.init) {
-                await pageConfig.init();
+                try {
+                    await pageConfig.init();
+                } catch (error) {
+                    console.error(`Error initializing ${pageName} page:`, error);
+                }
             }
         }
     }
 
+    /**
+     * Update UI state after page navigation
+     * @param {string} pageName - Current page name
+     */
     updateUIState(pageName) {
         // Update active navigation state
         document.querySelectorAll('.main-nav a').forEach(link => {
-            const href = link.getAttribute('href').substring(1);
-            link.classList.toggle('active', href === pageName);
-            link.setAttribute('aria-current', href === pageName ? 'page' : 'false');
+            const href = link.getAttribute('href')?.substring(1);
+            const isActive = href === pageName;
+            link.classList.toggle('active', isActive);
+            link.setAttribute('aria-current', isActive ? 'page' : 'false');
         });
 
         // Update document title
@@ -253,28 +278,39 @@ class PageManager {
         this.currentPage = pageName;
     }
 
+    /**
+     * Complete page transition animation
+     */
     async completePageTransition() {
-        if (this.contentContainer) {
-            this.contentContainer.style.opacity = '1';
-            this.contentContainer.style.transform = 'translateY(0)';
-            return new Promise(resolve => setTimeout(resolve, 300));
-        }
-        return Promise.resolve();
+        if (!this.contentContainer) return Promise.resolve();
+        
+        this.contentContainer.style.opacity = '1';
+        this.contentContainer.style.transform = 'translateY(0)';
+        return new Promise(resolve => setTimeout(resolve, 300));
     }
 
+    /**
+     * Handle navigation errors
+     */
     handleNavigationError() {
-        if (this.contentContainer) {
-            this.contentContainer.innerHTML = `
-                <div class="error-container">
-                    <h2>Navigation Error</h2>
-                    <p>Failed to load the requested page. Please try again.</p>
-                    <button onclick="window.location.reload()">Reload Page</button>
-                </div>
-            `;
-        }
+        if (!this.contentContainer) return;
+        
+        this.contentContainer.innerHTML = `
+            <div class="error-container">
+                <h2>Navigation Error</h2>
+                <p>Failed to load the requested page. Please try again.</p>
+                <button onclick="window.location.reload()">Reload Page</button>
+            </div>
+        `;
     }
 
+    // ----------------
     // Page-specific initialization methods
+    // ----------------
+
+    /**
+     * Initialize main page functionality
+     */
     async initMainPage() {
         console.log('Initializing main page');
         
@@ -288,6 +324,9 @@ class PageManager {
         }
     }
 
+    /**
+     * Initialize planet selector functionality
+     */
     initPlanetSelector() {
         const selector = document.querySelector('.planet-selector');
         const leftBtn = document.querySelector('.scroll-indicator.left');
@@ -295,47 +334,43 @@ class PageManager {
         
         if (!selector || !leftBtn || !rightBtn) return;
         
-        // Scroll left
+        // Scroll left/right buttons
         leftBtn.addEventListener('click', () => {
             selector.scrollBy({ left: -200, behavior: 'smooth' });
         });
         
-        // Scroll right
         rightBtn.addEventListener('click', () => {
             selector.scrollBy({ left: 200, behavior: 'smooth' });
         });
         
-        // Update scroll buttons visibility based on scroll position
+        // Update scroll buttons visibility
         const updateScrollButtons = () => {
             leftBtn.style.opacity = selector.scrollLeft > 0 ? '1' : '0.3';
             rightBtn.style.opacity = 
                 selector.scrollLeft < selector.scrollWidth - selector.clientWidth - 10 ? '1' : '0.3';
         };
         
-        // Update on scroll
+        // Set up event listeners
         selector.addEventListener('scroll', updateScrollButtons);
+        window.addEventListener('resize', updateScrollButtons);
         
         // Initial update
         updateScrollButtons();
         
-        // Update on window resize
-        window.addEventListener('resize', updateScrollButtons);
-        
-        // Add planet selection functionality
+        // Planet selection functionality
         const planetButtons = document.querySelectorAll('.planet-btn');
         planetButtons.forEach(button => {
             button.addEventListener('click', () => {
-                // Remove active class from all buttons
+                // Update active state
                 planetButtons.forEach(btn => {
                     btn.classList.remove('active');
                     btn.setAttribute('aria-selected', 'false');
                 });
                 
-                // Add active class to clicked button
                 button.classList.add('active');
                 button.setAttribute('aria-selected', 'true');
                 
-                // Get planet name and update info panel
+                // Update planet info
                 const planetName = button.getAttribute('data-planet');
                 this.updatePlanetInfo(planetName);
             });
@@ -347,8 +382,12 @@ class PageManager {
         }
     }
     
+    /**
+     * Update planet information panel with selected planet data
+     * @param {string} planetName - Name of the selected planet
+     */
     updatePlanetInfo(planetName) {
-        // Example planet data - in a real app, this would come from an API or data file
+        // Planet data
         const planetData = {
             Sun: {
                 description: "The star at the center of our Solar System.",
@@ -406,69 +445,67 @@ class PageManager {
             }
         };
         
-        // Get planet data
         const planet = planetData[planetName];
         if (!planet) return;
         
-        // Update planet info panel
-        document.getElementById('planet-name').textContent = planetName;
-        document.getElementById('planet-description').textContent = planet.description;
-        document.getElementById('planet-diameter').textContent = planet.diameter;
-        document.getElementById('planet-distance').textContent = planet.distance;
-        document.getElementById('planet-orbital-period').textContent = planet.orbitalPeriod;
+        // Update planet info panel elements if they exist
+        const nameEl = document.getElementById('planet-name');
+        const descEl = document.getElementById('planet-description');
+        const diameterEl = document.getElementById('planet-diameter');
+        const distanceEl = document.getElementById('planet-distance');
+        const orbitalEl = document.getElementById('planet-orbital-period');
+        
+        if (nameEl) nameEl.textContent = planetName;
+        if (descEl) descEl.textContent = planet.description;
+        if (diameterEl) diameterEl.textContent = planet.diameter;
+        if (distanceEl) distanceEl.textContent = planet.distance;
+        if (orbitalEl) orbitalEl.textContent = planet.orbitalPeriod;
     }
 
+    /**
+     * Initialize projects page functionality
+     */
     async initProjectsPage() {
         console.log('Initializing projects page');
         
-        // Add event listeners to project navigation buttons
+        // Project navigation
         const projectNavButtons = document.querySelectorAll('.side-nav .nav-button');
-        const projectCards = document.querySelectorAll('.project-card');
-        
         projectNavButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 
-                // Remove active class from all buttons
+                // Update active state
                 projectNavButtons.forEach(btn => {
                     btn.classList.remove('active');
                     btn.setAttribute('aria-current', 'false');
                 });
                 
-                // Add active class to clicked button
                 button.classList.add('active');
                 button.setAttribute('aria-current', 'true');
                 
-                // Get the target project ID from the href attribute
+                // Scroll to target project
                 const targetId = button.getAttribute('href');
-                
-                // Find the target project element
                 const targetProject = document.querySelector(targetId);
                 
                 if (targetProject) {
-                    // Smooth scroll to the project
-                    targetProject.scrollIntoView({ 
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    targetProject.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     
-                    // Add a highlight effect to the target project
+                    // Add highlight effect
                     targetProject.classList.add('highlight');
-                    setTimeout(() => {
-                        targetProject.classList.remove('highlight');
-                    }, 1000);
+                    setTimeout(() => targetProject.classList.remove('highlight'), 1000);
                 }
             });
         });
 
-        // Add click events to project cards for details
+        // Project cards interaction
+        const projectCards = document.querySelectorAll('.project-card');
         projectCards.forEach(card => {
+            // Click event
             card.addEventListener('click', () => {
-                // In a real app, this would show project details
                 console.log(`Project clicked: ${card.id}`);
             });
             
-            // Add keyboard accessibility
+            // Keyboard accessibility
             card.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -478,66 +515,73 @@ class PageManager {
         });
     }
 
+    /**
+     * Initialize about page functionality
+     */
     async initAboutPage() {
         console.log('Initializing about page');
-        // Simple initialization for about page
+        // No specific initialization needed
     }
 
+    /**
+     * Initialize store page functionality
+     */
     async initStorePage() {
         console.log('Initializing store page');
         
-        // Add event listeners to filter buttons if they exist
+        // Product filtering
         const filterButtons = document.querySelectorAll('.filter-btn');
         if (filterButtons.length > 0) {
             filterButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    // Remove active class from all buttons
+                    // Update active state
                     filterButtons.forEach(btn => btn.classList.remove('active'));
-                    
-                    // Add active class to clicked button
                     button.classList.add('active');
                     
-                    // Get category
+                    // Filter products by category
                     const category = button.getAttribute('data-category');
-                    
-                    // Filter products
                     this.filterProducts(category);
                 });
             });
+            
+            // Filter all products by default
+            const allButton = document.querySelector('.filter-btn[data-category="all"]');
+            if (allButton) allButton.click();
         }
     }
     
+    /**
+     * Filter products by category
+     * @param {string} category - Category to filter by
+     */
     filterProducts(category) {
         const products = document.querySelectorAll('.product-card');
         
         products.forEach(product => {
-            if (category === 'all' || product.getAttribute('data-category') === category) {
-                product.style.display = 'block';
-            } else {
-                product.style.display = 'none';
-            }
+            const display = (category === 'all' || product.getAttribute('data-category') === category) 
+                ? 'block' : 'none';
+            product.style.display = display;
         });
     }
 
+    /**
+     * Initialize contact page with form validation
+     */
     async initContactPage() {
         console.log('Initializing contact page');
         
         // Add form validation if contact form exists
         const contactForm = document.getElementById('contact-form');
-        if (contactForm) {
-            contactForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                // Validate form
-                if (this.validateContactForm(contactForm)) {
-                    // In a real app, this would send the form data
-                    console.log('Form submitted successfully');
-                    contactForm.reset();
-                    
-                    // Show success message
-                    const formGroups = contactForm.querySelectorAll('.form-group');
-                    const submitButton = contactForm.querySelector('.submit-button');
-                    
+        if (!contactForm) return;
+        
+        contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Validate and submit form
+            if (this.validateContactForm(contactForm)) {
+                // Show success message
+                const submitButton = contactForm.querySelector('.submit-button');
+                if (submitButton) {
                     submitButton.innerHTML = '<span>Message Sent!</span>';
                     submitButton.classList.add('success');
                     
@@ -546,25 +590,30 @@ class PageManager {
                         submitButton.classList.remove('success');
                     }, 3000);
                 }
-            });
-            
-            // Add input validation
-            const inputs = contactForm.querySelectorAll('input, textarea');
-            inputs.forEach(input => {
-                input.addEventListener('blur', () => {
-                    this.validateInput(input);
-                });
                 
-                input.addEventListener('input', () => {
-                    const errorElement = document.getElementById(`${input.id}-error`);
-                    if (errorElement) {
-                        errorElement.textContent = '';
-                    }
-                });
+                contactForm.reset();
+            }
+        });
+        
+        // Input validation events
+        const inputs = contactForm.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            // Validate on blur
+            input.addEventListener('blur', () => this.validateInput(input));
+            
+            // Clear error on input
+            input.addEventListener('input', () => {
+                const errorElement = document.getElementById(`${input.id}-error`);
+                if (errorElement) errorElement.textContent = '';
             });
-        }
+        });
     }
     
+    /**
+     * Validate contact form
+     * @param {HTMLFormElement} form - The contact form element
+     * @returns {boolean} - Whether the form is valid
+     */
     validateContactForm(form) {
         const nameInput = form.querySelector('#name');
         const emailInput = form.querySelector('#email');
@@ -572,26 +621,27 @@ class PageManager {
         
         let isValid = true;
         
-        if (!this.validateInput(nameInput)) isValid = false;
-        if (!this.validateInput(emailInput)) isValid = false;
-        if (!this.validateInput(messageInput)) isValid = false;
+        if (nameInput && !this.validateInput(nameInput)) isValid = false;
+        if (emailInput && !this.validateInput(emailInput)) isValid = false;
+        if (messageInput && !this.validateInput(messageInput)) isValid = false;
         
         return isValid;
     }
     
+    /**
+     * Validate a form input
+     * @param {HTMLInputElement|HTMLTextAreaElement} input - Input element to validate
+     * @returns {boolean} - Whether the input is valid
+     */
     validateInput(input) {
         const errorElement = document.getElementById(`${input.id}-error`);
         
         // Reset error
-        if (errorElement) {
-            errorElement.textContent = '';
-        }
+        if (errorElement) errorElement.textContent = '';
         
         // Check required
         if (input.hasAttribute('required') && !input.value.trim()) {
-            if (errorElement) {
-                errorElement.textContent = 'This field is required';
-            }
+            if (errorElement) errorElement.textContent = 'This field is required';
             return false;
         }
         
@@ -599,9 +649,7 @@ class PageManager {
         if (input.type === 'email' && input.value.trim()) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(input.value.trim())) {
-                if (errorElement) {
-                    errorElement.textContent = 'Please enter a valid email address';
-                }
+                if (errorElement) errorElement.textContent = 'Please enter a valid email address';
                 return false;
             }
         }

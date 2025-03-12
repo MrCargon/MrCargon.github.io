@@ -159,6 +159,8 @@ class PageManager {
      * Handle initial routing when the page first loads
      */
     async handleInitialRoute() {
+        // Initialize space background first
+        await this.initializeSpaceBackground();
         // Get the initial page from URL hash or default to about
         const hash = window.location.hash.substring(1) || 'about';
         await this.navigateToPage(hash, false);

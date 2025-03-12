@@ -71,22 +71,7 @@ class PageManager {
     initializeHeaderManager() {
         // Check if HeaderManager class is available
         if (window.HeaderManager) {
-            // Use existing instance if available or create a new one
-            if (window.headerManager) {
-                this.headerManager = window.headerManager;
-                
-                // Ensure the header manager is properly initialized with the DOM elements
-                if (typeof this.headerManager.reinitialize === 'function') {
-                    // Allow time for DOM elements to be fully rendered
-                    setTimeout(() => {
-                        this.headerManager.reinitialize();
-                    }, 100);
-                }
-            } else {
-                // Create new instance only if needed
-                this.headerManager = new HeaderManager();
-                window.headerManager = this.headerManager;
-            }
+            this.headerManager = new HeaderManager();
             console.log('HeaderManager initialized');
         }
     }
@@ -159,6 +144,8 @@ class PageManager {
      * Handle initial routing when the page first loads
      */
     async handleInitialRoute() {
+        // Initialize space background first
+        await this.initializeSpaceBackground();
         // Get the initial page from URL hash or default to about
         const hash = window.location.hash.substring(1) || 'about';
         await this.navigateToPage(hash, false);

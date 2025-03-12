@@ -1,5 +1,5 @@
 /**
- * Header Component Styles
+ * Header Component Styles - Fixed mobile menu
  */
 
 /* ------ Header Container ------ */
@@ -11,7 +11,6 @@
     --header-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     --header-shadow-scrolled: 0 10px 30px rgba(0, 0, 0, 0.4);
     --header-transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-    --menu-transition: transform 0.3s ease, opacity 0.3s ease;
     
     max-width: 900px;
     width: 90%;
@@ -23,11 +22,10 @@
     padding: var(--spacing-md);
     position: sticky;
     top: 20px;
-    z-index: 1000; /* Ensures header is above other content */
+    z-index: 1000; /* Increased z-index to ensure header is above other content */
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: var(--header-transition);
-    will-change: background-color, border-color, box-shadow; /* Optimize for animations */
 }
 
 /* Scrolled state */
@@ -67,7 +65,7 @@
 .site-branding {
     display: flex;
     align-items: center;
-    z-index: 1010; /* Keeps above the mobile menu */
+    z-index: 1010; /* Above the mobile menu */
 }
 
 .logo {
@@ -82,14 +80,6 @@
     flex-grow: 1;
     display: flex;
     justify-content: center;
-    transition: opacity 0.2s ease; /* Smoother transition for mobile menu */
-    will-change: opacity; /* Performance optimization */
-}
-
-/* Add animation class for mobile menu */
-.nav-container.nav-visible {
-    opacity: 1;
-    transform: translateY(0);
 }
 
 /* ------ Mobile Menu Button ------ */
@@ -105,7 +95,6 @@
     margin-left: auto;
     color: var(--text-color);
     position: relative;
-    transition: background-color 0.2s ease;
 }
 
 .mobile-menu-toggle:hover {
@@ -130,7 +119,6 @@
     background-color: var(--text-color);
     border-radius: 1px;
     transition: transform 0.3s ease, opacity 0.3s ease;
-    will-change: transform, opacity; /* Performance optimization */
 }
 
 /* Active state for hamburger icon */
@@ -287,15 +275,6 @@
         display: none; /* Hidden by default */
         width: 100%;
         margin-top: 15px;
-        opacity: 0;
-        transform: translateY(-10px);
-        transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-    
-    /* Animation class for mobile menu */
-    .nav-container.nav-visible {
-        opacity: 1;
-        transform: translateY(0);
     }
     
     /* Show navigation when mobile menu is active */
@@ -378,10 +357,8 @@
     .nav-link,
     .nav-link::after,
     .mobile-menu-toggle .bar,
-    .main-nav,
-    .nav-container {
+    .main-nav {
         transition: none !important;
-        animation: none !important;
     }
     
     @keyframes fadeIn {
@@ -437,8 +414,6 @@
 @media (min-width: 769px) {
     .nav-container {
         display: flex !important;
-        opacity: 1 !important;
-        transform: none !important;
     }
 }
 

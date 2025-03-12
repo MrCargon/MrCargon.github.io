@@ -4,8 +4,8 @@
 
 /* ------ Header Container ------ */
 .main-header {
-    --header-bg: rgba(20, 20, 20, 0.95);
-    --header-bg-scrolled: rgba(15, 15, 15, 0.98);
+    --header-bg: rgba(20, 20, 20, 0.45);
+    --header-bg-scrolled: rgba(15, 15, 15, 0.68);
     --header-border: rgba(255, 165, 0, 0.2);
     --header-border-scrolled: rgba(255, 165, 0, 0.3);
     --header-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
@@ -22,9 +22,15 @@
     padding: var(--spacing-md);
     position: sticky;
     top: 20px;
+<<<<<<< HEAD
     z-index: 1000; /* Increased z-index to ensure header is above other content */
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+=======
+    z-index: 1000; /* Ensures header is above other content */
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+>>>>>>> Main_Public_Page
     transition: var(--header-transition);
 }
 

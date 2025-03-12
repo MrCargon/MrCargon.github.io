@@ -22,15 +22,9 @@
     padding: var(--spacing-md);
     position: sticky;
     top: 20px;
-<<<<<<< HEAD
     z-index: 1000; /* Increased z-index to ensure header is above other content */
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-=======
-    z-index: 1000; /* Ensures header is above other content */
-    backdrop-filter: blur(1px);
-    -webkit-backdrop-filter: blur(1px);
->>>>>>> Main_Public_Page
     transition: var(--header-transition);
 }
 

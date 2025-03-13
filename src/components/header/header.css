@@ -412,6 +412,9 @@
 
 /* Ensure menu is always visible above a certain width */
 @media (min-width: 769px) {
+    .logo {
+        display: none;
+    }
     .nav-container {
         display: flex !important;
     }

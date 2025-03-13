@@ -31,8 +31,39 @@ class HeaderManager {
         
         // Setup resize handler for responsive adjustments
         this.setupResizeHandler();
+        
+        // Set initial page title based on URL or default active link
+        this.setInitialPageTitle();
+        
+        // Listen for hash changes to update active link and logo text
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash;
+            const pageName = hash ? hash.substring(1) : '';
+            if (pageName) {
+                this.updateActiveLink(pageName);
+            }
+        });
     }
     
+    setInitialPageTitle() {
+        // Try to get current page from URL hash
+        const hash = window.location.hash;
+        let pageName = hash ? hash.substring(1) : '';
+        
+        // If no hash in URL, check for active link
+        if (!pageName) {
+            const activeLink = document.querySelector('.nav-link.active');
+            if (activeLink) {
+                pageName = activeLink.getAttribute('href')?.substring(1);
+            }
+        }
+        
+        // Update active link and page title
+        if (pageName) {
+            this.updateActiveLink(pageName);
+        }
+    }
+
     /**
      * Allow reinitialization of header elements after DOM changes
      */
@@ -164,6 +195,9 @@ class HeaderManager {
     updateActiveLink(pageName) {
         if (!this.navLinks.length) return;
         
+        let activePageName = 'MrCargo'; // Default
+        let activeFound = false;
+        
         this.navLinks.forEach(link => {
             const href = link.getAttribute('href')?.substring(1);
             const isActive = href === pageName;
@@ -171,9 +205,26 @@ class HeaderManager {
             // Skip disabled links
             if (link.classList.contains('disabled')) return;
             
+            // Update active state
             link.classList.toggle('active', isActive);
             link.setAttribute('aria-current', isActive ? 'page' : 'false');
+            
+            // Get the page name from the active link
+            if (isActive) {
+                activeFound = true;
+                // Get the text content of the span inside the link (just the page name, not the badges)
+                const spanText = link.querySelector('span:first-child');
+                if (spanText) {
+                    activePageName = spanText.textContent.trim();
+                }
+            }
         });
+        
+        // Update the logo text with the current page name
+        const logoElement = document.querySelector('.logo');
+        if (logoElement) {
+            logoElement.textContent = activeFound ? activePageName : 'MrCargo';
+        }
         
         // Close mobile menu after navigation on mobile devices
         if (window.innerWidth <= 768) {

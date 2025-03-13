@@ -242,7 +242,11 @@
     }
     
     .main-nav ul {
-        gap: var(--spacing-lg);
+        gap: var(--spacing-md); /* Reduce gap between menu items */
+    }
+
+    .nav-link {
+        padding: var(--spacing-md) var(--spacing-md); /* Reduce padding on links */
     }
 }
 

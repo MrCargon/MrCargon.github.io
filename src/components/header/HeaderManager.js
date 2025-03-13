@@ -1,7 +1,7 @@
 /**
  * HeaderManager - Manages the header component functionality
  * Handles mobile menu, scrolling effects, and active link management
- * @version 1.0.0
+ * @version 1.1.0
  */
 class HeaderManager {
     /**
@@ -14,6 +14,18 @@ class HeaderManager {
         this.mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
         this.navContainer = document.querySelector('.nav-container');
         this.navLinks = document.querySelectorAll('.main-nav a');
+        this.logoElement = document.querySelector('.logo');
+        
+        // Event handler bindings to ensure proper 'this' context
+        this._handleDocumentClick = this._handleDocumentClick.bind(this);
+        this._handleKeydown = this._handleKeydown.bind(this);
+        this._handleScroll = this._handleScroll.bind(this);
+        this._handleResize = this._handleResize.bind(this);
+        this._handleHashChange = this._handleHashChange.bind(this);
+        
+        // State variables
+        this.scrollTicking = false;
+        this.resizeTimer = null;
         
         // Initialize header functionality
         this.init();
@@ -23,6 +35,8 @@ class HeaderManager {
      * Initialize the HeaderManager
      */
     init() {
+        if (!this.header) return;
+        
         // Setup mobile menu toggle
         this.setupMobileMenu();
         
@@ -36,15 +50,23 @@ class HeaderManager {
         this.setInitialPageTitle();
         
         // Listen for hash changes to update active link and logo text
-        window.addEventListener('hashchange', () => {
-            const hash = window.location.hash;
-            const pageName = hash ? hash.substring(1) : '';
-            if (pageName) {
-                this.updateActiveLink(pageName);
-            }
-        });
+        window.addEventListener('hashchange', this._handleHashChange);
     }
     
+    /**
+     * Handle hash change events
+     */
+    _handleHashChange() {
+        const hash = window.location.hash;
+        const pageName = hash ? hash.substring(1) : '';
+        if (pageName) {
+            this.updateActiveLink(pageName);
+        }
+    }
+    
+    /**
+     * Set the initial page title based on URL or active link
+     */
     setInitialPageTitle() {
         // Try to get current page from URL hash
         const hash = window.location.hash;
@@ -54,7 +76,8 @@ class HeaderManager {
         if (!pageName) {
             const activeLink = document.querySelector('.nav-link.active');
             if (activeLink) {
-                pageName = activeLink.getAttribute('href')?.substring(1);
+                const href = activeLink.getAttribute('href');
+                pageName = href ? href.substring(1) : '';
             }
         }
         
@@ -68,15 +91,122 @@ class HeaderManager {
      * Allow reinitialization of header elements after DOM changes
      */
     reinitialize() {
+        // Remove existing event listeners to prevent duplicates
+        this.removeEventListeners();
+        
         // Re-select DOM elements in case they've changed
         this.header = document.querySelector('.main-header');
         this.headerContent = document.querySelector('.header-content');
         this.mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
         this.navContainer = document.querySelector('.nav-container');
         this.navLinks = document.querySelectorAll('.main-nav a');
+        this.logoElement = document.querySelector('.logo');
         
         // Re-initialize functionality
         this.init();
+    }
+    
+    /**
+     * Remove all event listeners
+     */
+    removeEventListeners() {
+        document.removeEventListener('click', this._handleDocumentClick);
+        document.removeEventListener('keydown', this._handleKeydown);
+        window.removeEventListener('scroll', this._handleScroll);
+        window.removeEventListener('resize', this._handleResize);
+        window.removeEventListener('hashchange', this._handleHashChange);
+        
+        if (this.mobileMenuToggle) {
+            this.mobileMenuToggle.removeEventListener('click', this._handleMobileMenuToggle);
+        }
+    }
+    
+    /**
+     * Handle mobile menu toggle click
+     * @param {Event} event - Click event
+     */
+    _handleMobileMenuToggle = (event) => {
+        if (!this.mobileMenuToggle) return;
+        
+        const isExpanded = this.mobileMenuToggle.getAttribute('aria-expanded') === 'true';
+        
+        // Toggle expanded state
+        this.mobileMenuToggle.setAttribute('aria-expanded', !isExpanded);
+        
+        // Toggle menu active class
+        this.headerContent.classList.toggle('menu-active');
+        
+        // Toggle visibility class on nav container
+        if (this.navContainer) {
+            this.navContainer.classList.toggle('nav-visible');
+        }
+        
+        // Announce menu state for screen readers
+        const menuState = !isExpanded ? 'opened' : 'closed';
+        this.mobileMenuToggle.setAttribute('aria-label', `Menu ${menuState}`);
+    }
+    
+    /**
+     * Handle document click for closing menu when clicking outside
+     * @param {Event} event - Click event
+     */
+    _handleDocumentClick(event) {
+        // Skip if menu is not open or if clicking inside the header
+        if (
+            !this.headerContent.classList.contains('menu-active') ||
+            this.header.contains(event.target)
+        ) {
+            return;
+        }
+        
+        // Close the menu
+        this.closeMobileMenu();
+    }
+    
+    /**
+     * Handle keydown events for accessibility
+     * @param {KeyboardEvent} event - Keydown event
+     */
+    _handleKeydown(event) {
+        if (
+            event.key === 'Escape' && 
+            this.headerContent.classList.contains('menu-active')
+        ) {
+            this.closeMobileMenu();
+            this.mobileMenuToggle.focus(); // Return focus to toggle button
+        }
+    }
+    
+    /**
+     * Throttled scroll handler
+     */
+    _handleScroll() {
+        if (!this.scrollTicking) {
+            window.requestAnimationFrame(() => {
+                const currentScrollY = window.scrollY;
+                
+                // Add scrolled class when page is scrolled
+                this.header.classList.toggle('scrolled', currentScrollY > 50);
+                
+                // Reset ticking state
+                this.scrollTicking = false;
+            });
+            
+            this.scrollTicking = true;
+        }
+    }
+    
+    /**
+     * Debounced resize handler
+     */
+    _handleResize() {
+        clearTimeout(this.resizeTimer);
+        this.resizeTimer = setTimeout(() => {
+            // Reset mobile menu on desktop view
+            if (window.innerWidth > 768 && this.headerContent.classList.contains('menu-active')) {
+                this.closeMobileMenu();
+            }
+        }, 250);
     }
     
     /**
@@ -85,57 +215,14 @@ class HeaderManager {
     setupMobileMenu() {
         if (!this.mobileMenuToggle) return;
         
-        this.mobileMenuToggle.addEventListener('click', () => {
-            const isExpanded = this.mobileMenuToggle.getAttribute('aria-expanded') === 'true';
-            
-            // Toggle expanded state
-            this.mobileMenuToggle.setAttribute('aria-expanded', !isExpanded);
-            
-            // Toggle menu active class
-            this.headerContent.classList.toggle('menu-active');
-            
-            // Toggle visibility class on nav container
-            if (this.navContainer) {
-                this.navContainer.classList.toggle('nav-visible');
-            }
-            
-            // Announce menu state for screen readers
-            const menuState = !isExpanded ? 'opened' : 'closed';
-            this.mobileMenuToggle.setAttribute('aria-label', `Menu ${menuState}`);
-        });
+        // Add click event listener to mobile menu toggle
+        this.mobileMenuToggle.addEventListener('click', this._handleMobileMenuToggle);
         
-        // Close menu when clicking outside
-        document.addEventListener('click', (event) => {
-            // Skip if menu is not open or if clicking inside the header
-            if (
-                !this.headerContent.classList.contains('menu-active') ||
-                this.header.contains(event.target)
-            ) {
-                return;
-            }
-            
-            // Close the menu
-            this.mobileMenuToggle.setAttribute('aria-expanded', 'false');
-            this.headerContent.classList.remove('menu-active');
-            if (this.navContainer) {
-                this.navContainer.classList.remove('nav-visible');
-            }
-        });
+        // Add document click listener to close menu when clicking outside
+        document.addEventListener('click', this._handleDocumentClick);
         
-        // Handle Escape key to close menu
-        document.addEventListener('keydown', (event) => {
-            if (
-                event.key === 'Escape' && 
-                this.headerContent.classList.contains('menu-active')
-            ) {
-                this.mobileMenuToggle.setAttribute('aria-expanded', 'false');
-                this.headerContent.classList.remove('menu-active');
-                if (this.navContainer) {
-                    this.navContainer.classList.remove('nav-visible');
-                }
-                this.mobileMenuToggle.focus(); // Return focus to toggle button
-            }
-        });
+        // Add keydown listener for Escape key
+        document.addEventListener('keydown', this._handleKeydown);
     }
     
     /**
@@ -144,48 +231,18 @@ class HeaderManager {
     setupScrollEffects() {
         if (!this.header) return;
         
-        // Debounced scroll handler using requestAnimationFrame for performance
-        let ticking = false;
-        let lastScrollY = window.scrollY;
+        // Add scroll event listener
+        window.addEventListener('scroll', this._handleScroll);
         
-        window.addEventListener('scroll', () => {
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    const currentScrollY = window.scrollY;
-                    
-                    // Add scrolled class when page is scrolled
-                    this.header.classList.toggle('scrolled', currentScrollY > 50);
-                    
-                    // Reset ticking state
-                    ticking = false;
-                    lastScrollY = currentScrollY;
-                });
-                
-                ticking = true;
-            }
-        });
+        // Initial scroll check
+        this._handleScroll();
     }
     
     /**
      * Setup resize handler for responsive adjustments
      */
     setupResizeHandler() {
-        // Debounced resize handler
-        let resizeTimer;
-        
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                // Reset mobile menu on desktop view
-                if (window.innerWidth > 768 && this.headerContent.classList.contains('menu-active')) {
-                    this.mobileMenuToggle.setAttribute('aria-expanded', 'false');
-                    this.headerContent.classList.remove('menu-active');
-                    if (this.navContainer) {
-                        this.navContainer.classList.remove('nav-visible');
-                    }
-                }
-            }, 250);
-        });
+        window.addEventListener('resize', this._handleResize);
     }
     
     /**
@@ -199,8 +256,9 @@ class HeaderManager {
         let activeFound = false;
         
         this.navLinks.forEach(link => {
-            const href = link.getAttribute('href')?.substring(1);
-            const isActive = href === pageName;
+            const href = link.getAttribute('href');
+            const linkPageName = href ? href.substring(1) : '';
+            const isActive = linkPageName === pageName;
             
             // Skip disabled links
             if (link.classList.contains('disabled')) return;
@@ -221,9 +279,8 @@ class HeaderManager {
         });
         
         // Update the logo text with the current page name
-        const logoElement = document.querySelector('.logo');
-        if (logoElement) {
-            logoElement.textContent = activeFound ? activePageName : 'MrCargo';
+        if (this.logoElement) {
+            this.logoElement.textContent = activeFound ? activePageName : 'MrCargo';
         }
         
         // Close mobile menu after navigation on mobile devices
@@ -246,6 +303,24 @@ class HeaderManager {
                 this.navContainer.classList.remove('nav-visible');
             }
         }
+    }
+    
+    /**
+     * Clean up resources when instance is no longer needed
+     */
+    destroy() {
+        this.removeEventListeners();
+        
+        // Clear any timers
+        clearTimeout(this.resizeTimer);
+        
+        // Reset references
+        this.header = null;
+        this.headerContent = null;
+        this.mobileMenuToggle = null;
+        this.navContainer = null;
+        this.navLinks = null;
+        this.logoElement = null;
     }
 }
 

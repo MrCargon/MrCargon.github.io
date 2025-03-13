@@ -22,7 +22,7 @@
     padding: var(--spacing-md);
     position: sticky;
     top: 20px;
-    z-index: 1000; /* Increased z-index to ensure header is above other content */
+    z-index: 1000;
     backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
     transition: var(--header-transition);
@@ -57,15 +57,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: relative; /* Required for absolute positioning of mobile menu */
-    flex-wrap: wrap; /* Important for mobile layout */
+    position: relative;
+    flex-wrap: wrap;
 }
 
 /* Site branding/logo */
 .site-branding {
     display: flex;
     align-items: center;
-    z-index: 1010; /* Above the mobile menu */
+    z-index: 1010;
 }
 
 .logo {
@@ -84,14 +84,14 @@
 
 /* ------ Mobile Menu Button ------ */
 .mobile-menu-toggle {
-    display: none; /* Hidden by default, shown on mobile */
+    display: none;
     background: transparent;
     border: none;
     width: 40px;
     height: 40px;
     cursor: pointer;
     padding: 0;
-    z-index: 1010; /* Above the mobile menu */
+    z-index: 1010;
     margin-left: auto;
     color: var(--text-color);
     position: relative;
@@ -119,6 +119,7 @@
     background-color: var(--text-color);
     border-radius: 1px;
     transition: transform 0.3s ease, opacity 0.3s ease;
+    will-change: transform, opacity;
 }
 
 /* Active state for hamburger icon */
@@ -194,6 +195,7 @@
     transition: width 0.3s ease, opacity 0.3s ease;
     transform: translateX(-50%);
     opacity: 0;
+    will-change: width, opacity;
 }
 
 .nav-link:not(.disabled):hover::after {
@@ -242,16 +244,16 @@
     }
     
     .main-nav ul {
-        gap: var(--spacing-md); /* Reduce gap between menu items */
+        gap: var(--spacing-md);
     }
 
     .nav-link {
-        padding: var(--spacing-md) var(--spacing-md); /* Reduce padding on links */
+        padding: var(--spacing-md) var(--spacing-md);
     }
 }
 
 /* Mobile Navigation */
-@media (max-width: 768px) {
+@media (max-width: 835px) {
     .main-header {
         width: 95%;
         padding: var(--spacing-sm);
@@ -266,7 +268,7 @@
     
     /* Show mobile menu button */
     .mobile-menu-toggle {
-        display: flex !important; /* Force display */
+        display: flex !important;
         align-items: center;
         justify-content: center;
         order: 2;
@@ -276,14 +278,14 @@
     .nav-container {
         flex-basis: 100%;
         order: 3;
-        display: none; /* Hidden by default */
+        display: none;
         width: 100%;
         margin-top: 15px;
     }
     
     /* Show navigation when mobile menu is active */
     .header-content.menu-active .nav-container {
-        display: block !important; /* Force display */
+        display: block !important;
     }
     
     /* Navigation styling for mobile */
@@ -414,7 +416,7 @@
     }
 }
 
-/* Ensure menu is always visible above a certain width */
+/* Ensure menu is always visible above a certain width and logo is hidden on desktop */
 @media (min-width: 769px) {
     .logo {
         display: none;

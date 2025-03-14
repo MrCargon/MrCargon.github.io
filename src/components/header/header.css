@@ -1,10 +1,9 @@
 /**
- * Header Component Styles - Fixed mobile menu with optimized performance
+ * Header Component Styles - Fixed mobile menu
  */
 
-/* ------ Header Variables & Container ------ */
+/* ------ Header Container ------ */
 .main-header {
-    /* CSS Variables for easier maintenance and theming */
     --header-bg: rgba(20, 20, 20, 0.45);
     --header-bg-scrolled: rgba(15, 15, 15, 0.68);
     --header-border: rgba(255, 165, 0, 0.2);
@@ -27,7 +26,6 @@
     backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
     transition: var(--header-transition);
-    will-change: background-color, border-color, box-shadow; /* Performance hint for browser */
 }
 
 /* Scrolled state */
@@ -82,18 +80,6 @@
     flex-grow: 1;
     display: flex;
     justify-content: center;
-    transition: opacity 0.3s ease;
-    opacity: 1;
-}
-
-/* Nav visibility class for JavaScript toggle */
-.nav-container.nav-visible {
-    display: block !important;
-    opacity: 1;
-}
-
-.header-content:not(.menu-active) .nav-container {
-    opacity: 0;
 }
 
 /* ------ Mobile Menu Button ------ */
@@ -209,6 +195,7 @@
     transition: width 0.3s ease, opacity 0.3s ease;
     transform: translateX(-50%);
     opacity: 0;
+    will-change: width, opacity;
 }
 
 .nav-link:not(.disabled):hover::after {
@@ -294,14 +281,11 @@
         display: none;
         width: 100%;
         margin-top: 15px;
-        opacity: 0;
-        transition: opacity 0.3s ease;
     }
     
     /* Show navigation when mobile menu is active */
     .header-content.menu-active .nav-container {
         display: block !important;
-        opacity: 1;
     }
     
     /* Navigation styling for mobile */
@@ -345,11 +329,6 @@
         height: 3px;
         margin: 1px 0;
         background-color: var(--primary-color);
-    }
-    
-    /* Fix for problematic range between 835px and 769px */
-    .site-branding {
-        display: flex;
     }
 }
 
@@ -437,19 +416,13 @@
     }
 }
 
-/* Desktop styles - hide logo on desktop */
-@media (min-width: 836px) {
-    .site-branding {
+/* Ensure menu is always visible above a certain width and logo is hidden on desktop */
+@media (min-width: 769px) {
+    .logo {
         display: none;
     }
-    
     .nav-container {
         display: flex !important;
-        opacity: 1 !important;
-    }
-    
-    .mobile-menu-toggle {
-        display: none !important;
     }
 }
 

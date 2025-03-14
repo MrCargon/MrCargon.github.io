@@ -1,11 +1,12 @@
 /**
  * PageManager - Single Page Application (SPA) navigation system
  * Optimized for GitHub Pages deployment with progressive enhancement
- * @version 1.1.0
+ * @version 1.2.0
  */
 class PageManager {
     /**
      * Creates a new PageManager instance
+     * @constructor
      */
     constructor() {
         // Core properties
@@ -14,6 +15,7 @@ class PageManager {
         this.currentPage = null;
         this.isTransitioning = false;
         this.headerManager = null;
+        this.boundEventHandlers = {};
         
         // Configuration - page definitions
         this.pages = {
@@ -50,6 +52,7 @@ class PageManager {
     
     /**
      * Initialize the PageManager
+     * @private
      */
     init() {
         // Set up header management
@@ -63,36 +66,70 @@ class PageManager {
         
         // Preload other pages for faster navigation
         this.preloadPages();
+        
+        // Log initialization completion
+        console.info('PageManager initialized');
     }
 
     /**
      * Initialize HeaderManager if available
+     * @private
      */
     initializeHeaderManager() {
         // Check if HeaderManager class is available
         if (window.HeaderManager) {
             this.headerManager = new HeaderManager();
-            console.log('HeaderManager initialized');
+            console.info('HeaderManager initialized');
+        } else {
+            console.warn('HeaderManager not available, using fallback navigation');
         }
     }
 
     /**
      * Set up event listeners for navigation and browser history
+     * @private
      */
     setupRouting() {
+        // Store bound event handlers for later cleanup
+        this.boundEventHandlers = {
+            handleNavigationClick: this.handleNavigationClick.bind(this),
+            handlePopState: this.handlePopState.bind(this),
+            handleKeyboardNavigation: this.handleKeyboardNavigation.bind(this)
+        };
+        
         // Use event delegation for all navigation clicks
-        document.addEventListener('click', this.handleNavigationClick.bind(this));
+        document.addEventListener('click', this.boundEventHandlers.handleNavigationClick);
     
         // Handle browser back/forward navigation
-        window.addEventListener('popstate', this.handlePopState.bind(this));
+        window.addEventListener('popstate', this.boundEventHandlers.handlePopState);
         
         // Handle keyboard navigation accessibility
-        document.addEventListener('keydown', this.handleKeyboardNavigation.bind(this));
+        document.addEventListener('keydown', this.boundEventHandlers.handleKeyboardNavigation);
+    }
+    
+    /**
+     * Clean up event listeners when instance is destroyed
+     * @public
+     */
+    destroy() {
+        // Remove event listeners
+        document.removeEventListener('click', this.boundEventHandlers.handleNavigationClick);
+        window.removeEventListener('popstate', this.boundEventHandlers.handlePopState);
+        document.removeEventListener('keydown', this.boundEventHandlers.handleKeyboardNavigation);
+        
+        // Clear any cached data
+        this.pageCache.clear();
+        
+        // Clean up other resources
+        this.cleanupCurrentPage();
+        
+        console.info('PageManager destroyed');
     }
     
     /**
      * Handle navigation click events with proper event delegation
      * @param {MouseEvent} event - Click event
+     * @private
      */
     handleNavigationClick(event) {
         const link = event.target.closest('.main-nav a');
@@ -102,7 +139,7 @@ class PageManager {
         
         // Check if the link is disabled
         if (link.classList.contains('disabled')) {
-            console.log('Navigation prevented: This feature is coming soon.');
+            console.info('Navigation prevented: This feature is coming soon.');
             return;
         }
         
@@ -113,6 +150,7 @@ class PageManager {
     /**
      * Handle browser history navigation events
      * @param {PopStateEvent} event - PopState event
+     * @private
      */
     handlePopState(event) {
         const pageName = event.state?.page || 'main';
@@ -122,6 +160,7 @@ class PageManager {
     /**
      * Handle keyboard navigation for accessibility
      * @param {KeyboardEvent} event - Keyboard event
+     * @private
      */
     handleKeyboardNavigation(event) {
         // Only handle when focused on navigation links
@@ -142,17 +181,26 @@ class PageManager {
 
     /**
      * Handle initial routing when the page first loads
+     * @private
      */
     async handleInitialRoute() {
-        // Initialize space background first
-        await this.initializeSpaceBackground();
-        // Get the initial page from URL hash or default to about
-        const hash = window.location.hash.substring(1) || 'about';
-        await this.navigateToPage(hash, false);
+        try {
+            // Initialize space background first
+            await this.initializeSpaceBackground();
+            
+            // Get the initial page from URL hash or default to about
+            const hash = window.location.hash.substring(1) || 'about';
+            await this.navigateToPage(hash, false);
+        } catch (error) {
+            console.error('Error during initial routing:', error);
+            // Try to recover by loading the about page as fallback
+            await this.navigateToPage('about', false);
+        }
     }
 
     /**
      * Preload pages for faster navigation
+     * @private
      */
     preloadPages() {
         // Use requestIdleCallback if available, or setTimeout as fallback
@@ -174,6 +222,7 @@ class PageManager {
     /**
      * Prefetch a page in the background
      * @param {string} pageName - Page to prefetch
+     * @private
      */
     async prefetchPage(pageName) {
         // Skip if already cached
@@ -190,6 +239,9 @@ class PageManager {
             
             const content = await response.text();
             this.pageCache.set(pageName, content);
+            
+            // Log prefetch success for debug purposes
+            console.debug(`Prefetched ${pageName} page`);
         } catch (error) {
             // Silently fail on prefetch - it's just an optimization
             console.debug(`Background prefetch failed for ${pageName}:`, error);
@@ -200,6 +252,7 @@ class PageManager {
      * Load a JavaScript file asynchronously
      * @param {string} src - Script source URL
      * @returns {Promise} - Resolves when script is loaded
+     * @private
      */
     loadScript(src) {
         return new Promise((resolve, reject) => {
@@ -223,6 +276,8 @@ class PageManager {
     /**
      * Initialize the space background for the main page
      * Lazily loads Three.js and the SpaceEnvironment script
+     * @returns {Promise<boolean>} - Whether initialization was successful
+     * @private
      */
     async initializeSpaceBackground() {
         try {
@@ -249,6 +304,8 @@ class PageManager {
      * Navigate to a specific page
      * @param {string} pageName - Name of the page to navigate to
      * @param {boolean} updateHistory - Whether to update browser history
+     * @returns {Promise<void>}
+     * @public
      */
     async navigateToPage(pageName, updateHistory = true) {
         // Skip if already transitioning, invalid page, or same page
@@ -284,6 +341,9 @@ class PageManager {
             
             // Trigger navigation complete event
             this.triggerEvent('navigation:complete', { page: pageName });
+            
+            // Log navigation for analytics
+            console.info(`Navigated to page: ${pageName}`);
         } catch (error) {
             console.error('Navigation error:', error);
             this.handleNavigationError();
@@ -299,19 +359,23 @@ class PageManager {
      * Trigger a custom event for extensibility
      * @param {string} name - Event name
      * @param {Object} detail - Event details
+     * @private
      */
     triggerEvent(name, detail = {}) {
+        if (!this.contentContainer) return;
+        
         const event = new CustomEvent(`pagemanager:${name}`, { 
             detail,
             bubbles: true
         });
         
-        this.contentContainer?.dispatchEvent(event);
+        this.contentContainer.dispatchEvent(event);
     }
 
     /**
      * Set body class based on current page
      * @param {string} pageName - Current page name
+     * @private
      */
     setPageBodyClass(pageName) {
         // Remove all page-specific classes
@@ -334,6 +398,7 @@ class PageManager {
 
     /**
      * Make the space background visible
+     * @private
      */
     enhanceSpaceBackground() {
         if (window.spaceEnvironment?.initialized) {
@@ -347,18 +412,26 @@ class PageManager {
 
     /**
      * Begin page transition animation
+     * @returns {Promise<void>}
+     * @private
      */
     async startPageTransition() {
         if (!this.contentContainer) return Promise.resolve();
         
+        // Apply transition effect
         this.contentContainer.style.opacity = '0';
         this.contentContainer.style.transform = 'translateY(20px)';
-        return new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Wait for animation to complete (accounting for reduced motion preferences)
+        const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 300;
+        return new Promise(resolve => setTimeout(resolve, duration));
     }
 
     /**
      * Load page content and render it
      * @param {string} pageName - Page name to load
+     * @returns {Promise<void>}
+     * @private
      */
     async loadAndRenderPage(pageName) {
         const pageConfig = this.pages[pageName];
@@ -370,10 +443,14 @@ class PageManager {
         } else {
             // Load page content
             try {
-                const response = await fetch(pageConfig.path);
+                const response = await fetch(pageConfig.path, {
+                    cache: 'force-cache' // Use cached response if available
+                });
+                
                 if (!response.ok) {
                     throw new Error(`Failed to load ${pageName} page (${response.status})`);
                 }
+                
                 content = await response.text();
                 this.pageCache.set(pageName, content);
             } catch (error) {
@@ -402,6 +479,7 @@ class PageManager {
     
     /**
      * Clean up resources from current page before loading new one
+     * @private
      */
     cleanupCurrentPage() {
         // This is a placeholder for more specific cleanup
@@ -416,11 +494,29 @@ class PageManager {
             });
             window.charts = [];
         }
+        
+        // Clean up any interval timers specific to the page
+        if (window.pageTimers && window.pageTimers.length) {
+            window.pageTimers.forEach(timer => clearInterval(timer));
+            window.pageTimers = [];
+        }
+        
+        // Clean up any timeout timers specific to the page
+        if (window.pageTimeouts && window.pageTimeouts.length) {
+            window.pageTimeouts.forEach(timeout => clearTimeout(timeout));
+            window.pageTimeouts = [];
+        }
+        
+        // Run garbage collection hint
+        if (window.gc) {
+            window.gc();
+        }
     }
 
     /**
      * Update UI state after page navigation
      * @param {string} pageName - Current page name
+     * @private
      */
     updateUIState(pageName) {
         // Update header navigation if HeaderManager exists
@@ -444,17 +540,24 @@ class PageManager {
 
     /**
      * Complete page transition animation
+     * @returns {Promise<void>}
+     * @private
      */
     async completePageTransition() {
         if (!this.contentContainer) return Promise.resolve();
         
+        // Apply transition effect
         this.contentContainer.style.opacity = '1';
         this.contentContainer.style.transform = 'translateY(0)';
-        return new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Wait for animation to complete (accounting for reduced motion preferences)
+        const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 300;
+        return new Promise(resolve => setTimeout(resolve, duration));
     }
 
     /**
      * Handle navigation errors
+     * @private
      */
     handleNavigationError() {
         if (!this.contentContainer) return;
@@ -474,9 +577,10 @@ class PageManager {
 
     /**
      * Initialize main page functionality
+     * @private
      */
     async initMainPage() {
-        console.log('Initializing main page');
+        console.info('Initializing main page');
         
         // Make sure space environment is visible
         this.enhanceSpaceBackground();
@@ -490,6 +594,7 @@ class PageManager {
 
     /**
      * Initialize planet selector functionality
+     * @private
      */
     initPlanetSelector() {
         const selector = document.querySelector('.planet-selector');
@@ -551,6 +656,7 @@ class PageManager {
      * @param {Function} func - Function to debounce
      * @param {number} wait - Debounce delay in milliseconds
      * @returns {Function} - Debounced function
+     * @private
      */
     debounce(func, wait) {
         let timeout;
@@ -567,6 +673,7 @@ class PageManager {
     /**
      * Update planet information panel with selected planet data
      * @param {string} planetName - Name of the selected planet
+     * @private
      */
     updatePlanetInfo(planetName) {
         // Planet data
@@ -630,25 +737,29 @@ class PageManager {
         const planet = planetData[planetName];
         if (!planet) return;
         
-        // Update planet info panel elements if they exist
-        const nameEl = document.getElementById('planet-name');
-        const descEl = document.getElementById('planet-description');
-        const diameterEl = document.getElementById('planet-diameter');
-        const distanceEl = document.getElementById('planet-distance');
-        const orbitalEl = document.getElementById('planet-orbital-period');
+        // Cache DOM queries for better performance
+        const planetElements = {
+            name: document.getElementById('planet-name'),
+            desc: document.getElementById('planet-description'),
+            diameter: document.getElementById('planet-diameter'),
+            distance: document.getElementById('planet-distance'),
+            orbital: document.getElementById('planet-orbital-period'),
+        };
         
-        if (nameEl) nameEl.textContent = planetName;
-        if (descEl) descEl.textContent = planet.description;
-        if (diameterEl) diameterEl.textContent = planet.diameter;
-        if (distanceEl) distanceEl.textContent = planet.distance;
-        if (orbitalEl) orbitalEl.textContent = planet.orbitalPeriod;
+        // Update planet info panel elements if they exist
+        if (planetElements.name) planetElements.name.textContent = planetName;
+        if (planetElements.desc) planetElements.desc.textContent = planet.description;
+        if (planetElements.diameter) planetElements.diameter.textContent = planet.diameter;
+        if (planetElements.distance) planetElements.distance.textContent = planet.distance;
+        if (planetElements.orbital) planetElements.orbital.textContent = planet.orbitalPeriod;
     }
 
     /**
      * Initialize projects page functionality
+     * @private
      */
     async initProjectsPage() {
-        console.log('Initializing projects page');
+        console.info('Initializing projects page');
         
         // Project navigation
         const projectNavButtons = document.querySelectorAll('.side-nav .nav-button');
@@ -685,7 +796,7 @@ class PageManager {
             projectContainer.addEventListener('click', (e) => {
                 const card = e.target.closest('.project-card');
                 if (card) {
-                    console.log(`Project clicked: ${card.id}`);
+                    console.info(`Project clicked: ${card.id}`);
                     // Here you would show project details or open a modal
                 }
             });
@@ -703,17 +814,19 @@ class PageManager {
 
     /**
      * Initialize about page functionality
+     * @private
      */
     async initAboutPage() {
-        console.log('Initializing about page');
+        console.info('Initializing about page');
         // No specific initialization needed
     }
 
     /**
      * Initialize store page functionality
+     * @private
      */
     async initStorePage() {
-        console.log('Initializing store page');
+        console.info('Initializing store page');
         
         // Product filtering using event delegation
         const filterContainer = document.querySelector('.filter-container');
@@ -743,6 +856,7 @@ class PageManager {
     /**
      * Filter products by category
      * @param {string} category - Category to filter by
+     * @private
      */
     filterProducts(category) {
         const products = document.querySelectorAll('.product-card');
@@ -756,9 +870,10 @@ class PageManager {
 
     /**
      * Initialize contact page with form validation
+     * @private
      */
     async initContactPage() {
-        console.log('Initializing contact page');
+        console.info('Initializing contact page');
         
         // Add form validation if contact form exists
         const contactForm = document.getElementById('contact-form');
@@ -805,6 +920,7 @@ class PageManager {
      * Validate contact form
      * @param {HTMLFormElement} form - The contact form element
      * @returns {boolean} - Whether the form is valid
+     * @private
      */
     validateContactForm(form) {
         const nameInput = form.querySelector('#name');
@@ -824,6 +940,7 @@ class PageManager {
      * Validate a form input
      * @param {HTMLInputElement|HTMLTextAreaElement} input - Input element to validate
      * @returns {boolean} - Whether the input is valid
+     * @private
      */
     validateInput(input) {
         const errorElement = document.getElementById(`${input.id}-error`);

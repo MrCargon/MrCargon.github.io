@@ -1,14 +1,15 @@
-// SpaceEnvironment.js - Simplified star field background
+// SpaceEnvironment.js - Main controller for the space visualization
 class SpaceEnvironment {
     constructor() {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
         this.container = null;
-        this.stars = null;
+        this.solarSystem = null;
         this.clock = new THREE.Clock();
         this.initialized = false;
         this.animationId = null;
+        this.resourceLoader = null;
     }
     
     async init() {
@@ -21,8 +22,12 @@ class SpaceEnvironment {
             // Setup Three.js basics
             this.setupThreeJS();
             
-            // Create stars
-            this.createStars();
+            // Create resource loader
+            this.resourceLoader = new ResourceLoader();
+            
+            // Create solar system
+            this.solarSystem = new SolarSystem(this);
+            await this.solarSystem.init();
             
             // Connect UI controls
             this.connectUIControls();
@@ -126,127 +131,22 @@ class SpaceEnvironment {
         // Add renderer to container
         this.container.appendChild(this.renderer.domElement);
         
+        // Add OrbitControls if available
+        if (typeof THREE.OrbitControls !== 'undefined') {
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.enableZoom = true;
+        }
+        
         // Add resize handler
         window.addEventListener('resize', this.handleResize.bind(this));
         
+        // Add memory manager
+        this.memoryManager = new MemoryManager(this.scene, this.renderer);
+        
         console.log("ThreeJS setup complete. Container now has renderer:", 
             this.container.contains(this.renderer.domElement));
-    }
-    
-    createStars() {
-        // Create basic star field
-        const starsGeometry = new THREE.BufferGeometry();
-        const starsMaterial = new THREE.PointsMaterial({
-            color: 0xFFFFFF,
-            size: 2,
-            sizeAttenuation: false
-        });
-        
-        const starsVertices = [];
-        for (let i = 0; i < 5000; i++) {
-            const x = (Math.random() - 0.5) * 2000;
-            const y = (Math.random() - 0.5) * 2000;
-            const z = (Math.random() - 0.5) * 2000;
-            starsVertices.push(x, y, z);
-        }
-        
-        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-        this.stars = new THREE.Points(starsGeometry, starsMaterial);
-        this.scene.add(this.stars);
-        
-        console.log("Stars created:", this.stars instanceof THREE.Points);
-    }
-    
-    connectUIControls() {
-        // Connect planet buttons
-        const planetButtons = document.querySelectorAll('.planet-btn');
-        if (planetButtons.length) {
-            planetButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const planetName = button.getAttribute('data-planet');
-                    this.updatePlanetInfo(planetName);
-                });
-            });
-            console.log(`Connected ${planetButtons.length} planet buttons`);
-        } else {
-            console.log("No planet buttons found");
-        }
-    }
-    
-    updatePlanetInfo(planetName) {
-        // Planet data (simplified)
-        const planetData = {
-            Sun: {
-                description: "The star at the center of our Solar System.",
-                diameter: "1,392,700 km",
-                distance: "0 km",
-                orbitalPeriod: "N/A"
-            },
-            Mercury: {
-                description: "The smallest and innermost planet in the Solar System.",
-                diameter: "4,880 km",
-                distance: "57.9 million km",
-                orbitalPeriod: "88 days"
-            },
-            Venus: {
-                description: "The second planet from the Sun with a thick toxic atmosphere.",
-                diameter: "12,104 km",
-                distance: "108.2 million km",
-                orbitalPeriod: "225 days"
-            },
-            Earth: {
-                description: "Our home planet, the only known celestial body to harbor life.",
-                diameter: "12,742 km",
-                distance: "149.6 million km",
-                orbitalPeriod: "365.25 days"
-            },
-            Mars: {
-                description: "The Red Planet, known for its iron oxide surface.",
-                diameter: "6,779 km",
-                distance: "227.9 million km",
-                orbitalPeriod: "687 days"
-            },
-            Jupiter: {
-                description: "The largest planet in our Solar System, a gas giant.",
-                diameter: "139,820 km",
-                distance: "778.5 million km",
-                orbitalPeriod: "11.86 years"
-            },
-            Saturn: {
-                description: "Known for its prominent ring system.",
-                diameter: "116,460 km",
-                distance: "1.4 billion km",
-                orbitalPeriod: "29.46 years"
-            },
-            Uranus: {
-                description: "An ice giant with a tilted rotation axis of 97.8 degrees.",
-                diameter: "50,724 km",
-                distance: "2.9 billion km",
-                orbitalPeriod: "84.01 years"
-            },
-            Neptune: {
-                description: "The windiest planet in our Solar System.",
-                diameter: "49,244 km",
-                distance: "4.5 billion km",
-                orbitalPeriod: "164.8 years"
-            }
-        };
-        
-        const planet = planetData[planetName];
-        if (!planet) return;
-        
-        // Update UI
-        const nameEl = document.getElementById('planet-name');
-        const descEl = document.getElementById('planet-description');
-        const diameterEl = document.getElementById('planet-diameter');
-        const distanceEl = document.getElementById('planet-distance');
-        const orbitalEl = document.getElementById('planet-orbital-period');
-        
-        if (nameEl) nameEl.textContent = planetName;
-        if (descEl) descEl.textContent = planet.description;
-        if (diameterEl) diameterEl.textContent = planet.diameter;
-        if (distanceEl) distanceEl.textContent = planet.distance;
-        if (orbitalEl) orbitalEl.textContent = planet.orbitalPeriod;
     }
     
     handleResize() {
@@ -261,12 +161,115 @@ class SpaceEnvironment {
         this.renderer.setSize(this.width, this.height);
     }
     
+    connectUIControls() {
+        // Connect planet buttons
+        const planetButtons = document.querySelectorAll('.planet-btn');
+        if (planetButtons.length) {
+            planetButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const planetName = button.getAttribute('data-planet');
+                    this.focusOnPlanet(planetName);
+                });
+            });
+            console.log(`Connected ${planetButtons.length} planet buttons`);
+        } else {
+            console.log("No planet buttons found");
+        }
+        
+        // Connect camera controls
+        const resetCameraBtn = document.getElementById('reset-camera');
+        if (resetCameraBtn) {
+            resetCameraBtn.addEventListener('click', () => this.resetCamera());
+        }
+        
+        const toggleRotationBtn = document.getElementById('toggle-rotation');
+        if (toggleRotationBtn) {
+            toggleRotationBtn.addEventListener('click', () => {
+                if (this.solarSystem) {
+                    const isEnabled = this.solarSystem.toggleAnimation();
+                    toggleRotationBtn.classList.toggle('active', isEnabled);
+                }
+            });
+        }
+        
+        const toggleOrbitBtn = document.getElementById('toggle-orbit');
+        if (toggleOrbitBtn) {
+            toggleOrbitBtn.addEventListener('click', () => {
+                if (this.solarSystem) {
+                    const isVisible = this.solarSystem.toggleOrbits();
+                    toggleOrbitBtn.classList.toggle('active', isVisible);
+                }
+            });
+        }
+    }
+    
+    resetCamera() {
+        // Reset camera to default position
+        if (this.camera) {
+            this.camera.position.set(0, 30, 100);
+            this.camera.lookAt(0, 0, 0);
+        }
+        
+        // Reset controls if available
+        if (this.controls) {
+            this.controls.reset();
+        }
+    }
+    
+    focusOnPlanet(planetName) {
+        if (!this.solarSystem) return;
+        
+        // Update planet info in the UI
+        this.updatePlanetInfo(planetName);
+        
+        // Focus camera on the selected planet
+        if (this.solarSystem && typeof this.solarSystem.focusOnPlanet === 'function') {
+            const cameraInfo = this.solarSystem.focusOnPlanet(planetName);
+            if (cameraInfo && this.camera) {
+                this.camera.position.copy(cameraInfo.position);
+                this.camera.lookAt(cameraInfo.lookAt);
+                
+                if (this.controls) {
+                    this.controls.target.copy(cameraInfo.lookAt);
+                    this.controls.update();
+                }
+            }
+        }
+    }
+    
+    updatePlanetInfo(planetName) {
+        // Get planet data from solar system
+        if (!this.solarSystem || typeof this.solarSystem.getPlanetInfo !== 'function') return;
+        
+        const planetInfo = this.solarSystem.getPlanetInfo(planetName);
+        if (!planetInfo) return;
+        
+        // Update UI elements
+        const nameEl = document.getElementById('planet-name');
+        const descEl = document.getElementById('planet-description');
+        const diameterEl = document.getElementById('planet-diameter');
+        const distanceEl = document.getElementById('planet-distance');
+        const orbitalEl = document.getElementById('planet-orbital-period');
+        
+        if (nameEl) nameEl.textContent = planetInfo.name;
+        if (descEl) descEl.textContent = planetInfo.description;
+        if (diameterEl) diameterEl.textContent = planetInfo.diameter;
+        if (distanceEl) distanceEl.textContent = planetInfo.distanceFromSun;
+        if (orbitalEl) orbitalEl.textContent = planetInfo.orbitalPeriod;
+    }
+    
     animate() {
         this.animationId = requestAnimationFrame(this.animate.bind(this));
         
-        // Rotate stars
-        if (this.stars) {
-            this.stars.rotation.y += 0.000025;
+        // Update controls if available
+        if (this.controls) {
+            this.controls.update();
+        }
+        
+        // Update solar system
+        if (this.solarSystem) {
+            const deltaTime = this.clock.getDelta() * 1; // Convert to milliseconds
+            this.solarSystem.update(deltaTime);
         }
         
         // Render scene
@@ -275,38 +278,35 @@ class SpaceEnvironment {
         }
     }
     
-    show() {
+    show(interactive = true) {
         if (!this.container) return;
         
-        console.log("Showing space environment");
+        // Always make container visible
         this.container.style.display = 'block';
         this.container.style.opacity = '1';
+        this.container.style.zIndex = '-5'; // Keep behind content
         
-        // Force re-render
+        // Set pointer events based on interactivity
+        this.container.style.pointerEvents = interactive ? 'auto' : 'none';
+        
+        // If controls exist and interactive is false, disable them
+        if (this.controls) {
+            this.controls.enabled = interactive;
+        }
+        
+        // Force a resize to ensure proper rendering
         this.handleResize();
         
-        // Debug visibility
-        setTimeout(() => {
-            const computed = window.getComputedStyle(this.container);
-            console.log("Container computed style:", {
-                display: computed.display,
-                opacity: computed.opacity,
-                zIndex: computed.zIndex,
-                visibility: computed.visibility
-            });
-            
-            // Check if renderer is active
-            if (this.renderer) {
-                console.log("Renderer info:", this.renderer.info.render);
-            }
-        }, 100);
+        console.log(`Space environment visible (interactive: ${interactive})`);
     }
     
     hide() {
+        if (!this.container) return;
         
+        this.container.style.opacity = '0';
+        this.container.style.pointerEvents = 'none';
         
-        console.log("Hiding space environment");
-       
+        console.log("Space environment hidden (but still rendered)");
     }
     
     dispose() {
@@ -317,17 +317,28 @@ class SpaceEnvironment {
             cancelAnimationFrame(this.animationId);
         }
         
-        // Remove resize listener
+        // Clean up event listeners
         window.removeEventListener('resize', this.handleResize.bind(this));
         
-        // Dispose resources
-        if (this.stars) {
-            this.scene.remove(this.stars);
-            this.stars.geometry.dispose();
-            this.stars.material.dispose();
+        // Clean up solar system resources
+        if (this.solarSystem) {
+            // Assuming SolarSystem has a dispose method
+            if (typeof this.solarSystem.dispose === 'function') {
+                this.solarSystem.dispose();
+            }
         }
         
-        // Remove renderer
+        // Clean up ThreeJS resources
+        if (this.memoryManager) {
+            this.memoryManager.cleanUp();
+        }
+        
+        // Clean up the resource loader
+        if (this.resourceLoader) {
+            this.resourceLoader.purgeCache();
+        }
+        
+        // Remove renderer from container
         if (this.renderer && this.container) {
             this.container.removeChild(this.renderer.domElement);
             this.renderer.dispose();

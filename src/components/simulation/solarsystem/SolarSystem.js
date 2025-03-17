@@ -1,20 +1,21 @@
 // SolarSystem.js - Main class that orchestrates all solar system objects
 class SolarSystem {
-    constructor(scene) {
-        this.scene = scene;
+    constructor(environment) {
+        this.environment = environment;
+        this.scene = environment.scene;
         this.objects = new Map();
         this.animationEnabled = true;
         this.showOrbits = true;
         this.orbitLines = new THREE.Group();
         
         // Add orbit lines group to scene
-        this.scene.scene.add(this.orbitLines);
+        this.scene.add(this.orbitLines);
         
         // Load planet data
         this.planetData = null;
         
-        // Resource loader for textures
-        this.resourceLoader = new ResourceLoader();
+        // Use the environment's resource loader if available
+        this.resourceLoader = environment.resourceLoader || new ResourceLoader();
     }
     
     async init() {
@@ -141,7 +142,7 @@ class SolarSystem {
     }
     
     async createSun() {
-        const sun = new Sun(this.scene.scene, this.resourceLoader, this.planetData.sun);
+        const sun = new Sun(this.scene, this.resourceLoader, this.planetData.sun);
         await sun.init();
         this.objects.set('sun', sun);
     }
@@ -153,31 +154,31 @@ class SolarSystem {
             
             switch (planetData.name) {
                 case 'Mercury':
-                    planet = new Mercury(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Mercury(this.scene, this.resourceLoader, planetData);
                     break;
                 case 'Venus':
-                    planet = new Venus(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Venus(this.scene, this.resourceLoader, planetData);
                     break;
                 case 'Earth':
-                    planet = new Earth(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Earth(this.scene, this.resourceLoader, planetData);
                     break;
                 case 'Mars':
-                    planet = new Mars(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Mars(this.scene, this.resourceLoader, planetData);
                     break;
                 case 'Jupiter':
-                    planet = new Jupiter(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Jupiter(this.scene, this.resourceLoader, planetData);
                     break;
                 case 'Saturn':
-                    planet = new Saturn(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Saturn(this.scene, this.resourceLoader, planetData);
                     break;
                 case 'Uranus':
-                    planet = new Uranus(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Uranus(this.scene, this.resourceLoader, planetData);
                     break;
                 case 'Neptune':
-                    planet = new Neptune(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Neptune(this.scene, this.resourceLoader, planetData);
                     break;
                 default:
-                    planet = new Planet(this.scene.scene, this.resourceLoader, planetData);
+                    planet = new Planet(this.scene, this.resourceLoader, planetData);
             }
             
             await planet.init();
@@ -214,19 +215,19 @@ class SolarSystem {
     }
     
     async createAsteroidBelt() {
-        const asteroidBelt = new AsteroidBelt(this.scene.scene, 85, 95, 1000);
+        const asteroidBelt = new AsteroidBelt(this.scene, 85, 95, 1000);
         await asteroidBelt.init();
         this.objects.set('asteroidBelt', asteroidBelt);
     }
     
     createHabitableZone() {
-        const habitableZone = new HabitableZone(this.scene.scene, 58, 68);
+        const habitableZone = new HabitableZone(this.scene, 58, 68);
         habitableZone.init();
         this.objects.set('habitableZone', habitableZone);
     }
     
     createBackgroundStars() {
-        const galaxy = new Galaxy(this.scene.scene, 5000);
+        const galaxy = new Galaxy(this.scene, 5000);
         galaxy.init();
         this.objects.set('galaxy', galaxy);
     }
@@ -291,4 +292,29 @@ class SolarSystem {
             lookAt: position
         };
     }
+    
+    dispose() {
+        // Dispose all objects
+        for (const object of this.objects.values()) {
+            if (object.dispose) {
+                object.dispose();
+            }
+        }
+        
+        // Clear orbit lines
+        if (this.orbitLines) {
+            this.scene.remove(this.orbitLines);
+            for (const child of this.orbitLines.children) {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            }
+            this.orbitLines.clear();
+        }
+        
+        // Clear objects map
+        this.objects.clear();
+    }
 }
+
+// Make globally available
+window.SolarSystem = SolarSystem;

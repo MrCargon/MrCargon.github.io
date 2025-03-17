@@ -230,10 +230,35 @@ class PageManager {
             // Load Three.js
             await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js');
             
-            // Load SpaceEnvironment directly
+            // Load OrbitControls
+            await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
+            
+            // Load utility files
+            await this.loadScript('src/utils/ResourceLoader.js');
+            await this.loadScript('src/utils/MemoryManager.js');
+            
+            // Load celestial body classes
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Planet.js');
+            await this.loadScript('src/components/simulation/solarsystem/Sun.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Mercury.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Venus.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Earth.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Mars.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Jupiter.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Saturn.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Uranus.js');
+            await this.loadScript('src/components/simulation/solarsystem/Planets/Neptune.js');
+            
+            // Load environment features
+            await this.loadScript('src/components/simulation/solarsystem/Galaxy.js');
+            await this.loadScript('src/components/simulation/solarsystem/AsteroidBelt.js');
+            await this.loadScript('src/components/simulation/solarsystem/HabitableZone.js');
+            
+            // Load main controller classes 
+            await this.loadScript('src/components/simulation/solarsystem/SolarSystem.js');
             await this.loadScript('src/components/simulation/solarsystem/SpaceEnvironment.js');
             
-            // Create and initialize
+            // Create and initialize space environment
             if (!window.spaceEnvironment) {
                 console.log("Creating new SpaceEnvironment instance");
                 window.spaceEnvironment = new SpaceEnvironment();
@@ -321,7 +346,7 @@ class PageManager {
      * @param {string} pageName - Current page name
      */
     setPageBodyClass(pageName) {
-        // Remove existing page classes
+        // Remove all page-specific classes
         document.body.classList.forEach(className => {
             if (className.startsWith('page-')) {
                 document.body.classList.remove(className);
@@ -331,17 +356,20 @@ class PageManager {
         // Add current page class
         document.body.classList.add(`page-${pageName}`);
         
-        // Handle space environment
+        // Space environment visibility handling
         if (pageName === 'main') {
-            console.log("Main page active - showing space environment");
+            // On main page, show and enable interaction with space environment
             this.initializeSpaceBackground().then(success => {
-                if (success) {
-                    this.enhanceSpaceBackground();
+                if (success && window.spaceEnvironment) {
+                    // Make fully visible and interactive
+                    window.spaceEnvironment.show(true);
+                    console.log("Space environment fully enabled for main page");
                 }
             });
         } else if (window.spaceEnvironment) {
-            console.log("Non-main page active - hiding space environment");
-            window.spaceEnvironment.hide();
+            // On other pages, show as background but disable interaction
+            window.spaceEnvironment.show(false); // Show but make non-interactive
+            console.log("Space environment visible as background only");
         }
     }
 

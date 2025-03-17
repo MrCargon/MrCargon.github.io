@@ -225,21 +225,29 @@ class PageManager {
      */
     async initializeSpaceBackground() {
         try {
-            // Load Three.js library
+            console.log("Starting space environment initialization");
+            
+            // Load Three.js
             await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js');
             
-            // Load SpaceEnvironment script
+            // Load SpaceEnvironment directly
             await this.loadScript('src/components/simulation/solarsystem/SpaceEnvironment.js');
             
-            // Create and initialize the space environment if it doesn't exist
+            // Create and initialize
             if (!window.spaceEnvironment) {
+                console.log("Creating new SpaceEnvironment instance");
                 window.spaceEnvironment = new SpaceEnvironment();
                 await window.spaceEnvironment.init();
+                console.log("SpaceEnvironment initialization complete");
+                
+                // Show immediately
+                window.spaceEnvironment.show();
             }
             
             return true;
         } catch (error) {
             console.error("Failed to initialize space environment:", error);
+            console.error(error.stack);
             return false;
         }
     }
@@ -313,7 +321,7 @@ class PageManager {
      * @param {string} pageName - Current page name
      */
     setPageBodyClass(pageName) {
-        // Remove all page-specific classes
+        // Remove existing page classes
         document.body.classList.forEach(className => {
             if (className.startsWith('page-')) {
                 document.body.classList.remove(className);
@@ -323,11 +331,17 @@ class PageManager {
         // Add current page class
         document.body.classList.add(`page-${pageName}`);
         
-        // If on main page, initialize space environment when needed
+        // Handle space environment
         if (pageName === 'main') {
-            this.initializeSpaceBackground().then(() => {
-                this.enhanceSpaceBackground();
+            console.log("Main page active - showing space environment");
+            this.initializeSpaceBackground().then(success => {
+                if (success) {
+                    this.enhanceSpaceBackground();
+                }
             });
+        } else if (window.spaceEnvironment) {
+            console.log("Non-main page active - hiding space environment");
+            window.spaceEnvironment.hide();
         }
     }
 
@@ -335,12 +349,63 @@ class PageManager {
      * Make the space background visible
      */
     enhanceSpaceBackground() {
+        console.log("Enhancing space background");
+        
         if (window.spaceEnvironment?.initialized) {
-            const container = document.getElementById('solar-system-container');
-            if (container) {
-                container.style.opacity = '1';
-                container.style.pointerEvents = 'auto';
+            // Show the environment
+            window.spaceEnvironment.show();
+            
+            // Fix z-index for main content to ensure it's above the background
+            const contentContainer = document.getElementById('content');
+            if (contentContainer) {
+                contentContainer.style.position = 'relative';
+                contentContainer.style.zIndex = '1';
+                console.log("Set content container z-index to 1");
             }
+            
+            // Ensure header is visible over background
+            const headerContainer = document.getElementById('header-container');
+            if (headerContainer) {
+                headerContainer.style.position = 'relative';
+                headerContainer.style.zIndex = '2';
+            }
+            
+            // Ensure page container is visible
+            const pageContainer = document.getElementById('page-container'); 
+            if (pageContainer) {
+                pageContainer.style.position = 'relative';
+                pageContainer.style.zIndex = '1';
+            }
+            
+            // Ensure footer is visible
+            const footerContainer = document.getElementById('footer-container');
+            if (footerContainer) {
+                footerContainer.style.position = 'relative';
+                footerContainer.style.zIndex = '2';
+            }
+            
+            // Force a rerender
+            if (typeof window.spaceEnvironment.handleResize === 'function') {
+                window.spaceEnvironment.handleResize();
+            }
+            
+            // Pre-select first planet after a brief delay
+            setTimeout(() => {
+                const firstPlanetBtn = document.querySelector('.planet-btn');
+                if (firstPlanetBtn) {
+                    firstPlanetBtn.click();
+                    console.log("First planet selected");
+                }
+            }, 500);
+        } else {
+            console.warn("SpaceEnvironment not properly initialized");
+            // Try to initialize it again
+            this.initializeSpaceBackground().then(success => {
+                if (success) {
+                    console.log("Space environment initialized on retry");
+                    this.enhanceSpaceBackground(); // Try again
+                }
+            });
         }
     }
 

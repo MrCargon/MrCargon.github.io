@@ -3,7 +3,7 @@
     max-width: 900px;
     width: 90%;
     margin: 20px auto;
-    background-color: rgba(20, 20, 20, 0.45);
+    background-color: rgba(20, 20, 20, 0.95);
     border-radius: var(--border-radius);
     border: 1px solid rgba(255, 165, 0, 0.2);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);

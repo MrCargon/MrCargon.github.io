@@ -266,7 +266,7 @@ class SpaceEnvironment {
         
         // Rotate stars
         if (this.stars) {
-            this.stars.rotation.y += 0.0001;
+            this.stars.rotation.y += 0.000025;
         }
         
         // Render scene

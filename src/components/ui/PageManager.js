@@ -1,7 +1,6 @@
 /**
  * PageManager - Single Page Application (SPA) navigation system
  * Optimized for GitHub Pages deployment with progressive enhancement
- * @version 1.1.0
  */
 class PageManager {
     /**

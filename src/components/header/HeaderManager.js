@@ -1,7 +1,6 @@
 /**
  * HeaderManager - Manages the header component functionality
  * Handles mobile menu, scrolling effects, and active link management
- * @version 1.1.0
  */
 class HeaderManager {
     /**

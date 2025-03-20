@@ -3,16 +3,16 @@
 .main-section.hero-section {
     max-width: var(--content-width);
     width: 92%;
-    margin: var(--spacing-xl) auto; /* Same top/bottom margin as About page */
-    min-height: unset; /* Remove full viewport height */
-    display: block; /* Override flex */
+    margin: var(--spacing-xl) auto; 
+    min-height: unset; 
+    display: block; 
     padding: 0;
     margin-bottom: var(--spacing-xl); /* Consistent bottom margin */
   }
 
 /* Hero content - Contained within panel */
 .hero-content {
-    background-color: var(--panel-bg);
+    background-color: rgba(20, 20, 20, 0.95);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-medium);
@@ -40,7 +40,7 @@
 
 /* Space Exploration Container - Contained within panel */
 .space-exploration-container {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.15);
     border-radius: var(--border-radius-sm);
     padding: var(--spacing-lg);
     margin-top: var(--spacing-lg);

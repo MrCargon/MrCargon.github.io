@@ -4,7 +4,7 @@
 
  .main-header {
     /* CSS variables brought to the top for better organization */
-    --header-bg: rgba(20, 20, 20, 0.95);
+    --header-bg: rgba(20, 20, 20, 0.45);
     --header-bg-scrolled: rgba(15, 15, 15, 0.68);
     --header-border: rgba(255, 165, 0, 0.2);
     --header-border-scrolled: rgba(255, 165, 0, 0.3);
@@ -23,7 +23,7 @@
     position: sticky;
     top: 20px;
     z-index: 1000;
-    backdrop-filter: blur(1px); /* Performance note: Use sparingly */
+    backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
     transition: var(--header-transition);
 }
@@ -422,8 +422,17 @@
 
 /* Ensure menu is always visible above a certain width and logo is hidden on desktop */
 @media (min-width: 769px) {
+    .logo {
+        display: none;
+    }
     .nav-container {
         display: flex !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .logo {
+        display: block;
     }
 }
 

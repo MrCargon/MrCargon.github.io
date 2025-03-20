@@ -14,6 +14,10 @@ class HeaderManager {
         this.navContainer = document.querySelector('.nav-container');
         this.navLinks = document.querySelectorAll('.main-nav a');
         this.logoElement = document.querySelector('.logo');
+        this.siteBranding = document.querySelector('.site-branding');
+        
+        // Store original logo text
+        this.originalLogoText = 'MrCargo';
         
         // Event handler bindings to ensure proper 'this' context
         this._handleDocumentClick = this._handleDocumentClick.bind(this);
@@ -25,6 +29,7 @@ class HeaderManager {
         // State variables
         this.scrollTicking = false;
         this.resizeTimer = null;
+        this.currentPageName = '';
         
         // Initialize header functionality
         this.init();
@@ -100,6 +105,7 @@ class HeaderManager {
         this.navContainer = document.querySelector('.nav-container');
         this.navLinks = document.querySelectorAll('.main-nav a');
         this.logoElement = document.querySelector('.logo');
+        this.siteBranding = document.querySelector('.site-branding');
         
         // Re-initialize functionality
         this.init();
@@ -205,7 +211,25 @@ class HeaderManager {
             if (window.innerWidth > 768 && this.headerContent.classList.contains('menu-active')) {
                 this.closeMobileMenu();
             }
+            
+            // Update logo text based on screen width (for mobile only)
+            if (window.innerWidth <= 768 && this.logoElement) {
+                this.updateMobileLogoText();
+            }
         }, 250);
+    }
+    
+    /**
+     * Update the logo text for mobile view only
+     */
+    updateMobileLogoText() {
+        if (!this.logoElement) return;
+        
+        if (this.currentPageName) {
+            this.logoElement.textContent = this.currentPageName;
+        } else {
+            this.logoElement.textContent = this.originalLogoText;
+        }
     }
     
     /**
@@ -242,6 +266,11 @@ class HeaderManager {
      */
     setupResizeHandler() {
         window.addEventListener('resize', this._handleResize);
+        
+        // Initial update for mobile logo text if we're on mobile
+        if (window.innerWidth <= 768 && this.logoElement) {
+            this.updateMobileLogoText();
+        }
     }
     
     /**
@@ -251,7 +280,7 @@ class HeaderManager {
     updateActiveLink(pageName) {
         if (!this.navLinks.length) return;
         
-        let activePageName = 'MrCargo'; // Default
+        let activePageName = ''; // Will store the active page name
         let activeFound = false;
         
         this.navLinks.forEach(link => {
@@ -277,9 +306,12 @@ class HeaderManager {
             }
         });
         
-        // Update the logo text with the current page name
-        if (this.logoElement) {
-            this.logoElement.textContent = activeFound ? activePageName : 'MrCargo';
+        // Store current page name for reference
+        this.currentPageName = activeFound ? activePageName : '';
+        
+        // Update logo text only if on mobile
+        if (window.innerWidth <= 768 && this.logoElement) {
+            this.updateMobileLogoText();
         }
         
         // Close mobile menu after navigation on mobile devices
@@ -320,6 +352,7 @@ class HeaderManager {
         this.navContainer = null;
         this.navLinks = null;
         this.logoElement = null;
+        this.siteBranding = null;
     }
 }
 

@@ -29,6 +29,9 @@ class SpaceEnvironment {
             this.solarSystem = new SolarSystem(this);
             await this.solarSystem.init();
             
+            // Focus on Earth at startup (ADD THIS LINE)
+            this.focusOnPlanet("Earth");
+            
             // Connect UI controls
             this.connectUIControls();
             

@@ -2,13 +2,12 @@
 .main-footer {
     max-width: 900px;
     width: 90%;
-    margin: 20px auto;
+    margin: 20px auto var(--spacing-lg) auto;
     background-color: rgba(20, 20, 20, 0.95);
     border-radius: var(--border-radius);
     border: 1px solid rgba(255, 165, 0, 0.2);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     padding: var(--spacing-md);
-    margin-top: var(--spacing-xl);
     text-align: center;
 }
 
@@ -16,6 +15,7 @@
     padding: var(--spacing-md);
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
+    text-align: center;
 }
 
 /* Print styles */
@@ -29,8 +29,12 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .main-footer {
-        width: 95%;
-        padding: var(--spacing-sm);
+    .projects-content {
+      flex-direction: column;
+    }
+    
+    .side-nav {
+      width: 100%;
+      margin-bottom: var(--spacing-lg);
     }
 }

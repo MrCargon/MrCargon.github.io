@@ -1,33 +1,74 @@
 <!-- storePage.html -->
-<section class="main-section">
+<section class="main-section store-section" id="store">
     <div class="store-content">
-        <h2>Store</h2>
-        <div class="store-grid">
-            <div class="product-filters">
-                <h3>Categories</h3>
-                <ul class="filter-list">
-                    <li><button class="filter-btn active" data-category="all">All Products</button></li>
-                    <li><button class="filter-btn" data-category="3d-models">3D Models</button></li>
-                    <li><button class="filter-btn" data-category="games">Games</button></li>
-                    <li><button class="filter-btn" data-category="assets">Digital Assets</button></li>
-                </ul>
-            </div>
-            
-            <div class="products-grid">
-                <!-- Product cards will be dynamically loaded here -->
-                <div class="product-card" data-category="3d-models">
-                    <div class="product-image">
-                        <img src="src/assets/textures/planets/earth/earth_map.jpg" alt="3D Model Pack">
-                    </div>
-                    <div class="product-info">
-                        <h3>Space Scene Pack</h3>
-                        <p>A collection of detailed 3D models for space visualization</p>
-                        <span class="price">$24.99</span>
-                        <button class="buy-button">Add to Cart</button>
-                    </div>
+        <!-- Panel header with title -->
+        <div class="store-header">
+            <h2>Store</h2>
+        </div>
+        
+        <!-- Store content area -->
+        <div class="store-grid-container">
+            <div class="store-grid">
+                <!-- Product filters sidebar -->
+                <div class="product-filters">
+                    <h3>Categories</h3>
+                    <ul class="filter-list">
+                        <li><button class="filter-btn active" data-category="all">All Products</button></li>
+                        <li><button class="filter-btn" data-category="3d-models">3D Models</button></li>
+                        <li><button class="filter-btn" data-category="games">Games</button></li>
+                        <li><button class="filter-btn" data-category="assets">Digital Assets</button></li>
+                    </ul>
                 </div>
                 
-                <!-- More product cards... -->
+                <div class="products-container">
+                    <!-- Products grid -->
+                    <div class="products-grid">
+                        <!-- Sample product card -->
+                        <article class="product-card" data-category="3d-models">
+                            <div class="product-image">
+                                <img src="src/assets/textures/planets/earth/earth_map.jpg" alt="3D Model Pack" loading="lazy">
+                            </div>
+                            <div class="product-info">
+                                <h3>Space Scene Pack</h3>
+                                <p>A collection of detailed 3D models for space visualization</p>
+                                <span class="price">$24.99</span>
+                                <button class="buy-button">Add to Cart</button>
+                            </div>
+                        </article>
+                        
+                        <!-- Additional product card sample -->
+                        <article class="product-card" data-category="games">
+                            <div class="product-image">
+                                <img src="src/assets/textures/planets/mars/mars_map.jpg" alt="Game Asset" loading="lazy">
+                            </div>
+                            <div class="product-info">
+                                <h3>Space Explorer Game</h3>
+                                <p>An educational game about space exploration</p>
+                                <span class="price">$19.99</span>
+                                <button class="buy-button">Add to Cart</button>
+                            </div>
+                        </article>
+                        
+                        <!-- Additional product card sample -->
+                        <article class="product-card" data-category="assets">
+                            <div class="product-image">
+                                <img src="src/assets/textures/planets/jupiter/jupiter_map.jpg" alt="Digital Asset" loading="lazy">
+                            </div>
+                            <div class="product-info">
+                                <h3>Planet Textures Pack</h3>
+                                <p>High-resolution planet textures for 3D projects</p>
+                                <span class="price">$12.99</span>
+                                <button class="buy-button">Add to Cart</button>
+                            </div>
+                        </article>
+                    </div>
+                    
+                    <!-- Coming Soon Notice -->
+                    <div class="coming-soon-notice">
+                        <h3>More Products Coming Soon</h3>
+                        <p>We're working on adding more digital products to our store. Check back soon!</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

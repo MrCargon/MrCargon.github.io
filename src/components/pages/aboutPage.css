@@ -1,5 +1,4 @@
 /* aboutPage.css */
-/* Specific styles for the about page content */
 
 /* Main Section */
 .main-section {
@@ -8,14 +7,14 @@
     overflow-x: hidden;
 }
 
-/* Profile Panel Styles */
+/* Profile Panel Styles - optimized for performance */
 .profile-panel {
     max-width: 900px;
     width: 92%;
     margin: var(--spacing-xl) auto;
-    will-change: opacity;
     animation: fadeIn 0.8s ease-out;
-    contain: layout style;
+    will-change: opacity;
+    contain: content;
 }
 
 .panel-container {
@@ -26,7 +25,6 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    contain: content;
 }
 
 .panel-header {
@@ -39,7 +37,9 @@
     gap: var(--spacing-md);
 }
 
-.panel-header h3 {
+/* Made consistent with other section titles */
+.panel-header h3,
+.section-title {
     color: var(--primary-color);
     font-size: 1.5rem;
     margin: 0;
@@ -47,7 +47,8 @@
     display: inline-block;
 }
 
-.panel-header h3::after {
+.panel-header h3::after,
+.section-title::after {
     content: '';
     position: absolute;
     bottom: -8px;
@@ -66,6 +67,32 @@
 .header-social .social-links {
     display: flex;
     gap: var(--spacing-md);
+}
+
+/* Social links - styled to match contact page */
+.social-link {
+    color: var(--text-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-sm);
+    background-color: rgba(30, 30, 30, 0.6);
+    border: 1px solid rgba(255, 165, 0, 0.1);
+    border-radius: 4px;
+}
+
+.social-link:hover, .social-link:focus-visible {
+    color: var(--primary-color);
+    background-color: rgba(30, 30, 30, 0.8);
+    border-color: rgba(255, 165, 0, 0.3);
+    transform: translateY(-3px);
+}
+
+.social-link:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .panel-content {
@@ -103,13 +130,13 @@
     border: 0;
 }
 
-/* Scrollable content area */
+/* Scrollable content area - optimized scrollbar */
 .scrollable-content {
-    overflow-y: auto; /* Enable vertical scrolling */
-    padding-right: var(--spacing-sm); /* Leave space for scrollbar */
-    max-height: 50vh; /* Fixed height to ensure scrolling */
-    scrollbar-width: thin; /* Firefox */
-    scrollbar-color: var(--primary-color) rgba(30, 30, 30, 0.5); /* Firefox */
+    overflow-y: auto;
+    padding-right: var(--spacing-sm);
+    max-height: 50vh;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(30, 30, 30, 0.5);
 }
 
 /* Webkit scrollbar styling */
@@ -170,15 +197,7 @@
     font-weight: 400;
 }
 
-/* Profile Summary Section */
-.profile-summary {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-md);
-    min-width: 200px;
-}
-
+/* Profile image - optimized transform */
 .profile-image {
     align-self: center;
 }
@@ -202,23 +221,6 @@
     transform: scale(1.05);
 }
 
-/* Profile tag styling */
-.profile-tag {
-    background-color: rgba(255, 165, 0, 0.1);
-    color: var(--primary-color);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    border: 1px solid rgba(255, 165, 0, 0.3);
-    transition: background-color 0.3s ease;
-    display: inline-block;
-    margin: 3px;
-}
-
-.profile-tag:hover {
-    background-color: rgba(255, 165, 0, 0.2);
-}
-
 /* Bio Section */
 .bio-section {
     margin-bottom: var(--spacing-lg);
@@ -239,26 +241,6 @@
     color: rgba(255, 255, 255, 0.9);
 }
 
-/* Section Title Styling */
-.section-title {
-    color: var(--secondary-color);
-    font-size: clamp(1.25rem, 2vw, 1.4rem);
-    margin-bottom: var(--spacing-md);
-    padding-bottom: var(--spacing-sm);
-    border-bottom: 1px solid rgba(255, 165, 0, 0.2);
-    position: relative;
-}
-
-.section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 60px;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-}
-
 /* Skills Section */
 .skills-section {
     margin-bottom: var(--spacing-xl);
@@ -271,14 +253,14 @@
     margin-top: var(--spacing-md);
 }
 
-/* Consolidated animations for cards */
+/* Card animations - optimized with will-change */
 .animate-card {
     background-color: rgba(30, 30, 30, 0.5);
     padding: var(--spacing-md);
     border-radius: 8px;
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     border: 1px solid rgba(255, 165, 0, 0.1);
-    contain: content;
+    will-change: transform, box-shadow;
 }
 
 .animate-card:hover {
@@ -320,7 +302,7 @@
     left: 0;
 }
 
-/* Timeline Section */
+/* Timeline Section - optimized */
 .experience-timeline {
     margin-bottom: var(--spacing-xl);
 }
@@ -384,32 +366,6 @@
     color: rgba(255, 255, 255, 0.8);
 }
 
-/* Social Links Section */
-.social-link {
-    color: var(--text-color);
-    text-decoration: none;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-sm);
-    background-color: rgba(30, 30, 30, 0.6);
-    border: 1px solid rgba(255, 165, 0, 0.1);
-    border-radius: 4px;
-}
-
-.social-link:hover, .social-link:focus-visible {
-    color: var(--primary-color);
-    background-color: rgba(30, 30, 30, 0.8);
-    border-color: rgba(255, 165, 0, 0.3);
-    transform: translateY(-3px);
-}
-
-.social-link:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
-
 /* Animations */
 @keyframes fadeIn {
     from {
@@ -419,44 +375,6 @@
     to {
         opacity: 1;
         transform: translateY(0);
-    }
-}
-
-/* Lazy loading support */
-.lazy-load {
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.lazy-load.loaded {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Print styles for better printing */
-@media print {
-    .profile-panel {
-        box-shadow: none;
-        border: none;
-    }
-    
-    .panel-container {
-        background-color: transparent;
-        border: none;
-        box-shadow: none;
-    }
-    
-    .profile-header h1, .section-title, .skill-category h5, .timeline-content h5 {
-        color: #000;
-    }
-    
-    .highlight, .bio-highlight {
-        color: #555;
-    }
-    
-    .social-link, .header-social {
-        display: none;
     }
 }
 
@@ -584,13 +502,7 @@
     }
 }
 
-/* Enhanced accessibility for keyboard navigation and screen readers */
-a:focus, button:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 3px;
-}
-
-/* Accessibility improvement for reduced motion */
+/* Accessibility improvements */
 @media (prefers-reduced-motion: reduce) {
     .profile-panel {
         animation: none;
@@ -607,8 +519,7 @@ a:focus, button:focus {
     .animate-card:hover,
     .profile-placeholder:hover, 
     .social-link:hover, 
-    .skill-list li:hover, 
-    .profile-tag:hover {
+    .skill-list li:hover {
         transform: none;
     }
     
@@ -618,11 +529,28 @@ a:focus, button:focus {
     }
 }
 
-/* Performance optimizations */
-@supports (content-visibility: auto) {
-    .skill-category, 
-    .timeline-item {
-        content-visibility: auto;
-        contain-intrinsic-size: 0 100px;
+/* Print styles - optimized for printing */
+@media print {
+    .profile-panel {
+        box-shadow: none;
+        border: none;
+    }
+    
+    .panel-container {
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+    }
+    
+    .profile-header h1, .section-title, .skill-category h5, .timeline-content h5 {
+        color: #000;
+    }
+    
+    .highlight, .bio-highlight {
+        color: #555;
+    }
+    
+    .social-link, .header-social {
+        display: none;
     }
 }

@@ -1,21 +1,47 @@
 /* Base Variables */
 :root {
+  /* Primary color palette */
   --primary-color: #FFA500;
   --secondary-color: #FF8C00;
   --text-color: #fff;
-  --bg-color: rgba(0, 0, 0, 0.0);
+  --bg-color: rgba(0, 0, 0, 0.90);
   --overlay-bg: rgba(88, 88, 88, 0.1);
+  
+  /* Common backgrounds */
+  --panel-bg: rgba(20, 20, 20, 0.95);
+  --card-bg: rgba(30, 30, 30, 0.5);
+  --hover-bg: rgba(255, 165, 0, 0.1);
+  
+  /* Border colors */
+  --border-color: rgba(255, 165, 0, 0.2);
+  --border-hover: rgba(255, 165, 0, 0.3);
+  
+  /* Box shadows */
+  --shadow-light: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.3);
+  
+  /* Transitions */
   --transition: all 0.3s ease;
   
-  /* Adding some new variables for consistency */
+  /* Spacing */
+  --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
-  --border-radius: 35px;
+  
+  /* Layout */
+  --header-width: 900px;     /* Width of header - all pages should match this */
+  --content-width: 900px;    /* Standard content width for all sections */
+  --border-radius: 35px;     /* Consistent border radius */
+  --border-radius-sm: 8px;   /* Smaller border radius for cards */
+  
+  /* Text */
+  --title-font-size: clamp(1.8rem, 4vw, 2.5rem);
+  --subtitle-font-size: clamp(1.2rem, 2vw, 1.8rem);
 }
 
-/* Reset and Base Styles */
+/* Reset and Base Styles - kept the same */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -24,13 +50,36 @@
 
 body, html {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  background-color: var(--bg-color);
+  background-color: var(--overlay-bg);
   color: var(--text-color);
   line-height: 1.6;
   overflow-x: hidden;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Loading Screen */
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Main container needs to grow to fill space */
+#page-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#footer-container {
+  margin-top: auto;
+}
+
+/* Loading Screen - optimized animation properties */
 #loading-screen {
   position: fixed;
   width: 100%;
@@ -91,6 +140,7 @@ body, html {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+/* Error container - kept the same */
 .error-container {
   text-align: center;
   padding: var(--spacing-lg);
@@ -112,14 +162,14 @@ body, html {
   transform: translateY(-2px);
 }
 
-/* Animations */
+/* Animations - kept the same */
 @keyframes pulse {
   0% { transform: scale(1); opacity: 0.8; }
   50% { transform: scale(1.05); opacity: 1; }
   100% { transform: scale(1); opacity: 0.8; }
 }
 
-/* Utility Classes */
+/* Utility Classes - kept the same */
 .hidden {
   opacity: 0;
   visibility: hidden;
@@ -148,47 +198,40 @@ body, html {
   width: 80%;
 }
 
+/* Print styles - kept the same */
 @media print {
   .main-nav, .social-links {
     display: none;
   }
+  
   body {
     background: white;
     color: rgba(0, 0, 0, 0.95);
   }
 }
 
-
+/* Accessibility improvement - consolidated */
 @media (prefers-reduced-motion: reduce) {
-
   .fade-out,
-
   .fade-in,
-
-  .bubble {
-    animation: none;
-  }
-
+  .bubble,
   #loading-progress::after,
-
-  #loading-screen {
-      transition: none;
-  }
-
+  #loading-screen,
   #section-container {
+      animation: none;
       transition: none;
       transform: none;
   }
-  
 }
 
-/* Performance optimizations */
+/* Performance optimization - kept the same but added comment */
+/* Used for lazy-loading element calculation */
 .project-card {
   content-visibility: auto;
   contain-intrinsic-size: 0 300px;
 }
 
-/* Add to elements that animate */
+/* Animation optimization */
 .nav-button {
   will-change: transform;
 }

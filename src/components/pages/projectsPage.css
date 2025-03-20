@@ -1,27 +1,80 @@
 /* Projects Page Specific Styles */
-.main-section {
+.main-section.projects-section {
+    max-width: var(--content-width);
+    width: 92%;
+    margin: var(--spacing-xl) auto;
+    margin-bottom: var(--spacing-xl);
+    padding: 0;
+    min-height: unset;
+    display: block;
+  }
+
+/* Projects Panel Container - Mimics about page panel */
+.projects-panel {
+    background-color: var(--panel-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-medium);
+    overflow: hidden;
+    margin-bottom: var(--spacing-lg);
+    position: relative;
+    z-index: 10; 
+  }
+
+/* Panel Header - Like about page */
+.panel-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
     display: flex;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-lg);
-    min-height: 100vh;
+    justify-content: space-between;
+    align-items: center;
 }
 
-/* Side Navigation Styles */
+.panel-header h2 {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    margin: 0;
+    position: relative;
+    display: inline-block;
+}
+
+.panel-header h2::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
+}
+
+/* Projects Content Area - Standardized layout */
+.projects-content {
+    display: flex;
+    padding: var(--spacing-lg);
+    gap: var(--spacing-lg);
+    background-color: var(--panel-bg);
+    position: relative;
+    z-index: 5;
+  }
+
+/* Side Navigation - Modified to fit the panel */
 .side-nav {
-    width: 300px;
+    width: 250px;
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
+    background: rgba(30, 30, 30, 0.5);
+    border-radius: var(--border-radius-sm);
     padding: var(--spacing-md);
     height: fit-content;
-    position: sticky;
-    top: var(--spacing-lg);
-}
+    position: relative;
+    top: 0;
+    border: 1px solid rgba(255, 165, 0, 0.1);
+  }
 
 .nav-content h2 {
     color: var(--primary-color);
     margin-bottom: var(--spacing-lg);
-    font-size: 1.5rem;
+    font-size: 1.2rem;
 }
 
 .nav-list {
@@ -37,15 +90,16 @@
     flex-direction: column;
     padding: var(--spacing-md);
     background: rgba(255, 255, 255, 0.03);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-sm);
     text-decoration: none;
     color: var(--text-color);
     transition: var(--transition);
+    will-change: transform;
 }
 
 .nav-button:hover,
 .nav-button[aria-current="true"] {
-    background: rgba(255, 165, 0, 0.1);
+    background: var(--hover-bg);
     transform: translateX(5px);
 }
 
@@ -59,27 +113,59 @@
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* Main Content Styles */
+/* Main Content - Modified for better fit */
 .main-content {
     flex: 1;
+    overflow: hidden;
 }
 
 .project-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: var(--spacing-lg);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+    width: 100%;
 }
 
 .project-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
+    background: rgba(30, 30, 30, 0.5); /* Match card style from About page */
+    border-radius: var(--border-radius-sm);
     overflow: hidden;
     transition: var(--transition);
+    height: 100%;
+    border: 1px solid rgba(255, 165, 0, 0.1);
 }
 
 .project-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-light);
+    border-color: var(--border-color);
+}
+
+.projects-panel .panel-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(20, 20, 20, 0.95);
+}
+
+.projects-panel .panel-header h2 {
+  color: var(--primary-color);
+  font-size: 1.5rem;
+  margin: 0;
+  position: relative;
+  display: inline-block;
+}
+
+.projects-panel .panel-header h2::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
 }
 
 .project-card:focus {
@@ -89,7 +175,7 @@
 
 .project-image {
     width: 100%;
-    height: 200px;
+    height: 160px; /* Reduced from 200px */
     overflow: hidden;
 }
 
@@ -111,11 +197,13 @@
 .project-info h3 {
     color: var(--primary-color);
     margin-bottom: var(--spacing-sm);
+    font-size: 1.1rem;
 }
 
 .project-info p {
     margin-bottom: var(--spacing-md);
     color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
 }
 
 .project-tags {
@@ -125,52 +213,61 @@
 }
 
 .tag {
-    background: rgba(255, 165, 0, 0.1);
+    background: var(--hover-bg);
     color: var(--primary-color);
     padding: 4px 8px;
-    border-radius: calc(var(--border-radius) / 2);
-    font-size: 0.9em;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8em;
 }
 
-/* Highlight Animation */
-@keyframes highlight {
-    from {
-        background-color: rgba(255, 165, 0, 0.2);
-    }
-    to {
-        background-color: transparent;
-    }
-}
-
-/* Responsive Design */
+/* Responsive Design - Improved for consistency */
 @media (max-width: 768px) {
-    .main-section {
+    .projects-content {
         flex-direction: column;
     }
-
+    
     .side-nav {
         width: 100%;
-        position: static;
         margin-bottom: var(--spacing-lg);
     }
-
+    
     .project-grid {
         grid-template-columns: 1fr;
     }
 }
 
-/* Accessibility Improvements */
+@media (max-width: 480px) {
+    .main-section.projects-section {
+        width: 95%;
+        padding: 0;
+    }
+    
+    .projects-content {
+        padding: var(--spacing-md);
+    }
+    
+    .project-image {
+        height: 140px;
+    }
+    
+    .project-info h3 {
+        font-size: 1rem;
+    }
+}
+
+/* Accessibility improvements */
 @media (prefers-reduced-motion: reduce) {
     .project-card,
     .nav-button,
     .project-image img {
         transition: none;
     }
-
-    .project-card:hover {
+    
+    .project-card:hover,
+    .nav-button:hover {
         transform: none;
     }
-
+    
     .project-card:hover .project-image img {
         transform: none;
     }

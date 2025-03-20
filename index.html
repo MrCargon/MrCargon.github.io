@@ -1,17 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 
-    <!-- Base html head -->
+    <!-- Base html head - improved SEO and accessibility -->
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="MrCargo - Portfolio">
+        <meta name="description" content="MrCargo - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
         <title>MrCargo - Portfolio</title>
         
-        <!-- Base styles first -->
+        <!-- Styles - maintained existing structure -->
         <link rel="stylesheet" href="index.css">
-        
-        <!-- Component-specific styles -->
         <link rel="stylesheet" href="src/components/header/header.css">
         <link rel="stylesheet" href="src/components/pages/mainPage.css">
         <link rel="stylesheet" href="src/components/pages/projectsPage.css">
@@ -19,29 +17,26 @@
         <link rel="stylesheet" href="src/components/pages/storePage.css">
         <link rel="stylesheet" href="src/components/pages/contactPage.css">
         <link rel="stylesheet" href="src/components/footer/footer.css">
-        
-        
     </head>
 
-    <!-- Base html body -->
     <body>
-        <!-- Loading Screen -->
-        <div id="loading-screen">
-            <div class="bubble-container">
+        <!-- Loading Screen - improved accessibility -->
+        <div id="loading-screen" aria-live="polite">
+            <div class="bubble-container" aria-hidden="true">
                 <div class="bubble"></div>
             </div>
             <div id="loading-text">Loading components...</div>
-            <div id="loading-progress" class="progress-bar"></div>
+            <div id="loading-progress" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
     
-        <!-- Main Content -->
+        <!-- Main Content - improved semantics -->
         <div id="content" class="hidden">
             <div id="header-container"></div>
-            <div id="page-container"></div>
+            <main id="page-container"></main>
             <div id="footer-container"></div>
         </div>
     
-        <!-- Main Scripts -->
+        <!-- Main Scripts - kept the same -->
         <script src="src/components/ui/LoadingScreen.js"></script>
         <script src="src/components/ui/PageManager.js"></script>
         <script src="src/components/header/HeaderManager.js"></script>

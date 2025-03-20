@@ -1,9 +1,9 @@
 /**
- * Header Component Styles - Fixed mobile menu
+ * Header
  */
 
-/* ------ Header Container ------ */
-.main-header {
+ .main-header {
+    /* CSS variables brought to the top for better organization */
     --header-bg: rgba(20, 20, 20, 0.95);
     --header-bg-scrolled: rgba(15, 15, 15, 0.68);
     --header-border: rgba(255, 165, 0, 0.2);
@@ -23,19 +23,19 @@
     position: sticky;
     top: 20px;
     z-index: 1000;
-    backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px); /* Performance note: Use sparingly */
     -webkit-backdrop-filter: blur(1px);
     transition: var(--header-transition);
 }
 
-/* Scrolled state */
+/* Scrolled state - kept the same */
 .main-header.scrolled {
     background-color: var(--header-bg-scrolled);
     border-color: var(--header-border-scrolled);
     box-shadow: var(--header-shadow-scrolled);
 }
 
-/* Visibility states for show/hide transitions */
+/* Visibility states - optimized animation */
 .main-header.hidden {
     display: none;
 }
@@ -45,11 +45,13 @@
     animation: fadeIn 0.3s ease forwards;
 }
 
+/* Defined animation only once */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Header content - kept the same */
 .header-content {
     width: 100%;
     margin: 0 auto;
@@ -61,7 +63,7 @@
     flex-wrap: wrap;
 }
 
-/* Site branding/logo */
+/* Site branding/logo - kept the same */
 .site-branding {
     display: flex;
     align-items: center;
@@ -97,11 +99,13 @@
     position: relative;
 }
 
+/* Mobile button hover - kept the same */
 .mobile-menu-toggle:hover {
     background-color: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
 }
 
+/* Hamburger icon - performance optimized with will-change */
 .hamburger-icon {
     display: flex;
     flex-direction: column;
@@ -122,7 +126,7 @@
     will-change: transform, opacity;
 }
 
-/* Active state for hamburger icon */
+/* Active state for hamburger icon - kept the same */
 .mobile-menu-toggle[aria-expanded="true"] .bar-1 {
     transform: translateY(8px) rotate(45deg);
 }
@@ -170,20 +174,20 @@
 
 /* ------ Link States ------ */
 
-/* Active State */
+/* Active State - kept the same */
 .nav-link.active {
     color: var(--primary-color);
     background: rgba(255, 165, 0, 0.1);
     border-bottom: 2px solid var(--primary-color);
 }
 
-/* Hover Effects */
+/* Hover Effects - kept the same */
 .nav-link:not(.disabled):hover {
     color: var(--primary-color);
     background: rgba(255, 165, 0, 0.1);
 }
 
-/* Underline animation */
+/* Underline animation - optimized with will-change */
 .nav-link::after {
     content: '';
     position: absolute;
@@ -237,7 +241,7 @@
 
 /* ------ Responsive Styles ------ */
 
-/* Tablet and smaller desktop */
+/* Tablet and smaller desktop - kept the same */
 @media (max-width: 1024px) {
     .header-content {
         padding: 0 var(--spacing-sm);
@@ -252,7 +256,7 @@
     }
 }
 
-/* Mobile Navigation */
+/* Mobile Navigation - kept the same */
 @media (max-width: 835px) {
     .main-header {
         width: 95%;
@@ -332,7 +336,7 @@
     }
 }
 
-/* Small phones */
+/* Small phones - kept the same */
 @media (max-width: 480px) {
     .main-header {
         width: 100%;
@@ -357,7 +361,7 @@
 
 /* ------ Accessibility ------ */
 
-/* Reduced Motion */
+/* Reduced Motion - consolidated */
 @media (prefers-reduced-motion: reduce) {
     .main-header,
     .nav-link,
@@ -373,7 +377,7 @@
     }
 }
 
-/* High Contrast Mode */
+/* High Contrast Mode - kept the same */
 @media (prefers-contrast: high) {
     .nav-link.disabled {
         color: rgba(255, 255, 255, 0.6);
@@ -394,7 +398,7 @@
     }
 }
 
-/* Print styles */
+/* Print styles - kept the same */
 @media print {
     .main-header {
         position: static;
@@ -418,9 +422,6 @@
 
 /* Ensure menu is always visible above a certain width and logo is hidden on desktop */
 @media (min-width: 769px) {
-    .logo {
-        display: none;
-    }
     .nav-container {
         display: flex !important;
     }

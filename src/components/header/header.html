@@ -1,6 +1,5 @@
 <!-- 
-    Header with enhanced accessibility and responsive design
-    Optimized for mobile devices with working hamburger menu
+    Header
 -->
 <header class="main-header" role="banner">
     <div class="header-content">
@@ -9,8 +8,12 @@
             <span class="logo">MrCargo</span>
         </div>
         
-        <!-- Mobile menu toggle button on right -->
-        <button class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false" type="button">
+        <!-- Mobile menu toggle button on right - improved ARIA attributes -->
+        <button class="mobile-menu-toggle" 
+                aria-label="Toggle navigation menu" 
+                aria-expanded="false" 
+                aria-controls="main-navigation"
+                type="button">
             <span class="hamburger-icon">
                 <span class="bar bar-1"></span>
                 <span class="bar bar-2"></span>
@@ -18,24 +21,24 @@
             </span>
         </button>
         
-        <!-- Main navigation - now wrapped in a container for better mobile display -->
+        <!-- Main navigation - improved accessibility -->
         <div class="nav-container">
-            <nav class="main-nav" role="navigation" aria-label="Main navigation">
+            <nav class="main-nav" role="navigation" aria-label="Main navigation" id="main-navigation">
                 <ul>
                     <li>
                         <a href="#main"
-                           class="nav-link disabled"
-                           aria-disabled="true"
+                           class="nav-link"
+                           aria-disabled="false"
                            tabindex="-1">
                             <span>Main</span>
-                            <span class="status-badge">Coming Soon</span>
                         </a>
                     </li>
                     <li>
                         <a href="#projects"
-                           class="nav-link"
+                           class="nav-link disabled"
                            aria-current="false">
                             <span>Projects</span>
+                            
                         </a>
                     </li>
                     <li>
@@ -48,10 +51,9 @@
                     <li>
                         <a href="#store"
                            class="nav-link disabled"
-                           aria-disabled="true"
-                           tabindex="-1">
+                           aria-disabled="false">
                             <span>Store</span>
-                            <span class="status-badge">Coming Soon</span>
+                            
                         </a>
                     </li>
                     <li>

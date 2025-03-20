@@ -1,76 +1,88 @@
-<section class="main-section projects-section">
-    <nav class="side-nav" aria-label="Project navigation">
-        <div class="nav-content">
+<section class="main-section projects-section" id="projects">
+    <div class="projects-panel">
+        <!-- Panel header with title -->
+        <div class="panel-header">
             <h2>Projects</h2>
-            <ul class="nav-list">
-                <li>
-                    <a href="#project1" class="nav-button" aria-current="false">
-                        <span class="project-title">Project One</span>
-                        <span class="project-category">Web Development</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#project2" class="nav-button">
-                        <span class="project-title">Project Two</span>
-                        <span class="project-category">3D Modeling</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#project3" class="nav-button">
-                        <span class="project-title">Project Three</span>
-                        <span class="project-category">Game Dev</span>
-                    </a>
-                </li>
-            </ul>
         </div>
-    </nav>
+        
+        <!-- Projects content area -->
+        <div class="projects-content">
+            <!-- Side navigation - Now within the panel -->
+            <nav class="side-nav" aria-label="Project navigation">
+                <div class="nav-content">
+                    <ul class="nav-list">
+                        <li>
+                            <a href="#project1" class="nav-button" aria-current="true">
+                                <span class="project-title">Project One</span>
+                                <span class="project-category">Web Development</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#project2" class="nav-button">
+                                <span class="project-title">Project Two</span>
+                                <span class="project-category">3D Modeling</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#project3" class="nav-button">
+                                <span class="project-title">Project Three</span>
+                                <span class="project-category">Game Dev</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
 
-    <article class="main-content">
-        <div class="project-grid">
-            <div class="project-card" id="project1" tabindex="0">
-                <div class="project-image">
-                    <img src="src/assets/textures/sun/sun_map.jpg" alt="Project One Preview">
-                </div>
-                <div class="project-info">
-                    <h3>Project One</h3>
-                    <p>A comprehensive web application.</p>
-                    <div class="project-tags">
-                        <span class="tag">JavaScript</span>
-                        <span class="tag">CSS</span>
-                        <span class="tag">HTML</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Main project grid -->
+            <div class="main-content">
+                <div class="project-grid">
+                    <!-- Project cards with consistent structure -->
+                    <article class="project-card" id="project1" tabindex="0">
+                        <div class="project-image">
+                            <img src="src/assets/textures/sun/sun_map.jpg" alt="Project One Preview" loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <h3>Project One</h3>
+                            <p>A comprehensive web application.</p>
+                            <div class="project-tags">
+                                <span class="tag">JavaScript</span>
+                                <span class="tag">CSS</span>
+                                <span class="tag">HTML</span>
+                            </div>
+                        </div>
+                    </article>
 
-            <div class="project-card" id="project2" tabindex="0">
-                <div class="project-image">
-                    <img src="src/assets/textures/planets/earth/earth_map.jpg" alt="Project Two Preview">
-                </div>
-                <div class="project-info">
-                    <h3>Project Two</h3>
-                    <p>3D Modeling.</p>
-                    <div class="project-tags">
-                        <span class="tag">Blender</span>
-                        <span class="tag">Fusion360</span>
-                        <span class="tag">Tinkercad</span>
-                    </div>
-                </div>
-            </div>
+                    <article class="project-card" id="project2" tabindex="0">
+                        <div class="project-image">
+                            <img src="src/assets/textures/planets/earth/earth_map.jpg" alt="Project Two Preview" loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <h3>Project Two</h3>
+                            <p>3D Modeling.</p>
+                            <div class="project-tags">
+                                <span class="tag">Blender</span>
+                                <span class="tag">Fusion360</span>
+                                <span class="tag">Tinkercad</span>
+                            </div>
+                        </div>
+                    </article>
 
-            <div class="project-card" id="project3" tabindex="0">
-                <div class="project-image">
-                    <img src="src/assets/textures/planets/saturn/saturn_map.jpg" alt="Project Three Preview">
-                </div>
-                <div class="project-info">
-                    <h3>Project Three</h3>
-                    <p>Game Development.</p>
-                    <div class="project-tags">
-                        <span class="tag">Godot</span>
-                        <span class="tag">Python</span>
-                        <span class="tag">JavaScript</span>
-                    </div>
+                    <article class="project-card" id="project3" tabindex="0">
+                        <div class="project-image">
+                            <img src="src/assets/textures/planets/saturn/saturn_map.jpg" alt="Project Three Preview" loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <h3>Project Three</h3>
+                            <p>Game Development.</p>
+                            <div class="project-tags">
+                                <span class="tag">Godot</span>
+                                <span class="tag">Python</span>
+                                <span class="tag">JavaScript</span>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
         </div>
-    </article>
+    </div>
 </section>

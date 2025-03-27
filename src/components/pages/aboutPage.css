@@ -1,53 +1,24 @@
-/* aboutPage.css */
+/* aboutPage.css - Updated for consistency with contactPage.css */
 
-/* Main Section */
+/* Main Section - Aligned with contact page structure */
 .main-section {
-    padding: var(--spacing-md);
-    max-width: 100%;
+    max-width: var(--content-width);
+    width: 92%;
+    margin: var(--spacing-xl) auto;
+    margin-bottom: var(--spacing-xl);
+    padding: 0;
     overflow-x: hidden;
 }
 
-/* Profile Panel Styles - optimized for performance */
-.profile-panel {
-    max-width: 900px;
-    width: 92%;
-    margin: var(--spacing-xl) auto;
-    animation: fadeIn 0.8s ease-out;
-    will-change: opacity;
-    contain: content;
-}
-
-.panel-container {
-    background-color: rgba(20, 20, 20, 0.95);
-    border-radius: var(--border-radius);
-    border: 1px solid rgba(255, 165, 0, 0.2);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.panel-header {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid rgba(255, 165, 0, 0.2);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--spacing-md);
-}
-
-/* Made consistent with other section titles */
-.panel-header h3,
+/* Section Title - Standardized with contact page */
 .section-title {
     color: var(--primary-color);
-    font-size: 1.5rem;
-    margin: 0;
+    margin-bottom: var(--spacing-lg);
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
     position: relative;
     display: inline-block;
 }
 
-.panel-header h3::after,
 .section-title::after {
     content: '';
     position: absolute;
@@ -58,7 +29,54 @@
     background-color: var(--primary-color);
 }
 
-/* Header social links */
+/* Profile Panel Styles - optimized for performance and aligned with contact-grid */
+.profile-panel {
+    width: 100%;
+    margin-top: var(--spacing-lg);
+    animation: fadeIn 0.8s ease-out;
+    will-change: opacity;
+    contain: content;
+}
+
+.panel-container {
+    background-color: var(--panel-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-medium);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.panel-header h3 {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    margin: 0;
+    position: relative;
+    display: inline-block;
+}
+
+.panel-header h3::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
+}
+
+/* Header social links - aligned with contact page */
 .header-social {
     display: flex;
     align-items: center;
@@ -69,25 +87,25 @@
     gap: var(--spacing-md);
 }
 
-/* Social links - styled to match contact page */
+/* Social links - Standardized with contact page */
 .social-link {
-    color: var(--text-color);
-    text-decoration: none;
-    transition: all 0.3s ease;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    padding: var(--spacing-sm);
-    background-color: rgba(30, 30, 30, 0.6);
-    border: 1px solid rgba(255, 165, 0, 0.1);
-    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text-color);
+    background: rgba(30, 30, 30, 0.6);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
 }
 
-.social-link:hover, .social-link:focus-visible {
+.social-link:hover,
+.social-link:focus-visible {
+    transform: translateY(-2px);
+    background: var(--hover-bg);
+    border-color: var(--border-color);
     color: var(--primary-color);
-    background-color: rgba(30, 30, 30, 0.8);
-    border-color: rgba(255, 165, 0, 0.3);
-    transform: translateY(-3px);
 }
 
 .social-link:focus-visible {
@@ -95,11 +113,15 @@
     outline-offset: 2px;
 }
 
+.social-link svg {
+    margin-right: var(--spacing-sm);
+}
+
 .panel-content {
     padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;
-    max-height: 90vh; /* Limit the panel height */
+    max-height: 90vh;
 }
 
 /* Accessibility improvement - skip link */
@@ -111,7 +133,7 @@
     color: #000;
     padding: var(--spacing-sm) var(--spacing-md);
     z-index: 100;
-    transition: top 0.3s ease;
+    transition: var(--transition);
 }
 
 .skip-link:focus {
@@ -174,8 +196,8 @@
     min-width: 280px;
 }
 
-.profile-header h1 {
-    font-size: clamp(2rem, 4vw, 2.5rem);
+.profile-header h3 {
+    font-size: clamp(1.5rem, 4vw, 2rem);
     margin-bottom: 0;
     color: var(--text-color);
     letter-spacing: 0.05em;
@@ -186,18 +208,18 @@
     color: var(--primary-color);
     font-weight: normal;
     display: block;
-    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
 }
 
 .tagline {
     color: var(--secondary-color);
-    font-size: clamp(1.1rem, 2vw, 1.3rem);
+    font-size: clamp(1rem, 2vw, 1.2rem);
     margin-top: var(--spacing-sm);
     margin-bottom: 0;
     font-weight: 400;
 }
 
-/* Profile image - optimized transform */
+/* Profile image */
 .profile-image {
     align-self: center;
 }
@@ -214,7 +236,7 @@
     font-weight: bold;
     color: rgba(0, 0, 0, 0.8);
     box-shadow: 0 5px 15px rgba(255, 165, 0, 0.3);
-    transition: transform 0.3s ease;
+    transition: var(--transition);
 }
 
 .profile-placeholder:hover {
@@ -224,7 +246,7 @@
 /* Bio Section */
 .bio-section {
     margin-bottom: var(--spacing-lg);
-    line-height: 1.8;
+    line-height: 1.6;
 }
 
 .bio-highlight {
@@ -238,7 +260,7 @@
 
 .bio-content p {
     margin-bottom: var(--spacing-md);
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-color);
 }
 
 /* Skills Section */
@@ -257,16 +279,16 @@
 .animate-card {
     background-color: rgba(30, 30, 30, 0.5);
     padding: var(--spacing-md);
-    border-radius: 8px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    border: 1px solid rgba(255, 165, 0, 0.1);
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
     will-change: transform, box-shadow;
 }
 
 .animate-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(255, 165, 0, 0.15);
-    border-color: rgba(255, 165, 0, 0.3);
+    box-shadow: var(--shadow-medium);
+    border-color: var(--border-color);
 }
 
 .skill-category h5 {
@@ -274,7 +296,7 @@
     margin-top: 0;
     margin-bottom: var(--spacing-md);
     font-size: 1.1rem;
-    border-bottom: 1px solid rgba(255, 165, 0, 0.1);
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: var(--spacing-sm);
 }
 
@@ -288,7 +310,7 @@
     margin-bottom: var(--spacing-sm);
     padding-left: var(--spacing-md);
     position: relative;
-    transition: transform 0.2s ease;
+    transition: var(--transition);
 }
 
 .skill-list li:hover {
@@ -320,7 +342,7 @@
     bottom: 0;
     left: 9px;
     width: 2px;
-    background-color: rgba(255, 165, 0, 0.3);
+    background-color: var(--border-color);
 }
 
 .timeline-item {
@@ -337,16 +359,16 @@
     border-radius: 50%;
     background-color: var(--primary-color);
     border: 4px solid rgba(0, 0, 0, 0.8);
-    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.3);
+    box-shadow: 0 0 0 2px var(--border-color);
 }
 
 .timeline-content {
-    background-color: rgba(30, 30, 30, 0.95);
-    border-radius: 8px;
+    background-color: var(--panel-bg);
+    border-radius: var(--border-radius-sm);
     padding: var(--spacing-md);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-medium);
     border-left: 2px solid transparent;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: var(--transition);
 }
 
 .timeline-content:hover {
@@ -363,7 +385,7 @@
 
 .timeline-content p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-color);
 }
 
 /* Animations */
@@ -378,20 +400,26 @@
     }
 }
 
-/* Media Queries for Responsive Design */
+/* Media Queries for Responsive Design - aligned with contact page */
+@media (max-width: 968px) {
+    .profile-top {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
 @media (max-width: 768px) {
-    .profile-panel {
+    .main-section {
         width: 95%;
-        margin: var(--spacing-lg) auto;
     }
     
     .panel-content {
         padding: var(--spacing-md);
-        max-height: none; /* Remove fixed height on mobile */
+        max-height: none;
     }
     
     .scrollable-content {
-        max-height: 60vh; /* Adjust scrollable area height for tablets */
+        max-height: 60vh;
     }
     
     .profile-top {
@@ -447,9 +475,8 @@
 
 /* Small mobile screens */
 @media (max-width: 480px) {
-    .profile-panel {
+    .main-section {
         width: 98%;
-        margin: var(--spacing-md) auto;
     }
     
     .panel-content {
@@ -457,12 +484,12 @@
     }
     
     .scrollable-content {
-        max-height: 65vh; /* Increase scrollable area height for small screens */
-        padding-right: 0; /* Remove padding on small screens */
+        max-height: 65vh;
+        padding-right: 0;
     }
     
-    .profile-header h1 {
-        font-size: 1.8rem;
+    .section-title {
+        font-size: 1.5rem;
     }
     
     .highlight {
@@ -471,10 +498,6 @@
     
     .tagline {
         font-size: 1rem;
-    }
-    
-    .section-title {
-        font-size: 1.2rem;
     }
     
     .bio-highlight {
@@ -493,12 +516,14 @@
     
     .social-links {
         gap: var(--spacing-sm);
+        flex-direction: column;
     }
 
     /* Ensure touch targets are large enough */
     .social-link {
         min-width: 44px;
         min-height: 44px;
+        width: 100%;
     }
 }
 
@@ -529,6 +554,13 @@
     }
 }
 
+/* Focus states for accessibility */
+.social-link:focus-visible,
+.skill-list a:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
 /* Print styles - optimized for printing */
 @media print {
     .profile-panel {
@@ -542,7 +574,7 @@
         box-shadow: none;
     }
     
-    .profile-header h1, .section-title, .skill-category h5, .timeline-content h5 {
+    .profile-header h3, .section-title, .skill-category h5, .timeline-content h5 {
         color: #000;
     }
     

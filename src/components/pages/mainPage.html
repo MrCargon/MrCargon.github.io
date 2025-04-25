@@ -1,112 +1,120 @@
 <!-- mainPage.html -->
 <section class="main-section hero-section" id="main">
-    <div class="hero-content">
-        <h1 class="hero-title">Welcome to My Creative Space</h1>
-        <p class="hero-subtitle">Exploring the intersection of development and design</p>
-        
-        <!-- Space Exploration UI - Now contained within the panel -->
-        <div class="space-exploration-container">
-            <!-- Planet Selection Bar -->
-            <div class="planet-selector-wrapper" role="navigation" aria-label="Planet Selection">
-                <button class="scroll-indicator left" aria-label="Scroll left">
-                    <span class="arrow" aria-hidden="true">←</span>
+    
+    <!-- Space Exploration UI - Restructured -->
+    <div class="space-exploration-container">
+        <!-- Planet Selection Bar - Moved up and optimized -->
+        <div class="planet-selector-wrapper" role="navigation" aria-label="Planet Selection">
+            <button class="scroll-indicator left" aria-label="Scroll left">
+                <span class="arrow" aria-hidden="true">←</span>
+            </button>
+            
+            <div class="planet-selector" role="tablist">
+                <button class="planet-btn active" 
+                        role="tab" 
+                        aria-selected="true"
+                        aria-controls="planet-info-panel"
+                        id="tab-Sun"
+                        data-planet="Sun">
+                    <span class="planet-icon" aria-hidden="true">☀️</span>
+                    <span class="planet-name">Sun</span>
                 </button>
-                
-                <div class="planet-selector" role="tablist">
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="true"
-                            aria-controls="planet-info-panel"
-                            id="tab-Sun"
-                            data-planet="Sun">
-                        <span class="planet-icon" aria-hidden="true">☀️</span>
-                        <span class="planet-name">Sun</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Mercury" 
-                            data-planet="Mercury">
-                        <span class="planet-icon" aria-hidden="true">🌑</span>
-                        <span class="planet-name">Mercury</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Venus" 
-                            data-planet="Venus">
-                        <span class="planet-icon" aria-hidden="true">🌕</span>
-                        <span class="planet-name">Venus</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Earth" 
-                            data-planet="Earth">
-                        <span class="planet-icon" aria-hidden="true">🌍</span>
-                        <span class="planet-name">Earth</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Mars" 
-                            data-planet="Mars">
-                        <span class="planet-icon" aria-hidden="true">🔴</span>
-                        <span class="planet-name">Mars</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Jupiter" 
-                            data-planet="Jupiter">
-                        <span class="planet-icon" aria-hidden="true">⭕</span>
-                        <span class="planet-name">Jupiter</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Saturn" 
-                            data-planet="Saturn">
-                        <span class="planet-icon" aria-hidden="true">🪐</span>
-                        <span class="planet-name">Saturn</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Uranus" 
-                            data-planet="Uranus">
-                        <span class="planet-icon" aria-hidden="true">🌌</span>
-                        <span class="planet-name">Uranus</span>
-                    </button>
-                    <button class="planet-btn" 
-                            role="tab" 
-                            aria-selected="false"
-                            aria-controls="planet-info-panel"
-                            id="tab-Neptune" 
-                            data-planet="Neptune">
-                        <span class="planet-icon" aria-hidden="true">💫</span>
-                        <span class="planet-name">Neptune</span>
-                    </button>
-                </div>
-                
-                <button class="scroll-indicator right" aria-label="Scroll right">
-                    <span class="arrow" aria-hidden="true">→</span>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Mercury" 
+                        data-planet="Mercury">
+                    <span class="planet-icon" aria-hidden="true">🌑</span>
+                    <span class="planet-name">Mercury</span>
+                </button>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Venus" 
+                        data-planet="Venus">
+                    <span class="planet-icon" aria-hidden="true">🌕</span>
+                    <span class="planet-name">Venus</span>
+                </button>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Earth" 
+                        data-planet="Earth">
+                    <span class="planet-icon" aria-hidden="true">🌍</span>
+                    <span class="planet-name">Earth</span>
+                </button>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Mars" 
+                        data-planet="Mars">
+                    <span class="planet-icon" aria-hidden="true">🔴</span>
+                    <span class="planet-name">Mars</span>
+                </button>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Jupiter" 
+                        data-planet="Jupiter">
+                    <span class="planet-icon" aria-hidden="true">⭕</span>
+                    <span class="planet-name">Jupiter</span>
+                </button>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Saturn" 
+                        data-planet="Saturn">
+                    <span class="planet-icon" aria-hidden="true">🪐</span>
+                    <span class="planet-name">Saturn</span>
+                </button>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Uranus" 
+                        data-planet="Uranus">
+                    <span class="planet-icon" aria-hidden="true">🌌</span>
+                    <span class="planet-name">Uranus</span>
+                </button>
+                <button class="planet-btn" 
+                        role="tab" 
+                        aria-selected="false"
+                        aria-controls="planet-info-panel"
+                        id="tab-Neptune" 
+                        data-planet="Neptune">
+                    <span class="planet-icon" aria-hidden="true">💫</span>
+                    <span class="planet-name">Neptune</span>
                 </button>
             </div>
+            
+            <button class="scroll-indicator right" aria-label="Scroll right">
+                <span class="arrow" aria-hidden="true">→</span>
+            </button>
+        </div>
 
-            <!-- Planet Information Panel -->
-            <div id="planet-info-panel" class="planet-info-panel" role="tabpanel" aria-live="polite">
-                <div class="info-header">
-                    <h2 id="planet-name" class="planet-title">Sun</h2>
-                    <p id="planet-description" class="planet-description">The star at the center of our Solar System.</p>
-                </div>
+        <!-- Progress indicator bar -->
+        <div class="selection-progress">
+            <div class="progress-indicator"></div>
+        </div>
+
+        <!-- Collapsible Planet Information Panel -->
+        <div id="planet-info-panel" class="planet-info-panel" role="tabpanel" aria-live="polite">
+            <div class="info-header">
+                <h2 id="planet-name" class="planet-title">Sun</h2>
+                <button class="toggle-info-btn" aria-label="Toggle information panel" title="Toggle details">
+                    <span class="icon" aria-hidden="true">↓</span>
+                </button>
+            </div>
+            
+            <div class="planet-details">
+                <p id="planet-description" class="planet-description">The star at the center of our Solar System.</p>
+                
                 <div class="planet-stats">
                     <div class="stat-card">
                         <label id="diameter-label">Diameter</label>
@@ -122,28 +130,45 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Camera Controls -->
-            <div id="navigation-controls" class="camera-controls" role="toolbar" aria-label="Camera Controls">
-                <button id="reset-camera" 
-                        class="control-btn" 
-                        title="Reset Camera"
-                        aria-label="Reset Camera View">
-                    <span class="icon" aria-hidden="true">⟲</span>
-                </button>
-                <button id="toggle-rotation" 
-                        class="control-btn" 
-                        title="Toggle Auto-rotation"
-                        aria-label="Toggle Planet Rotation">
-                    <span class="icon" aria-hidden="true">↻</span>
-                </button>
-                <button id="toggle-orbit" 
-                        class="control-btn" 
-                        title="Toggle Orbit Lines"
-                        aria-label="Toggle Orbit Lines">
-                    <span class="icon" aria-hidden="true">◯</span>
-                </button>
-            </div>
+        <!-- Camera Controls - Moved to the side as a floating panel -->
+        <div id="navigation-controls" class="camera-controls" role="toolbar" aria-label="Camera Controls">
+            <button id="reset-camera" 
+                    class="control-btn tooltip" 
+                    title="Reset Camera"
+                    aria-label="Reset Camera View">
+                <span class="icon" aria-hidden="true">⟲</span>
+                <span class="tooltip-text">Reset View</span>
+            </button>
+            <button id="toggle-rotation" 
+                    class="control-btn tooltip" 
+                    title="Toggle Auto-rotation"
+                    aria-label="Toggle Planet Rotation">
+                <span class="icon" aria-hidden="true">↻</span>
+                <span class="tooltip-text">Toggle Rotation</span>
+            </button>
+            <button id="toggle-orbit-mode" 
+                    class="control-btn tooltip" 
+                    title="Toggle Camera Orbit"
+                    aria-label="Toggle Camera Orbit">
+                <span class="icon" aria-hidden="true">⚲</span>
+                <span class="tooltip-text">Orbit Mode</span>
+            </button>
+            <button id="toggle-follow-rotation" 
+                    class="control-btn tooltip" 
+                    title="Follow Planet Rotation"
+                    aria-label="Follow Planet Rotation">
+                <span class="icon" aria-hidden="true">⥀</span>
+                <span class="tooltip-text">Follow Rotation</span>
+            </button>
+            <button id="toggle-orbit" 
+                    class="control-btn tooltip" 
+                    title="Toggle Orbit Lines"
+                    aria-label="Toggle Orbit Lines">
+                <span class="icon" aria-hidden="true">◯</span>
+                <span class="tooltip-text">Show Orbits</span>
+            </button>
         </div>
     </div>
 </section>

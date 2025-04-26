@@ -615,7 +615,9 @@ class PageManager {
         
         // Planet selection functionality
         const planetButtons = document.querySelectorAll('.planet-btn');
-        planetButtons.forEach(button => {
+        const progressIndicator = document.querySelector('.progress-indicator');
+        
+        planetButtons.forEach((button, index) => {
             button.addEventListener('click', () => {
                 // Update active state
                 planetButtons.forEach(btn => {
@@ -629,8 +631,41 @@ class PageManager {
                 // Update planet info
                 const planetName = button.getAttribute('data-planet');
                 this.updatePlanetInfo(planetName);
+                
+                // Update progress indicator position (new functionality)
+                if (progressIndicator) {
+                    const totalPlanets = planetButtons.length;
+                    const segmentWidth = 100 / totalPlanets;
+                    
+                    progressIndicator.style.width = segmentWidth + '%';
+                    progressIndicator.style.left = (segmentWidth * index) + '%';
+                }
             });
         });
+        
+        // Toggle planet details (new functionality)
+        const toggleInfoBtn = document.querySelector('.toggle-info-btn');
+        const planetDetails = document.querySelector('.planet-details');
+        
+        if (toggleInfoBtn && planetDetails) {
+            toggleInfoBtn.addEventListener('click', function() {
+                this.classList.toggle('collapsed');
+                planetDetails.classList.toggle('collapsed');
+                
+                // Update aria attributes for accessibility
+                const isCollapsed = planetDetails.classList.contains('collapsed');
+                this.setAttribute('aria-expanded', !isCollapsed);
+                
+                // Change the icon text based on state
+                const iconSpan = this.querySelector('.icon');
+                if (iconSpan) {
+                    iconSpan.textContent = isCollapsed ? '↑' : '↓';
+                }
+            });
+            
+            // Set initial state
+            toggleInfoBtn.setAttribute('aria-expanded', 'true');
+        }
         
         // Select the first planet by default
         if (planetButtons.length > 0) {

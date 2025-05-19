@@ -13,41 +13,36 @@ class SpaceEnvironment {
     }
     
     async init() {
-        console.log("SpaceEnvironment initialization started");
-        
         try {
-            // Create container
+            console.log("SpaceEnvironment initialization started");
+            
+            // Create container first to show loading visuals ASAP
             this.createContainer();
             
-            // Setup Three.js basics
+            // Defer Three.js setup to next animation frame for smoother loading
+            await new Promise(resolve => requestAnimationFrame(resolve));
             this.setupThreeJS();
             
-            // Create resource loader
+            // Load essential resources first
             this.resourceLoader = new ResourceLoader();
             
-            // Create solar system
-            this.solarSystem = new SolarSystem(this);
+            // Initialize solar system with progressive loading strategy
+            this.solarSystem = new SolarSystem(this, {
+                progressiveLoading: true,
+                prioritizeCentralBodies: true
+            });
+            
             await this.solarSystem.init();
-            
-            // Focus on Earth at startup (ADD THIS LINE)
-            this.focusOnPlanet("Earth");
-            
-            // Connect UI controls
             this.connectUIControls();
-            
-            // Start animation loop
             this.animate();
             
             console.log("SpaceEnvironment initialized successfully");
             this.initialized = true;
-            
-            // Make it visible right away
             this.show();
             
             return true;
         } catch (error) {
             console.error('Failed to initialize Space Environment:', error);
-            console.error(error.stack);
             return false;
         }
     }

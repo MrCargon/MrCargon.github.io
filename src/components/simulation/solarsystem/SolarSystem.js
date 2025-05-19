@@ -1,8 +1,15 @@
 // SolarSystem.js - Main class that orchestrates all solar system objects
 class SolarSystem {
-    constructor(environment) {
+    constructor(environment, options = {}) {
         this.environment = environment;
         this.scene = environment.scene;
+        
+        // Parse options with defaults
+        this.options = {
+            progressiveLoading: options?.progressiveLoading || false,
+            prioritizeCentralBodies: options?.prioritizeCentralBodies || false
+        };
+        
         this.objects = new Map();
         this.animationEnabled = true;
         this.showOrbits = true;

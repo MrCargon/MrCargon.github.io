@@ -122,7 +122,7 @@ When a planet is selected in the UI:
    npm start
    ```
 
-4. Open your browser and visit `http://localhost:3000`
+4. Open your browser and visit ~ `http://localhost:3001`
 
 ## Deployment
 

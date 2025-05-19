@@ -130,7 +130,7 @@ This project is configured for GitHub Pages deployment:
 
 1. Push to your GitHub repository
 2. Enable GitHub Pages in repository settings
-3. The site will be available at `https://yourusername.github.io/repository-name`
+3. The site will be available at `https://mrcargon.github.io`
 
 ## Performance Optimization
 

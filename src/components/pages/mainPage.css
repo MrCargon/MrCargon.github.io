@@ -263,7 +263,7 @@
     color: var(--text-color);
 }
 
-/* Camera Controls - Standardized */
+/* Camera Controls - Enhanced and more visible */
 .camera-controls {
     position: fixed;
     right: var(--spacing-md);
@@ -272,32 +272,49 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
-    backdrop-filter: blur(8px);
-    background: rgba(20, 20, 20, 0.65);
-    padding: var(--spacing-sm);
+    backdrop-filter: blur(12px);
+    background: rgba(20, 20, 20, 0.85);
+    padding: var(--spacing-md);
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-color);
     z-index: 100;
+    box-shadow: var(--shadow-medium);
+    min-width: 180px;
 }
 
+/* Camera Controls Header */
+.camera-controls::before {
+    content: "Camera Controls";
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--border-color);
+    display: block;
+}
 
 .control-btn {
     background: rgba(255, 255, 255, 0.1);
     border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
     color: var(--text-color);
     transition: var(--transition);
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: var(--spacing-sm);
+    font-size: 0.9rem;
+    min-height: 36px;
 }
 
 .control-btn:hover {
-    background: var(--primary-color);
-    color: var(--bg-color);
+    background: var(--hover-bg);
+    color: var(--primary-color);
+    transform: translateX(2px);
 }
 
 .control-btn.active {
@@ -307,6 +324,61 @@
 
 .control-btn .icon {
     font-size: 1.1rem;
+    min-width: 16px;
+    text-align: center;
+}
+
+/* Control button labels */
+.control-btn::after {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+#reset-camera::after {
+    content: "Reset View";
+}
+
+#toggle-rotation::after {
+    content: "Planet Rotation";
+}
+
+#toggle-orbit-mode::after {
+    content: "Auto Orbit";
+}
+
+#toggle-follow-rotation::after {
+    content: "Follow Planet";
+}
+
+#toggle-orbit::after {
+    content: "Orbit Lines";
+}
+
+/* Tooltip enhancement for better UX */
+.control-btn {
+    position: relative;
+}
+
+.tooltip-text {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--text-color);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+    margin-right: var(--spacing-sm);
+    z-index: 1000;
+}
+
+.control-btn:hover .tooltip-text {
+    opacity: 1;
 }
 
 /* Responsive Design - Consistent with About page */
@@ -321,12 +393,32 @@
         top: auto;
         transform: none;
         flex-direction: row;
+        flex-wrap: wrap;
         justify-content: center;
         margin-top: var(--spacing-md);
-        backdrop-filter: none;
-        background: none;
-        border: none;
-        padding: 0;
+        backdrop-filter: blur(8px);
+        background: rgba(20, 20, 20, 0.7);
+        min-width: auto;
+        width: 100%;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .camera-controls::before {
+        width: 100%;
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .control-btn {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .control-btn::after {
+        display: none; /* Hide labels on mobile to save space */
     }
 }
 
@@ -342,6 +434,16 @@
     
     .planet-stats {
         grid-template-columns: 1fr 1fr;
+    }
+    
+    .camera-controls {
+        padding: var(--spacing-sm);
+    }
+    
+    .control-btn {
+        min-width: 100px;
+        padding: var(--spacing-xs);
+        font-size: 0.8rem;
     }
 }
 
@@ -366,6 +468,16 @@
     .planet-info-panel {
         padding: var(--spacing-sm);
     }
+    
+    .camera-controls {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    
+    .control-btn {
+        min-width: auto;
+        width: 100%;
+    }
 }
 
 /* For very small screens */
@@ -389,7 +501,8 @@
     .planet-btn,
     .control-btn,
     .stat-card,
-    .planet-details {
+    .planet-details,
+    .tooltip-text {
         transition: none;
     }
     

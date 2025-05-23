@@ -286,13 +286,47 @@ class SolarSystem {
         };
     }
     
+    getPlanetByName(planetName) {
+        if (planetName.toLowerCase() === 'sun') {
+            return this.objects.get('sun');
+        }
+        return this.objects.get(planetName.toLowerCase());
+    }
+
     focusOnPlanet(planetName) {
         const planetObj = this.objects.get(planetName.toLowerCase());
         if (!planetObj || !planetObj.getMesh) return null;
         
         const mesh = planetObj.getMesh();
         const position = mesh.position.clone();
-        const cameraPosition = position.clone().add(new THREE.Vector3(0, 5, 20));
+        
+        // Get planet radius (if available) or use default values
+        let planetRadius = 1;
+        if (planetName === 'Sun') {
+            planetRadius = 20;
+        } else if (planetObj.data && planetObj.data.radius) {
+            planetRadius = planetObj.data.radius;
+        }
+        
+        // Calculate appropriate camera distance based on planet size
+        let viewDistance = planetRadius * 5;
+        
+        // Sun needs a special distance since it's much larger
+        if (planetName === 'Sun') {
+            viewDistance = planetRadius * 4;
+        }
+        
+        // Ensure minimum viewing distance
+        viewDistance = Math.max(viewDistance, 5);
+        
+        // Position camera at an angle to see the planet better
+        const cameraOffset = new THREE.Vector3(
+            viewDistance * 0.866, // sin(30 degrees)
+            viewDistance * 0.5,   // cos(30 degrees)
+            viewDistance * 0.866  // sin(30 degrees)
+        );
+        
+        const cameraPosition = position.clone().add(cameraOffset);
         
         return {
             position: cameraPosition,

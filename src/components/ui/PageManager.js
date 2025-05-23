@@ -628,17 +628,27 @@ class PageManager {
                 button.classList.add('active');
                 button.setAttribute('aria-selected', 'true');
                 
-                // Update planet info
+                // Get planet name
                 const planetName = button.getAttribute('data-planet');
+                
+                // Update planet info
                 this.updatePlanetInfo(planetName);
                 
-                // Update progress indicator position (new functionality)
+                // Update progress indicator position
                 if (progressIndicator) {
                     const totalPlanets = planetButtons.length;
                     const segmentWidth = 100 / totalPlanets;
                     
                     progressIndicator.style.width = segmentWidth + '%';
                     progressIndicator.style.left = (segmentWidth * index) + '%';
+                }
+                
+                // Focus camera on selected planet using SpaceEnvironment
+                if (window.spaceEnvironment && window.spaceEnvironment.initialized) {
+                    window.spaceEnvironment.focusOnPlanet(planetName);
+                    console.log(`Camera focusing on ${planetName}`);
+                } else {
+                    console.warn("SpaceEnvironment not available for camera control");
                 }
             });
         });
@@ -667,9 +677,75 @@ class PageManager {
             toggleInfoBtn.setAttribute('aria-expanded', 'true');
         }
         
+        // Connect camera control buttons
+        this.initCameraControls();
+        
         // Select the first planet by default
         if (planetButtons.length > 0) {
             planetButtons[0].click();
+        }
+    }
+    
+    /**
+     * Initialize camera control buttons
+     */
+    initCameraControls() {
+        const resetCameraBtn = document.getElementById('reset-camera');
+        const toggleRotationBtn = document.getElementById('toggle-rotation');
+        const toggleOrbitBtn = document.getElementById('toggle-orbit');
+        const toggleOrbitModeBtn = document.getElementById('toggle-orbit-mode');
+        const toggleFollowRotationBtn = document.getElementById('toggle-follow-rotation');
+        
+        if (resetCameraBtn) {
+            resetCameraBtn.addEventListener('click', () => {
+                if (window.spaceEnvironment) {
+                    // Reset camera to default position
+                    window.spaceEnvironment.resetCamera();
+                    console.log('Camera reset to default position');
+                }
+            });
+        }
+        
+        if (toggleRotationBtn) {
+            toggleRotationBtn.addEventListener('click', () => {
+                if (window.spaceEnvironment && window.spaceEnvironment.solarSystem) {
+                    const isEnabled = window.spaceEnvironment.solarSystem.toggleAnimation();
+                    toggleRotationBtn.classList.toggle('active', isEnabled);
+                    console.log(`Planet rotation ${isEnabled ? 'enabled' : 'disabled'}`);
+                }
+            });
+        }
+        
+        if (toggleOrbitBtn) {
+            toggleOrbitBtn.addEventListener('click', () => {
+                if (window.spaceEnvironment && window.spaceEnvironment.solarSystem) {
+                    const isVisible = window.spaceEnvironment.solarSystem.toggleOrbits();
+                    toggleOrbitBtn.classList.toggle('active', isVisible);
+                    console.log(`Orbit lines ${isVisible ? 'visible' : 'hidden'}`);
+                }
+            });
+        }
+        
+        if (toggleOrbitModeBtn) {
+            toggleOrbitModeBtn.addEventListener('click', () => {
+                if (window.spaceEnvironment && window.spaceEnvironment.controls) {
+                    const controls = window.spaceEnvironment.controls;
+                    controls.enableRotate = !controls.enableRotate;
+                    toggleOrbitModeBtn.classList.toggle('active', controls.enableRotate);
+                    console.log(`Camera orbit mode ${controls.enableRotate ? 'enabled' : 'disabled'}`);
+                }
+            });
+        }
+        
+        if (toggleFollowRotationBtn) {
+            toggleFollowRotationBtn.addEventListener('click', () => {
+                if (window.spaceEnvironment) {
+                    const isFollowing = !window.spaceEnvironment.followRotation;
+                    window.spaceEnvironment.followRotation = isFollowing;
+                    toggleFollowRotationBtn.classList.toggle('active', isFollowing);
+                    console.log(`Follow rotation ${isFollowing ? 'enabled' : 'disabled'}`);
+                }
+            });
         }
     }
     
@@ -696,7 +772,13 @@ class PageManager {
      * @param {string} planetName - Name of the selected planet
      */
     updatePlanetInfo(planetName) {
-        // Planet data
+        // Check if SpaceEnvironment is available for planet info
+        if (window.spaceEnvironment && window.spaceEnvironment.updatePlanetInfo) {
+            window.spaceEnvironment.updatePlanetInfo(planetName);
+            return;
+        }
+        
+        // Fallback to static data if SpaceEnvironment is not available
         const planetData = {
             Sun: {
                 description: "The star at the center of our Solar System.",

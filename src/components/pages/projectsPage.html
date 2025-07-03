@@ -2,31 +2,62 @@
     <div class="projects-panel">
         <!-- Panel header with title -->
         <div class="panel-header">
-            <h2>Projects</h2>
+            <h2>Featured Projects</h2>
+            <div class="panel-stats">
+                <span class="stat-item">
+                    <span class="stat-number">6</span>
+                    <span class="stat-label">Projects</span>
+                </span>
+            </div>
         </div>
-        
+
         <!-- Projects content area -->
         <div class="projects-content">
             <!-- Side navigation -->
             <nav class="side-nav" aria-label="Project navigation">
                 <div class="nav-content">
+                    <h3>Project Categories</h3>
                     <ul class="nav-list">
                         <li>
-                            <a href="#project1" class="nav-button" aria-current="true">
-                                <span class="project-title">Project One</span>
+                            <a href="#barista-game" class="nav-button" aria-current="true" data-category="interactive">
+                                <span class="project-title">Starbucks Barista Adventure</span>
+                                <span class="project-category">Interactive Game</span>
+                                <span class="project-status interactive">🎮 Playable</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#portfolio-site" class="nav-button" data-category="web">
+                                <span class="project-title">Portfolio Website</span>
                                 <span class="project-category">Web Development</span>
+                                <span class="project-status completed">✅ Live</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#project2" class="nav-button">
-                                <span class="project-title">Project Two</span>
-                                <span class="project-category">3D Modeling</span>
+                            <a href="#solar-system" class="nav-button" data-category="3d">
+                                <span class="project-title">3D Solar System</span>
+                                <span class="project-category">3D Visualization</span>
+                                <span class="project-status completed">✅ Complete</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#project3" class="nav-button">
-                                <span class="project-title">Project Three</span>
-                                <span class="project-category">Game Dev</span>
+                            <a href="#game-engine" class="nav-button" data-category="gamedev">
+                                <span class="project-title">Custom Game Engine</span>
+                                <span class="project-category">Game Development</span>
+                                <span class="project-status in-progress">🚧 In Progress</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#mobile-app" class="nav-button" data-category="mobile">
+                                <span class="project-title">Task Manager App</span>
+                                <span class="project-category">Mobile Development</span>
+                                <span class="project-status in-progress">🚧 Beta</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#ai-project" class="nav-button" data-category="ai">
+                                <span class="project-title">AI Chat Assistant</span>
+                                <span class="project-category">Machine Learning</span>
+                                <span class="project-status completed">✅ Complete</span>
                             </a>
                         </li>
                     </ul>
@@ -36,48 +67,152 @@
             <!-- Main project grid -->
             <div class="main-content">
                 <div class="project-grid">
-                    <!-- Project cards with consistent structure -->
-                    <article class="project-card" id="project1" tabindex="0">
-                        <div class="project-image">
-                            <img src="src/assets/textures/sun/sun_map.jpg" alt="Project One Preview" loading="lazy">
+                    <!-- Featured Project: Starbucks Barista Game -->
+                    <article class="project-card featured" id="barista-game" tabindex="0" data-category="interactive">
+                        <div class="project-image game-preview">
+                            ☕
                         </div>
                         <div class="project-info">
-                            <h3>Project One</h3>
-                            <p>A comprehensive web application.</p>
+                            <h3>Starbucks Barista Adventure</h3>
+                            <p>An interactive educational game where you learn to make Starbucks drinks through fun challenges. Master recipes, earn badges, and become the ultimate barista!</p>
+                            <div class="project-tags">
+                                <span class="tag">React</span>
+                                <span class="tag">Interactive</span>
+                                <span class="tag">Educational</span>
+                                <span class="tag">Game Design</span>
+                            </div>
+                            <div class="project-actions">
+                                <button class="project-action primary" data-action="play-game" data-game="barista">
+                                    🎮 Play Game
+                                </button>
+                                <button class="project-action" data-action="view-details" data-project="barista-game">
+                                    📖 Details
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Portfolio Website -->
+                    <article class="project-card" id="portfolio-site" tabindex="0" data-category="web">
+                        <div class="project-image">
+                            <img src="src/assets/projects/portfolio-preview.jpg" alt="Portfolio Website Preview" loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <h3>Portfolio Website</h3>
+                            <p>A modern, responsive portfolio website showcasing my projects and skills. Built with vanilla JavaScript and optimized for performance.</p>
                             <div class="project-tags">
                                 <span class="tag">JavaScript</span>
-                                <span class="tag">CSS</span>
-                                <span class="tag">HTML</span>
+                                <span class="tag">CSS3</span>
+                                <span class="tag">HTML5</span>
+                                <span class="tag">Responsive</span>
+                            </div>
+                            <div class="project-actions">
+                                <a href="#" class="project-action primary" target="_blank">
+                                    🌐 Visit Site
+                                </a>
+                                <button class="project-action" data-action="view-details" data-project="portfolio-site">
+                                    📖 Details
+                                </button>
                             </div>
                         </div>
                     </article>
 
-                    <article class="project-card" id="project2" tabindex="0">
+                    <!-- 3D Solar System -->
+                    <article class="project-card" id="solar-system" tabindex="0" data-category="3d">
                         <div class="project-image">
-                            <img src="src/assets/textures/planets/earth/earth_map.jpg" alt="Project Two Preview" loading="lazy">
+                            <img src="src/assets/textures/sun/sun_map.jpg" alt="3D Solar System Preview" loading="lazy">
                         </div>
                         <div class="project-info">
-                            <h3>Project Two</h3>
-                            <p>3D Modeling.</p>
+                            <h3>3D Solar System Simulation</h3>
+                            <p>An interactive 3D solar system with realistic planet orbits, textures, and educational information about each celestial body.</p>
                             <div class="project-tags">
-                                <span class="tag">Blender</span>
-                                <span class="tag">Fusion360</span>
-                                <span class="tag">Tinkercad</span>
+                                <span class="tag">Three.js</span>
+                                <span class="tag">WebGL</span>
+                                <span class="tag">3D Graphics</span>
+                                <span class="tag">Physics</span>
+                            </div>
+                            <div class="project-actions">
+                                <button class="project-action primary" data-action="launch-demo" data-project="solar-system">
+                                    🚀 Launch Demo
+                                </button>
+                                <button class="project-action" data-action="view-details" data-project="solar-system">
+                                    📖 Details
+                                </button>
                             </div>
                         </div>
                     </article>
 
-                    <article class="project-card" id="project3" tabindex="0">
+                    <!-- Game Engine -->
+                    <article class="project-card" id="game-engine" tabindex="0" data-category="gamedev">
                         <div class="project-image">
-                            <img src="src/assets/textures/planets/saturn/saturn_map.jpg" alt="Project Three Preview" loading="lazy">
+                            <img src="src/assets/projects/game-engine-preview.jpg" alt="Custom Game Engine Preview" loading="lazy">
                         </div>
                         <div class="project-info">
-                            <h3>Project Three</h3>
-                            <p>Game Development.</p>
+                            <h3>Custom Game Engine</h3>
+                            <p>A lightweight 2D game engine built from scratch with entity-component system, physics, and comprehensive debugging tools.</p>
                             <div class="project-tags">
-                                <span class="tag">Godot</span>
+                                <span class="tag">C++</span>
+                                <span class="tag">OpenGL</span>
+                                <span class="tag">Game Engine</span>
+                                <span class="tag">Physics</span>
+                            </div>
+                            <div class="project-actions">
+                                <a href="#" class="project-action primary">
+                                    📁 View Code
+                                </a>
+                                <button class="project-action" data-action="view-details" data-project="game-engine">
+                                    📖 Details
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Mobile Task Manager -->
+                    <article class="project-card" id="mobile-app" tabindex="0" data-category="mobile">
+                        <div class="project-image">
+                            <img src="src/assets/projects/mobile-app-preview.jpg" alt="Task Manager App Preview" loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <h3>Task Manager App</h3>
+                            <p>A cross-platform mobile application for task management with offline support, cloud sync, and intelligent notifications.</p>
+                            <div class="project-tags">
+                                <span class="tag">React Native</span>
+                                <span class="tag">TypeScript</span>
+                                <span class="tag">SQLite</span>
+                                <span class="tag">Cloud Sync</span>
+                            </div>
+                            <div class="project-actions">
+                                <button class="project-action primary" data-action="view-demo" data-project="mobile-app">
+                                    📱 View Demo
+                                </button>
+                                <button class="project-action" data-action="view-details" data-project="mobile-app">
+                                    📖 Details
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- AI Chat Assistant -->
+                    <article class="project-card" id="ai-project" tabindex="0" data-category="ai">
+                        <div class="project-image">
+                            <img src="src/assets/projects/ai-assistant-preview.jpg" alt="AI Chat Assistant Preview" loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <h3>AI Chat Assistant</h3>
+                            <p>An intelligent chatbot powered by natural language processing, capable of understanding context and providing helpful responses.</p>
+                            <div class="project-tags">
                                 <span class="tag">Python</span>
-                                <span class="tag">JavaScript</span>
+                                <span class="tag">TensorFlow</span>
+                                <span class="tag">NLP</span>
+                                <span class="tag">Machine Learning</span>
+                            </div>
+                            <div class="project-actions">
+                                <button class="project-action primary" data-action="try-demo" data-project="ai-project">
+                                    🤖 Try Demo
+                                </button>
+                                <button class="project-action" data-action="view-details" data-project="ai-project">
+                                    📖 Details
+                                </button>
                             </div>
                         </div>
                     </article>
@@ -85,4 +220,38 @@
             </div>
         </div>
     </div>
+
+    <!-- Game Container (Hidden by default) -->
+    <div class="game-container" id="game-container">
+        <div class="game-wrapper">
+            <div class="game-header">
+                <h3 id="game-title">Starbucks Barista Adventure</h3>
+                <button class="game-close" id="close-game" aria-label="Close game">
+                    ✕
+                </button>
+            </div>
+            <div class="game-content" id="game-content">
+                <!-- Game will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Details Modal (Hidden by default) -->
+    <div class="project-modal" id="project-modal">
+        <div class="modal-backdrop" id="modal-backdrop"></div>
+        <div class="modal-content" id="modal-content">
+            <!-- Project details will be loaded here -->
+        </div>
+    </div>
 </section>
+
+<!-- Project Categories Filter (Optional Enhancement) -->
+<div class="projects-filter" style="display: none;">
+    <button class="filter-btn active" data-filter="all">All Projects</button>
+    <button class="filter-btn" data-filter="interactive">Interactive</button>
+    <button class="filter-btn" data-filter="web">Web Development</button>
+    <button class="filter-btn" data-filter="3d">3D Graphics</button>
+    <button class="filter-btn" data-filter="gamedev">Game Development</button>
+    <button class="filter-btn" data-filter="mobile">Mobile</button>
+    <button class="filter-btn" data-filter="ai">AI/ML</button>
+</div>

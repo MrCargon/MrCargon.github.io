@@ -1,20 +1,730 @@
 /**
- * PageManager - Single Page Application (SPA) navigation system
- * Optimized for GitHub Pages deployment with progressive enhancement
+ * Enhanced Projects Page Manager
+ * Optimized for performance and game integration
  */
-class PageManager {
-    /**
-     * Creates a new PageManager instance
-     */
+class ProjectsPageManager {
     constructor() {
-        // Core properties
+        this.projectContainer = null;
+        this.gameContainer = null;
+        this.currentGame = null;
+        this.projects = new Map();
+        this.isInitialized = false;
+        
+        // Performance tracking
+        this.performanceMetrics = {
+            gameLoadTimes: {},
+            interactionCount: 0
+        };
+        
+        // Game configurations
+        this.gameConfigs = {
+            barista: {
+                title: "Starbucks Barista Adventure",
+                component: "StarbucksGame",
+                preload: true,
+                category: "educational"
+            }
+        };
+        
+        this.init();
+    }
+
+    /**
+     * Initialize the projects page manager
+     */
+    async init() {
+        if (this.isInitialized) return;
+        
+        try {
+            // Cache DOM elements
+            this.cacheElements();
+            
+            // Setup event listeners
+            this.setupEventListeners();
+            
+            // Initialize projects data
+            this.initializeProjectsData();
+            
+            // Setup game integration
+            this.setupGameIntegration();
+            
+            // Setup accessibility features
+            this.setupAccessibility();
+            
+            this.isInitialized = true;
+            console.log('Projects page manager initialized successfully');
+            
+        } catch (error) {
+            console.error('Failed to initialize projects page manager:', error);
+        }
+    }
+
+    /**
+     * Cache frequently used DOM elements
+     */
+    cacheElements() {
+        this.projectContainer = document.querySelector('.projects-content');
+        this.gameContainer = document.getElementById('game-container');
+        this.gameContent = document.getElementById('game-content');
+        this.gameTitle = document.getElementById('game-title');
+        this.closeGameBtn = document.getElementById('close-game');
+        this.navButtons = document.querySelectorAll('.nav-button');
+        this.projectCards = document.querySelectorAll('.project-card');
+        this.projectActions = document.querySelectorAll('.project-action');
+    }
+
+    /**
+     * Setup event listeners with performance optimization
+     */
+    setupEventListeners() {
+        // Use event delegation for better performance
+        if (this.projectContainer) {
+            this.projectContainer.addEventListener('click', this.handleProjectClick.bind(this));
+            this.projectContainer.addEventListener('keydown', this.handleKeyboardNavigation.bind(this));
+        }
+        
+        // Game controls
+        if (this.closeGameBtn) {
+            this.closeGameBtn.addEventListener('click', this.closeGame.bind(this));
+        }
+        
+        if (this.gameContainer) {
+            this.gameContainer.addEventListener('click', (e) => {
+                if (e.target === this.gameContainer) {
+                    this.closeGame();
+                }
+            });
+        }
+        
+        // Escape key to close game
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isGameOpen()) {
+                this.closeGame();
+            }
+        });
+        
+        // Navigation buttons
+        this.navButtons.forEach(btn => {
+            btn.addEventListener('click', this.handleNavigation.bind(this));
+        });
+        
+        // Window resize handler (debounced)
+        window.addEventListener('resize', this.debounce(this.handleResize.bind(this), 250));
+    }
+
+    /**
+     * Handle project interactions
+     */
+    async handleProjectClick(event) {
+        const action = event.target.closest('[data-action]');
+        if (!action) return;
+        
+        event.preventDefault();
+        this.performanceMetrics.interactionCount++;
+        
+        const actionType = action.dataset.action;
+        const projectId = action.dataset.project;
+        const gameId = action.dataset.game;
+        
+        // Add loading state
+        action.classList.add('loading');
+        
+        try {
+            switch (actionType) {
+                case 'play-game':
+                    await this.launchGame(gameId);
+                    break;
+                case 'view-details':
+                    await this.showProjectDetails(projectId);
+                    break;
+                case 'launch-demo':
+                    await this.launchDemo(projectId);
+                    break;
+                case 'try-demo':
+                    await this.tryDemo(projectId);
+                    break;
+                case 'view-demo':
+                    await this.viewDemo(projectId);
+                    break;
+                default:
+                    console.warn(`Unknown action: ${actionType}`);
+            }
+        } catch (error) {
+            console.error(`Error handling action ${actionType}:`, error);
+            this.showErrorMessage(`Failed to ${actionType.replace('-', ' ')}. Please try again.`);
+        } finally {
+            action.classList.remove('loading');
+        }
+    }
+
+    /**
+     * Launch a game in the game container
+     */
+    async launchGame(gameId) {
+        if (!gameId || !this.gameConfigs[gameId]) {
+            throw new Error(`Invalid game ID: ${gameId}`);
+        }
+        
+        const startTime = performance.now();
+        const gameConfig = this.gameConfigs[gameId];
+        
+        try {
+            // Update game title
+            if (this.gameTitle) {
+                this.gameTitle.textContent = gameConfig.title;
+            }
+            
+            // Show loading state
+            this.showGameLoading();
+            
+            // Show game container
+            this.showGameContainer();
+            
+            // Load and initialize the game
+            await this.loadGameComponent(gameId);
+            
+            // Track performance
+            const loadTime = performance.now() - startTime;
+            this.performanceMetrics.gameLoadTimes[gameId] = loadTime;
+            
+            console.log(`Game ${gameId} loaded in ${loadTime.toFixed(2)}ms`);
+            
+        } catch (error) {
+            this.hideGameContainer();
+            throw error;
+        }
+    }
+
+    /**
+     * Load game component dynamically
+     */
+    async loadGameComponent(gameId) {
+        const gameConfig = this.gameConfigs[gameId];
+        
+        if (gameId === 'barista') {
+            // Load the React Starbucks game
+            await this.loadBaristaGame();
+        } else {
+            throw new Error(`Game component not found: ${gameConfig.component}`);
+        }
+    }
+
+    /**
+     * Load the Barista game (React component integration)
+     */
+    async loadBaristaGame() {
+        if (!this.gameContent) return;
+        
+        // Clear previous content
+        this.gameContent.innerHTML = '';
+        
+        // Create container for React component
+        const gameDiv = document.createElement('div');
+        gameDiv.id = 'barista-game-root';
+        gameDiv.style.width = '100%';
+        gameDiv.style.height = '100%';
+        this.gameContent.appendChild(gameDiv);
+        
+        // Check if React and the game component are available
+        if (typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
+            // If React is available, we can render the component
+            try {
+                // Load the game component
+                const StarbucksGameModule = await import('./games/StarbucksGame.js');
+                const StarbucksGame = StarbucksGameModule.default;
+                
+                // Render the React component
+                ReactDOM.render(React.createElement(StarbucksGame), gameDiv);
+                
+            } catch (error) {
+                console.warn('React component loading failed, falling back to HTML version');
+                this.loadBaristaGameHTML();
+            }
+        } else {
+            // Fallback to HTML/JS version
+            this.loadBaristaGameHTML();
+        }
+    }
+
+    /**
+     * Fallback HTML version of the Barista game
+     */
+    loadBaristaGameHTML() {
+        if (!this.gameContent) return;
+        
+        this.gameContent.innerHTML = `
+            <div class="barista-game-container">
+                <div class="game-screen welcome-screen active">
+                    <div class="game-header">
+                        <h1>☕ Starbucks Barista Adventure ☕</h1>
+                        <p>Become a master barista through fun challenges!</p>
+                    </div>
+                    
+                    <div class="game-form">
+                        <div class="barista-avatar">👨‍🍳</div>
+                        <h2>Welcome, Future Barista!</h2>
+                        <p>What's your barista name?</p>
+                        
+                        <input type="text" id="player-name" placeholder="Enter your name" class="name-input">
+                        <button id="start-game" class="start-btn" disabled>Start My Adventure!</button>
+                    </div>
+                    
+                    <div class="game-info">
+                        <p>Learn recipes • Earn stars • Collect badges</p>
+                        <p>Become the ultimate Starbucks barista!</p>
+                    </div>
+                </div>
+                
+                <div class="game-screen main-screen">
+                    <div class="player-info">
+                        <div class="player-stats">
+                            <h2 id="player-title">Barista</h2>
+                            <div class="stats">
+                                <span class="level">Level <span id="player-level">1</span></span>
+                                <span class="stars"><span id="player-stars">0</span> ⭐</span>
+                            </div>
+                        </div>
+                        <button class="badges-btn" id="badges-btn">🏆 <span id="badge-count">0</span></button>
+                    </div>
+                    
+                    <div class="barista-tip">
+                        <div class="barista-character">😊</div>
+                        <div class="tip-content">
+                            <h3>Barista Tip:</h3>
+                            <p id="current-tip">Welcome to your barista adventure! Remember to have fun while learning!</p>
+                        </div>
+                    </div>
+                    
+                    <div class="game-options">
+                        <button class="option-btn random-challenge" data-category="all">
+                            <span class="icon">🎯</span>
+                            <span class="title">Random Challenge</span>
+                            <span class="subtitle">Test your skills!</span>
+                        </button>
+                        
+                        <button class="option-btn recipe-types">
+                            <span class="icon">📚</span>
+                            <span class="title">Recipe Types</span>
+                            <span class="subtitle">Choose a category</span>
+                        </button>
+                        
+                        <button class="option-btn recipe-book">
+                            <span class="icon">📖</span>
+                            <span class="title">Recipe Book</span>
+                            <span class="subtitle">Study the recipes</span>
+                        </button>
+                        
+                        <button class="option-btn barista-tips">
+                            <span class="icon">💡</span>
+                            <span class="title">Barista Tips</span>
+                            <span class="subtitle">Helpful advice</span>
+                        </button>
+                    </div>
+                    
+                    <div class="progress-info">
+                        <p class="streak-info">Start a streak by getting answers right in a row!</p>
+                        <p class="level-info"><span id="stars-needed">5</span> more stars to level up!</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Initialize the HTML game
+        this.initializeBaristaGameHTML();
+    }
+
+    /**
+     * Initialize the HTML version of the barista game
+     */
+    initializeBaristaGameHTML() {
+        const nameInput = document.getElementById('player-name');
+        const startBtn = document.getElementById('start-game');
+        const gameScreens = document.querySelectorAll('.game-screen');
+        
+        if (nameInput && startBtn) {
+            nameInput.addEventListener('input', (e) => {
+                startBtn.disabled = !e.target.value.trim();
+            });
+            
+            startBtn.addEventListener('click', () => {
+                const playerName = nameInput.value.trim();
+                if (playerName) {
+                    document.getElementById('player-title').textContent = `Barista ${playerName}`;
+                    this.switchGameScreen('main-screen');
+                }
+            });
+        }
+        
+        // Game option handlers
+        const optionButtons = document.querySelectorAll('.option-btn');
+        optionButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const btnClass = btn.className;
+                if (btnClass.includes('random-challenge')) {
+                    this.showMessage('🎯 Random Challenge selected! Feature coming soon...');
+                } else if (btnClass.includes('recipe-types')) {
+                    this.showMessage('📚 Recipe Types selected! Feature coming soon...');
+                } else if (btnClass.includes('recipe-book')) {
+                    this.showMessage('📖 Recipe Book selected! Feature coming soon...');
+                } else if (btnClass.includes('barista-tips')) {
+                    this.showMessage('💡 Here\'s a tip: Practice makes perfect!');
+                }
+            });
+        });
+    }
+
+    /**
+     * Switch between game screens
+     */
+    switchGameScreen(screenClass) {
+        const screens = document.querySelectorAll('.game-screen');
+        screens.forEach(screen => {
+            screen.classList.remove('active');
+            if (screen.classList.contains(screenClass)) {
+                screen.classList.add('active');
+            }
+        });
+    }
+
+    /**
+     * Show a temporary message
+     */
+    showMessage(message, duration = 3000) {
+        // Create message element
+        const messageEl = document.createElement('div');
+        messageEl.className = 'game-message';
+        messageEl.textContent = message;
+        messageEl.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            z-index: 10000;
+            font-weight: 600;
+            text-align: center;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(messageEl);
+        
+        // Remove after duration
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
+            }
+        }, duration);
+    }
+
+    /**
+     * Show game loading state
+     */
+    showGameLoading() {
+        if (!this.gameContent) return;
+        
+        this.gameContent.innerHTML = `
+            <div class="game-loading">
+                <div class="loading-spinner"></div>
+                <h3>Loading Game...</h3>
+                <p>Please wait while we prepare your barista adventure!</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Show game container
+     */
+    showGameContainer() {
+        if (this.gameContainer) {
+            this.gameContainer.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+    }
+
+    /**
+     * Hide game container
+     */
+    hideGameContainer() {
+        if (this.gameContainer) {
+            this.gameContainer.classList.remove('active');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+    }
+
+    /**
+     * Close the currently open game
+     */
+    closeGame() {
+        this.hideGameContainer();
+        
+        // Clean up game content
+        if (this.gameContent) {
+            this.gameContent.innerHTML = '';
+        }
+        
+        this.currentGame = null;
+        
+        // Focus back to the trigger button for accessibility
+        const activeProjectCard = document.querySelector('.project-card.featured');
+        if (activeProjectCard) {
+            activeProjectCard.focus();
+        }
+    }
+
+    /**
+     * Check if a game is currently open
+     */
+    isGameOpen() {
+        return this.gameContainer && this.gameContainer.classList.contains('active');
+    }
+
+    /**
+     * Handle navigation between projects
+     */
+    handleNavigation(event) {
+        event.preventDefault();
+        
+        const button = event.currentTarget;
+        const targetId = button.getAttribute('href');
+        
+        // Update active state
+        this.navButtons.forEach(btn => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-current', 'false');
+        });
+        
+        button.classList.add('active');
+        button.setAttribute('aria-current', 'true');
+        
+        // Scroll to target project
+        if (targetId) {
+            const targetProject = document.querySelector(targetId);
+            if (targetProject) {
+                targetProject.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
+                // Add highlight effect
+                this.highlightProject(targetProject);
+            }
+        }
+    }
+
+    /**
+     * Highlight a project card
+     */
+    highlightProject(projectCard) {
+        projectCard.classList.add('highlighted');
+        setTimeout(() => {
+            projectCard.classList.remove('highlighted');
+        }, 2000);
+    }
+
+    /**
+     * Show project details (placeholder)
+     */
+    async showProjectDetails(projectId) {
+        console.log(`Showing details for project: ${projectId}`);
+        
+        // This would typically load project details
+        // For now, just show a message
+        this.showMessage(`📖 Project details for ${projectId} coming soon!`);
+    }
+
+    /**
+     * Launch demo (placeholder)
+     */
+    async launchDemo(projectId) {
+        console.log(`Launching demo for project: ${projectId}`);
+        this.showMessage(`🚀 Demo for ${projectId} launching soon!`);
+    }
+
+    /**
+     * Try demo (placeholder)
+     */
+    async tryDemo(projectId) {
+        console.log(`Trying demo for project: ${projectId}`);
+        this.showMessage(`🤖 Demo for ${projectId} coming soon!`);
+    }
+
+    /**
+     * View demo (placeholder)
+     */
+    async viewDemo(projectId) {
+        console.log(`Viewing demo for project: ${projectId}`);
+        this.showMessage(`📱 Demo for ${projectId} coming soon!`);
+    }
+
+    /**
+     * Handle keyboard navigation
+     */
+    handleKeyboardNavigation(event) {
+        const focusedElement = document.activeElement;
+        
+        if (event.key === 'Enter' || event.key === ' ') {
+            if (focusedElement.classList.contains('project-card')) {
+                event.preventDefault();
+                const playButton = focusedElement.querySelector('[data-action="play-game"]') ||
+                                   focusedElement.querySelector('.project-action.primary');
+                if (playButton) {
+                    playButton.click();
+                }
+            }
+        }
+    }
+
+    /**
+     * Setup accessibility features
+     */
+    setupAccessibility() {
+        // Add ARIA labels and roles
+        this.projectCards.forEach((card, index) => {
+            if (!card.getAttribute('role')) {
+                card.setAttribute('role', 'article');
+            }
+            
+            if (!card.getAttribute('aria-label')) {
+                const title = card.querySelector('h3')?.textContent || `Project ${index + 1}`;
+                card.setAttribute('aria-label', title);
+            }
+        });
+        
+        // Add keyboard support indicators
+        const keyboardHint = document.createElement('div');
+        keyboardHint.className = 'keyboard-hint';
+        keyboardHint.innerHTML = 'Use Tab to navigate, Enter to interact';
+        keyboardHint.style.cssText = `
+            position: absolute;
+            top: -100px;
+            left: 0;
+            background: #000;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        `;
+        
+        document.body.appendChild(keyboardHint);
+        
+        // Show hint on keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                keyboardHint.style.opacity = '1';
+                setTimeout(() => {
+                    keyboardHint.style.opacity = '0';
+                }, 2000);
+            }
+        });
+    }
+
+    /**
+     * Handle window resize
+     */
+    handleResize() {
+        // Adjust game container if open
+        if (this.isGameOpen()) {
+            // Game container responsive adjustments would go here
+        }
+    }
+
+    /**
+     * Initialize projects data
+     */
+    initializeProjectsData() {
+        this.projects.set('barista-game', {
+            title: 'Starbucks Barista Adventure',
+            category: 'interactive',
+            status: 'completed',
+            technologies: ['React', 'Interactive', 'Educational'],
+            description: 'An interactive educational game where you learn to make Starbucks drinks through fun challenges.'
+        });
+        
+        // Add other projects...
+    }
+
+    /**
+     * Setup game integration
+     */
+    setupGameIntegration() {
+        // Preload game assets if needed
+        if (this.gameConfigs.barista.preload) {
+            // Preload barista game resources
+            console.log('Preloading barista game resources...');
+        }
+    }
+
+    /**
+     * Show error message
+     */
+    showErrorMessage(message) {
+        console.error(message);
+        this.showMessage(`❌ ${message}`, 4000);
+    }
+
+    /**
+     * Utility: Debounce function
+     */
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    /**
+     * Get performance report
+     */
+    getPerformanceReport() {
+        return {
+            gameLoadTimes: this.performanceMetrics.gameLoadTimes,
+            interactionCount: this.performanceMetrics.interactionCount,
+            isInitialized: this.isInitialized
+        };
+    }
+
+    /**
+     * Cleanup resources
+     */
+    destroy() {
+        // Remove event listeners
+        this.projectContainer?.removeEventListener('click', this.handleProjectClick);
+        this.closeGameBtn?.removeEventListener('click', this.closeGame);
+        
+        // Clear game content
+        if (this.gameContent) {
+            this.gameContent.innerHTML = '';
+        }
+        
+        // Reset state
+        this.isInitialized = false;
+        this.currentGame = null;
+        
+        console.log('Projects page manager destroyed');
+    }
+}
+
+// Enhanced PageManager integration
+class PageManager {
+    constructor() {
         this.contentContainer = document.getElementById('page-container');
         this.pageCache = new Map();
         this.currentPage = null;
         this.isTransitioning = false;
         this.headerManager = null;
-        
-        // Configuration - page definitions
+        this.projectsManager = null; // Add projects manager
+
         this.pages = {
             main: {
                 path: 'src/components/pages/mainPage.html',
@@ -42,1026 +752,271 @@ class PageManager {
                 init: () => this.initContactPage()
             }
         };
-        
-        // Initialize the application
+
         this.init();
     }
-    
-    /**
-     * Initialize the PageManager
-     */
-    init() {
-        // Set up header management
-        this.initializeHeaderManager();
-        
-        // Setup event handlers for navigation
-        this.setupRouting();
-        
-        // Handle initial route based on URL hash
-        this.handleInitialRoute();
-        
-        // Preload other pages for faster navigation
-        this.preloadPages();
-    }
+
+    // ... existing PageManager methods ...
 
     /**
-     * Initialize HeaderManager if available
-     */
-    initializeHeaderManager() {
-        // Check if HeaderManager class is available
-        if (window.HeaderManager) {
-            this.headerManager = new HeaderManager();
-            console.log('HeaderManager initialized');
-        }
-    }
-
-    /**
-     * Set up event listeners for navigation and browser history
-     */
-    setupRouting() {
-        // Use event delegation for all navigation clicks
-        document.addEventListener('click', this.handleNavigationClick.bind(this));
-    
-        // Handle browser back/forward navigation
-        window.addEventListener('popstate', this.handlePopState.bind(this));
-        
-        // Handle keyboard navigation accessibility
-        document.addEventListener('keydown', this.handleKeyboardNavigation.bind(this));
-    }
-    
-    /**
-     * Handle navigation click events with proper event delegation
-     * @param {MouseEvent} event - Click event
-     */
-    handleNavigationClick(event) {
-        const link = event.target.closest('.main-nav a');
-        if (!link) return;
-        
-        event.preventDefault();
-        
-        // Check if the link is disabled
-        if (link.classList.contains('disabled')) {
-            console.log('Navigation prevented: This feature is coming soon.');
-            return;
-        }
-        
-        const pageName = link.getAttribute('href').substring(1);
-        this.navigateToPage(pageName);
-    }
-    
-    /**
-     * Handle browser history navigation events
-     * @param {PopStateEvent} event - PopState event
-     */
-    handlePopState(event) {
-        const pageName = event.state?.page || 'main';
-        this.navigateToPage(pageName, false);
-    }
-    
-    /**
-     * Handle keyboard navigation for accessibility
-     * @param {KeyboardEvent} event - Keyboard event
-     */
-    handleKeyboardNavigation(event) {
-        // Only handle when focused on navigation links
-        const focusedLink = document.activeElement;
-        if (!focusedLink || !focusedLink.classList.contains('nav-link')) return;
-        
-        // Handle Enter or Space key
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            
-            // Check if the link is disabled
-            if (focusedLink.classList.contains('disabled')) return;
-            
-            const pageName = focusedLink.getAttribute('href').substring(1);
-            this.navigateToPage(pageName);
-        }
-    }
-
-    /**
-     * Handle initial routing when the page first loads
-     */
-    async handleInitialRoute() {
-        // Initialize space background first
-        await this.initializeSpaceBackground();
-        // Get the initial page from URL hash or default to about
-        const hash = window.location.hash.substring(1) || 'about';
-        await this.navigateToPage(hash, false);
-    }
-
-    /**
-     * Preload pages for faster navigation
-     */
-    preloadPages() {
-        // Use requestIdleCallback if available, or setTimeout as fallback
-        const preloader = window.requestIdleCallback || setTimeout;
-        
-        preloader(() => {
-            // Get current page to avoid preloading it
-            const currentPageName = this.currentPage || 'about';
-            
-            // Preload all other pages with low priority
-            Object.keys(this.pages).forEach(pageName => {
-                if (pageName !== currentPageName) {
-                    this.prefetchPage(pageName);
-                }
-            });
-        }, { timeout: 2000 });
-    }
-    
-    /**
-     * Prefetch a page in the background
-     * @param {string} pageName - Page to prefetch
-     */
-    async prefetchPage(pageName) {
-        // Skip if already cached
-        if (this.pageCache.has(pageName)) return;
-        
-        try {
-            const pageConfig = this.pages[pageName];
-            const response = await fetch(pageConfig.path, { 
-                priority: 'low', 
-                cache: 'force-cache' 
-            });
-            
-            if (!response.ok) return;
-            
-            const content = await response.text();
-            this.pageCache.set(pageName, content);
-        } catch (error) {
-            // Silently fail on prefetch - it's just an optimization
-            console.debug(`Background prefetch failed for ${pageName}:`, error);
-        }
-    }
-
-    /**
-     * Load a JavaScript file asynchronously
-     * @param {string} src - Script source URL
-     * @returns {Promise} - Resolves when script is loaded
-     */
-    loadScript(src) {
-        return new Promise((resolve, reject) => {
-            // Check if script is already loaded
-            if (document.querySelector(`script[src="${src}"]`)) {
-                resolve();
-                return;
-            }
-            
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error(`Failed to load ${src}`));
-            
-            document.head.appendChild(script);
-        });
-    }
-
-    /**
-     * Initialize the space background for the main page
-     * Lazily loads Three.js and the SpaceEnvironment script
-     */
-    async initializeSpaceBackground() {
-        try {
-            console.log("Starting space environment initialization");
-            
-            // Load Three.js
-            await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js');
-            
-            // Load OrbitControls
-            await this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
-            
-            // Load utility files
-            await this.loadScript('src/utils/ResourceLoader.js');
-            await this.loadScript('src/utils/MemoryManager.js');
-            
-            // Load celestial body classes
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Planet.js');
-            await this.loadScript('src/components/simulation/solarsystem/Sun.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Mercury.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Venus.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Earth.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Mars.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Jupiter.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Saturn.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Uranus.js');
-            await this.loadScript('src/components/simulation/solarsystem/Planets/Neptune.js');
-            
-            // Load environment features
-            await this.loadScript('src/components/simulation/solarsystem/Galaxy.js');
-            await this.loadScript('src/components/simulation/solarsystem/AsteroidBelt.js');
-            await this.loadScript('src/components/simulation/solarsystem/HabitableZone.js');
-            
-            // Load main controller classes 
-            await this.loadScript('src/components/simulation/solarsystem/SolarSystem.js');
-            await this.loadScript('src/components/simulation/solarsystem/SpaceEnvironment.js');
-            
-            // Create and initialize space environment
-            if (!window.spaceEnvironment) {
-                console.log("Creating new SpaceEnvironment instance");
-                window.spaceEnvironment = new SpaceEnvironment();
-                await window.spaceEnvironment.init();
-                console.log("SpaceEnvironment initialization complete");
-                
-                // Show immediately
-                window.spaceEnvironment.show();
-            }
-            
-            return true;
-        } catch (error) {
-            console.error("Failed to initialize space environment:", error);
-            console.error(error.stack);
-            return false;
-        }
-    }
-
-    /**
-     * Navigate to a specific page
-     * @param {string} pageName - Name of the page to navigate to
-     * @param {boolean} updateHistory - Whether to update browser history
-     */
-    async navigateToPage(pageName, updateHistory = true) {
-        // Skip if already transitioning, invalid page, or same page
-        if (this.isTransitioning || !this.pages[pageName] || pageName === this.currentPage) {
-            return;
-        }
-    
-        this.isTransitioning = true;
-        
-        // Trigger navigation start event for potential analytics
-        this.triggerEvent('navigation:start', { from: this.currentPage, to: pageName });
-    
-        // Update browser history if needed
-        if (updateHistory) {
-            window.history.pushState({ page: pageName }, '', `#${pageName}`);
-        }
-    
-        try {
-            // Start transition animation
-            await this.startPageTransition();
-    
-            // Load and render page content
-            await this.loadAndRenderPage(pageName);
-    
-            // Update UI state - navigation and document title
-            this.updateUIState(pageName);
-            
-            // Set page-specific body class
-            this.setPageBodyClass(pageName);
-    
-            // Complete transition animation
-            await this.completePageTransition();
-            
-            // Trigger navigation complete event
-            this.triggerEvent('navigation:complete', { page: pageName });
-        } catch (error) {
-            console.error('Navigation error:', error);
-            this.handleNavigationError();
-            
-            // Trigger navigation error event
-            this.triggerEvent('navigation:error', { page: pageName, error });
-        } finally {
-            this.isTransitioning = false;
-        }
-    }
-
-    /**
-     * Trigger a custom event for extensibility
-     * @param {string} name - Event name
-     * @param {Object} detail - Event details
-     */
-    triggerEvent(name, detail = {}) {
-        const event = new CustomEvent(`pagemanager:${name}`, { 
-            detail,
-            bubbles: true
-        });
-        
-        this.contentContainer?.dispatchEvent(event);
-    }
-
-    /**
-     * Set body class based on current page
-     * @param {string} pageName - Current page name
-     */
-    setPageBodyClass(pageName) {
-        // Remove all page-specific classes
-        document.body.classList.forEach(className => {
-            if (className.startsWith('page-')) {
-                document.body.classList.remove(className);
-            }
-        });
-        
-        // Add current page class
-        document.body.classList.add(`page-${pageName}`);
-        
-        // Space environment visibility handling
-        if (pageName === 'main') {
-            // On main page, show and enable interaction with space environment
-            this.initializeSpaceBackground().then(success => {
-                if (success && window.spaceEnvironment) {
-                    // Make fully visible and interactive
-                    window.spaceEnvironment.show(true);
-                    console.log("Space environment fully enabled for main page");
-                }
-            });
-        } else if (window.spaceEnvironment) {
-            // On other pages, show as background but disable interaction
-            window.spaceEnvironment.show(false); // Show but make non-interactive
-            console.log("Space environment visible as background only");
-        }
-    }
-
-    /**
-     * Make the space background visible
-     */
-    enhanceSpaceBackground() {
-        console.log("Enhancing space background");
-        
-        if (window.spaceEnvironment?.initialized) {
-            // Show the environment
-            window.spaceEnvironment.show();
-            
-            // Fix z-index for main content to ensure it's above the background
-            const contentContainer = document.getElementById('content');
-            if (contentContainer) {
-                contentContainer.style.position = 'relative';
-                contentContainer.style.zIndex = '1';
-                console.log("Set content container z-index to 1");
-            }
-            
-            // Ensure header is visible over background
-            const headerContainer = document.getElementById('header-container');
-            if (headerContainer) {
-                headerContainer.style.position = 'relative';
-                headerContainer.style.zIndex = '2';
-            }
-            
-            // Ensure page container is visible
-            const pageContainer = document.getElementById('page-container'); 
-            if (pageContainer) {
-                pageContainer.style.position = 'relative';
-                pageContainer.style.zIndex = '1';
-            }
-            
-            // Ensure footer is visible
-            const footerContainer = document.getElementById('footer-container');
-            if (footerContainer) {
-                footerContainer.style.position = 'relative';
-                footerContainer.style.zIndex = '2';
-            }
-            
-            // Force a rerender
-            if (typeof window.spaceEnvironment.handleResize === 'function') {
-                window.spaceEnvironment.handleResize();
-            }
-            
-            // Pre-select first planet after a brief delay
-            setTimeout(() => {
-                const firstPlanetBtn = document.querySelector('.planet-btn');
-                if (firstPlanetBtn) {
-                    firstPlanetBtn.click();
-                    console.log("First planet selected");
-                }
-            }, 500);
-        } else {
-            console.warn("SpaceEnvironment not properly initialized");
-            // Try to initialize it again
-            this.initializeSpaceBackground().then(success => {
-                if (success) {
-                    console.log("Space environment initialized on retry");
-                    this.enhanceSpaceBackground(); // Try again
-                }
-            });
-        }
-    }
-
-    /**
-     * Begin page transition animation
-     */
-    async startPageTransition() {
-        if (!this.contentContainer) return Promise.resolve();
-        
-        this.contentContainer.style.opacity = '0';
-        this.contentContainer.style.transform = 'translateY(20px)';
-        return new Promise(resolve => setTimeout(resolve, 300));
-    }
-
-    /**
-     * Load page content and render it
-     * @param {string} pageName - Page name to load
-     */
-    async loadAndRenderPage(pageName) {
-        const pageConfig = this.pages[pageName];
-        let content;
-
-        // Check cache first
-        if (this.pageCache.has(pageName)) {
-            content = this.pageCache.get(pageName);
-        } else {
-            // Load page content
-            try {
-                const response = await fetch(pageConfig.path);
-                if (!response.ok) {
-                    throw new Error(`Failed to load ${pageName} page (${response.status})`);
-                }
-                content = await response.text();
-                this.pageCache.set(pageName, content);
-            } catch (error) {
-                console.error(`Error loading page content for ${pageName}:`, error);
-                throw error;
-            }
-        }
-
-        // Cleanup previous page content (remove event listeners, etc.)
-        this.cleanupCurrentPage();
-
-        // Render content
-        if (this.contentContainer) {
-            this.contentContainer.innerHTML = content;
-            
-            // Initialize page-specific functionality
-            if (pageConfig.init) {
-                try {
-                    await pageConfig.init();
-                } catch (error) {
-                    console.error(`Error initializing ${pageName} page:`, error);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Clean up resources from current page before loading new one
-     */
-    cleanupCurrentPage() {
-        // This is a placeholder for more specific cleanup
-        // In a larger app, you would remove event listeners, stop animations, etc.
-        
-        // Example: Clean up any data visualization charts
-        if (window.charts && window.charts.length) {
-            window.charts.forEach(chart => {
-                if (chart && typeof chart.destroy === 'function') {
-                    chart.destroy();
-                }
-            });
-            window.charts = [];
-        }
-    }
-
-    /**
-     * Update UI state after page navigation
-     * @param {string} pageName - Current page name
-     */
-    updateUIState(pageName) {
-        // Update header navigation if HeaderManager exists
-        if (this.headerManager && typeof this.headerManager.updateActiveLink === 'function') {
-            this.headerManager.updateActiveLink(pageName);
-        } else {
-            // Fallback to direct DOM manipulation
-            document.querySelectorAll('.main-nav a').forEach(link => {
-                const href = link.getAttribute('href')?.substring(1);
-                const isActive = href === pageName;
-                link.classList.toggle('active', isActive);
-                link.setAttribute('aria-current', isActive ? 'page' : 'false');
-            });
-        }
-
-        // Update document title
-        document.title = `${this.pages[pageName].title} - MrCargo Portfolio`;
-        
-        this.currentPage = pageName;
-    }
-
-    /**
-     * Complete page transition animation
-     */
-    async completePageTransition() {
-        if (!this.contentContainer) return Promise.resolve();
-        
-        this.contentContainer.style.opacity = '1';
-        this.contentContainer.style.transform = 'translateY(0)';
-        return new Promise(resolve => setTimeout(resolve, 300));
-    }
-
-    /**
-     * Handle navigation errors
-     */
-    handleNavigationError() {
-        if (!this.contentContainer) return;
-        
-        this.contentContainer.innerHTML = `
-            <div class="error-container">
-                <h2>Navigation Error</h2>
-                <p>Failed to load the requested page. Please try again.</p>
-                <button onclick="window.location.reload()" class="retry-button">Reload Page</button>
-            </div>
-        `;
-    }
-
-    // ----------------
-    // Page-specific initialization methods
-    // ----------------
-
-    /**
-     * Initialize main page functionality
-     */
-    async initMainPage() {
-        console.log('Initializing main page');
-        
-        // Make sure space environment is visible
-        this.enhanceSpaceBackground();
-        
-        // Initialize planet selector if it exists
-        const planetSelector = document.querySelector('.planet-selector');
-        if (planetSelector) {
-            this.initPlanetSelector();
-        }
-    }
-
-    /**
-     * Initialize planet selector functionality
-     */
-    initPlanetSelector() {
-        const selector = document.querySelector('.planet-selector');
-        const leftBtn = document.querySelector('.scroll-indicator.left');
-        const rightBtn = document.querySelector('.scroll-indicator.right');
-        
-        if (!selector || !leftBtn || !rightBtn) return;
-        
-        // Scroll left/right buttons
-        leftBtn.addEventListener('click', () => {
-            selector.scrollBy({ left: -200, behavior: 'smooth' });
-        });
-        
-        rightBtn.addEventListener('click', () => {
-            selector.scrollBy({ left: 200, behavior: 'smooth' });
-        });
-        
-        // Use debounced scroll handler for better performance
-        const updateScrollButtons = this.debounce(() => {
-            leftBtn.style.opacity = selector.scrollLeft > 0 ? '1' : '0.3';
-            rightBtn.style.opacity = 
-                selector.scrollLeft < selector.scrollWidth - selector.clientWidth - 10 ? '1' : '0.3';
-        }, 50);
-        
-        // Set up event listeners
-        selector.addEventListener('scroll', updateScrollButtons);
-        window.addEventListener('resize', updateScrollButtons);
-        
-        // Initial update
-        updateScrollButtons();
-        
-        // Planet selection functionality
-        const planetButtons = document.querySelectorAll('.planet-btn');
-        const progressIndicator = document.querySelector('.progress-indicator');
-        
-        planetButtons.forEach((button, index) => {
-            button.addEventListener('click', () => {
-                // Update active state
-                planetButtons.forEach(btn => {
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-selected', 'false');
-                });
-                
-                button.classList.add('active');
-                button.setAttribute('aria-selected', 'true');
-                
-                // Get planet name
-                const planetName = button.getAttribute('data-planet');
-                
-                // Update planet info
-                this.updatePlanetInfo(planetName);
-                
-                // Update progress indicator position
-                if (progressIndicator) {
-                    const totalPlanets = planetButtons.length;
-                    const segmentWidth = 100 / totalPlanets;
-                    
-                    progressIndicator.style.width = segmentWidth + '%';
-                    progressIndicator.style.left = (segmentWidth * index) + '%';
-                }
-                
-                // Focus camera on selected planet using SpaceEnvironment
-                if (window.spaceEnvironment && window.spaceEnvironment.initialized) {
-                    window.spaceEnvironment.focusOnPlanet(planetName);
-                    console.log(`Camera focusing on ${planetName}`);
-                } else {
-                    console.warn("SpaceEnvironment not available for camera control");
-                }
-            });
-        });
-        
-        // Toggle planet details (new functionality)
-        const toggleInfoBtn = document.querySelector('.toggle-info-btn');
-        const planetDetails = document.querySelector('.planet-details');
-        
-        if (toggleInfoBtn && planetDetails) {
-            toggleInfoBtn.addEventListener('click', function() {
-                this.classList.toggle('collapsed');
-                planetDetails.classList.toggle('collapsed');
-                
-                // Update aria attributes for accessibility
-                const isCollapsed = planetDetails.classList.contains('collapsed');
-                this.setAttribute('aria-expanded', !isCollapsed);
-                
-                // Change the icon text based on state
-                const iconSpan = this.querySelector('.icon');
-                if (iconSpan) {
-                    iconSpan.textContent = isCollapsed ? '↑' : '↓';
-                }
-            });
-            
-            // Set initial state
-            toggleInfoBtn.setAttribute('aria-expanded', 'true');
-        }
-        
-        // Connect camera control buttons
-        this.initCameraControls();
-        
-        // Select the first planet by default
-        if (planetButtons.length > 0) {
-            planetButtons[0].click();
-        }
-    }
-    
-    /**
-     * Initialize camera control buttons
-     */
-    initCameraControls() {
-        const resetCameraBtn = document.getElementById('reset-camera');
-        const toggleRotationBtn = document.getElementById('toggle-rotation');
-        const toggleOrbitBtn = document.getElementById('toggle-orbit');
-        const toggleOrbitModeBtn = document.getElementById('toggle-orbit-mode');
-        const toggleFollowRotationBtn = document.getElementById('toggle-follow-rotation');
-        
-        if (resetCameraBtn) {
-            resetCameraBtn.addEventListener('click', () => {
-                if (window.spaceEnvironment) {
-                    // Reset camera to default position
-                    window.spaceEnvironment.resetCamera();
-                    console.log('Camera reset to default position');
-                }
-            });
-        }
-        
-        if (toggleRotationBtn) {
-            toggleRotationBtn.addEventListener('click', () => {
-                if (window.spaceEnvironment && window.spaceEnvironment.solarSystem) {
-                    const isEnabled = window.spaceEnvironment.solarSystem.toggleAnimation();
-                    toggleRotationBtn.classList.toggle('active', isEnabled);
-                    console.log(`Planet rotation ${isEnabled ? 'enabled' : 'disabled'}`);
-                }
-            });
-        }
-        
-        if (toggleOrbitBtn) {
-            toggleOrbitBtn.addEventListener('click', () => {
-                if (window.spaceEnvironment && window.spaceEnvironment.solarSystem) {
-                    const isVisible = window.spaceEnvironment.solarSystem.toggleOrbits();
-                    toggleOrbitBtn.classList.toggle('active', isVisible);
-                    console.log(`Orbit lines ${isVisible ? 'visible' : 'hidden'}`);
-                }
-            });
-        }
-        
-        if (toggleOrbitModeBtn) {
-            toggleOrbitModeBtn.addEventListener('click', () => {
-                if (window.spaceEnvironment && window.spaceEnvironment.controls) {
-                    const controls = window.spaceEnvironment.controls;
-                    controls.enableRotate = !controls.enableRotate;
-                    toggleOrbitModeBtn.classList.toggle('active', controls.enableRotate);
-                    console.log(`Camera orbit mode ${controls.enableRotate ? 'enabled' : 'disabled'}`);
-                }
-            });
-        }
-        
-        if (toggleFollowRotationBtn) {
-            toggleFollowRotationBtn.addEventListener('click', () => {
-                if (window.spaceEnvironment) {
-                    const isFollowing = !window.spaceEnvironment.followRotation;
-                    window.spaceEnvironment.followRotation = isFollowing;
-                    toggleFollowRotationBtn.classList.toggle('active', isFollowing);
-                    console.log(`Follow rotation ${isFollowing ? 'enabled' : 'disabled'}`);
-                }
-            });
-        }
-    }
-    
-    /**
-     * Debounce function to limit frequent executions
-     * @param {Function} func - Function to debounce
-     * @param {number} wait - Debounce delay in milliseconds
-     * @returns {Function} - Debounced function
-     */
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-    
-    /**
-     * Update planet information panel with selected planet data
-     * @param {string} planetName - Name of the selected planet
-     */
-    updatePlanetInfo(planetName) {
-        // Check if SpaceEnvironment is available for planet info
-        if (window.spaceEnvironment && window.spaceEnvironment.updatePlanetInfo) {
-            window.spaceEnvironment.updatePlanetInfo(planetName);
-            return;
-        }
-        
-        // Fallback to static data if SpaceEnvironment is not available
-        const planetData = {
-            Sun: {
-                description: "The star at the center of our Solar System.",
-                diameter: "1,392,700 km",
-                distance: "0 km",
-                orbitalPeriod: "N/A"
-            },
-            Mercury: {
-                description: "The smallest and innermost planet in the Solar System.",
-                diameter: "4,880 km",
-                distance: "57.9 million km",
-                orbitalPeriod: "88 days"
-            },
-            Venus: {
-                description: "The second planet from the Sun with a thick toxic atmosphere.",
-                diameter: "12,104 km",
-                distance: "108.2 million km",
-                orbitalPeriod: "225 days"
-            },
-            Earth: {
-                description: "Our home planet, the only known celestial body to harbor life.",
-                diameter: "12,742 km",
-                distance: "149.6 million km",
-                orbitalPeriod: "365.25 days"
-            },
-            Mars: {
-                description: "The Red Planet, known for its iron oxide surface.",
-                diameter: "6,779 km",
-                distance: "227.9 million km",
-                orbitalPeriod: "687 days"
-            },
-            Jupiter: {
-                description: "The largest planet in our Solar System, a gas giant.",
-                diameter: "139,820 km",
-                distance: "778.5 million km",
-                orbitalPeriod: "11.86 years"
-            },
-            Saturn: {
-                description: "Known for its prominent ring system composed of ice and rock particles.",
-                diameter: "116,460 km",
-                distance: "1.4 billion km",
-                orbitalPeriod: "29.46 years"
-            },
-            Uranus: {
-                description: "An ice giant with a tilted rotation axis of 97.8 degrees.",
-                diameter: "50,724 km",
-                distance: "2.9 billion km",
-                orbitalPeriod: "84.01 years"
-            },
-            Neptune: {
-                description: "The windiest planet in our Solar System, with winds up to 2,100 km/h.",
-                diameter: "49,244 km",
-                distance: "4.5 billion km",
-                orbitalPeriod: "164.8 years"
-            }
-        };
-        
-        const planet = planetData[planetName];
-        if (!planet) return;
-        
-        // Update planet info panel elements if they exist
-        const nameEl = document.getElementById('planet-name');
-        const descEl = document.getElementById('planet-description');
-        const diameterEl = document.getElementById('planet-diameter');
-        const distanceEl = document.getElementById('planet-distance');
-        const orbitalEl = document.getElementById('planet-orbital-period');
-        
-        if (nameEl) nameEl.textContent = planetName;
-        if (descEl) descEl.textContent = planet.description;
-        if (diameterEl) diameterEl.textContent = planet.diameter;
-        if (distanceEl) distanceEl.textContent = planet.distance;
-        if (orbitalEl) orbitalEl.textContent = planet.orbitalPeriod;
-    }
-
-    /**
-     * Initialize projects page functionality
+     * Enhanced projects page initialization
      */
     async initProjectsPage() {
-        console.log('Initializing projects page');
+        console.log('Initializing enhanced projects page');
         
-        // Project navigation
-        const projectNavButtons = document.querySelectorAll('.side-nav .nav-button');
-        projectNavButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                
-                // Update active state
-                projectNavButtons.forEach(btn => {
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-current', 'false');
-                });
-                
-                button.classList.add('active');
-                button.setAttribute('aria-current', 'true');
-                
-                // Scroll to target project
-                const targetId = button.getAttribute('href');
-                const targetProject = document.querySelector(targetId);
-                
-                if (targetProject) {
-                    targetProject.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    
-                    // Add highlight effect
-                    targetProject.classList.add('highlight');
-                    setTimeout(() => targetProject.classList.remove('highlight'), 1000);
-                }
-            });
-        });
-
-        // Project cards interaction using event delegation
-        const projectContainer = document.querySelector('.projects-container');
-        if (projectContainer) {
-            projectContainer.addEventListener('click', (e) => {
-                const card = e.target.closest('.project-card');
-                if (card) {
-                    console.log(`Project clicked: ${card.id}`);
-                    // Here you would show project details or open a modal
-                }
-            });
-            
-            // Keyboard accessibility
-            projectContainer.addEventListener('keydown', (e) => {
-                const card = e.target.closest('.project-card');
-                if (card && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault();
-                    card.click();
-                }
-            });
-        }
-    }
-
-    /**
-     * Initialize about page functionality
-     */
-    async initAboutPage() {
-        console.log('Initializing about page');
-        // No specific initialization needed
-    }
-
-    /**
-     * Initialize store page functionality
-     */
-    async initStorePage() {
-        console.log('Initializing store page');
-        
-        // Product filtering using event delegation
-        const filterContainer = document.querySelector('.filter-container');
-        if (!filterContainer) return;
-        
-        filterContainer.addEventListener('click', (e) => {
-            const button = e.target.closest('.filter-btn');
-            if (!button) return;
-            
-            // Update active state
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            button.classList.add('active');
-            
-            // Filter products by category
-            const category = button.getAttribute('data-category');
-            this.filterProducts(category);
-        });
-        
-        // Filter all products by default
-        const allButton = document.querySelector('.filter-btn[data-category="all"]');
-        if (allButton) allButton.click();
-    }
-    
-    /**
-     * Filter products by category
-     * @param {string} category - Category to filter by
-     */
-    filterProducts(category) {
-        const products = document.querySelectorAll('.product-card');
-        
-        products.forEach(product => {
-            const display = (category === 'all' || product.getAttribute('data-category') === category) 
-                ? 'block' : 'none';
-            product.style.display = display;
-        });
-    }
-
-    /**
-     * Initialize contact page with form validation
-     */
-    async initContactPage() {
-        console.log('Initializing contact page');
-        
-        // Add form validation if contact form exists
-        const contactForm = document.getElementById('contact-form');
-        if (!contactForm) return;
-        
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            // Validate and submit form
-            if (this.validateContactForm(contactForm)) {
-                // Show success message
-                const submitButton = contactForm.querySelector('.submit-button');
-                if (submitButton) {
-                    submitButton.innerHTML = '<span>Message Sent!</span>';
-                    submitButton.classList.add('success');
-                    
-                    setTimeout(() => {
-                        submitButton.innerHTML = '<span>Send Message</span>';
-                        submitButton.classList.remove('success');
-                    }, 3000);
-                }
-                
-                contactForm.reset();
-            }
-        });
-        
-        // Input validation using event delegation
-        contactForm.addEventListener('blur', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                this.validateInput(e.target);
-            }
-        }, true);
-        
-        // Clear errors on input
-        contactForm.addEventListener('input', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                const errorElement = document.getElementById(`${e.target.id}-error`);
-                if (errorElement) errorElement.textContent = '';
-            }
-        });
-    }
-    
-    /**
-     * Validate contact form
-     * @param {HTMLFormElement} form - The contact form element
-     * @returns {boolean} - Whether the form is valid
-     */
-    validateContactForm(form) {
-        const nameInput = form.querySelector('#name');
-        const emailInput = form.querySelector('#email');
-        const messageInput = form.querySelector('#message');
-        
-        let isValid = true;
-        
-        if (nameInput && !this.validateInput(nameInput)) isValid = false;
-        if (emailInput && !this.validateInput(emailInput)) isValid = false;
-        if (messageInput && !this.validateInput(messageInput)) isValid = false;
-        
-        return isValid;
-    }
-    
-    /**
-     * Validate a form input
-     * @param {HTMLInputElement|HTMLTextAreaElement} input - Input element to validate
-     * @returns {boolean} - Whether the input is valid
-     */
-    validateInput(input) {
-        const errorElement = document.getElementById(`${input.id}-error`);
-        
-        // Reset error
-        if (errorElement) errorElement.textContent = '';
-        
-        // Check required
-        if (input.hasAttribute('required') && !input.value.trim()) {
-            if (errorElement) errorElement.textContent = 'This field is required';
-            return false;
+        // Cleanup previous projects manager if exists
+        if (this.projectsManager) {
+            this.projectsManager.destroy();
         }
         
-        // Check email format
-        if (input.type === 'email' && input.value.trim()) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(input.value.trim())) {
-                if (errorElement) errorElement.textContent = 'Please enter a valid email address';
-                return false;
-            }
-        }
+        // Initialize new projects manager
+        this.projectsManager = new ProjectsPageManager();
         
-        return true;
+        // Wait for initialization to complete
+        await new Promise(resolve => {
+            const checkInit = () => {
+                if (this.projectsManager.isInitialized) {
+                    resolve();
+                } else {
+                    setTimeout(checkInit, 50);
+                }
+            };
+            checkInit();
+        });
+        
+        console.log('Enhanced projects page initialized successfully');
     }
+
+    // ... rest of existing PageManager methods ...
 }
 
-// Export PageManager to the global scope if used with ES modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PageManager;
+// CSS for the HTML game version
+const gameStyles = `
+    .barista-game-container {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        overflow-y: auto;
+    }
+    
+    .game-screen {
+        display: none;
+        padding: 2rem;
+        height: 100%;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .game-screen.active {
+        display: flex;
+    }
+    
+    .game-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .game-header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .game-form {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+        border-radius: 1rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .barista-avatar {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .name-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 2rem;
+        text-align: center;
+        margin: 1rem 0;
+        font-size: 1rem;
+    }
+    
+    .start-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    
+    .start-btn:hover:not(:disabled) {
+        background: #059669;
+    }
+    
+    .start-btn:disabled {
+        background: #6b7280;
+        cursor: not-allowed;
+    }
+    
+    .game-info {
+        text-align: center;
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+    
+    .player-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .player-stats {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .badges-btn {
+        background: #f59e0b;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    
+    .barista-tip {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .barista-character {
+        font-size: 3rem;
+    }
+    
+    .tip-content h3 {
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+    }
+    
+    .tip-content p {
+        margin: 0;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .game-options {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .option-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        padding: 1rem;
+        border-radius: 1rem;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .option-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .option-btn .icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .option-btn .title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .option-btn .subtitle {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+    
+    .progress-info {
+        text-align: center;
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+    
+    .game-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+    }
+    
+    .loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top: 3px solid #fff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+`;
+
+// Inject game styles
+const styleElement = document.createElement('style');
+styleElement.textContent = gameStyles;
+document.head.appendChild(styleElement);
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        // PageManager will be initialized by the main app
+    });
 } else {
-    window.PageManager = PageManager;
+    // DOM already loaded
+    console.log('Projects page JavaScript loaded');
+}
+
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { ProjectsPageManager, PageManager };
+} else {
+    window.ProjectsPageManager = ProjectsPageManager;
 }

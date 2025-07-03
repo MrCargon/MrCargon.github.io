@@ -1,15 +1,19 @@
-/* Projects Page Specific Styles */
+/* ==============================================
+   OPTIMIZED PROJECTS PAGE CSS
+   Cleaned, optimized and enhanced for better performance
+   ============================================== */
+
+/* Projects Section - Main Container */
 .main-section.projects-section {
     max-width: var(--content-width);
     width: 92%;
     margin: var(--spacing-xl) auto;
-    margin-bottom: var(--spacing-xl);
     padding: 0;
     min-height: unset;
     display: block;
-  }
+}
 
-/* Projects Panel Container - Mimics about page panel */
+/* Projects Panel - Consistent with site design */
 .projects-panel {
     background-color: var(--panel-bg);
     border-radius: var(--border-radius);
@@ -18,13 +22,19 @@
     overflow: hidden;
     margin-bottom: var(--spacing-lg);
     position: relative;
-    z-index: 10; 
-  }
+    z-index: 10;
+    transition: var(--transition);
+}
 
-/* Panel Header - Like about page */
+.projects-panel:hover {
+    box-shadow: var(--shadow-light);
+}
+
+/* Panel Header - Standardized styling */
 .panel-header {
     padding: var(--spacing-md) var(--spacing-lg);
     border-bottom: 1px solid var(--border-color);
+    background-color: rgba(20, 20, 20, 0.95);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -33,6 +43,7 @@
 .panel-header h2 {
     color: var(--primary-color);
     font-size: 1.5rem;
+    font-weight: 600;
     margin: 0;
     position: relative;
     display: inline-block;
@@ -45,10 +56,11 @@
     left: 0;
     width: 100%;
     height: 3px;
-    background-color: var(--primary-color);
+    background: linear-gradient(90deg, var(--primary-color), transparent);
+    border-radius: 2px;
 }
 
-/* Projects Content Area - Standardized layout */
+/* Projects Content Layout */
 .projects-content {
     display: flex;
     padding: var(--spacing-lg);
@@ -56,116 +68,166 @@
     background-color: var(--panel-bg);
     position: relative;
     z-index: 5;
-  }
+}
 
-/* Side Navigation - Modified to fit the panel */
+/* Side Navigation - Enhanced */
 .side-nav {
-    width: 250px;
+    width: 280px;
     flex-shrink: 0;
-    background: rgba(30, 30, 30, 0.5);
+    background: rgba(30, 30, 30, 0.6);
     border-radius: var(--border-radius-sm);
     padding: var(--spacing-md);
     height: fit-content;
-    position: relative;
-    top: 0;
-    border: 1px solid rgba(255, 165, 0, 0.1);
-  }
+    border: 1px solid rgba(255, 165, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
 
-.nav-content h2 {
+.nav-content h3 {
     color: var(--primary-color);
     margin-bottom: var(--spacing-lg);
-    font-size: 1.2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .nav-list {
     list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 .nav-list li:not(:last-child) {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
 }
 
+/* Navigation Buttons - Improved interaction */
 .nav-button {
     display: flex;
     flex-direction: column;
     padding: var(--spacing-md);
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.04);
     border-radius: var(--border-radius-sm);
     text-decoration: none;
     color: var(--text-color);
-    transition: var(--transition);
-    will-change: transform;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 165, 0, 0.1), transparent);
+    transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-button:hover::before,
+.nav-button[aria-current="true"]::before {
+    left: 100%;
 }
 
 .nav-button:hover,
 .nav-button[aria-current="true"] {
     background: var(--hover-bg);
-    transform: translateX(5px);
+    transform: translateX(8px);
+    border-color: rgba(255, 165, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.nav-button:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .project-title {
-    font-weight: bold;
-    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+    font-size: 0.95rem;
 }
 
 .project-category {
-    font-size: 0.9em;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.65);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-/* Main Content - Modified for better fit */
+.project-status {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-top: var(--spacing-xs);
+    display: inline-block;
+}
+
+.project-status.completed {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.project-status.in-progress {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.project-status.interactive {
+    background: rgba(168, 85, 247, 0.2);
+    color: #a855f7;
+}
+
+/* Main Content Area */
 .main-content {
     flex: 1;
     overflow: hidden;
 }
 
+/* Project Grid - Enhanced responsiveness */
 .project-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
     width: 100%;
 }
 
+/* Project Cards - Improved design */
 .project-card {
-    background: rgba(30, 30, 30, 0.5); /* Match card style from About page */
+    background: rgba(30, 30, 30, 0.6);
     border-radius: var(--border-radius-sm);
     overflow: hidden;
-    transition: var(--transition);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     height: 100%;
     border: 1px solid rgba(255, 165, 0, 0.1);
+    position: relative;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+}
+
+.project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.05) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .project-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-light);
-    border-color: var(--border-color);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
 }
 
-.projects-panel .panel-header {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: rgba(20, 20, 20, 0.95);
-}
-
-.projects-panel .panel-header h2 {
-  color: var(--primary-color);
-  font-size: 1.5rem;
-  margin: 0;
-  position: relative;
-  display: inline-block;
-}
-
-.projects-panel .panel-header h2::after {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background-color: var(--primary-color);
+.project-card:hover::before {
+    opacity: 1;
 }
 
 .project-card:focus {
@@ -173,66 +235,288 @@
     outline-offset: 2px;
 }
 
+.project-card.featured {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(255, 165, 0, 0.1);
+}
+
+/* Project Images - Optimized */
 .project-image {
     width: 100%;
-    height: 160px; /* Reduced from 200px */
+    height: 180px;
     overflow: hidden;
+    position: relative;
+    background: rgba(20, 20, 20, 0.8);
 }
 
 .project-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: var(--transition);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: brightness(0.9);
 }
 
 .project-card:hover .project-image img {
-    transform: scale(1.05);
+    transform: scale(1.08);
+    filter: brightness(1);
 }
 
+/* Project Image Placeholder for Games/Interactive */
+.project-image.game-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    font-size: 3rem;
+    color: var(--primary-color);
+}
+
+.project-image.game-preview::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 165, 0, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(255, 165, 0, 0.05) 0%, transparent 50%);
+}
+
+/* Project Info Section */
 .project-info {
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg);
+    position: relative;
 }
 
 .project-info h3 {
     color: var(--primary-color);
     margin-bottom: var(--spacing-sm);
-    font-size: 1.1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 .project-info p {
     margin-bottom: var(--spacing-md);
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
+/* Project Tags - Enhanced styling */
 .project-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
 }
 
 .tag {
-    background: var(--hover-bg);
+    background: rgba(255, 165, 0, 0.15);
     color: var(--primary-color);
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: var(--border-radius-sm);
-    font-size: 0.8em;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 165, 0, 0.2);
+    transition: all 0.2s ease;
 }
 
-/* Responsive Design - Improved for consistency */
+.tag:hover {
+    background: rgba(255, 165, 0, 0.25);
+    transform: translateY(-1px);
+}
+
+/* Project Actions */
+.project-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: auto;
+}
+
+.project-action {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(255, 165, 0, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(255, 165, 0, 0.3);
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+}
+
+.project-action:hover {
+    background: var(--primary-color);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+}
+
+.project-action.primary {
+    background: var(--primary-color);
+    color: #000;
+}
+
+.project-action.primary:hover {
+    background: #ffb84d;
+}
+
+/* Game Integration Styles */
+.game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.game-container.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.game-wrapper {
+    width: 90%;
+    max-width: 600px;
+    height: 90%;
+    max-height: 700px;
+    background: #fff;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.game-header {
+    background: var(--primary-color);
+    color: #000;
+    padding: var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+
+.game-close {
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    color: #000;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: background 0.2s ease;
+}
+
+.game-close:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.game-content {
+    height: calc(100% - 60px);
+    overflow: hidden;
+}
+
+/* Loading States */
+.project-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.project-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--primary-color);
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translate(-50%, -50%);
+}
+
+/* Animations */
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.project-card {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.project-card:nth-child(1) { animation-delay: 0.1s; }
+.project-card:nth-child(2) { animation-delay: 0.2s; }
+.project-card:nth-child(3) { animation-delay: 0.3s; }
+.project-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Responsive Design - Enhanced breakpoints */
+@media (max-width: 1024px) {
+    .project-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+    
+    .side-nav {
+        width: 240px;
+    }
+}
+
 @media (max-width: 768px) {
     .projects-content {
         flex-direction: column;
+        padding: var(--spacing-md);
     }
-    
+
     .side-nav {
         width: 100%;
         margin-bottom: var(--spacing-lg);
     }
-    
+
     .project-grid {
         grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .nav-button:hover {
+        transform: translateX(4px);
+    }
+    
+    .game-wrapper {
+        width: 95%;
+        height: 95%;
     }
 }
 
@@ -241,34 +525,91 @@
         width: 95%;
         padding: 0;
     }
-    
+
     .projects-content {
+        padding: var(--spacing-sm);
+    }
+
+    .project-image {
+        height: 150px;
+    }
+
+    .project-info {
         padding: var(--spacing-md);
     }
-    
-    .project-image {
-        height: 140px;
+
+    .project-info h3 {
+        font-size: 1.1rem;
     }
     
-    .project-info h3 {
-        font-size: 1rem;
+    .project-actions {
+        flex-direction: column;
     }
 }
 
-/* Accessibility improvements */
+/* Accessibility Improvements */
 @media (prefers-reduced-motion: reduce) {
     .project-card,
     .nav-button,
-    .project-image img {
+    .project-image img,
+    .tag,
+    .project-action {
         transition: none;
+        animation: none;
     }
-    
+
     .project-card:hover,
     .nav-button:hover {
         transform: none;
     }
-    
+
     .project-card:hover .project-image img {
         transform: none;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    /* Light mode adjustments if needed */
+    .projects-panel {
+        background-color: rgba(255, 255, 255, 0.95);
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .project-card,
+    .nav-button {
+        border-width: 2px;
+    }
+    
+    .tag {
+        border-width: 2px;
+    }
+}
+
+/* Focus indicators for keyboard navigation */
+.nav-button:focus-visible,
+.project-card:focus-visible,
+.project-action:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .projects-section {
+        background: white;
+        color: black;
+    }
+    
+    .project-card {
+        break-inside: avoid;
+        border: 2px solid #ccc;
+        box-shadow: none;
+    }
+    
+    .project-actions,
+    .game-container {
+        display: none;
     }
 }

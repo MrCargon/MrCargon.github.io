@@ -1,257 +1,730 @@
-<section class="main-section projects-section" id="projects">
+<!-- 
+PROJECTS PAGE
+-->
+<section class="main-section projects-section" id="projects" role="main" aria-labelledby="projects-title">
     <div class="projects-panel">
-        <!-- Panel header with title -->
-        <div class="panel-header">
-            <h2>Featured Projects</h2>
-            <div class="panel-stats">
-                <span class="stat-item">
-                    <span class="stat-number">6</span>
-                    <span class="stat-label">Projects</span>
-                </span>
+        <!-- Enhanced Panel Header -->
+        <header class="panel-header">
+            <h2 id="projects-title">My Projects</h2>
+            <div class="header-controls">
+                <span class="project-count" id="project-count" aria-live="polite">6 Projects</span>
             </div>
-        </div>
+        </header>
 
-        <!-- Projects content area -->
+        <!-- Projects Content Area -->
         <div class="projects-content">
-            <!-- Side navigation -->
-            <nav class="side-nav" aria-label="Project navigation">
+            <!-- Enhanced Side Navigation -->
+            <nav class="side-nav" aria-label="Project navigation" role="navigation">
                 <div class="nav-content">
-                    <h3>Project Categories</h3>
-                    <ul class="nav-list">
+                    <h3>Browse Projects</h3>
+                    <ul class="nav-list" role="list">
                         <li>
-                            <a href="#barista-game" class="nav-button" aria-current="true" data-category="interactive">
-                                <span class="project-title">Starbucks Barista Adventure</span>
+                            <a href="#barista-game" 
+                               class="nav-button" 
+                               aria-current="false"
+                               data-category="interactive"
+                               role="listitem">
+                                <span class="project-title">Starbucks Barista Game</span>
                                 <span class="project-category">Interactive Game</span>
-                                <span class="project-status interactive">🎮 Playable</span>
+                                <span class="project-status">🎮 Live Demo</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#portfolio-site" class="nav-button" data-category="web">
+                            <a href="#portfolio-site" 
+                               class="nav-button" 
+                               aria-current="false"
+                               data-category="web"
+                               role="listitem">
                                 <span class="project-title">Portfolio Website</span>
                                 <span class="project-category">Web Development</span>
-                                <span class="project-status completed">✅ Live</span>
+                                <span class="project-status">🌐 Live Site</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#solar-system" class="nav-button" data-category="3d">
-                                <span class="project-title">3D Solar System</span>
-                                <span class="project-category">3D Visualization</span>
-                                <span class="project-status completed">✅ Complete</span>
+                            <a href="#solar-system" 
+                               class="nav-button" 
+                               aria-current="false"
+                               data-category="3d"
+                               role="listitem">
+                                <span class="project-title">Solar System Simulation</span>
+                                <span class="project-category">3D Modeling</span>
+                                <span class="project-status">🪐 Interactive</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#game-engine" class="nav-button" data-category="gamedev">
-                                <span class="project-title">Custom Game Engine</span>
+                            <a href="#space-explorer" 
+                               class="nav-button" 
+                               aria-current="false"
+                               data-category="game"
+                               role="listitem">
+                                <span class="project-title">Space Explorer</span>
                                 <span class="project-category">Game Development</span>
-                                <span class="project-status in-progress">🚧 In Progress</span>
+                                <span class="project-status">🚀 In Progress</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#mobile-app" class="nav-button" data-category="mobile">
-                                <span class="project-title">Task Manager App</span>
+                            <a href="#data-viz" 
+                               class="nav-button" 
+                               aria-current="false"
+                               data-category="web"
+                               role="listitem">
+                                <span class="project-title">Data Visualization</span>
+                                <span class="project-category">Web Development</span>
+                                <span class="project-status">📊 Complete</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#mobile-app" 
+                               class="nav-button" 
+                               aria-current="false"
+                               data-category="mobile"
+                               role="listitem">
+                                <span class="project-title">Mobile Productivity App</span>
                                 <span class="project-category">Mobile Development</span>
-                                <span class="project-status in-progress">🚧 Beta</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#ai-project" class="nav-button" data-category="ai">
-                                <span class="project-title">AI Chat Assistant</span>
-                                <span class="project-category">Machine Learning</span>
-                                <span class="project-status completed">✅ Complete</span>
+                                <span class="project-status">📱 Beta</span>
                             </a>
                         </li>
                     </ul>
                 </div>
             </nav>
 
-            <!-- Main project grid -->
-            <div class="main-content">
-                <div class="project-grid">
-                    <!-- Featured Project: Starbucks Barista Game -->
-                    <article class="project-card featured" id="barista-game" tabindex="0" data-category="interactive">
-                        <div class="project-image game-preview">
-                            ☕
+            <!-- Main Content Area -->
+            <main class="main-content">
+                <!-- Content Header with Filters -->
+                <div class="content-header">
+                    <h3 class="content-title">Featured Projects</h3>
+                    <p class="content-description">
+                        Explore my diverse portfolio of interactive applications, games, and web experiences. 
+                        Each project showcases different skills and technologies.
+                    </p>
+                </div>
+
+                <!-- Enhanced Filters and Search -->
+                <div class="projects-filters" role="toolbar" aria-label="Project filters">
+                    <div class="filter-group" role="group" aria-label="Category filters">
+                        <button class="filter-btn active" data-category="all" aria-pressed="true">
+                            All Projects
+                        </button>
+                        <button class="filter-btn" data-category="interactive" aria-pressed="false">
+                            Interactive
+                        </button>
+                        <button class="filter-btn" data-category="web" aria-pressed="false">
+                            Web Dev
+                        </button>
+                        <button class="filter-btn" data-category="3d" aria-pressed="false">
+                            3D/Graphics
+                        </button>
+                        <button class="filter-btn" data-category="game" aria-pressed="false">
+                            Games
+                        </button>
+                        <button class="filter-btn" data-category="mobile" aria-pressed="false">
+                            Mobile
+                        </button>
+                    </div>
+                    <div class="search-group">
+                        <input type="search" 
+                               class="search-box" 
+                               placeholder="Search projects..." 
+                               aria-label="Search projects"
+                               id="project-search">
+                    </div>
+                </div>
+
+                <!-- Enhanced Project Grid -->
+                <div class="project-grid" role="grid" aria-label="Projects grid">
+                    <!-- Interactive Game Project - Barista Game -->
+                    <article class="project-card interactive-game" 
+                             id="barista-game" 
+                             tabindex="0" 
+                             role="gridcell"
+                             data-category="interactive"
+                             data-featured="true"
+                             aria-labelledby="barista-title">
+                        <div class="project-image">
+                            <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=200&fit=crop&crop=center" 
+                                 alt="Starbucks Barista Game - Interactive coffee making simulator" 
+                                 loading="lazy">
                         </div>
                         <div class="project-info">
-                            <h3>Starbucks Barista Adventure</h3>
-                            <p>An interactive educational game where you learn to make Starbucks drinks through fun challenges. Master recipes, earn badges, and become the ultimate barista!</p>
+                            <div class="project-meta">
+                                <span class="project-type">Interactive Game</span>
+                                <span class="project-date">2025</span>
+                            </div>
+                            <h3 id="barista-title">Starbucks Barista Adventure</h3>
+                            <p>
+                                An engaging educational game where you learn to make authentic Starbucks drinks through 
+                                interactive challenges. Master recipes, earn badges, and become the ultimate barista!
+                            </p>
                             <div class="project-tags">
                                 <span class="tag">React</span>
                                 <span class="tag">Interactive</span>
                                 <span class="tag">Educational</span>
                                 <span class="tag">Game Design</span>
+                                <span class="tag">UI/UX</span>
                             </div>
                             <div class="project-actions">
-                                <button class="project-action primary" data-action="play-game" data-game="barista">
-                                    🎮 Play Game
+                                <button class="project-btn primary" 
+                                        onclick="loadBaristaGame(this)"
+                                        aria-describedby="barista-title">
+                                    <span>🎮</span> Play Game
                                 </button>
-                                <button class="project-action" data-action="view-details" data-project="barista-game">
-                                    📖 Details
-                                </button>
+                                <a href="#" class="project-btn" aria-label="View Barista Game source code">
+                                    <span>🔗</span> Code
+                                </a>
                             </div>
                         </div>
                     </article>
 
-                    <!-- Portfolio Website -->
-                    <article class="project-card" id="portfolio-site" tabindex="0" data-category="web">
+                    <!-- Portfolio Website Project -->
+                    <article class="project-card" 
+                             id="portfolio-site" 
+                             tabindex="0" 
+                             role="gridcell"
+                             data-category="web"
+                             aria-labelledby="portfolio-title">
                         <div class="project-image">
-                            <img src="src/assets/projects/portfolio-preview.jpg" alt="Portfolio Website Preview" loading="lazy">
+                            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop&crop=center" 
+                                 alt="Modern portfolio website with space theme" 
+                                 loading="lazy">
                         </div>
                         <div class="project-info">
-                            <h3>Portfolio Website</h3>
-                            <p>A modern, responsive portfolio website showcasing my projects and skills. Built with vanilla JavaScript and optimized for performance.</p>
+                            <div class="project-meta">
+                                <span class="project-type">Web Development</span>
+                                <span class="project-date">2025</span>
+                            </div>
+                            <h3 id="portfolio-title">Interactive Portfolio</h3>
+                            <p>
+                                A modern, responsive portfolio website featuring an interactive 3D solar system, 
+                                smooth animations, and optimized performance. Built with vanilla JavaScript and Three.js.
+                            </p>
                             <div class="project-tags">
                                 <span class="tag">JavaScript</span>
+                                <span class="tag">Three.js</span>
                                 <span class="tag">CSS3</span>
-                                <span class="tag">HTML5</span>
                                 <span class="tag">Responsive</span>
+                                <span class="tag">Performance</span>
                             </div>
                             <div class="project-actions">
-                                <a href="#" class="project-action primary" target="_blank">
-                                    🌐 Visit Site
+                                <a href="#" class="project-btn primary" aria-describedby="portfolio-title">
+                                    <span>🌐</span> Live Site
                                 </a>
-                                <button class="project-action" data-action="view-details" data-project="portfolio-site">
-                                    📖 Details
-                                </button>
+                                <a href="#" class="project-btn" aria-label="View portfolio source code">
+                                    <span>🔗</span> Code
+                                </a>
                             </div>
                         </div>
                     </article>
 
-                    <!-- 3D Solar System -->
-                    <article class="project-card" id="solar-system" tabindex="0" data-category="3d">
+                    <!-- Solar System Project -->
+                    <article class="project-card" 
+                             id="solar-system" 
+                             tabindex="0" 
+                             role="gridcell"
+                             data-category="3d"
+                             aria-labelledby="solar-title">
                         <div class="project-image">
-                            <img src="src/assets/textures/sun/sun_map.jpg" alt="3D Solar System Preview" loading="lazy">
+                            <img src="src/assets/textures/sun/sun_map.jpg" 
+                                 alt="3D Solar System simulation with realistic planet textures" 
+                                 loading="lazy"
+                                 onerror="this.src='https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=200&fit=crop&crop=center'">
                         </div>
                         <div class="project-info">
-                            <h3>3D Solar System Simulation</h3>
-                            <p>An interactive 3D solar system with realistic planet orbits, textures, and educational information about each celestial body.</p>
+                            <div class="project-meta">
+                                <span class="project-type">3D Simulation</span>
+                                <span class="project-date">2024</span>
+                            </div>
+                            <h3 id="solar-title">Solar System Simulator</h3>
+                            <p>
+                                Immersive 3D solar system with accurate planetary orbits, realistic textures, 
+                                and interactive controls. Features dynamic lighting and camera controls.
+                            </p>
                             <div class="project-tags">
                                 <span class="tag">Three.js</span>
                                 <span class="tag">WebGL</span>
                                 <span class="tag">3D Graphics</span>
                                 <span class="tag">Physics</span>
+                                <span class="tag">Astronomy</span>
                             </div>
                             <div class="project-actions">
-                                <button class="project-action primary" data-action="launch-demo" data-project="solar-system">
-                                    🚀 Launch Demo
-                                </button>
-                                <button class="project-action" data-action="view-details" data-project="solar-system">
-                                    📖 Details
-                                </button>
-                            </div>
-                        </div>
-                    </article>
-
-                    <!-- Game Engine -->
-                    <article class="project-card" id="game-engine" tabindex="0" data-category="gamedev">
-                        <div class="project-image">
-                            <img src="src/assets/projects/game-engine-preview.jpg" alt="Custom Game Engine Preview" loading="lazy">
-                        </div>
-                        <div class="project-info">
-                            <h3>Custom Game Engine</h3>
-                            <p>A lightweight 2D game engine built from scratch with entity-component system, physics, and comprehensive debugging tools.</p>
-                            <div class="project-tags">
-                                <span class="tag">C++</span>
-                                <span class="tag">OpenGL</span>
-                                <span class="tag">Game Engine</span>
-                                <span class="tag">Physics</span>
-                            </div>
-                            <div class="project-actions">
-                                <a href="#" class="project-action primary">
-                                    📁 View Code
+                                <a href="#main" class="project-btn primary" aria-describedby="solar-title">
+                                    <span>🪐</span> Explore
                                 </a>
-                                <button class="project-action" data-action="view-details" data-project="game-engine">
-                                    📖 Details
-                                </button>
+                                <a href="#" class="project-btn" aria-label="View solar system source code">
+                                    <span>🔗</span> Code
+                                </a>
                             </div>
                         </div>
                     </article>
 
-                    <!-- Mobile Task Manager -->
-                    <article class="project-card" id="mobile-app" tabindex="0" data-category="mobile">
+                    <!-- Space Explorer Game -->
+                    <article class="project-card" 
+                             id="space-explorer" 
+                             tabindex="0" 
+                             role="gridcell"
+                             data-category="game"
+                             aria-labelledby="space-title">
                         <div class="project-image">
-                            <img src="src/assets/projects/mobile-app-preview.jpg" alt="Task Manager App Preview" loading="lazy">
+                            <img src="https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=200&fit=crop&crop=center" 
+                                 alt="Space exploration game with spacecraft and planets" 
+                                 loading="lazy">
                         </div>
                         <div class="project-info">
-                            <h3>Task Manager App</h3>
-                            <p>A cross-platform mobile application for task management with offline support, cloud sync, and intelligent notifications.</p>
+                            <div class="project-meta">
+                                <span class="project-type">Game Development</span>
+                                <span class="project-date">2024</span>
+                            </div>
+                            <h3 id="space-title">Space Explorer</h3>
+                            <p>
+                                An adventure game where players navigate through space, discover planets, 
+                                and collect resources. Built with Godot engine and custom physics.
+                            </p>
+                            <div class="project-tags">
+                                <span class="tag">Godot</span>
+                                <span class="tag">GDScript</span>
+                                <span class="tag">Game Design</span>
+                                <span class="tag">Physics</span>
+                                <span class="tag">Procedural</span>
+                            </div>
+                            <div class="project-actions">
+                                <button class="project-btn primary" disabled aria-describedby="space-title">
+                                    <span>🚧</span> In Development
+                                </button>
+                                <a href="#" class="project-btn" aria-label="View space explorer source code">
+                                    <span>🔗</span> Code
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Data Visualization Project -->
+                    <article class="project-card" 
+                             id="data-viz" 
+                             tabindex="0" 
+                             role="gridcell"
+                             data-category="web"
+                             aria-labelledby="data-title">
+                        <div class="project-image">
+                            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop&crop=center" 
+                                 alt="Interactive data visualization dashboard with charts and graphs" 
+                                 loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <div class="project-meta">
+                                <span class="project-type">Data Visualization</span>
+                                <span class="project-date">2024</span>
+                            </div>
+                            <h3 id="data-title">Interactive Dashboard</h3>
+                            <p>
+                                Dynamic data visualization platform with real-time charts, filtering capabilities, 
+                                and responsive design. Processes large datasets efficiently.
+                            </p>
+                            <div class="project-tags">
+                                <span class="tag">D3.js</span>
+                                <span class="tag">Chart.js</span>
+                                <span class="tag">Data Analysis</span>
+                                <span class="tag">Real-time</span>
+                                <span class="tag">Responsive</span>
+                            </div>
+                            <div class="project-actions">
+                                <a href="#" class="project-btn primary" aria-describedby="data-title">
+                                    <span>📊</span> View Demo
+                                </a>
+                                <a href="#" class="project-btn" aria-label="View dashboard source code">
+                                    <span>🔗</span> Code
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Mobile App Project -->
+                    <article class="project-card" 
+                             id="mobile-app" 
+                             tabindex="0" 
+                             role="gridcell"
+                             data-category="mobile"
+                             aria-labelledby="mobile-title">
+                        <div class="project-image">
+                            <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=200&fit=crop&crop=center" 
+                                 alt="Mobile productivity app interface design" 
+                                 loading="lazy">
+                        </div>
+                        <div class="project-info">
+                            <div class="project-meta">
+                                <span class="project-type">Mobile Development</span>
+                                <span class="project-date">2024</span>
+                            </div>
+                            <h3 id="mobile-title">Productivity Assistant</h3>
+                            <p>
+                                Cross-platform mobile app for task management and productivity tracking. 
+                                Features offline support, notifications, and intuitive gesture controls.
+                            </p>
                             <div class="project-tags">
                                 <span class="tag">React Native</span>
                                 <span class="tag">TypeScript</span>
                                 <span class="tag">SQLite</span>
-                                <span class="tag">Cloud Sync</span>
+                                <span class="tag">Push Notifications</span>
+                                <span class="tag">Offline-First</span>
                             </div>
                             <div class="project-actions">
-                                <button class="project-action primary" data-action="view-demo" data-project="mobile-app">
-                                    📱 View Demo
-                                </button>
-                                <button class="project-action" data-action="view-details" data-project="mobile-app">
-                                    📖 Details
-                                </button>
-                            </div>
-                        </div>
-                    </article>
-
-                    <!-- AI Chat Assistant -->
-                    <article class="project-card" id="ai-project" tabindex="0" data-category="ai">
-                        <div class="project-image">
-                            <img src="src/assets/projects/ai-assistant-preview.jpg" alt="AI Chat Assistant Preview" loading="lazy">
-                        </div>
-                        <div class="project-info">
-                            <h3>AI Chat Assistant</h3>
-                            <p>An intelligent chatbot powered by natural language processing, capable of understanding context and providing helpful responses.</p>
-                            <div class="project-tags">
-                                <span class="tag">Python</span>
-                                <span class="tag">TensorFlow</span>
-                                <span class="tag">NLP</span>
-                                <span class="tag">Machine Learning</span>
-                            </div>
-                            <div class="project-actions">
-                                <button class="project-action primary" data-action="try-demo" data-project="ai-project">
-                                    🤖 Try Demo
-                                </button>
-                                <button class="project-action" data-action="view-details" data-project="ai-project">
-                                    📖 Details
-                                </button>
+                                <a href="#" class="project-btn primary" aria-describedby="mobile-title">
+                                    <span>📱</span> Download Beta
+                                </a>
+                                <a href="#" class="project-btn" aria-label="View mobile app source code">
+                                    <span>🔗</span> Code
+                                </a>
                             </div>
                         </div>
                     </article>
                 </div>
-            </div>
+
+                <!-- Loading State (hidden by default) -->
+                <div class="loading-state" style="display: none;" role="status" aria-live="polite">
+                    <div class="loading-spinner" aria-hidden="true"></div>
+                    <p>Loading projects...</p>
+                </div>
+
+                <!-- Empty State (hidden by default) -->
+                <div class="empty-state" style="display: none;" role="status">
+                    <p>No projects found matching your criteria.</p>
+                    <button class="project-btn" onclick="clearFilters()">Clear Filters</button>
+                </div>
+            </main>
         </div>
     </div>
 
-    <!-- Game Container (Hidden by default) -->
-    <div class="game-container" id="game-container">
-        <div class="game-wrapper">
-            <div class="game-header">
-                <h3 id="game-title">Starbucks Barista Adventure</h3>
-                <button class="game-close" id="close-game" aria-label="Close game">
-                    ✕
+    <!-- Game Container for Interactive Projects (hidden by default) -->
+    <div id="game-container" class="projects-panel" style="display: none;" role="region" aria-label="Interactive game">
+        <header class="panel-header">
+            <h2 id="game-title">Interactive Game</h2>
+            <div class="header-controls">
+                <button class="project-btn" onclick="closeGame()" aria-label="Close game">
+                    <span>✕</span> Close
                 </button>
             </div>
-            <div class="game-content" id="game-content">
-                <!-- Game will be loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Project Details Modal (Hidden by default) -->
-    <div class="project-modal" id="project-modal">
-        <div class="modal-backdrop" id="modal-backdrop"></div>
-        <div class="modal-content" id="modal-content">
-            <!-- Project details will be loaded here -->
+        </header>
+        <div class="game-container" id="game-content">
+            <!-- Game will be loaded here dynamically -->
         </div>
     </div>
 </section>
 
-<!-- Project Categories Filter (Optional Enhancement) -->
-<div class="projects-filter" style="display: none;">
-    <button class="filter-btn active" data-filter="all">All Projects</button>
-    <button class="filter-btn" data-filter="interactive">Interactive</button>
-    <button class="filter-btn" data-filter="web">Web Development</button>
-    <button class="filter-btn" data-filter="3d">3D Graphics</button>
-    <button class="filter-btn" data-filter="gamedev">Game Development</button>
-    <button class="filter-btn" data-filter="mobile">Mobile</button>
-    <button class="filter-btn" data-filter="ai">AI/ML</button>
-</div>
+<!-- Enhanced JavaScript for Projects Page -->
+<script>
+/**
+ * Projects Page Enhanced Functionality
+ * Integrates with existing PageManager system
+ */
+
+// Initialize projects page when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('projects')) {
+        initializeProjectsPage();
+    }
+});
+
+/**
+ * Initialize projects page functionality
+ */
+function initializeProjectsPage() {
+    setupProjectNavigation();
+    setupProjectFilters();
+    setupProjectSearch();
+    setupProjectInteractions();
+    updateProjectCount();
+}
+
+/**
+ * Setup project navigation
+ */
+function setupProjectNavigation() {
+    const navButtons = document.querySelectorAll('.nav-button');
+    
+    navButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Update active state
+            navButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-current', 'false');
+            });
+            
+            this.classList.add('active');
+            this.setAttribute('aria-current', 'true');
+            
+            // Scroll to target project
+            const targetId = this.getAttribute('href');
+            const targetProject = document.querySelector(targetId);
+            
+            if (targetProject) {
+                targetProject.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
+                // Add highlight effect
+                targetProject.classList.add('highlight');
+                setTimeout(() => {
+                    targetProject.classList.remove('highlight');
+                }, 2000);
+                
+                // Focus on the project for accessibility
+                targetProject.focus();
+            }
+        });
+    });
+}
+
+/**
+ * Setup project filters
+ */
+function setupProjectFilters() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const projectCards = document.querySelectorAll('.project-card');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const category = this.getAttribute('data-category');
+            
+            // Update active filter
+            filterButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            
+            // Filter projects
+            filterProjects(category, projectCards);
+            updateProjectCount();
+        });
+    });
+}
+
+/**
+ * Filter projects by category
+ */
+function filterProjects(category, projectCards) {
+    let visibleCount = 0;
+    
+    projectCards.forEach(card => {
+        const cardCategory = card.getAttribute('data-category');
+        const shouldShow = category === 'all' || cardCategory === category;
+        
+        if (shouldShow) {
+            card.style.display = 'block';
+            card.style.animation = 'fadeInUp 0.6s ease-out';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Show/hide empty state
+    const emptyState = document.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+    }
+}
+
+/**
+ * Setup project search
+ */
+function setupProjectSearch() {
+    const searchBox = document.getElementById('project-search');
+    if (!searchBox) return;
+    
+    searchBox.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const projectCards = document.querySelectorAll('.project-card');
+        let visibleCount = 0;
+        
+        projectCards.forEach(card => {
+            const title = card.querySelector('h3').textContent.toLowerCase();
+            const description = card.querySelector('p').textContent.toLowerCase();
+            const tags = Array.from(card.querySelectorAll('.tag'))
+                .map(tag => tag.textContent.toLowerCase())
+                .join(' ');
+            
+            const shouldShow = title.includes(searchTerm) || 
+                             description.includes(searchTerm) || 
+                             tags.includes(searchTerm);
+            
+            if (shouldShow) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        // Update project count and empty state
+        updateProjectCount();
+        const emptyState = document.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+        }
+    });
+}
+
+/**
+ * Setup project card interactions
+ */
+function setupProjectInteractions() {
+    const projectCards = document.querySelectorAll('.project-card');
+    
+    projectCards.forEach(card => {
+        // Click handler for card
+        card.addEventListener('click', function(e) {
+            // Don't trigger if clicking on buttons or links
+            if (e.target.closest('.project-btn') || e.target.closest('a')) {
+                return;
+            }
+            
+            // Add interaction feedback
+            this.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+        });
+        
+        // Keyboard navigation
+        card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
+        });
+    });
+}
+
+/**
+ * Update project count display
+ */
+function updateProjectCount() {
+    const projectCount = document.getElementById('project-count');
+    if (projectCount) {
+        const visibleProjects = document.querySelectorAll('.project-card[style*="display: block"], .project-card:not([style*="display: none"])').length;
+        const totalProjects = document.querySelectorAll('.project-card').length;
+        
+        projectCount.textContent = `${visibleProjects} of ${totalProjects} Projects`;
+    }
+}
+
+/**
+ * Clear all filters
+ */
+function clearFilters() {
+    // Reset filter buttons
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
+    
+    // Activate "All Projects" filter
+    const allButton = document.querySelector('.filter-btn[data-category="all"]');
+    if (allButton) {
+        allButton.classList.add('active');
+        allButton.setAttribute('aria-pressed', 'true');
+    }
+    
+    // Clear search
+    const searchBox = document.getElementById('project-search');
+    if (searchBox) {
+        searchBox.value = '';
+    }
+    
+    // Show all projects
+    const projectCards = document.querySelectorAll('.project-card');
+    projectCards.forEach(card => {
+        card.style.display = 'block';
+    });
+    
+    // Hide empty state
+    const emptyState = document.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+    
+    updateProjectCount();
+}
+
+/**
+ * Load and display the Barista Game
+ */
+function loadBaristaGame(button) {
+    const gameContainer = document.getElementById('game-container');
+    const gameContent = document.getElementById('game-content');
+    const gameTitle = document.getElementById('game-title');
+    
+    if (!gameContainer || !gameContent) return;
+    
+    // Update button state
+    button.innerHTML = '<span>⏳</span> Loading...';
+    button.disabled = true;
+    
+    // Show game container
+    gameContainer.style.display = 'block';
+    gameTitle.textContent = 'Starbucks Barista Adventure';
+    
+    // Scroll to game
+    gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // Load the game (placeholder for now - will be replaced with actual React component)
+    setTimeout(() => {
+        gameContent.innerHTML = `
+            <div style="display: flex; items-center: justify-center; height: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; text-align: center; padding: 2rem;">
+                <div>
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">☕</div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Starbucks Barista Adventure</h3>
+                    <p style="margin-bottom: 2rem; opacity: 0.9;">Game will be loaded here!</p>
+                    <p style="font-size: 0.9rem; opacity: 0.7;">Integration with React component coming soon...</p>
+                </div>
+            </div>
+        `;
+        
+        // Reset button
+        button.innerHTML = '<span>🎮</span> Game Loaded';
+        button.disabled = false;
+        
+        // Focus on game container for accessibility
+        gameContainer.focus();
+    }, 1000);
+}
+
+/**
+ * Close the game
+ */
+function closeGame() {
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+        gameContainer.style.display = 'none';
+        
+        // Scroll back to projects
+        document.getElementById('projects').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+        
+        // Clear game content to free memory
+        const gameContent = document.getElementById('game-content');
+        if (gameContent) {
+            gameContent.innerHTML = '';
+        }
+    }
+}
+
+// Export functions for potential use by PageManager
+if (typeof window !== 'undefined') {
+    window.projectsPageUtils = {
+        initializeProjectsPage,
+        loadBaristaGame,
+        closeGame,
+        clearFilters,
+        filterProjects,
+        updateProjectCount
+    };
+}
+</script>

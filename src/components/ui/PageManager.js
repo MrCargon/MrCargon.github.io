@@ -1,675 +1,1046 @@
 /**
- * Enhanced Projects Page Manager
- * Optimized for performance and game integration
+ * PageManager - Single Page Application Navigation System
+ * Optimized for GitHub Pages
  */
-class ProjectsPageManager {
+class PageManager {
+    /**
+     * Creates a new PageManager instance
+     */
     constructor() {
-        this.projectContainer = null;
-        this.gameContainer = null;
-        this.currentGame = null;
-        this.projects = new Map();
-        this.isInitialized = false;
-        
-        // Performance tracking
-        this.performanceMetrics = {
-            gameLoadTimes: {},
-            interactionCount: 0
-        };
-        
-        // Game configurations
-        this.gameConfigs = {
-            barista: {
-                title: "Starbucks Barista Adventure",
-                component: "StarbucksGame",
+        // Core properties
+        this.contentContainer = document.getElementById('page-container');
+        this.pageCache = new Map();
+        this.gameCache = new Map();
+        this.currentPage = null;
+        this.isTransitioning = false;
+        this.headerManager = null;
+        this.performanceMonitor = null;
+
+        // Configuration - page definitions
+        this.pages = {
+            main: {
+                path: 'src/components/pages/mainPage.html',
+                title: 'Home - Interactive Portfolio',
+                init: () => this.initMainPage(),
                 preload: true,
-                category: "educational"
+                requiresSpaceEnv: true
+            },
+            projects: {
+                path: 'src/components/pages/projectsPage.html',
+                title: 'Projects - Portfolio Showcase',
+                init: () => this.initProjectsPage(),
+                preload: true,
+                requiresSpaceEnv: false
+            },
+            about: {
+                path: 'src/components/pages/aboutPage.html',
+                title: 'About - Professional Background',
+                init: () => this.initAboutPage(),
+                preload: false,
+                requiresSpaceEnv: false
+            },
+            store: {
+                path: 'src/components/pages/storePage.html',
+                title: 'Store - Digital Products',
+                init: () => this.initStorePage(),
+                preload: false,
+                requiresSpaceEnv: false
+            },
+            contact: {
+                path: 'src/components/pages/contactPage.html',
+                title: 'Contact - Get In Touch',
+                init: () => this.initContactPage(),
+                preload: false,
+                requiresSpaceEnv: false
             }
         };
-        
+
+        // Game registry for dynamic loading
+        this.games = {
+            'barista-game': {
+                name: 'Starbucks Barista Adventure',
+                class: 'StarbucksGame',
+                script: 'src/components/games/StarbucksGame.js',
+                container: 'game-content',
+                preload: false
+            }
+        };
+
+        // Performance tracking
+        this.performanceMetrics = {
+            pageLoads: new Map(),
+            componentLoads: new Map(),
+            gameLoads: new Map(),
+            errors: []
+        };
+
+        // Initialize the application
         this.init();
     }
 
     /**
-     * Initialize the projects page manager
+     * Initialize the PageManager
      */
     async init() {
-        if (this.isInitialized) return;
-        
         try {
-            // Cache DOM elements
-            this.cacheElements();
+            console.log('🚀 Initializing PageManager...');
             
-            // Setup event listeners
-            this.setupEventListeners();
-            
-            // Initialize projects data
-            this.initializeProjectsData();
-            
-            // Setup game integration
-            this.setupGameIntegration();
-            
-            // Setup accessibility features
-            this.setupAccessibility();
-            
-            this.isInitialized = true;
-            console.log('Projects page manager initialized successfully');
-            
+            // Set up performance monitoring
+            this.initializePerformanceMonitoring();
+
+            // Set up header management
+            this.initializeHeaderManager();
+
+            // Setup event handlers for navigation
+            this.setupRouting();
+
+            // Handle initial route based on URL hash
+            await this.handleInitialRoute();
+
+            // Preload important pages and components
+            this.preloadResources();
+
+            console.log('✅ PageManager initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize projects page manager:', error);
+            console.error('❌ Failed to initialize PageManager:', error);
+            this.handleInitializationError(error);
         }
     }
 
     /**
-     * Cache frequently used DOM elements
+     * Initialize performance monitoring
      */
-    cacheElements() {
-        this.projectContainer = document.querySelector('.projects-content');
-        this.gameContainer = document.getElementById('game-container');
-        this.gameContent = document.getElementById('game-content');
-        this.gameTitle = document.getElementById('game-title');
-        this.closeGameBtn = document.getElementById('close-game');
-        this.navButtons = document.querySelectorAll('.nav-button');
-        this.projectCards = document.querySelectorAll('.project-card');
-        this.projectActions = document.querySelectorAll('.project-action');
+    initializePerformanceMonitoring() {
+        // Only enable in development or with debug flag
+        const isDevelopment = location.hostname === 'localhost' || 
+                            location.hostname === '127.0.0.1' ||
+                            location.search.includes('debug=true');
+
+        if (isDevelopment && window.PerformanceMonitor) {
+            this.performanceMonitor = new PerformanceMonitor();
+            console.log('📊 Performance monitoring enabled');
+        }
     }
 
     /**
-     * Setup event listeners with performance optimization
+     * Initialize HeaderManager if available
      */
-    setupEventListeners() {
-        // Use event delegation for better performance
-        if (this.projectContainer) {
-            this.projectContainer.addEventListener('click', this.handleProjectClick.bind(this));
-            this.projectContainer.addEventListener('keydown', this.handleKeyboardNavigation.bind(this));
-        }
-        
-        // Game controls
-        if (this.closeGameBtn) {
-            this.closeGameBtn.addEventListener('click', this.closeGame.bind(this));
-        }
-        
-        if (this.gameContainer) {
-            this.gameContainer.addEventListener('click', (e) => {
-                if (e.target === this.gameContainer) {
-                    this.closeGame();
-                }
-            });
-        }
-        
-        // Escape key to close game
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isGameOpen()) {
-                this.closeGame();
+    initializeHeaderManager() {
+        if (window.HeaderManager) {
+            try {
+                this.headerManager = new HeaderManager();
+                console.log('🎯 HeaderManager initialized');
+            } catch (error) {
+                console.warn('⚠️ HeaderManager initialization failed:', error);
             }
-        });
-        
-        // Navigation buttons
-        this.navButtons.forEach(btn => {
-            btn.addEventListener('click', this.handleNavigation.bind(this));
-        });
-        
-        // Window resize handler (debounced)
+        }
+    }
+
+    /**
+     * Set up event listeners for navigation and browser history
+     */
+    setupRouting() {
+        // Use event delegation for all navigation clicks
+        document.addEventListener('click', this.handleNavigationClick.bind(this));
+
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', this.handlePopState.bind(this));
+
+        // Handle keyboard navigation accessibility
+        document.addEventListener('keydown', this.handleKeyboardNavigation.bind(this));
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+
+        // Handle window resize for responsive adjustments
         window.addEventListener('resize', this.debounce(this.handleResize.bind(this), 250));
     }
 
     /**
-     * Handle project interactions
+     * Handle navigation click events with proper event delegation
+     * @param {MouseEvent} event - Click event
      */
-    async handleProjectClick(event) {
-        const action = event.target.closest('[data-action]');
-        if (!action) return;
-        
+    handleNavigationClick(event) {
+        const link = event.target.closest('.main-nav a, .nav-button, .project-btn[href]');
+        if (!link) return;
+
+        // Skip if it's an external link
+        if (link.href && (link.href.startsWith('http') && !link.href.includes(location.hostname))) {
+            return;
+        }
+
         event.preventDefault();
-        this.performanceMetrics.interactionCount++;
+
+        // Check if the link is disabled
+        if (link.classList.contains('disabled')) {
+            console.log('🚫 Navigation prevented: This feature is coming soon.');
+            return;
+        }
+
+        // Handle different types of navigation
+        const href = link.getAttribute('href');
         
-        const actionType = action.dataset.action;
-        const projectId = action.dataset.project;
-        const gameId = action.dataset.game;
-        
-        // Add loading state
-        action.classList.add('loading');
-        
-        try {
-            switch (actionType) {
-                case 'play-game':
-                    await this.launchGame(gameId);
-                    break;
-                case 'view-details':
-                    await this.showProjectDetails(projectId);
-                    break;
-                case 'launch-demo':
-                    await this.launchDemo(projectId);
-                    break;
-                case 'try-demo':
-                    await this.tryDemo(projectId);
-                    break;
-                case 'view-demo':
-                    await this.viewDemo(projectId);
-                    break;
-                default:
-                    console.warn(`Unknown action: ${actionType}`);
+        if (href.startsWith('#')) {
+            const pageName = href.substring(1);
+            if (this.pages[pageName]) {
+                this.navigateToPage(pageName);
+            } else {
+                // Handle anchor links within page
+                this.scrollToElement(href);
             }
-        } catch (error) {
-            console.error(`Error handling action ${actionType}:`, error);
-            this.showErrorMessage(`Failed to ${actionType.replace('-', ' ')}. Please try again.`);
-        } finally {
-            action.classList.remove('loading');
+        } else if (link.classList.contains('project-btn') && link.dataset.action) {
+            this.handleProjectAction(link.dataset.action, link.dataset.target);
         }
     }
 
     /**
-     * Launch a game in the game container
+     * Handle project-specific actions
      */
-    async launchGame(gameId) {
-        if (!gameId || !this.gameConfigs[gameId]) {
-            throw new Error(`Invalid game ID: ${gameId}`);
-        }
-        
-        const startTime = performance.now();
-        const gameConfig = this.gameConfigs[gameId];
-        
-        try {
-            // Update game title
-            if (this.gameTitle) {
-                this.gameTitle.textContent = gameConfig.title;
-            }
-            
-            // Show loading state
-            this.showGameLoading();
-            
-            // Show game container
-            this.showGameContainer();
-            
-            // Load and initialize the game
-            await this.loadGameComponent(gameId);
-            
-            // Track performance
-            const loadTime = performance.now() - startTime;
-            this.performanceMetrics.gameLoadTimes[gameId] = loadTime;
-            
-            console.log(`Game ${gameId} loaded in ${loadTime.toFixed(2)}ms`);
-            
-        } catch (error) {
-            this.hideGameContainer();
-            throw error;
+    handleProjectAction(action, target) {
+        switch (action) {
+            case 'load-game':
+                this.loadGame(target);
+                break;
+            case 'view-demo':
+                this.viewDemo(target);
+                break;
+            default:
+                console.warn('Unknown project action:', action);
         }
     }
 
     /**
-     * Load game component dynamically
+     * Scroll to element with smooth animation
      */
-    async loadGameComponent(gameId) {
-        const gameConfig = this.gameConfigs[gameId];
-        
-        if (gameId === 'barista') {
-            // Load the React Starbucks game
-            await this.loadBaristaGame();
-        } else {
-            throw new Error(`Game component not found: ${gameConfig.component}`);
-        }
-    }
-
-    /**
-     * Load the Barista game (React component integration)
-     */
-    async loadBaristaGame() {
-        if (!this.gameContent) return;
-        
-        // Clear previous content
-        this.gameContent.innerHTML = '';
-        
-        // Create container for React component
-        const gameDiv = document.createElement('div');
-        gameDiv.id = 'barista-game-root';
-        gameDiv.style.width = '100%';
-        gameDiv.style.height = '100%';
-        this.gameContent.appendChild(gameDiv);
-        
-        // Check if React and the game component are available
-        if (typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
-            // If React is available, we can render the component
-            try {
-                // Load the game component
-                const StarbucksGameModule = await import('./games/StarbucksGame.js');
-                const StarbucksGame = StarbucksGameModule.default;
-                
-                // Render the React component
-                ReactDOM.render(React.createElement(StarbucksGame), gameDiv);
-                
-            } catch (error) {
-                console.warn('React component loading failed, falling back to HTML version');
-                this.loadBaristaGameHTML();
-            }
-        } else {
-            // Fallback to HTML/JS version
-            this.loadBaristaGameHTML();
-        }
-    }
-
-    /**
-     * Fallback HTML version of the Barista game
-     */
-    loadBaristaGameHTML() {
-        if (!this.gameContent) return;
-        
-        this.gameContent.innerHTML = `
-            <div class="barista-game-container">
-                <div class="game-screen welcome-screen active">
-                    <div class="game-header">
-                        <h1>☕ Starbucks Barista Adventure ☕</h1>
-                        <p>Become a master barista through fun challenges!</p>
-                    </div>
-                    
-                    <div class="game-form">
-                        <div class="barista-avatar">👨‍🍳</div>
-                        <h2>Welcome, Future Barista!</h2>
-                        <p>What's your barista name?</p>
-                        
-                        <input type="text" id="player-name" placeholder="Enter your name" class="name-input">
-                        <button id="start-game" class="start-btn" disabled>Start My Adventure!</button>
-                    </div>
-                    
-                    <div class="game-info">
-                        <p>Learn recipes • Earn stars • Collect badges</p>
-                        <p>Become the ultimate Starbucks barista!</p>
-                    </div>
-                </div>
-                
-                <div class="game-screen main-screen">
-                    <div class="player-info">
-                        <div class="player-stats">
-                            <h2 id="player-title">Barista</h2>
-                            <div class="stats">
-                                <span class="level">Level <span id="player-level">1</span></span>
-                                <span class="stars"><span id="player-stars">0</span> ⭐</span>
-                            </div>
-                        </div>
-                        <button class="badges-btn" id="badges-btn">🏆 <span id="badge-count">0</span></button>
-                    </div>
-                    
-                    <div class="barista-tip">
-                        <div class="barista-character">😊</div>
-                        <div class="tip-content">
-                            <h3>Barista Tip:</h3>
-                            <p id="current-tip">Welcome to your barista adventure! Remember to have fun while learning!</p>
-                        </div>
-                    </div>
-                    
-                    <div class="game-options">
-                        <button class="option-btn random-challenge" data-category="all">
-                            <span class="icon">🎯</span>
-                            <span class="title">Random Challenge</span>
-                            <span class="subtitle">Test your skills!</span>
-                        </button>
-                        
-                        <button class="option-btn recipe-types">
-                            <span class="icon">📚</span>
-                            <span class="title">Recipe Types</span>
-                            <span class="subtitle">Choose a category</span>
-                        </button>
-                        
-                        <button class="option-btn recipe-book">
-                            <span class="icon">📖</span>
-                            <span class="title">Recipe Book</span>
-                            <span class="subtitle">Study the recipes</span>
-                        </button>
-                        
-                        <button class="option-btn barista-tips">
-                            <span class="icon">💡</span>
-                            <span class="title">Barista Tips</span>
-                            <span class="subtitle">Helpful advice</span>
-                        </button>
-                    </div>
-                    
-                    <div class="progress-info">
-                        <p class="streak-info">Start a streak by getting answers right in a row!</p>
-                        <p class="level-info"><span id="stars-needed">5</span> more stars to level up!</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Initialize the HTML game
-        this.initializeBaristaGameHTML();
-    }
-
-    /**
-     * Initialize the HTML version of the barista game
-     */
-    initializeBaristaGameHTML() {
-        const nameInput = document.getElementById('player-name');
-        const startBtn = document.getElementById('start-game');
-        const gameScreens = document.querySelectorAll('.game-screen');
-        
-        if (nameInput && startBtn) {
-            nameInput.addEventListener('input', (e) => {
-                startBtn.disabled = !e.target.value.trim();
-            });
-            
-            startBtn.addEventListener('click', () => {
-                const playerName = nameInput.value.trim();
-                if (playerName) {
-                    document.getElementById('player-title').textContent = `Barista ${playerName}`;
-                    this.switchGameScreen('main-screen');
-                }
+    scrollToElement(selector) {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
             });
         }
-        
-        // Game option handlers
-        const optionButtons = document.querySelectorAll('.option-btn');
-        optionButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const btnClass = btn.className;
-                if (btnClass.includes('random-challenge')) {
-                    this.showMessage('🎯 Random Challenge selected! Feature coming soon...');
-                } else if (btnClass.includes('recipe-types')) {
-                    this.showMessage('📚 Recipe Types selected! Feature coming soon...');
-                } else if (btnClass.includes('recipe-book')) {
-                    this.showMessage('📖 Recipe Book selected! Feature coming soon...');
-                } else if (btnClass.includes('barista-tips')) {
-                    this.showMessage('💡 Here\'s a tip: Practice makes perfect!');
-                }
-            });
-        });
     }
 
     /**
-     * Switch between game screens
+     * Handle browser history navigation events
+     * @param {PopStateEvent} event - PopState event
      */
-    switchGameScreen(screenClass) {
-        const screens = document.querySelectorAll('.game-screen');
-        screens.forEach(screen => {
-            screen.classList.remove('active');
-            if (screen.classList.contains(screenClass)) {
-                screen.classList.add('active');
-            }
-        });
+    handlePopState(event) {
+        const pageName = event.state?.page || 'main';
+        this.navigateToPage(pageName, false);
     }
 
     /**
-     * Show a temporary message
-     */
-    showMessage(message, duration = 3000) {
-        // Create message element
-        const messageEl = document.createElement('div');
-        messageEl.className = 'game-message';
-        messageEl.textContent = message;
-        messageEl.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            z-index: 10000;
-            font-weight: 600;
-            text-align: center;
-            max-width: 300px;
-        `;
-        
-        document.body.appendChild(messageEl);
-        
-        // Remove after duration
-        setTimeout(() => {
-            if (messageEl.parentNode) {
-                messageEl.parentNode.removeChild(messageEl);
-            }
-        }, duration);
-    }
-
-    /**
-     * Show game loading state
-     */
-    showGameLoading() {
-        if (!this.gameContent) return;
-        
-        this.gameContent.innerHTML = `
-            <div class="game-loading">
-                <div class="loading-spinner"></div>
-                <h3>Loading Game...</h3>
-                <p>Please wait while we prepare your barista adventure!</p>
-            </div>
-        `;
-    }
-
-    /**
-     * Show game container
-     */
-    showGameContainer() {
-        if (this.gameContainer) {
-            this.gameContainer.classList.add('active');
-            document.body.style.overflow = 'hidden'; // Prevent background scrolling
-        }
-    }
-
-    /**
-     * Hide game container
-     */
-    hideGameContainer() {
-        if (this.gameContainer) {
-            this.gameContainer.classList.remove('active');
-            document.body.style.overflow = ''; // Restore scrolling
-        }
-    }
-
-    /**
-     * Close the currently open game
-     */
-    closeGame() {
-        this.hideGameContainer();
-        
-        // Clean up game content
-        if (this.gameContent) {
-            this.gameContent.innerHTML = '';
-        }
-        
-        this.currentGame = null;
-        
-        // Focus back to the trigger button for accessibility
-        const activeProjectCard = document.querySelector('.project-card.featured');
-        if (activeProjectCard) {
-            activeProjectCard.focus();
-        }
-    }
-
-    /**
-     * Check if a game is currently open
-     */
-    isGameOpen() {
-        return this.gameContainer && this.gameContainer.classList.contains('active');
-    }
-
-    /**
-     * Handle navigation between projects
-     */
-    handleNavigation(event) {
-        event.preventDefault();
-        
-        const button = event.currentTarget;
-        const targetId = button.getAttribute('href');
-        
-        // Update active state
-        this.navButtons.forEach(btn => {
-            btn.classList.remove('active');
-            btn.setAttribute('aria-current', 'false');
-        });
-        
-        button.classList.add('active');
-        button.setAttribute('aria-current', 'true');
-        
-        // Scroll to target project
-        if (targetId) {
-            const targetProject = document.querySelector(targetId);
-            if (targetProject) {
-                targetProject.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-                
-                // Add highlight effect
-                this.highlightProject(targetProject);
-            }
-        }
-    }
-
-    /**
-     * Highlight a project card
-     */
-    highlightProject(projectCard) {
-        projectCard.classList.add('highlighted');
-        setTimeout(() => {
-            projectCard.classList.remove('highlighted');
-        }, 2000);
-    }
-
-    /**
-     * Show project details (placeholder)
-     */
-    async showProjectDetails(projectId) {
-        console.log(`Showing details for project: ${projectId}`);
-        
-        // This would typically load project details
-        // For now, just show a message
-        this.showMessage(`📖 Project details for ${projectId} coming soon!`);
-    }
-
-    /**
-     * Launch demo (placeholder)
-     */
-    async launchDemo(projectId) {
-        console.log(`Launching demo for project: ${projectId}`);
-        this.showMessage(`🚀 Demo for ${projectId} launching soon!`);
-    }
-
-    /**
-     * Try demo (placeholder)
-     */
-    async tryDemo(projectId) {
-        console.log(`Trying demo for project: ${projectId}`);
-        this.showMessage(`🤖 Demo for ${projectId} coming soon!`);
-    }
-
-    /**
-     * View demo (placeholder)
-     */
-    async viewDemo(projectId) {
-        console.log(`Viewing demo for project: ${projectId}`);
-        this.showMessage(`📱 Demo for ${projectId} coming soon!`);
-    }
-
-    /**
-     * Handle keyboard navigation
+     * Handle keyboard navigation for accessibility
+     * @param {KeyboardEvent} event - Keyboard event
      */
     handleKeyboardNavigation(event) {
-        const focusedElement = document.activeElement;
-        
+        // Handle escape key to close games/modals
+        if (event.key === 'Escape') {
+            this.handleEscapeKey();
+            return;
+        }
+
+        // Only handle when focused on navigation links
+        const focusedLink = document.activeElement;
+        if (!focusedLink || !focusedLink.matches('.nav-link, .nav-button, .project-btn')) return;
+
+        // Handle Enter or Space key
         if (event.key === 'Enter' || event.key === ' ') {
-            if (focusedElement.classList.contains('project-card')) {
-                event.preventDefault();
-                const playButton = focusedElement.querySelector('[data-action="play-game"]') ||
-                                   focusedElement.querySelector('.project-action.primary');
-                if (playButton) {
-                    playButton.click();
+            event.preventDefault();
+            focusedLink.click();
+        }
+    }
+
+    /**
+     * Handle escape key presses
+     */
+    handleEscapeKey() {
+        // Close any open games
+        if (this.currentGame) {
+            this.closeGame();
+        }
+        
+        // Close any open modals or overlays
+        const overlay = document.querySelector('.overlay, .modal, .game-container[style*="display: block"]');
+        if (overlay) {
+            this.closeOverlay(overlay);
+        }
+    }
+
+    /**
+     * Handle page visibility changes
+     */
+    handleVisibilityChange() {
+        if (document.hidden) {
+            // Page is hidden - pause animations, games, etc.
+            this.pauseActiveContent();
+        } else {
+            // Page is visible - resume content
+            this.resumeActiveContent();
+        }
+    }
+
+    /**
+     * Handle window resize events
+     */
+    handleResize() {
+        // Update space environment if active
+        if (window.spaceEnvironment?.handleResize) {
+            window.spaceEnvironment.handleResize();
+        }
+
+        // Update any active games
+        if (this.currentGame?.handleResize) {
+            this.currentGame.handleResize();
+        }
+    }
+
+    /**
+     * Pause active content when page is hidden
+     */
+    pauseActiveContent() {
+        // Pause space environment
+        if (window.spaceEnvironment?.pause) {
+            window.spaceEnvironment.pause();
+        }
+
+        // Pause active games
+        if (this.currentGame?.pause) {
+            this.currentGame.pause();
+        }
+    }
+
+    /**
+     * Resume active content when page becomes visible
+     */
+    resumeActiveContent() {
+        // Resume space environment
+        if (window.spaceEnvironment?.resume) {
+            window.spaceEnvironment.resume();
+        }
+
+        // Resume active games
+        if (this.currentGame?.resume) {
+            this.currentGame.resume();
+        }
+    }
+
+    /**
+     * Handle initial routing when the page first loads
+     */
+    async handleInitialRoute() {
+        try {
+            // Initialize space background first if needed
+            const spaceInitialized = await this.initializeSpaceBackground();
+            
+            // Get the initial page from URL hash or default to about
+            const hash = window.location.hash.substring(1) || 'about';
+            await this.navigateToPage(hash, false);
+
+            console.log('🎯 Initial route handled successfully');
+        } catch (error) {
+            console.error('❌ Failed to handle initial route:', error);
+            // Fallback to about page
+            await this.navigateToPage('about', false);
+        }
+    }
+
+    /**
+     * Preload important resources for faster navigation
+     */
+    preloadResources() {
+        // Use requestIdleCallback if available, or setTimeout as fallback
+        const preloader = window.requestIdleCallback || setTimeout;
+
+        preloader(() => {
+            this.preloadPages();
+            this.preloadGames();
+        }, { timeout: 3000 });
+    }
+
+    /**
+     * Preload pages for faster navigation
+     */
+    async preloadPages() {
+        const currentPageName = this.currentPage || 'about';
+
+        // Preload pages marked for preloading
+        const pagesToPreload = Object.entries(this.pages)
+            .filter(([name, config]) => config.preload && name !== currentPageName)
+            .map(([name]) => name);
+
+        console.log('📦 Preloading pages:', pagesToPreload);
+
+        for (const pageName of pagesToPreload) {
+            try {
+                await this.prefetchPage(pageName);
+            } catch (error) {
+                console.debug(`Preload failed for ${pageName}:`, error);
+            }
+        }
+    }
+
+    /**
+     * Preload games that are marked for preloading
+     */
+    async preloadGames() {
+        const gamesToPreload = Object.entries(this.games)
+            .filter(([, config]) => config.preload)
+            .map(([id]) => id);
+
+        for (const gameId of gamesToPreload) {
+            try {
+                await this.prefetchGame(gameId);
+            } catch (error) {
+                console.debug(`Game preload failed for ${gameId}:`, error);
+            }
+        }
+    }
+
+    /**
+     * Prefetch a page in the background
+     * @param {string} pageName - Page to prefetch
+     */
+    async prefetchPage(pageName) {
+        if (this.pageCache.has(pageName)) return;
+
+        try {
+            const pageConfig = this.pages[pageName];
+            const response = await fetch(pageConfig.path, { 
+                priority: 'low', 
+                cache: 'force-cache' 
+            });
+
+            if (!response.ok) return;
+
+            const content = await response.text();
+            this.pageCache.set(pageName, content);
+            console.log(`📄 Page cached: ${pageName}`);
+        } catch (error) {
+            console.debug(`Page prefetch failed for ${pageName}:`, error);
+        }
+    }
+
+    /**
+     * Prefetch a game script
+     */
+    async prefetchGame(gameId) {
+        if (this.gameCache.has(gameId)) return;
+
+        try {
+            const gameConfig = this.games[gameId];
+            const response = await fetch(gameConfig.script, {
+                priority: 'low',
+                cache: 'force-cache'
+            });
+
+            if (!response.ok) return;
+
+            const script = await response.text();
+            this.gameCache.set(gameId, script);
+            console.log(`🎮 Game cached: ${gameId}`);
+        } catch (error) {
+            console.debug(`Game prefetch failed for ${gameId}:`, error);
+        }
+    }
+
+    /**
+     * Load a JavaScript file asynchronously
+     * @param {string} src - Script source URL
+     * @returns {Promise} - Resolves when script is loaded
+     */
+    loadScript(src) {
+        return new Promise((resolve, reject) => {
+            // Check if script is already loaded
+            const existingScript = document.querySelector(`script[src="${src}"]`);
+            if (existingScript) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+
+            script.onload = () => {
+                console.log(`📜 Script loaded: ${src}`);
+                resolve();
+            };
+            script.onerror = () => {
+                const error = new Error(`Failed to load ${src}`);
+                console.error('❌ Script load failed:', error);
+                reject(error);
+            };
+
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * Initialize the space background for the main page
+     */
+    async initializeSpaceBackground() {
+        try {
+            console.log("🌌 Starting space environment initialization");
+
+            // Load Three.js and dependencies
+            await Promise.all([
+                this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js'),
+                this.loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js')
+            ]);
+
+            // Load utility files
+            await Promise.all([
+                this.loadScript('src/utils/ResourceLoader.js'),
+                this.loadScript('src/utils/MemoryManager.js')
+            ]);
+
+            // Load celestial body classes
+            await Promise.all([
+                this.loadScript('src/components/simulation/solarsystem/Planets/Planet.js'),
+                this.loadScript('src/components/simulation/solarsystem/Sun.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Mercury.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Venus.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Earth.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Mars.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Jupiter.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Saturn.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Uranus.js'),
+                this.loadScript('src/components/simulation/solarsystem/Planets/Neptune.js')
+            ]);
+
+            // Load environment features
+            await Promise.all([
+                this.loadScript('src/components/simulation/solarsystem/Galaxy.js'),
+                this.loadScript('src/components/simulation/solarsystem/AsteroidBelt.js'),
+                this.loadScript('src/components/simulation/solarsystem/HabitableZone.js')
+            ]);
+
+            // Load main controller classes
+            await Promise.all([
+                this.loadScript('src/components/simulation/solarsystem/SolarSystem.js'),
+                this.loadScript('src/components/simulation/solarsystem/SpaceEnvironment.js')
+            ]);
+
+            // Create and initialize space environment
+            if (!window.spaceEnvironment) {
+                console.log("🔧 Creating new SpaceEnvironment instance");
+                window.spaceEnvironment = new SpaceEnvironment();
+                await window.spaceEnvironment.init();
+                console.log("✅ SpaceEnvironment initialization complete");
+                window.spaceEnvironment.show();
+            }
+
+            return true;
+        } catch (error) {
+            console.error("❌ Failed to initialize space environment:", error);
+            return false;
+        }
+    }
+
+    /**
+     * Navigate to a specific page
+     * @param {string} pageName - Name of the page to navigate to
+     * @param {boolean} updateHistory - Whether to update browser history
+     */
+    async navigateToPage(pageName, updateHistory = true) {
+        if (this.isTransitioning || !this.pages[pageName] || pageName === this.currentPage) {
+            return;
+        }
+
+        const startTime = performance.now();
+        this.isTransitioning = true;
+
+        // Trigger navigation start event
+        this.triggerEvent('navigation:start', { from: this.currentPage, to: pageName });
+
+        // Update browser history if needed
+        if (updateHistory) {
+            window.history.pushState({ page: pageName }, '', `#${pageName}`);
+        }
+
+        try {
+            // Start transition animation
+            await this.startPageTransition();
+
+            // Load and render page content
+            await this.loadAndRenderPage(pageName);
+
+            // Update UI state
+            this.updateUIState(pageName);
+
+            // Set page-specific body class and environment
+            this.setPageBodyClass(pageName);
+
+            // Complete transition animation
+            await this.completePageTransition();
+
+            // Record performance metrics
+            const loadTime = performance.now() - startTime;
+            this.recordPageLoad(pageName, loadTime);
+
+            // Trigger navigation complete event
+            this.triggerEvent('navigation:complete', { page: pageName, loadTime });
+
+            console.log(`📄 Navigated to ${pageName} in ${loadTime.toFixed(2)}ms`);
+        } catch (error) {
+            console.error('❌ Navigation error:', error);
+            this.handleNavigationError(error);
+            this.triggerEvent('navigation:error', { page: pageName, error });
+        } finally {
+            this.isTransitioning = false;
+        }
+    }
+
+    /**
+     * Record page load performance
+     */
+    recordPageLoad(pageName, loadTime) {
+        if (!this.performanceMetrics.pageLoads.has(pageName)) {
+            this.performanceMetrics.pageLoads.set(pageName, []);
+        }
+        this.performanceMetrics.pageLoads.get(pageName).push(loadTime);
+
+        // Keep only last 10 measurements
+        const measurements = this.performanceMetrics.pageLoads.get(pageName);
+        if (measurements.length > 10) {
+            measurements.shift();
+        }
+    }
+
+    /**
+     * Trigger a custom event for extensibility
+     * @param {string} name - Event name
+     * @param {Object} detail - Event details
+     */
+    triggerEvent(name, detail = {}) {
+        const event = new CustomEvent(`pagemanager:${name}`, { 
+            detail,
+            bubbles: true
+        });
+
+        if (this.contentContainer) {
+            this.contentContainer.dispatchEvent(event);
+        } else {
+            document.dispatchEvent(event);
+        }
+    }
+
+    /**
+     * Set body class based on current page and manage space environment
+     * @param {string} pageName - Current page name
+     */
+    setPageBodyClass(pageName) {
+        // Remove all page-specific classes
+        document.body.classList.forEach(className => {
+            if (className.startsWith('page-')) {
+                document.body.classList.remove(className);
+            }
+        });
+
+        // Add current page class
+        document.body.classList.add(`page-${pageName}`);
+
+        // Handle space environment based on page requirements
+        const pageConfig = this.pages[pageName];
+        if (pageConfig.requiresSpaceEnv && window.spaceEnvironment) {
+            // Full interaction for space-dependent pages
+            window.spaceEnvironment.show(true);
+            console.log("🌌 Space environment fully enabled");
+        } else if (window.spaceEnvironment) {
+            // Background only for other pages
+            window.spaceEnvironment.show(false);
+            console.log("🌌 Space environment as background");
+        }
+    }
+
+    /**
+     * Begin page transition animation
+     */
+    async startPageTransition() {
+        if (!this.contentContainer) return;
+
+        this.contentContainer.style.opacity = '0';
+        this.contentContainer.style.transform = 'translateY(20px)';
+        
+        return new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    /**
+     * Load page content and render it
+     * @param {string} pageName - Page name to load
+     */
+    async loadAndRenderPage(pageName) {
+        const pageConfig = this.pages[pageName];
+        let content;
+
+        // Check cache first
+        if (this.pageCache.has(pageName)) {
+            content = this.pageCache.get(pageName);
+        } else {
+            // Load page content
+            try {
+                const response = await fetch(pageConfig.path);
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${pageName} page (${response.status})`);
+                }
+                content = await response.text();
+                this.pageCache.set(pageName, content);
+            } catch (error) {
+                console.error(`Error loading page content for ${pageName}:`, error);
+                throw error;
+            }
+        }
+
+        // Cleanup previous page content
+        this.cleanupCurrentPage();
+
+        // Render content
+        if (this.contentContainer) {
+            this.contentContainer.innerHTML = content;
+
+            // Initialize page-specific functionality
+            if (pageConfig.init) {
+                try {
+                    await pageConfig.init();
+                } catch (error) {
+                    console.error(`Error initializing ${pageName} page:`, error);
                 }
             }
         }
     }
 
     /**
-     * Setup accessibility features
+     * Clean up resources from current page before loading new one
      */
-    setupAccessibility() {
-        // Add ARIA labels and roles
-        this.projectCards.forEach((card, index) => {
-            if (!card.getAttribute('role')) {
-                card.setAttribute('role', 'article');
-            }
-            
-            if (!card.getAttribute('aria-label')) {
-                const title = card.querySelector('h3')?.textContent || `Project ${index + 1}`;
-                card.setAttribute('aria-label', title);
-            }
-        });
+    cleanupCurrentPage() {
+        // Clean up any active games
+        if (this.currentGame) {
+            this.closeGame();
+        }
+
+        // Clean up data visualization charts
+        if (window.charts?.length) {
+            window.charts.forEach(chart => {
+                if (chart?.destroy) chart.destroy();
+            });
+            window.charts = [];
+        }
+
+        // Clean up any running intervals or timeouts
+        if (window.pageIntervals?.length) {
+            window.pageIntervals.forEach(clearInterval);
+            window.pageIntervals = [];
+        }
+
+        if (window.pageTimeouts?.length) {
+            window.pageTimeouts.forEach(clearTimeout);
+            window.pageTimeouts = [];
+        }
+    }
+
+    /**
+     * Update UI state after page navigation
+     * @param {string} pageName - Current page name
+     */
+    updateUIState(pageName) {
+        // Update header navigation
+        if (this.headerManager?.updateActiveLink) {
+            this.headerManager.updateActiveLink(pageName);
+        } else {
+            // Fallback to direct DOM manipulation
+            document.querySelectorAll('.main-nav a').forEach(link => {
+                const href = link.getAttribute('href')?.substring(1);
+                const isActive = href === pageName;
+                link.classList.toggle('active', isActive);
+                link.setAttribute('aria-current', isActive ? 'page' : 'false');
+            });
+        }
+
+        // Update document title
+        document.title = this.pages[pageName].title;
+        this.currentPage = pageName;
+    }
+
+    /**
+     * Complete page transition animation
+     */
+    async completePageTransition() {
+        if (!this.contentContainer) return;
+
+        this.contentContainer.style.opacity = '1';
+        this.contentContainer.style.transform = 'translateY(0)';
         
-        // Add keyboard support indicators
-        const keyboardHint = document.createElement('div');
-        keyboardHint.className = 'keyboard-hint';
-        keyboardHint.innerHTML = 'Use Tab to navigate, Enter to interact';
-        keyboardHint.style.cssText = `
-            position: absolute;
-            top: -100px;
-            left: 0;
-            background: #000;
-            color: #fff;
-            padding: 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
+        return new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    /**
+     * Handle navigation errors
+     */
+    handleNavigationError(error) {
+        this.performanceMetrics.errors.push({
+            type: 'navigation',
+            error: error.message,
+            timestamp: Date.now()
+        });
+
+        if (!this.contentContainer) return;
+
+        this.contentContainer.innerHTML = `
+            <div class="error-container" style="text-align: center; padding: 2rem; color: var(--text-color);">
+                <h2 style="color: var(--primary-color); margin-bottom: 1rem;">⚠️ Navigation Error</h2>
+                <p style="margin-bottom: 1.5rem;">Failed to load the requested page. Please try again.</p>
+                <button onclick="window.location.reload()" 
+                        class="retry-button" 
+                        style="padding: 0.75rem 1.5rem; background: var(--primary-color); color: var(--bg-color); border: none; border-radius: 8px; cursor: pointer;">
+                    🔄 Reload Page
+                </button>
+            </div>
         `;
-        
-        document.body.appendChild(keyboardHint);
-        
-        // Show hint on keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Tab') {
-                keyboardHint.style.opacity = '1';
-                setTimeout(() => {
-                    keyboardHint.style.opacity = '0';
-                }, 2000);
+    }
+
+    /**
+     * Handle initialization errors
+     */
+    handleInitializationError(error) {
+        document.body.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #1a1a1a; color: white; font-family: system-ui;">
+                <div style="text-align: center; max-width: 500px; padding: 2rem;">
+                    <h1 style="color: #ff6b6b; margin-bottom: 1rem;">🚨 Application Error</h1>
+                    <p style="margin-bottom: 1.5rem; opacity: 0.8;">The application failed to initialize properly.</p>
+                    <button onclick="window.location.reload()" 
+                            style="padding: 0.75rem 1.5rem; background: #4ecdc4; color: #1a1a1a; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    // =====================================
+    // PAGE-SPECIFIC INITIALIZATION METHODS
+    // =====================================
+
+    /**
+     * Initialize main page functionality
+     */
+    async initMainPage() {
+        console.log('🏠 Initializing main page');
+
+        // Ensure space environment is properly visible
+        if (window.spaceEnvironment) {
+            window.spaceEnvironment.show(true);
+        }
+
+        // Initialize planet selector if it exists
+        const planetSelector = document.querySelector('.planet-selector');
+        if (planetSelector) {
+            this.initPlanetSelector();
+        }
+
+        // Initialize camera controls
+        this.initCameraControls();
+    }
+
+    /**
+     * Initialize projects page functionality
+     */
+    async initProjectsPage() {
+        console.log('🚀 Initializing projects page');
+
+        // Initialize the projects page utilities
+        if (window.projectsPageUtils) {
+            window.projectsPageUtils.initializeProjectsPage();
+        }
+
+        // Set up game loading integration
+        this.setupGameLoading();
+
+        // Set up project interactions
+        this.setupProjectInteractions();
+    }
+
+    /**
+     * Set up game loading for projects page
+     */
+    setupGameLoading() {
+        // Override the global loadBaristaGame function
+        window.loadBaristaGame = (button) => {
+            this.loadGame('barista-game', button);
+        };
+
+        window.closeGame = () => {
+            this.closeGame();
+        };
+    }
+
+    /**
+     * Load and initialize a game
+     * @param {string} gameId - Game identifier
+     * @param {HTMLElement} triggerButton - Button that triggered the load
+     */
+    async loadGame(gameId, triggerButton = null) {
+        if (!this.games[gameId]) {
+            console.error(`Game not found: ${gameId}`);
+            return;
+        }
+
+        const gameConfig = this.games[gameId];
+        const startTime = performance.now();
+
+        try {
+            // Update trigger button state
+            if (triggerButton) {
+                triggerButton.innerHTML = '<span>⏳</span> Loading...';
+                triggerButton.disabled = true;
             }
-        });
-    }
 
-    /**
-     * Handle window resize
-     */
-    handleResize() {
-        // Adjust game container if open
-        if (this.isGameOpen()) {
-            // Game container responsive adjustments would go here
+            // Show game container
+            const gameContainer = document.getElementById('game-container');
+            const gameContent = document.getElementById('game-content');
+            const gameTitle = document.getElementById('game-title');
+
+            if (!gameContainer || !gameContent) {
+                throw new Error('Game container not found');
+            }
+
+            gameContainer.style.display = 'block';
+            gameTitle.textContent = gameConfig.name;
+
+            // Load game script if not already loaded
+            if (!window[gameConfig.class]) {
+                await this.loadScript(gameConfig.script);
+            }
+
+            // Create game instance
+            const GameClass = window[gameConfig.class];
+            if (!GameClass) {
+                throw new Error(`Game class ${gameConfig.class} not found`);
+            }
+
+            this.currentGame = new GameClass(gameContent);
+            await this.currentGame.init();
+
+            // Record performance
+            const loadTime = performance.now() - startTime;
+            this.recordGameLoad(gameId, loadTime);
+
+            // Update trigger button
+            if (triggerButton) {
+                triggerButton.innerHTML = '<span>🎮</span> Game Loaded';
+                triggerButton.disabled = false;
+            }
+
+            // Scroll to game
+            gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            console.log(`🎮 Game loaded: ${gameId} in ${loadTime.toFixed(2)}ms`);
+
+        } catch (error) {
+            console.error(`❌ Failed to load game ${gameId}:`, error);
+            
+            if (triggerButton) {
+                triggerButton.innerHTML = '<span>❌</span> Load Failed';
+                triggerButton.disabled = false;
+            }
+
+            this.handleGameLoadError(gameId, error);
         }
     }
 
     /**
-     * Initialize projects data
+     * Record game load performance
      */
-    initializeProjectsData() {
-        this.projects.set('barista-game', {
-            title: 'Starbucks Barista Adventure',
-            category: 'interactive',
-            status: 'completed',
-            technologies: ['React', 'Interactive', 'Educational'],
-            description: 'An interactive educational game where you learn to make Starbucks drinks through fun challenges.'
-        });
-        
-        // Add other projects...
+    recordGameLoad(gameId, loadTime) {
+        if (!this.performanceMetrics.gameLoads.has(gameId)) {
+            this.performanceMetrics.gameLoads.set(gameId, []);
+        }
+        this.performanceMetrics.gameLoads.get(gameId).push(loadTime);
     }
 
     /**
-     * Setup game integration
+     * Handle game load errors
      */
-    setupGameIntegration() {
-        // Preload game assets if needed
-        if (this.gameConfigs.barista.preload) {
-            // Preload barista game resources
-            console.log('Preloading barista game resources...');
+    handleGameLoadError(gameId, error) {
+        const gameContent = document.getElementById('game-content');
+        if (gameContent) {
+            gameContent.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem;">
+                    <div>
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">😕</div>
+                        <h3 style="margin-bottom: 1rem; color: #333;">Game Load Failed</h3>
+                        <p style="margin-bottom: 1.5rem; color: #666;">Unable to load ${this.games[gameId]?.name || gameId}</p>
+                        <button onclick="window.pageManager.loadGame('${gameId}')" 
+                                style="padding: 0.75rem 1.5rem; background: #4ecdc4; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            🔄 Try Again
+                        </button>
+                    </div>
+                </div>
+            `;
         }
     }
 
     /**
-     * Show error message
+     * Close the currently active game
      */
-    showErrorMessage(message) {
-        console.error(message);
-        this.showMessage(`❌ ${message}`, 4000);
+    closeGame() {
+        if (this.currentGame) {
+            try {
+                if (this.currentGame.destroy) {
+                    this.currentGame.destroy();
+                }
+                this.currentGame = null;
+            } catch (error) {
+                console.warn('Error destroying game:', error);
+            }
+        }
+
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            gameContainer.style.display = 'none';
+            
+            // Clear game content
+            const gameContent = document.getElementById('game-content');
+            if (gameContent) {
+                gameContent.innerHTML = '';
+            }
+
+            // Scroll back to projects
+            const projectsSection = document.getElementById('projects');
+            if (projectsSection) {
+                projectsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     }
 
     /**
-     * Utility: Debounce function
+     * Initialize other page types
+     */
+    async initAboutPage() {
+        console.log('👨‍💻 Initializing about page');
+    }
+
+    async initStorePage() {
+        console.log('🏪 Initializing store page');
+        // Add store-specific functionality here
+    }
+
+    async initContactPage() {
+        console.log('📧 Initializing contact page');
+        // Add contact form functionality here
+    }
+
+    // =====================================
+    // UTILITY METHODS
+    // =====================================
+
+    /**
+     * Debounce function to limit frequent executions
+     * @param {Function} func - Function to debounce
+     * @param {number} wait - Debounce delay in milliseconds
+     * @returns {Function} - Debounced function
      */
     debounce(func, wait) {
         let timeout;
@@ -684,339 +1055,38 @@ class ProjectsPageManager {
     }
 
     /**
-     * Get performance report
+     * Get performance metrics report
      */
     getPerformanceReport() {
         return {
-            gameLoadTimes: this.performanceMetrics.gameLoadTimes,
-            interactionCount: this.performanceMetrics.interactionCount,
-            isInitialized: this.isInitialized
-        };
-    }
-
-    /**
-     * Cleanup resources
-     */
-    destroy() {
-        // Remove event listeners
-        this.projectContainer?.removeEventListener('click', this.handleProjectClick);
-        this.closeGameBtn?.removeEventListener('click', this.closeGame);
-        
-        // Clear game content
-        if (this.gameContent) {
-            this.gameContent.innerHTML = '';
-        }
-        
-        // Reset state
-        this.isInitialized = false;
-        this.currentGame = null;
-        
-        console.log('Projects page manager destroyed');
-    }
-}
-
-// Enhanced PageManager integration
-class PageManager {
-    constructor() {
-        this.contentContainer = document.getElementById('page-container');
-        this.pageCache = new Map();
-        this.currentPage = null;
-        this.isTransitioning = false;
-        this.headerManager = null;
-        this.projectsManager = null; // Add projects manager
-
-        this.pages = {
-            main: {
-                path: 'src/components/pages/mainPage.html',
-                title: 'Home',
-                init: () => this.initMainPage()
-            },
-            projects: {
-                path: 'src/components/pages/projectsPage.html',
-                title: 'Projects',
-                init: () => this.initProjectsPage()
-            },
-            about: {
-                path: 'src/components/pages/aboutPage.html',
-                title: 'About',
-                init: () => this.initAboutPage()
-            },
-            store: {
-                path: 'src/components/pages/storePage.html',
-                title: 'Store',
-                init: () => this.initStorePage()
-            },
-            contact: {
-                path: 'src/components/pages/contactPage.html',
-                title: 'Contact',
-                init: () => this.initContactPage()
+            pageLoads: Object.fromEntries(this.performanceMetrics.pageLoads),
+            gameLoads: Object.fromEntries(this.performanceMetrics.gameLoads),
+            errors: this.performanceMetrics.errors,
+            cacheStatus: {
+                pages: this.pageCache.size,
+                games: this.gameCache.size
             }
         };
-
-        this.init();
     }
 
-    // ... existing PageManager methods ...
-
-    /**
-     * Enhanced projects page initialization
-     */
-    async initProjectsPage() {
-        console.log('Initializing enhanced projects page');
-        
-        // Cleanup previous projects manager if exists
-        if (this.projectsManager) {
-            this.projectsManager.destroy();
-        }
-        
-        // Initialize new projects manager
-        this.projectsManager = new ProjectsPageManager();
-        
-        // Wait for initialization to complete
-        await new Promise(resolve => {
-            const checkInit = () => {
-                if (this.projectsManager.isInitialized) {
-                    resolve();
-                } else {
-                    setTimeout(checkInit, 50);
-                }
-            };
-            checkInit();
-        });
-        
-        console.log('Enhanced projects page initialized successfully');
+    // Additional methods for planet selector, camera controls, etc.
+    // (These would be the same as in your original code)
+    initPlanetSelector() {
+        // Your existing planet selector code
     }
 
-    // ... rest of existing PageManager methods ...
+    initCameraControls() {
+        // Your existing camera controls code
+    }
+
+    setupProjectInteractions() {
+        // Additional project-specific interactions
+    }
 }
 
-// CSS for the HTML game version
-const gameStyles = `
-    .barista-game-container {
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-        color: white;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        overflow-y: auto;
-    }
-    
-    .game-screen {
-        display: none;
-        padding: 2rem;
-        height: 100%;
-        flex-direction: column;
-        justify-content: center;
-    }
-    
-    .game-screen.active {
-        display: flex;
-    }
-    
-    .game-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .game-header h1 {
-        font-size: 1.8rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .game-form {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 2rem;
-        border-radius: 1rem;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .barista-avatar {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-    }
-    
-    .name-input {
-        width: 100%;
-        padding: 0.75rem;
-        border: none;
-        border-radius: 2rem;
-        text-align: center;
-        margin: 1rem 0;
-        font-size: 1rem;
-    }
-    
-    .start-btn {
-        width: 100%;
-        padding: 0.75rem;
-        background: #10b981;
-        color: white;
-        border: none;
-        border-radius: 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.3s;
-    }
-    
-    .start-btn:hover:not(:disabled) {
-        background: #059669;
-    }
-    
-    .start-btn:disabled {
-        background: #6b7280;
-        cursor: not-allowed;
-    }
-    
-    .game-info {
-        text-align: center;
-        font-size: 0.9rem;
-        opacity: 0.8;
-    }
-    
-    .player-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-    
-    .player-stats {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .stats {
-        display: flex;
-        gap: 1rem;
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
-    .badges-btn {
-        background: #f59e0b;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 2rem;
-        cursor: pointer;
-        font-weight: 600;
-    }
-    
-    .barista-tip {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 1rem;
-        border-radius: 1rem;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-    
-    .barista-character {
-        font-size: 3rem;
-    }
-    
-    .tip-content h3 {
-        margin-bottom: 0.5rem;
-        font-size: 1.1rem;
-    }
-    
-    .tip-content p {
-        margin: 0;
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
-    .game-options {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-    
-    .option-btn {
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
-        padding: 1rem;
-        border-radius: 1rem;
-        color: white;
-        cursor: pointer;
-        transition: all 0.3s;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    
-    .option-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateY(-2px);
-    }
-    
-    .option-btn .icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .option-btn .title {
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-    }
-    
-    .option-btn .subtitle {
-        font-size: 0.8rem;
-        opacity: 0.8;
-    }
-    
-    .progress-info {
-        text-align: center;
-        font-size: 0.9rem;
-        opacity: 0.8;
-    }
-    
-    .game-loading {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        text-align: center;
-    }
-    
-    .loading-spinner {
-        width: 3rem;
-        height: 3rem;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top: 3px solid #fff;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 1rem;
-    }
-    
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-`;
-
-// Inject game styles
-const styleElement = document.createElement('style');
-styleElement.textContent = gameStyles;
-document.head.appendChild(styleElement);
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        // PageManager will be initialized by the main app
-    });
-} else {
-    // DOM already loaded
-    console.log('Projects page JavaScript loaded');
-}
-
-// Export for module usage
+// Export PageManager to the global scope
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ProjectsPageManager, PageManager };
+    module.exports = PageManager;
 } else {
-    window.ProjectsPageManager = ProjectsPageManager;
+    window.PageManager = PageManager;
 }

@@ -1,6 +1,6 @@
 /**
- * Enhanced PageManager - Single Page Application
- * Optimized for GitHub pages
+ * PageManager - Single Page Application
+ * Optimized for GitHub Pages
  */
 class PageManager {
     /**
@@ -1041,14 +1041,34 @@ class PageManager {
      * Load Barista Game (placeholder for now)
      */
     async loadBaristaGame(container) {
-    // Create game instance
-    const game = new StarbucksGame(container);
-    
-    // Store reference for cleanup
-    this.activeGame = game;
-    
-    return game;
-}
+        // Placeholder content until React component is integrated
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; text-align: center; padding: 2rem; border-radius: 8px;">
+                <div>
+                    <div style="font-size: 4rem; margin-bottom: 1rem; animation: bounce 2s infinite;">☕</div>
+                    <h3 style="font-size: 1.8rem; margin-bottom: 1rem; font-weight: 600;">Starbucks Barista Adventure</h3>
+                    <p style="margin-bottom: 2rem; opacity: 0.9; font-size: 1.1rem;">Welcome to the ultimate barista training experience!</p>
+                    <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem;">
+                        <span style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 0.9rem;">🎯 Interactive Challenges</span>
+                        <span style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 0.9rem;">⭐ Earn Badges</span>
+                        <span style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 0.9rem;">📚 Learn Recipes</span>
+                    </div>
+                    <button onclick="alert('Game integration coming soon!')" style="padding: 0.75rem 2rem; background: #fff; color: #059669; border: none; border-radius: 25px; font-weight: 600; cursor: pointer; font-size: 1rem; transition: transform 0.2s ease;">
+                        🚀 Start Game
+                    </button>
+                    <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 1rem;">React component integration in progress...</p>
+                </div>
+            </div>
+            <style>
+                @keyframes bounce {
+                    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                    40% { transform: translateY(-10px); }
+                    60% { transform: translateY(-5px); }
+                }
+                button:hover { transform: scale(1.05); }
+            </style>
+        `;
+    }
 
     /**
      * Get game title by type

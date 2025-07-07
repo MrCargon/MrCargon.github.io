@@ -132,6 +132,7 @@ PROJECTS PAGE
 
                 <!-- Enhanced Project Grid -->
                 <div class="project-grid" role="grid" aria-label="Projects grid">
+                    
                     <!-- Interactive Game Project - Barista Game -->
                     <article class="project-card interactive-game" 
                              id="barista-game" 
@@ -164,7 +165,7 @@ PROJECTS PAGE
                             </div>
                             <div class="project-actions">
                                 <button class="project-btn primary" 
-                                        onclick="loadBaristaGame(this)"
+                                        data-game="barista"
                                         aria-describedby="barista-title">
                                     <span>🎮</span> Play Game
                                 </button>
@@ -392,27 +393,27 @@ PROJECTS PAGE
         </div>
     </div>
 
-    <!-- Game Container for Interactive Projects (hidden by default) -->
+    <!-- Enhanced Game Container for Interactive Projects -->
     <div id="game-container" class="projects-panel" style="display: none;" role="region" aria-label="Interactive game">
         <header class="panel-header">
             <h2 id="game-title">Interactive Game</h2>
             <div class="header-controls">
-                <button class="project-btn" onclick="closeGame()" aria-label="Close game">
+                <button class="project-btn" onclick="window.pageManager?.closeGame()" aria-label="Close game">
                     <span>✕</span> Close
                 </button>
             </div>
         </header>
         <div class="game-container" id="game-content">
-            <!-- Game will be loaded here dynamically -->
+            <!-- Game will be loaded here dynamically by PageManager -->
         </div>
     </div>
 </section>
 
-<!-- Enhanced JavaScript for Projects Page -->
+<!-- Enhanced JavaScript for Projects Page Integration -->
 <script>
 /**
  * Projects Page Enhanced Functionality
- * Integrates with existing PageManager system
+ * Fully integrated with PageManager v2.1
  */
 
 // Initialize projects page when DOM is ready
@@ -424,13 +425,115 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /**
  * Initialize projects page functionality
+ * Integrates with PageManager's enhanced game loading
  */
 function initializeProjectsPage() {
+    console.log('📂 Initializing projects page integration');
+    
     setupProjectNavigation();
     setupProjectFilters();
     setupProjectSearch();
     setupProjectInteractions();
+    setupEnhancedGameButtons();
     updateProjectCount();
+    
+    console.log('✅ Projects page integration complete');
+}
+
+/**
+ * Setup enhanced game loading buttons
+ * Works seamlessly with PageManager
+ */
+function setupEnhancedGameButtons() {
+    const gameButtons = document.querySelectorAll('[data-game]');
+    
+    gameButtons.forEach(button => {
+        // Enhanced click handler that works with PageManager
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const gameType = this.getAttribute('data-game');
+            
+            // Use PageManager's enhanced game loading if available
+            if (window.pageManager && typeof window.pageManager.loadGame === 'function') {
+                console.log(`🎮 Loading ${gameType} via PageManager`);
+                
+                // Show game container first
+                const gameContainer = document.getElementById('game-container');
+                if (gameContainer) {
+                    gameContainer.style.display = 'block';
+                    gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
+                // Load game through PageManager
+                window.pageManager.loadGame(gameType, this).catch(error => {
+                    console.error('Game loading failed:', error);
+                });
+            } else {
+                console.warn('PageManager not available, falling back to basic loading');
+                loadGameFallback(gameType, this);
+            }
+        });
+    });
+    
+    console.log(`🎮 Enhanced game loading setup for ${gameButtons.length} buttons`);
+}
+
+/**
+ * Fallback game loading if PageManager is not available
+ */
+function loadGameFallback(gameType, button) {
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<span>⏳</span> Loading...';
+    button.disabled = true;
+    
+    const gameContainer = document.getElementById('game-container');
+    const gameContent = document.getElementById('game-content');
+    
+    if (gameContainer && gameContent) {
+        gameContainer.style.display = 'block';
+        gameContent.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; text-align: center; padding: 2rem;">
+                <div>
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎮</div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Game Loading</h3>
+                    <p style="margin-bottom: 2rem; opacity: 0.9;">PageManager integration required for full functionality</p>
+                    <button onclick="closeGameFallback()" style="padding: 0.75rem 1.5rem; background: white; color: #059669; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Reset button
+    setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+    }, 2000);
+}
+
+/**
+ * Fallback close game function
+ */
+function closeGameFallback() {
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+        gameContainer.style.display = 'none';
+        
+        const gameContent = document.getElementById('game-content');
+        if (gameContent) {
+            gameContent.innerHTML = '';
+        }
+    }
+    
+    // Scroll back to projects
+    const projectsSection = document.getElementById('projects');
+    if (projectsSection) {
+        projectsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 /**
@@ -593,7 +696,12 @@ function setupProjectInteractions() {
         card.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                this.click();
+                
+                // Focus on the main action button
+                const primaryBtn = this.querySelector('.project-btn.primary');
+                if (primaryBtn) {
+                    primaryBtn.click();
+                }
             }
         });
     });
@@ -651,80 +759,33 @@ function clearFilters() {
     updateProjectCount();
 }
 
-/**
- * Load and display the Barista Game
- */
-function loadBaristaGame(button) {
-    const gameContainer = document.getElementById('game-container');
-    const gameContent = document.getElementById('game-content');
-    const gameTitle = document.getElementById('game-title');
-    
-    if (!gameContainer || !gameContent) return;
-    
-    // Update button state
-    button.innerHTML = '<span>⏳</span> Loading...';
-    button.disabled = true;
-    
-    // Show game container
-    gameContainer.style.display = 'block';
-    gameTitle.textContent = 'Starbucks Barista Adventure';
-    
-    // Scroll to game
-    gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    
-    // Load the game (placeholder for now - will be replaced with actual React component)
-    setTimeout(() => {
-        gameContent.innerHTML = `
-            <div style="display: flex; items-center: justify-center; height: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; text-align: center; padding: 2rem;">
-                <div>
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">☕</div>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Starbucks Barista Adventure</h3>
-                    <p style="margin-bottom: 2rem; opacity: 0.9;">Game will be loaded here!</p>
-                    <p style="font-size: 0.9rem; opacity: 0.7;">Integration with React component coming soon...</p>
-                </div>
-            </div>
-        `;
-        
-        // Reset button
-        button.innerHTML = '<span>🎮</span> Game Loaded';
-        button.disabled = false;
-        
-        // Focus on game container for accessibility
-        gameContainer.focus();
-    }, 1000);
-}
-
-/**
- * Close the game
- */
-function closeGame() {
-    const gameContainer = document.getElementById('game-container');
-    if (gameContainer) {
-        gameContainer.style.display = 'none';
-        
-        // Scroll back to projects
-        document.getElementById('projects').scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-        });
-        
-        // Clear game content to free memory
-        const gameContent = document.getElementById('game-content');
-        if (gameContent) {
-            gameContent.innerHTML = '';
-        }
-    }
-}
-
 // Export functions for potential use by PageManager
 if (typeof window !== 'undefined') {
     window.projectsPageUtils = {
         initializeProjectsPage,
-        loadBaristaGame,
-        closeGame,
-        clearFilters,
+        setupEnhancedGameButtons,
         filterProjects,
-        updateProjectCount
+        updateProjectCount,
+        clearFilters
     };
 }
+
+// Add highlight animation CSS
+const highlightCSS = document.createElement('style');
+highlightCSS.textContent = `
+    .project-card.highlight {
+        animation: highlightPulse 1s ease-out;
+        border-color: var(--primary-color, #ffa500) !important;
+        box-shadow: 0 0 20px rgba(255, 165, 0, 0.5) !important;
+    }
+    
+    @keyframes highlightPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+`;
+document.head.appendChild(highlightCSS);
+
+console.log('📂 Projects page integration script loaded');
 </script>

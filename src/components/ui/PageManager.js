@@ -1,5 +1,5 @@
 /**
- * PageManager - Single Page Application
+ * PageManager - Single Page Application 
  * Optimized for GitHub Pages
  */
 class PageManager {
@@ -18,9 +18,17 @@ class PageManager {
         this.performanceMetrics = new Map();
         this.startTime = performance.now();
         
-        // Game integration
+        // Game integration - Enhanced
         this.gameInstances = new Map();
         this.activeGame = null;
+        this.gameScriptsLoaded = new Set();
+        this.gameAssets = {
+            'barista': {
+                script: 'src/components/games/StarbucksGame.js',
+                css: 'src/components/games/StarbucksGame.css',
+                className: 'StarbucksGame'
+            }
+        };
         
         // Enhanced configuration with metadata
         this.pages = {
@@ -89,7 +97,7 @@ class PageManager {
      */
     async init() {
         try {
-            console.log('🚀 Initializing Enhanced PageManager v2.0');
+            console.log('🚀 Initializing Enhanced PageManager v2.1');
             
             // Setup core systems
             await this.initializeCore();
@@ -252,6 +260,11 @@ class PageManager {
                 focusedElement.click();
             }
         }
+        
+        // Handle Escape key for game closure
+        if (event.key === 'Escape' && this.activeGame) {
+            this.closeGame();
+        }
     }
 
     /**
@@ -261,9 +274,15 @@ class PageManager {
         if (document.hidden) {
             // Page is hidden - pause animations, reduce updates
             this.pauseActiveAnimations();
+            if (this.activeGame && this.gameInstances.get(this.activeGame)?.pause) {
+                this.gameInstances.get(this.activeGame).pause();
+            }
         } else {
             // Page is visible - resume animations
             this.resumeActiveAnimations();
+            if (this.activeGame && this.gameInstances.get(this.activeGame)?.resume) {
+                this.gameInstances.get(this.activeGame).resume();
+            }
         }
     }
 
@@ -277,8 +296,11 @@ class PageManager {
         }
         
         // Update any active games
-        if (this.activeGame?.handleResize) {
-            this.activeGame.handleResize();
+        if (this.activeGame && this.gameInstances.has(this.activeGame)) {
+            const game = this.gameInstances.get(this.activeGame);
+            if (game?.handleResize) {
+                game.handleResize();
+            }
         }
         
         // Dispatch custom resize event
@@ -570,8 +592,10 @@ class PageManager {
             }
         }
 
-        // Clean up games
-        this.cleanupActiveGames();
+        // Clean up games if switching away from projects
+        if (this.currentPage === 'projects') {
+            this.cleanupActiveGames();
+        }
         
         // Remove event listeners
         this.removePageEventListeners();
@@ -775,6 +799,369 @@ class PageManager {
     }
 
     // ===========================
+    // ENHANCED GAME INTEGRATION
+    // ===========================
+
+    /**
+     * Load game assets (script and CSS)
+     */
+    async loadGameAssets(gameType) {
+        const assets = this.gameAssets[gameType];
+        if (!assets) {
+            throw new Error(`Unknown game type: ${gameType}`);
+        }
+
+        const assetKey = `${gameType}-assets`;
+        if (this.gameScriptsLoaded.has(assetKey)) {
+            return true;
+        }
+
+        try {
+            console.log(`🎮 Loading ${gameType} game assets...`);
+
+            // Load CSS first
+            await this.loadGameCSS(assets.css);
+
+            // Load JavaScript
+            await this.loadScript(assets.script);
+
+            // Mark as loaded
+            this.gameScriptsLoaded.add(assetKey);
+
+            console.log(`✅ ${gameType} game assets loaded successfully`);
+            return true;
+
+        } catch (error) {
+            console.error(`❌ Failed to load ${gameType} game assets:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load game CSS
+     */
+    loadGameCSS(cssPath) {
+        return new Promise((resolve, reject) => {
+            // Check if CSS is already loaded
+            if (document.querySelector(`link[href="${cssPath}"]`)) {
+                resolve();
+                return;
+            }
+
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = cssPath;
+            link.onload = () => {
+                console.log(`✅ Game CSS loaded: ${cssPath}`);
+                resolve();
+            };
+            link.onerror = () => {
+                console.error(`❌ Failed to load game CSS: ${cssPath}`);
+                reject(new Error(`Failed to load CSS: ${cssPath}`));
+            };
+            
+            document.head.appendChild(link);
+        });
+    }
+
+    /**
+     * Enhanced loadBaristaGame method
+     */
+    async loadBaristaGame(container) {
+        try {
+            console.log('🎮 Loading Starbucks Barista Game...');
+
+            // Show loading state
+            this.showGameLoadingState(container);
+
+            // Load game assets
+            await this.loadGameAssets('barista');
+
+            // Small delay for better UX
+            await this.delay(800);
+
+            // Check if game class is available
+            if (typeof StarbucksGame === 'undefined') {
+                throw new Error('StarbucksGame class not found after loading assets');
+            }
+
+            // Clear container
+            container.innerHTML = '';
+            
+            // Create game instance
+            const game = new StarbucksGame(container);
+            
+            // Store reference for cleanup
+            this.gameInstances.set('barista', game);
+            this.activeGame = 'barista';
+            
+            // Setup game event listeners
+            this.setupGameEventListeners(game);
+            
+            console.log('✅ Barista Game loaded successfully');
+            
+            // Dispatch game loaded event
+            this.dispatchEvent('game:loaded', { 
+                gameType: 'barista', 
+                game: game 
+            });
+            
+            return game;
+
+        } catch (error) {
+            console.error('❌ Failed to load Barista Game:', error);
+            this.showGameErrorState(container, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Show game loading state
+     */
+    showGameLoadingState(container) {
+        container.innerHTML = `
+            <div class="game-loading-state">
+                <div class="loading-content">
+                    <div class="loading-spinner">⏳</div>
+                    <h3>Loading Barista Game...</h3>
+                    <p>Preparing your coffee adventure!</p>
+                    <div class="loading-progress">
+                        <div class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <style>
+                .game-loading-state {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    background: linear-gradient(135deg, #10b981, #059669);
+                    color: white;
+                    text-align: center;
+                    padding: 2rem;
+                }
+                .loading-content h3 {
+                    font-size: 1.5rem;
+                    margin: 1rem 0 0.5rem 0;
+                }
+                .loading-content p {
+                    opacity: 0.8;
+                    margin-bottom: 2rem;
+                }
+                .loading-spinner {
+                    font-size: 3rem;
+                    animation: spin 1s linear infinite;
+                }
+                .loading-progress {
+                    width: 200px;
+                    height: 4px;
+                    background: rgba(255,255,255,0.3);
+                    border-radius: 2px;
+                    overflow: hidden;
+                    margin: 0 auto;
+                }
+                .progress-bar {
+                    width: 0%;
+                    height: 100%;
+                    background: white;
+                    border-radius: 2px;
+                    animation: loadProgress 2s ease-out forwards;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                @keyframes loadProgress {
+                    0% { width: 0%; }
+                    50% { width: 70%; }
+                    100% { width: 100%; }
+                }
+            </style>
+        `;
+    }
+
+    /**
+     * Show game error state
+     */
+    showGameErrorState(container, error) {
+        container.innerHTML = `
+            <div class="game-error-state">
+                <div class="error-content">
+                    <div class="error-icon">⚠️</div>
+                    <h3>Failed to Load Game</h3>
+                    <p>There was an error loading the Barista Game.</p>
+                    <p class="error-details">${error.message}</p>
+                    <div class="error-actions">
+                        <button onclick="window.pageManager.retryGameLoad('barista')" class="retry-btn">
+                            🔄 Retry
+                        </button>
+                        <button onclick="window.pageManager.closeGame()" class="close-btn">
+                            ✕ Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <style>
+                .game-error-state {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    background: #ef4444;
+                    color: white;
+                    text-align: center;
+                    padding: 2rem;
+                }
+                .error-icon {
+                    font-size: 3rem;
+                    margin-bottom: 1rem;
+                }
+                .error-content h3 {
+                    font-size: 1.5rem;
+                    margin-bottom: 1rem;
+                }
+                .error-content p {
+                    margin-bottom: 0.5rem;
+                    opacity: 0.9;
+                }
+                .error-details {
+                    font-size: 0.875rem;
+                    background: rgba(0,0,0,0.2);
+                    padding: 0.5rem;
+                    border-radius: 4px;
+                    margin: 1rem 0;
+                }
+                .error-actions {
+                    display: flex;
+                    gap: 1rem;
+                    justify-content: center;
+                    margin-top: 1.5rem;
+                }
+                .retry-btn, .close-btn {
+                    padding: 0.5rem 1rem;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 500;
+                }
+                .retry-btn {
+                    background: white;
+                    color: #ef4444;
+                }
+                .close-btn {
+                    background: rgba(0,0,0,0.3);
+                    color: white;
+                }
+                .retry-btn:hover, .close-btn:hover {
+                    transform: translateY(-1px);
+                }
+            </style>
+        `;
+    }
+
+    /**
+     * Retry game loading
+     */
+    async retryGameLoad(gameType) {
+        const gameContainer = document.getElementById('game-container');
+        const gameContent = document.getElementById('game-content');
+        
+        if (gameContainer && gameContent) {
+            try {
+                // Clear any cached assets for retry
+                const assetKey = `${gameType}-assets`;
+                this.gameScriptsLoaded.delete(assetKey);
+                
+                // Retry loading
+                await this.loadBaristaGame(gameContent);
+                
+            } catch (error) {
+                console.error('❌ Game retry failed:', error);
+                this.showToast('Game loading failed again. Please refresh the page.', 'error');
+            }
+        }
+    }
+
+    /**
+     * Setup game event listeners
+     */
+    setupGameEventListeners(game) {
+        // Listen for game events if the game supports them
+        if (game && typeof game.addEventListener === 'function') {
+            game.addEventListener('game:exit', () => {
+                this.closeGame();
+            });
+            
+            game.addEventListener('game:error', (event) => {
+                console.error('Game error:', event.detail);
+                this.showToast('Game error occurred', 'error');
+            });
+        }
+    }
+
+    /**
+     * Close active game
+     */
+    closeGame() {
+        if (this.activeGame && this.gameInstances.has(this.activeGame)) {
+            const game = this.gameInstances.get(this.activeGame);
+            
+            try {
+                // Cleanup game instance
+                if (game && typeof game.cleanup === 'function') {
+                    game.cleanup();
+                }
+                
+                // Remove from instances
+                this.gameInstances.delete(this.activeGame);
+                
+                console.log(`✅ Closed ${this.activeGame} game`);
+                
+            } catch (error) {
+                console.warn(`⚠️ Error closing ${this.activeGame} game:`, error);
+            }
+            
+            this.activeGame = null;
+        }
+        
+        // Hide game container
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            gameContainer.style.display = 'none';
+            
+            // Clear content
+            const gameContent = document.getElementById('game-content');
+            if (gameContent) {
+                gameContent.innerHTML = '';
+            }
+        }
+        
+        // Scroll back to projects
+        const projectsSection = document.getElementById('projects');
+        if (projectsSection) {
+            projectsSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+        
+        // Dispatch game closed event
+        this.dispatchEvent('game:closed', { gameType: this.activeGame });
+    }
+
+    /**
+     * Get game title by type
+     */
+    getGameTitle(gameType) {
+        const titles = {
+            barista: 'Starbucks Barista Adventure',
+            // Add more games here as needed
+        };
+        return titles[gameType] || 'Interactive Game';
+    }
+
+    // ===========================
     // PAGE-SPECIFIC INITIALIZERS
     // ===========================
 
@@ -924,8 +1311,8 @@ class PageManager {
                 this.setupBasicProjectsPage();
             }
 
-            // Setup game loading functionality
-            this.setupGameLoading();
+            // Setup enhanced game loading functionality
+            this.setupEnhancedGameLoading();
 
         } catch (error) {
             console.error('❌ Projects page initialization failed:', error);
@@ -955,26 +1342,35 @@ class PageManager {
     }
 
     /**
-     * Setup game loading functionality
+     * Setup enhanced game loading functionality
      */
-    setupGameLoading() {
-        // Find game load buttons
-        const gameButtons = document.querySelectorAll('[onclick*="loadBaristaGame"], .project-btn[data-game]');
+    setupEnhancedGameLoading() {
+        // Find all game load buttons and setup proper event listeners
+        const gameButtons = document.querySelectorAll(
+            '[onclick*="loadBaristaGame"], .project-btn[data-game], .project-btn[data-action*="game"]'
+        );
         
         gameButtons.forEach(button => {
-            // Remove inline onclick if present
+            // Remove any inline onclick handlers
             button.removeAttribute('onclick');
             
             // Add proper event listener
-            button.addEventListener('click', (e) => {
+            button.addEventListener('click', async (e) => {
                 e.preventDefault();
-                this.loadGame('barista', button);
+                
+                // Prevent multiple clicks
+                if (button.disabled) return;
+                
+                const gameType = button.getAttribute('data-game') || 'barista';
+                await this.loadGame(gameType, button);
             });
         });
+
+        console.log(`🎮 Enhanced game loading setup for ${gameButtons.length} buttons`);
     }
 
     /**
-     * Load and display a game
+     * Enhanced load game method
      */
     async loadGame(gameType, button) {
         try {
@@ -989,31 +1385,40 @@ class PageManager {
             const gameContainer = document.getElementById('game-container');
             const gameContent = document.getElementById('game-content');
             
-            if (gameContainer && gameContent) {
-                gameContainer.style.display = 'block';
-                
-                // Update title
-                const gameTitle = document.getElementById('game-title');
-                if (gameTitle) {
-                    gameTitle.textContent = this.getGameTitle(gameType);
-                }
-
-                // Load game content
-                await this.loadGameContent(gameType, gameContent);
-
-                // Scroll to game
-                gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                // Update button
-                button.innerHTML = '<span>🎮</span> Game Loaded';
-                setTimeout(() => {
-                    button.innerHTML = originalHTML;
-                    button.disabled = false;
-                }, 2000);
-
-                // Set active game
-                this.activeGame = gameType;
+            if (!gameContainer || !gameContent) {
+                throw new Error('Game container elements not found');
             }
+
+            gameContainer.style.display = 'block';
+            
+            // Update title
+            const gameTitle = document.getElementById('game-title');
+            if (gameTitle) {
+                gameTitle.textContent = this.getGameTitle(gameType);
+            }
+
+            // Load specific game
+            let game;
+            switch (gameType) {
+                case 'barista':
+                    game = await this.loadBaristaGame(gameContent);
+                    break;
+                default:
+                    throw new Error(`Unknown game type: ${gameType}`);
+            }
+
+            // Scroll to game
+            gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Update button
+            button.innerHTML = '<span>🎮</span> Game Loaded';
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }, 2000);
+
+            // Focus on game container for accessibility
+            gameContainer.focus();
 
         } catch (error) {
             console.error(`❌ Failed to load ${gameType} game:`, error);
@@ -1023,85 +1428,6 @@ class PageManager {
             button.innerHTML = originalHTML;
             button.disabled = false;
         }
-    }
-
-    /**
-     * Load game content based on type
-     */
-    async loadGameContent(gameType, container) {
-        switch (gameType) {
-            case 'barista':
-                return this.loadBaristaGame(container);
-            default:
-                throw new Error(`Unknown game type: ${gameType}`);
-        }
-    }
-
-    /**
-     * Load Barista Game (placeholder for now)
-     */
-    async loadBaristaGame(container) {
-    try {
-        // Show loading state
-        container.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white;">
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem; animation: spin 1s linear infinite;">⏳</div>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Loading Barista Game...</h3>
-                    <p style="opacity: 0.8;">Preparing your coffee adventure!</p>
-                </div>
-            </div>
-            <style>
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            </style>
-        `;
-
-        // Load game CSS if not already loaded
-        await this.loadGameCSS();
-
-        // Small delay for better UX
-        await this.delay(800);
-
-        // Clear container and initialize game
-        container.innerHTML = '';
-        
-        // Create game instance
-        const game = new StarbucksGame(container);
-        
-        // Store reference for cleanup
-        this.gameInstances.set('barista', game);
-        
-        console.log('✅ Barista Game loaded successfully');
-        return game;
-
-    } catch (error) {
-        console.error('❌ Failed to load Barista Game:', error);
-        container.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #ef4444; color: white; text-align: center; padding: 2rem;">
-                <div>
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-                    <h3 style="margin-bottom: 1rem;">Failed to Load Game</h3>
-                    <p style="margin-bottom: 1.5rem;">There was an error loading the Barista Game.</p>
-                    <button onclick="this.closest('.projects-panel').style.display='none'" 
-                            style="padding: 0.5rem 1rem; background: white; color: #ef4444; border: none; border-radius: 6px; cursor: pointer;">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-        throw error;
-    }
-}
-
-    /**
-     * Get game title by type
-     */
-    getGameTitle(gameType) {
-        const titles = {
-            barista: 'Starbucks Barista Adventure',
-            // Add more games here
-        };
-        return titles[gameType] || 'Interactive Game';
     }
 
     /**
@@ -1190,26 +1516,42 @@ class PageManager {
     }
 
     /**
-     * Cleanup active games
+     * Enhanced cleanup active games
      */
     cleanupActiveGames() {
-        if (this.activeGame) {
-            console.log(`🎮 Cleaning up active game: ${this.activeGame}`);
+        if (this.gameInstances && this.gameInstances.size > 0) {
+            console.log('🎮 Cleaning up active games');
             
-            // Hide game container
-            const gameContainer = document.getElementById('game-container');
-            if (gameContainer) {
-                gameContainer.style.display = 'none';
-                
-                // Clear content to free memory
-                const gameContent = document.getElementById('game-content');
-                if (gameContent) {
-                    gameContent.innerHTML = '';
+            this.gameInstances.forEach((game, gameType) => {
+                try {
+                    if (game && typeof game.cleanup === 'function') {
+                        game.cleanup();
+                    }
+                    console.log(`✅ Cleaned up ${gameType} game`);
+                } catch (error) {
+                    console.warn(`⚠️ Error cleaning up ${gameType} game:`, error);
                 }
-            }
+            });
             
-            this.activeGame = null;
+            this.gameInstances.clear();
         }
+        
+        // Hide game container
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            gameContainer.style.display = 'none';
+            
+            // Clear content to free memory
+            const gameContent = document.getElementById('game-content');
+            if (gameContent) {
+                gameContent.innerHTML = '';
+            }
+        }
+        
+        this.activeGame = null;
+        
+        // Dispatch cleanup event
+        this.dispatchEvent('games:cleanup');
     }
 
     /**
@@ -1274,6 +1616,17 @@ class PageManager {
             const avg = times.reduce((a, b) => a + b, 0) / times.length;
             console.log(`${page}: ${avg.toFixed(2)}ms avg (${times.length} loads)`);
         });
+        
+        // Log game performance
+        if (this.gameInstances.size > 0) {
+            console.log(`Active games: ${this.gameInstances.size}`);
+            this.gameInstances.forEach((game, type) => {
+                if (game.getStats) {
+                    console.log(`${type} stats:`, game.getStats());
+                }
+            });
+        }
+        
         console.groupEnd();
     }
 
@@ -1303,7 +1656,37 @@ class PageManager {
      */
     showToast(message, type = 'info') {
         console.log(`${type.toUpperCase()}: ${message}`);
-        // Implement toast UI if needed
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `page-toast ${type}`;
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.75rem 1rem;
+            background: ${type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6'};
+            color: white;
+            border-radius: 8px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            font-weight: 500;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }
+        }, 3000);
     }
 
     /**
@@ -1393,6 +1776,20 @@ class PageManager {
     }
 
     /**
+     * Get current status for debugging
+     */
+    getStatus() {
+        return {
+            currentPage: this.currentPage,
+            isTransitioning: this.isTransitioning,
+            activeGame: this.activeGame,
+            gameInstances: this.gameInstances.size,
+            pageCache: this.pageCache.size,
+            errorCount: this.errorCount
+        };
+    }
+
+    /**
      * Cleanup all resources
      */
     cleanup() {
@@ -1429,3 +1826,17 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     window.PageManager = PageManager;
 }
+
+// Add CSS for toast notifications
+const toastCSS = document.createElement('style');
+toastCSS.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(toastCSS);

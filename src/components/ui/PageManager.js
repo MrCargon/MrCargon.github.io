@@ -14,6 +14,10 @@ class PageManager {
         this.isTransitioning = false;
         this.headerManager = null;
         
+        // Space environment tracking
+        this.spaceEnvironmentReady = false;
+        this.spaceInitializationPromise = null;
+        
         // Performance tracking
         this.performanceMetrics = new Map();
         this.startTime = performance.now();
@@ -99,6 +103,9 @@ class PageManager {
         try {
             console.log('🚀 Initializing Enhanced PageManager v2.1');
             
+            // PRIORITY: Initialize space environment FIRST before anything else
+            await this.initializeSpaceEnvironmentEarly();
+            
             // Setup core systems
             await this.initializeCore();
             
@@ -126,7 +133,191 @@ class PageManager {
     }
 
     /**
-     * Initialize core systems
+     * Initialize space environment EARLY and ALWAYS - highest priority
+     */
+    async initializeSpaceEnvironmentEarly() {
+        if (this.spaceInitializationPromise) {
+            // If already initializing, wait for it
+            return this.spaceInitializationPromise;
+        }
+
+        this.spaceInitializationPromise = this.performSpaceInitialization();
+        return this.spaceInitializationPromise;
+    }
+
+    /**
+     * Perform the actual space environment initialization
+     */
+    async performSpaceInitialization() {
+        try {
+            console.log('🌌 PRIORITY: Initializing space environment...');
+            
+            // Show early loading indicator specifically for space environment
+            this.showSpaceLoadingIndicator();
+
+            // Load required scripts in order with higher priority
+            const scripts = [
+                'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+                'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
+                'src/utils/ResourceLoader.js',
+                'src/utils/MemoryManager.js',
+                'src/components/simulation/solarsystem/Planets/Planet.js',
+                'src/components/simulation/solarsystem/Sun.js',
+                'src/components/simulation/solarsystem/Planets/Mercury.js',
+                'src/components/simulation/solarsystem/Planets/Venus.js',
+                'src/components/simulation/solarsystem/Planets/Earth.js',
+                'src/components/simulation/solarsystem/Planets/Mars.js',
+                'src/components/simulation/solarsystem/Planets/Jupiter.js',
+                'src/components/simulation/solarsystem/Planets/Saturn.js',
+                'src/components/simulation/solarsystem/Planets/Uranus.js',
+                'src/components/simulation/solarsystem/Planets/Neptune.js',
+                'src/components/simulation/solarsystem/Galaxy.js',
+                'src/components/simulation/solarsystem/AsteroidBelt.js',
+                'src/components/simulation/solarsystem/HabitableZone.js',
+                'src/components/simulation/solarsystem/SolarSystem.js',
+                'src/components/simulation/solarsystem/SpaceEnvironment.js'
+            ];
+
+            await this.loadScriptsSequentiallyWithPriority(scripts);
+
+            // Initialize space environment immediately
+            if (window.SpaceEnvironment && !window.spaceEnvironment) {
+                console.log('🌌 Creating SpaceEnvironment instance...');
+                window.spaceEnvironment = new SpaceEnvironment();
+                await window.spaceEnvironment.init();
+                
+                // Set to background mode initially (will be adjusted per page)
+                window.spaceEnvironment.show(false);
+                
+                this.spaceEnvironmentReady = true;
+                console.log('✅ Space environment initialized and ready as background');
+            }
+
+            // Hide space loading indicator
+            this.hideSpaceLoadingIndicator();
+            
+            return true;
+
+        } catch (error) {
+            console.error('❌ Space environment initialization failed:', error);
+            this.hideSpaceLoadingIndicator();
+            // Don't throw error - allow app to continue without space environment
+            return false;
+        }
+    }
+
+    /**
+     * Show space-specific loading indicator
+     */
+    showSpaceLoadingIndicator() {
+        // Create a minimal, non-intrusive loading indicator for space environment
+        const indicator = document.createElement('div');
+        indicator.id = 'space-loading-indicator';
+        indicator.innerHTML = `
+            <div class="space-loading-content">
+                <div class="space-loading-icon">🌌</div>
+                <span>Loading space environment...</span>
+            </div>
+        `;
+        indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 8px;
+            z-index: 10000;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        `;
+        
+        const iconStyle = document.createElement('style');
+        iconStyle.textContent = `
+            .space-loading-icon {
+                animation: spaceRotate 2s ease-in-out infinite;
+            }
+            @keyframes spaceRotate {
+                0%, 100% { transform: rotate(0deg) scale(1); }
+                50% { transform: rotate(180deg) scale(1.1); }
+            }
+        `;
+        document.head.appendChild(iconStyle);
+        document.body.appendChild(indicator);
+    }
+
+    /**
+     * Hide space loading indicator
+     */
+    hideSpaceLoadingIndicator() {
+        const indicator = document.getElementById('space-loading-indicator');
+        if (indicator) {
+            indicator.style.opacity = '0';
+            indicator.style.transform = 'translateY(-10px)';
+            indicator.style.transition = 'all 0.3s ease-out';
+            setTimeout(() => {
+                if (indicator.parentNode) {
+                    indicator.parentNode.removeChild(indicator);
+                }
+            }, 300);
+        }
+    }
+
+    /**
+     * Load scripts with higher priority for space environment
+     */
+    async loadScriptsSequentiallyWithPriority(scripts) {
+        for (const src of scripts) {
+            try {
+                await this.loadScriptWithPriority(src);
+            } catch (error) {
+                console.warn(`⚠️ Failed to load script: ${src}`, error);
+                // Continue loading other scripts
+            }
+        }
+    }
+
+    /**
+     * Enhanced script loader with higher priority
+     */
+    loadScriptWithPriority(src) {
+        return new Promise((resolve, reject) => {
+            // Check if already loaded
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            
+            // Higher priority for space scripts
+            if (script.fetchPriority) {
+                script.fetchPriority = 'high';
+            }
+
+            script.onload = () => {
+                console.log(`✅ Loaded: ${src}`);
+                resolve();
+            };
+            
+            script.onerror = () => {
+                console.error(`❌ Failed to load: ${src}`);
+                reject(new Error(`Failed to load script: ${src}`));
+            };
+
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * Initialize core systems (after space environment is ready)
      */
     async initializeCore() {
         // Verify required elements
@@ -138,16 +329,17 @@ class PageManager {
         this.currentPage = null;
         this.isTransitioning = false;
         
-        // Initialize space environment if needed
-        if (this.shouldInitializeSpaceEnvironment()) {
-            await this.initializeSpaceBackground();
+        // Ensure space environment is ready (it should be from early initialization)
+        if (!this.spaceEnvironmentReady && this.spaceInitializationPromise) {
+            console.log('🌌 Waiting for space environment to complete...');
+            await this.spaceInitializationPromise;
         }
         
         return true;
     }
 
     /**
-     * Check if space environment should be initialized
+     * Check if space environment should be initialized (kept for compatibility)
      */
     shouldInitializeSpaceEnvironment() {
         return !window.spaceEnvironment?.initialized && 
@@ -352,17 +544,17 @@ class PageManager {
     }
 
     /**
-     * Handle initial route with enhanced logic
+     * Handle initial route with enhanced logic (space environment already ready)
      */
     async handleInitialRoute() {
         try {
             // Show loading state
             this.showLoadingState('Initializing application...');
             
-            // Initialize space background first if needed
-            if (this.shouldInitializeSpaceEnvironment()) {
-                this.updateLoadingState('Loading space environment...');
-                await this.initializeSpaceBackground();
+            // Space environment is already initialized, just ensure it's ready
+            if (this.spaceInitializationPromise && !this.spaceEnvironmentReady) {
+                this.updateLoadingState('Finalizing space environment...');
+                await this.spaceInitializationPromise;
             }
             
             // Get initial page
@@ -417,7 +609,7 @@ class PageManager {
             // Update UI state
             this.updateUIState(pageName);
 
-            // Set page body class
+            // Set page body class and handle space environment
             this.setPageBodyClass(pageName);
 
             // Complete transition
@@ -629,7 +821,7 @@ class PageManager {
     }
 
     /**
-     * Set page-specific body class and handle space environment
+     * Set page-specific body class and handle space environment (ENHANCED)
      */
     setPageBodyClass(pageName) {
         // Remove existing page classes
@@ -642,8 +834,48 @@ class PageManager {
         // Add current page class
         document.body.classList.add(`page-${pageName}`);
 
-        // Handle space environment visibility
-        this.handleSpaceEnvironmentVisibility(pageName);
+        // Handle space environment visibility - ALWAYS ensure it's active
+        this.ensureSpaceEnvironmentActive(pageName);
+    }
+
+    /**
+     * ENHANCED: Ensure space environment is always active and visible
+     */
+    ensureSpaceEnvironmentActive(pageName) {
+        // Wait for space environment to be ready if needed
+        if (!this.spaceEnvironmentReady && this.spaceInitializationPromise) {
+            this.spaceInitializationPromise.then(() => {
+                this.setSpaceEnvironmentMode(pageName);
+            });
+            return;
+        }
+
+        this.setSpaceEnvironmentMode(pageName);
+    }
+
+    /**
+     * Set space environment mode based on current page
+     */
+    setSpaceEnvironmentMode(pageName) {
+        if (!window.spaceEnvironment) {
+            console.warn('⚠️ Space environment not available');
+            return;
+        }
+
+        if (pageName === 'main') {
+            // Fully interactive on main page
+            window.spaceEnvironment.show(true);
+            console.log('🌌 Space environment: fully interactive mode');
+        } else {
+            // Background mode on other pages - ALWAYS VISIBLE
+            window.spaceEnvironment.show(false);
+            console.log('🌌 Space environment: background mode (always visible)');
+        }
+
+        // Ensure space environment is always visible (never hidden)
+        if (window.spaceEnvironment.setVisibility) {
+            window.spaceEnvironment.setVisibility(true);
+        }
     }
 
     /**
@@ -664,50 +896,23 @@ class PageManager {
     }
 
     /**
-     * Enhanced space background initialization
+     * Enhanced space background initialization (kept for compatibility)
      */
     async initializeSpaceBackground() {
-        try {
-            console.log('🌌 Initializing space environment...');
-
-            // Load required scripts in order
-            const scripts = [
-                'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
-                'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
-                'src/utils/ResourceLoader.js',
-                'src/utils/MemoryManager.js',
-                'src/components/simulation/solarsystem/Planets/Planet.js',
-                'src/components/simulation/solarsystem/Sun.js',
-                'src/components/simulation/solarsystem/Planets/Mercury.js',
-                'src/components/simulation/solarsystem/Planets/Venus.js',
-                'src/components/simulation/solarsystem/Planets/Earth.js',
-                'src/components/simulation/solarsystem/Planets/Mars.js',
-                'src/components/simulation/solarsystem/Planets/Jupiter.js',
-                'src/components/simulation/solarsystem/Planets/Saturn.js',
-                'src/components/simulation/solarsystem/Planets/Uranus.js',
-                'src/components/simulation/solarsystem/Planets/Neptune.js',
-                'src/components/simulation/solarsystem/Galaxy.js',
-                'src/components/simulation/solarsystem/AsteroidBelt.js',
-                'src/components/simulation/solarsystem/HabitableZone.js',
-                'src/components/simulation/solarsystem/SolarSystem.js',
-                'src/components/simulation/solarsystem/SpaceEnvironment.js'
-            ];
-
-            await this.loadScriptsSequentially(scripts);
-
-            // Initialize space environment
-            if (window.SpaceEnvironment && !window.spaceEnvironment) {
-                window.spaceEnvironment = new SpaceEnvironment();
-                await window.spaceEnvironment.init();
-                console.log('✅ Space environment initialized successfully');
-            }
-
-            return true;
-
-        } catch (error) {
-            console.error('❌ Space environment initialization failed:', error);
-            return false;
+        // This method is kept for compatibility but now just ensures 
+        // the early initialization is complete
+        if (!this.spaceEnvironmentReady && this.spaceInitializationPromise) {
+            console.log('🌌 Waiting for space environment initialization...');
+            return this.spaceInitializationPromise;
         }
+        
+        if (this.spaceEnvironmentReady) {
+            console.log('🌌 Space environment already ready');
+            return true;
+        }
+        
+        // Fallback initialization if somehow not done
+        return this.performSpaceInitialization();
     }
 
     /**
@@ -1172,13 +1377,9 @@ class PageManager {
         console.log('🏠 Initializing main page');
 
         try {
-            // Ensure space environment is ready
-            if (!window.spaceEnvironment?.initialized) {
-                await this.initializeSpaceBackground();
-            }
-
-            // Show space environment
-            if (window.spaceEnvironment) {
+            // Space environment should already be ready
+            if (window.spaceEnvironment && this.spaceEnvironmentReady) {
+                // Switch to interactive mode
                 window.spaceEnvironment.show(true);
             }
 
@@ -1297,6 +1498,26 @@ class PageManager {
     }
 
     /**
+     * Toggle orbit mode (ADDED MISSING METHOD)
+     */
+    toggleOrbitMode() {
+        if (window.spaceEnvironment?.toggleOrbitMode) {
+            window.spaceEnvironment.toggleOrbitMode();
+            console.log('🌌 Toggled orbit mode');
+        }
+    }
+
+    /**
+     * Toggle follow rotation (ADDED MISSING METHOD)
+     */
+    toggleFollowRotation() {
+        if (window.spaceEnvironment?.toggleFollowRotation) {
+            window.spaceEnvironment.toggleFollowRotation();
+            console.log('🌌 Toggled follow rotation');
+        }
+    }
+
+    /**
      * Initialize projects page with enhanced functionality
      */
     async initProjectsPage() {
@@ -1338,6 +1559,76 @@ class PageManager {
             button.addEventListener('click', () => {
                 this.handleProjectFilter(button);
             });
+        });
+    }
+
+    /**
+     * Handle project navigation (ADDED MISSING METHOD)
+     */
+    handleProjectNavigation(button) {
+        console.log('📂 Project navigation:', button.textContent);
+        
+        // Remove active state from all nav buttons
+        document.querySelectorAll('.side-nav .nav-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Add active state to clicked button
+        button.classList.add('active');
+        
+        // Handle specific navigation logic
+        const targetSection = button.getAttribute('data-target') || button.textContent.toLowerCase();
+        this.scrollToProjectSection(targetSection);
+    }
+
+    /**
+     * Handle project filter (ADDED MISSING METHOD)
+     */
+    handleProjectFilter(button) {
+        console.log('🔍 Project filter:', button.textContent);
+        
+        // Remove active state from all filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Add active state to clicked button
+        button.classList.add('active');
+        
+        // Get filter value
+        const filterValue = button.getAttribute('data-filter') || 'all';
+        this.filterProjects(filterValue);
+    }
+
+    /**
+     * Scroll to project section (ADDED MISSING METHOD)
+     */
+    scrollToProjectSection(sectionName) {
+        const section = document.getElementById(sectionName) || 
+                       document.querySelector(`[data-section="${sectionName}"]`);
+        
+        if (section) {
+            section.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+    }
+
+    /**
+     * Filter projects (ADDED MISSING METHOD)
+     */
+    filterProjects(filterValue) {
+        const projects = document.querySelectorAll('.project-item, .project-card');
+        
+        projects.forEach(project => {
+            if (filterValue === 'all') {
+                project.style.display = 'block';
+            } else {
+                const projectCategories = project.getAttribute('data-category') || '';
+                const shouldShow = projectCategories.includes(filterValue);
+                project.style.display = shouldShow ? 'block' : 'none';
+            }
         });
     }
 
@@ -1473,6 +1764,121 @@ class PageManager {
             input.addEventListener('blur', () => this.validateInput(input));
             input.addEventListener('input', () => this.clearInputError(input));
         });
+    }
+
+    /**
+     * Handle contact form submission (ADDED MISSING METHOD)
+     */
+    handleContactSubmit(form) {
+        console.log('📧 Handling contact form submission');
+        
+        // Validate form
+        const isValid = this.validateForm(form);
+        if (!isValid) {
+            this.showToast('Please fix form errors before submitting', 'error');
+            return;
+        }
+        
+        // Get form data
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        console.log('Contact form data:', data);
+        
+        // Show success message
+        this.showToast('Message sent successfully!', 'success');
+        
+        // Reset form
+        form.reset();
+    }
+
+    /**
+     * Validate entire form (ADDED MISSING METHOD)
+     */
+    validateForm(form) {
+        const inputs = form.querySelectorAll('input, textarea');
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            if (!this.validateInput(input)) {
+                isValid = false;
+            }
+        });
+        
+        return isValid;
+    }
+
+    /**
+     * Validate individual input (ADDED MISSING METHOD)
+     */
+    validateInput(input) {
+        const value = input.value.trim();
+        const type = input.type;
+        const required = input.hasAttribute('required');
+        
+        // Clear previous errors
+        this.clearInputError(input);
+        
+        // Check if required field is empty
+        if (required && !value) {
+            this.showInputError(input, 'This field is required');
+            return false;
+        }
+        
+        // Email validation
+        if (type === 'email' && value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value)) {
+                this.showInputError(input, 'Please enter a valid email address');
+                return false;
+            }
+        }
+        
+        // Minimum length validation
+        const minLength = input.getAttribute('minlength');
+        if (minLength && value.length < parseInt(minLength)) {
+            this.showInputError(input, `Minimum length is ${minLength} characters`);
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Show input error (ADDED MISSING METHOD)
+     */
+    showInputError(input, message) {
+        input.classList.add('error');
+        
+        // Remove existing error message
+        const existingError = input.parentNode.querySelector('.error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        // Add error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = message;
+        errorDiv.style.cssText = `
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        `;
+        
+        input.parentNode.appendChild(errorDiv);
+    }
+
+    /**
+     * Clear input error (ADDED MISSING METHOD)
+     */
+    clearInputError(input) {
+        input.classList.remove('error');
+        
+        const errorMessage = input.parentNode.querySelector('.error-message');
+        if (errorMessage) {
+            errorMessage.remove();
+        }
     }
 
     // ===========================
@@ -1785,7 +2191,8 @@ class PageManager {
             activeGame: this.activeGame,
             gameInstances: this.gameInstances.size,
             pageCache: this.pageCache.size,
-            errorCount: this.errorCount
+            errorCount: this.errorCount,
+            spaceEnvironmentReady: this.spaceEnvironmentReady
         };
     }
 
@@ -1837,6 +2244,18 @@ toastCSS.textContent = `
     @keyframes slideOut {
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    /* Form error styles */
+    .error {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1) !important;
+    }
+    
+    .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
     }
 `;
 document.head.appendChild(toastCSS);

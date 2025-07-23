@@ -1,5 +1,7 @@
 /**
  * StarbucksGame.js - Barista trainer
+ * Enhanced version with proper error handling and memory management
+ * Optimized for GitHub Pages deployment and artifact compatibility
  */
 
 class StarbucksGame {
@@ -37,24 +39,43 @@ class StarbucksGame {
             animationDuration: 300,
             autoAdvanceDelay: 3000,
             soundEnabled: true,
-            saveProgress: true
+            useInMemoryStorage: true // Changed from localStorage for artifact compatibility
         };
+
+        // In-memory storage instead of localStorage
+        this.memoryStorage = {
+            gameState: null,
+            uiState: null
+        };
+
+        // Event handler references for proper cleanup
+        this._boundHandlers = {
+            click: null,
+            input: null,
+            keydown: null,
+            globalKeydown: null
+        };
+
+        // Animation frame and timeout tracking for cleanup
+        this._animationFrames = new Set();
+        this._timeouts = new Set();
+        this._intervals = new Set();
 
         // Initialize the game
         this.init();
     }
 
     /**
-     * Initialize the game
+     * Initialize the game with enhanced error handling
      */
     async init() {
         try {
             console.log('🎮 Initializing Starbucks Barista Game');
             
-            // Load saved progress
+            // Load saved progress from memory
             this.loadProgress();
             
-            // Setup event handlers
+            // Setup event handlers with proper binding
             this.setupEventHandlers();
             
             // Render initial screen
@@ -68,6 +89,244 @@ class StarbucksGame {
         } catch (error) {
             console.error('❌ Game initialization failed:', error);
             this.showErrorScreen(error);
+        }
+    }
+
+    /**
+     * Setup event handlers with proper cleanup tracking
+     */
+    setupEventHandlers() {
+        // Create bound handlers for proper cleanup
+        this._boundHandlers.click = this.handleClick.bind(this);
+        this._boundHandlers.input = this.handleInput.bind(this);
+        this._boundHandlers.keydown = this.handleKeydown.bind(this);
+        this._boundHandlers.globalKeydown = this.handleGlobalKeydown.bind(this);
+        
+        // Use event delegation for better performance
+        this.container.addEventListener('click', this._boundHandlers.click);
+        this.container.addEventListener('input', this._boundHandlers.input);
+        this.container.addEventListener('keydown', this._boundHandlers.keydown);
+        
+        // Setup keyboard shortcuts
+        document.addEventListener('keydown', this._boundHandlers.globalKeydown);
+    }
+
+    /**
+     * Remove all event handlers for cleanup
+     */
+    removeEventHandlers() {
+        if (this.container && this._boundHandlers.click) {
+            this.container.removeEventListener('click', this._boundHandlers.click);
+            this.container.removeEventListener('input', this._boundHandlers.input);
+            this.container.removeEventListener('keydown', this._boundHandlers.keydown);
+        }
+        
+        if (this._boundHandlers.globalKeydown) {
+            document.removeEventListener('keydown', this._boundHandlers.globalKeydown);
+        }
+    }
+
+    /**
+     * Handle click events
+     */
+    handleClick(event) {
+        const target = event.target;
+        const action = target.getAttribute('data-action');
+        
+        if (!action) return;
+        
+        event.preventDefault();
+        
+        // Prevent actions during animations
+        if (this.uiState.isAnimating) return;
+        
+        switch (action) {
+            case 'start-game':
+                this.startGame();
+                break;
+            case 'go-to-screen':
+                this.goToScreen(target.getAttribute('data-screen'));
+                break;
+            case 'select-category':
+                this.selectCategory(target.getAttribute('data-category'));
+                break;
+            case 'start-challenge':
+                this.startChallenge(target.getAttribute('data-category'));
+                break;
+            case 'check-answer':
+                this.checkAnswer();
+                break;
+            case 'next-challenge':
+                this.generateChallenge();
+                break;
+            case 'select-drink':
+                this.selectDrink(target.getAttribute('data-drink'));
+                break;
+            case 'practice-drink':
+                this.practiceDrink();
+                break;
+            case 'toggle-tip':
+                this.toggleTip();
+                break;
+            case 'reset-game':
+                this.resetGame();
+                break;
+            case 'save-progress':
+                this.saveProgress();
+                break;
+        }
+    }
+
+    /**
+     * Handle input events
+     */
+    handleInput(event) {
+        const target = event.target;
+        const field = target.getAttribute('data-field');
+        
+        if (field && target.getAttribute('data-answer') !== null) {
+            this.updateAnswer(field, target.value);
+        }
+        
+        if (target.id === 'player-name') {
+            this.gameState.playerName = target.value;
+        }
+    }
+
+    /**
+     * Handle keydown events
+     */
+    handleKeydown(event) {
+        // Handle Enter key on buttons
+        if (event.key === 'Enter' && event.target.tagName === 'BUTTON') {
+            event.target.click();
+        }
+    }
+
+    /**
+     * Handle global keyboard shortcuts
+     */
+    handleGlobalKeydown(event) {
+        // Only handle shortcuts when game is active
+        if (!this.container.contains(document.activeElement)) return;
+        
+        if (event.key === 'Escape') {
+            this.goToScreen('main');
+        }
+    }
+
+    /**
+     * Main render function
+     */
+    render() {
+        if (!this.container) return;
+        
+        const screen = this.gameState.screen;
+        let content = '';
+        
+        switch (screen) {
+            case 'welcome':
+                content = this.renderWelcomeScreen();
+                break;
+            case 'main':
+                content = this.renderMainScreen();
+                break;
+            case 'categories':
+                content = this.renderCategoriesScreen();
+                break;
+            case 'challenge':
+                content = this.renderChallengeScreen();
+                break;
+            case 'recipes':
+                content = this.renderRecipesScreen();
+                break;
+            case 'badges':
+                content = this.renderBadgesScreen();
+                break;
+            default:
+                content = this.renderErrorScreen();
+        }
+        
+        // Update container with smooth transition
+        this.updateContainerContent(content);
+    }
+
+    /**
+     * Update container content with optimized animation
+     */
+    async updateContainerContent(content) {
+        if (this.uiState.isAnimating) return;
+        
+        this.uiState.isAnimating = true;
+        
+        // Cancel any existing animations
+        this.cancelAnimations();
+        
+        // Use requestAnimationFrame for better performance
+        const animFrame = requestAnimationFrame(() => {
+            // Fade out
+            this.container.style.opacity = '0';
+            this.container.style.transform = 'translateY(10px)';
+            
+            const timeout = setTimeout(() => {
+                // Update content
+                this.container.innerHTML = content;
+                
+                // Force reflow
+                void this.container.offsetHeight;
+                
+                // Fade in
+                this.container.style.opacity = '1';
+                this.container.style.transform = 'translateY(0)';
+                
+                const innerTimeout = setTimeout(() => {
+                    this.uiState.isAnimating = false;
+                    this.manageFocus();
+                    this._timeouts.delete(innerTimeout);
+                }, this.config.animationDuration);
+                
+                this._timeouts.add(innerTimeout);
+                this._timeouts.delete(timeout);
+            }, this.config.animationDuration);
+            
+            this._timeouts.add(timeout);
+            this._animationFrames.delete(animFrame);
+        });
+        
+        this._animationFrames.add(animFrame);
+    }
+
+    /**
+     * Cancel all animations and timeouts
+     */
+    cancelAnimations() {
+        // Cancel animation frames
+        this._animationFrames.forEach(id => cancelAnimationFrame(id));
+        this._animationFrames.clear();
+        
+        // Clear timeouts
+        this._timeouts.forEach(id => clearTimeout(id));
+        this._timeouts.clear();
+        
+        // Clear intervals
+        this._intervals.forEach(id => clearInterval(id));
+        this._intervals.clear();
+    }
+
+    /**
+     * Manage focus for accessibility
+     */
+    manageFocus() {
+        const firstInput = this.container.querySelector('input');
+        const firstButton = this.container.querySelector('button:not([disabled])');
+        const focusTarget = firstInput || firstButton;
+        
+        if (focusTarget) {
+            const timeout = setTimeout(() => {
+                focusTarget.focus();
+                this._timeouts.delete(timeout);
+            }, 100);
+            this._timeouts.add(timeout);
         }
     }
 
@@ -248,186 +507,6 @@ class StarbucksGame {
     }
 
     /**
-     * Setup event handlers for the game
-     */
-    setupEventHandlers() {
-        // Use event delegation for better performance
-        this.container.addEventListener('click', this.handleClick.bind(this));
-        this.container.addEventListener('input', this.handleInput.bind(this));
-        this.container.addEventListener('keydown', this.handleKeydown.bind(this));
-        
-        // Setup keyboard shortcuts
-        document.addEventListener('keydown', this.handleGlobalKeydown.bind(this));
-    }
-
-    /**
-     * Handle click events
-     */
-    handleClick(event) {
-        const target = event.target;
-        const action = target.getAttribute('data-action');
-        
-        if (!action) return;
-        
-        event.preventDefault();
-        
-        // Prevent actions during animations
-        if (this.uiState.isAnimating) return;
-        
-        switch (action) {
-            case 'start-game':
-                this.startGame();
-                break;
-            case 'go-to-screen':
-                this.goToScreen(target.getAttribute('data-screen'));
-                break;
-            case 'select-category':
-                this.selectCategory(target.getAttribute('data-category'));
-                break;
-            case 'start-challenge':
-                this.startChallenge(target.getAttribute('data-category'));
-                break;
-            case 'check-answer':
-                this.checkAnswer();
-                break;
-            case 'next-challenge':
-                this.generateChallenge();
-                break;
-            case 'select-drink':
-                this.selectDrink(target.getAttribute('data-drink'));
-                break;
-            case 'practice-drink':
-                this.practiceDrink();
-                break;
-            case 'toggle-tip':
-                this.toggleTip();
-                break;
-            case 'reset-game':
-                this.resetGame();
-                break;
-            case 'save-progress':
-                this.saveProgress();
-                break;
-        }
-    }
-
-    /**
-     * Handle input events
-     */
-    handleInput(event) {
-        const target = event.target;
-        const field = target.getAttribute('data-field');
-        
-        if (field && target.getAttribute('data-answer') !== null) {
-            this.updateAnswer(field, target.value);
-        }
-        
-        if (target.id === 'player-name') {
-            this.gameState.playerName = target.value;
-        }
-    }
-
-    /**
-     * Handle keydown events
-     */
-    handleKeydown(event) {
-        // Handle Enter key on buttons
-        if (event.key === 'Enter' && event.target.tagName === 'BUTTON') {
-            event.target.click();
-        }
-    }
-
-    /**
-     * Handle global keyboard shortcuts
-     */
-    handleGlobalKeydown(event) {
-        // Only handle shortcuts when game is active
-        if (!this.container.contains(document.activeElement)) return;
-        
-        if (event.key === 'Escape') {
-            this.goToScreen('main');
-        }
-    }
-
-    /**
-     * Main render function
-     */
-    render() {
-        if (!this.container) return;
-        
-        const screen = this.gameState.screen;
-        let content = '';
-        
-        switch (screen) {
-            case 'welcome':
-                content = this.renderWelcomeScreen();
-                break;
-            case 'main':
-                content = this.renderMainScreen();
-                break;
-            case 'categories':
-                content = this.renderCategoriesScreen();
-                break;
-            case 'challenge':
-                content = this.renderChallengeScreen();
-                break;
-            case 'recipes':
-                content = this.renderRecipesScreen();
-                break;
-            case 'badges':
-                content = this.renderBadgesScreen();
-                break;
-            default:
-                content = this.renderErrorScreen();
-        }
-        
-        // Update container with smooth transition
-        this.updateContainerContent(content);
-    }
-
-    /**
-     * Update container content with animation
-     */
-    async updateContainerContent(content) {
-        if (this.uiState.isAnimating) return;
-        
-        this.uiState.isAnimating = true;
-        
-        // Fade out
-        this.container.style.opacity = '0';
-        this.container.style.transform = 'translateY(10px)';
-        
-        await this.delay(this.config.animationDuration);
-        
-        // Update content
-        this.container.innerHTML = content;
-        
-        // Fade in
-        this.container.style.opacity = '1';
-        this.container.style.transform = 'translateY(0)';
-        
-        await this.delay(this.config.animationDuration);
-        
-        this.uiState.isAnimating = false;
-        
-        // Focus management for accessibility
-        this.manageFocus();
-    }
-
-    /**
-     * Manage focus for accessibility
-     */
-    manageFocus() {
-        const firstInput = this.container.querySelector('input');
-        const firstButton = this.container.querySelector('button:not([disabled])');
-        const focusTarget = firstInput || firstButton;
-        
-        if (focusTarget) {
-            setTimeout(() => focusTarget.focus(), 100);
-        }
-    }
-
-    /**
      * Render welcome screen
      */
     renderWelcomeScreen() {
@@ -450,7 +529,7 @@ class StarbucksGame {
                             <input
                                 type="text"
                                 id="player-name"
-                                value="${this.gameState.playerName}"
+                                value="${this.escapeHtml(this.gameState.playerName)}"
                                 placeholder="Enter your name"
                                 class="name-input"
                                 maxlength="20"
@@ -499,7 +578,7 @@ class StarbucksGame {
                 <div class="game-content">
                     <div class="main-header">
                         <div class="player-info">
-                            <h1>Barista ${this.gameState.playerName}</h1>
+                            <h1>Barista ${this.escapeHtml(this.gameState.playerName)}</h1>
                             <div class="player-stats">
                                 <span class="level">Level ${this.gameState.playerLevel}</span>
                                 <span class="stars">${this.gameState.stars} ⭐</span>
@@ -917,6 +996,145 @@ class StarbucksGame {
     }
 
     /**
+     * Render drinks in selected category
+     */
+    renderRecipeDrinksScreen() {
+        const data = this.getGameData();
+        const category = this.challengeState.activeCategory;
+        const categoryInfo = data.categoryInfo[category];
+        const drinks = data.recipes[category];
+        
+        return `
+            <div class="game-screen recipes-screen">
+                <div class="game-content">
+                    <div class="screen-header">
+                        <h2>${categoryInfo.name} Recipes</h2>
+                        <div class="player-stats">
+                            Level ${this.gameState.playerLevel} • ${this.gameState.stars} ⭐
+                        </div>
+                    </div>
+                    
+                    <div class="drinks-grid">
+                        ${Object.entries(drinks).map(([name, drink]) => {
+                            const drinkKey = `${category}-${name}`;
+                            const completed = this.uiState.completedDrinks[drinkKey] > 0;
+                            
+                            return `
+                                <button data-action="select-drink" data-drink="${name}" 
+                                    class="drink-card ${completed ? 'completed' : ''}">
+                                    <span class="drink-icon">${drink.icon}</span>
+                                    <h3>${name}</h3>
+                                    <p>${drink.description}</p>
+                                    ${completed ? '<span class="completed-badge">✓</span>' : ''}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div class="screen-actions">
+                        <button data-action="select-category" data-category="all" class="back-button">
+                            ← Back to Categories
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render recipe detail screen
+     */
+    renderRecipeDetailScreen() {
+        const data = this.getGameData();
+        const category = this.challengeState.activeCategory;
+        const drinkName = this.uiState.selectedDrink;
+        const drink = data.recipes[category][drinkName];
+        
+        if (!drink) {
+            return this.renderErrorScreen('Recipe not found');
+        }
+        
+        return `
+            <div class="game-screen recipe-detail-screen">
+                <div class="game-content">
+                    <div class="screen-header">
+                        <h2>${drinkName} Recipe</h2>
+                    </div>
+                    
+                    <div class="recipe-detail-card">
+                        <div class="recipe-header">
+                            <span class="drink-icon-large">${drink.icon}</span>
+                            <p class="drink-description">${drink.description}</p>
+                        </div>
+                        
+                        <div class="recipe-sizes">
+                            <h3>Recipe by Size:</h3>
+                            ${this.renderRecipeTable(drink, category)}
+                        </div>
+                        
+                        <div class="fun-fact-section">
+                            <h3>Fun Fact!</h3>
+                            <p>${drink.funFact}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="screen-actions">
+                        <button data-action="practice-drink" class="practice-button">
+                            Practice This Drink
+                        </button>
+                        <button data-action="select-drink" data-drink="" class="back-button">
+                            ← Back to Drinks
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Render recipe table helper
+     */
+    renderRecipeTable(drink, category) {
+        const sizes = this.getAvailableSizes(category);
+        const data = this.getGameData();
+        
+        let table = '<table class="recipe-table"><thead><tr><th>Size</th>';
+        
+        // Add headers based on drink properties
+        const fields = [];
+        if (drink.shots) fields.push({ key: 'shots', label: 'Espresso Shots' });
+        if (drink.syrup) fields.push({ key: 'syrup', label: 'Syrup Pumps' });
+        if (drink.roast) fields.push({ key: 'roast', label: 'Frapp Roast' });
+        if (drink.frappBase) fields.push({ key: 'frappBase', label: 'Frapp Base' });
+        if (drink.mochaSauce) fields.push({ key: 'mochaSauce', label: 'Mocha Sauce' });
+        if (drink.caramelSyrup) fields.push({ key: 'caramelSyrup', label: 'Caramel Syrup' });
+        if (drink.inclusion) fields.push({ key: 'inclusion', label: 'Fruit Scoops' });
+        
+        fields.forEach(field => {
+            table += `<th>${field.label}</th>`;
+        });
+        
+        table += '</tr></thead><tbody>';
+        
+        // Add rows for each size
+        sizes.forEach(size => {
+            const sizeInfo = data.sizeInfo[size];
+            table += `<tr><td>${sizeInfo.name}</td>`;
+            
+            fields.forEach(field => {
+                const value = drink[field.key] && drink[field.key][size];
+                table += `<td>${value !== undefined ? value : '-'}</td>`;
+            });
+            
+            table += '</tr>';
+        });
+        
+        table += '</tbody></table>';
+        
+        return table;
+    }
+
+    /**
      * Render error screen
      */
     renderErrorScreen(message = 'An error occurred') {
@@ -1191,6 +1409,41 @@ class StarbucksGame {
     }
 
     /**
+     * Select drink handler
+     */
+    selectDrink(drinkName) {
+        if (drinkName) {
+            this.uiState.selectedDrink = drinkName;
+        } else {
+            this.uiState.selectedDrink = null;
+        }
+        this.render();
+    }
+
+    /**
+     * Practice drink handler
+     */
+    practiceDrink() {
+        if (this.uiState.selectedDrink && this.challengeState.activeCategory) {
+            // Generate a specific challenge for this drink
+            const sizes = this.getAvailableSizes(this.challengeState.activeCategory);
+            const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
+            
+            this.challengeState.currentChallenge = {
+                category: this.challengeState.activeCategory,
+                drink: this.uiState.selectedDrink,
+                size: randomSize
+            };
+            
+            this.challengeState.answer = {};
+            this.challengeState.showResult = false;
+            this.challengeState.animation = '';
+            
+            this.goToScreen('challenge');
+        }
+    }
+
+    /**
      * Toggle tip display
      */
     toggleTip() {
@@ -1279,96 +1532,52 @@ class StarbucksGame {
     // ===========================
 
     /**
-     * Play sound effect
-     */
-    playSound(type) {
-        if (!this.config.soundEnabled) return;
-        
-        // Placeholder for sound effects
-        console.log(`🎵 Playing ${type} sound`);
-        
-        // In a real implementation, you would play actual sound files
-        // For now, we'll use console logs as placeholders
-        switch (type) {
-            case 'correct':
-                console.log('🎵 Correct answer sound!');
-                break;
-            case 'wrong':
-                console.log('🎵 Wrong answer sound!');
-                break;
-            case 'levelup':
-                console.log('🎵 Level up fanfare!');
-                break;
-            case 'badge':
-                console.log('🎵 Badge earned sound!');
-                break;
-        }
-    }
-
-    /**
-     * Show toast notification
-     */
-    showToast(message, type = 'info') {
-        console.log(`${type.toUpperCase()}: ${message}`);
-        
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `game-toast ${type}`;
-        toast.textContent = message;
-        
-        // Add to container
-        this.container.appendChild(toast);
-        
-        // Auto remove after delay
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 3000);
-    }
-
-    /**
-     * Save progress to localStorage
+     * Save progress to in-memory storage (artifact-compatible)
      */
     saveProgress() {
-        if (!this.config.saveProgress) return;
+        if (!this.config.useInMemoryStorage) return;
         
         try {
-            const saveData = {
-                gameState: this.gameState,
+            this.memoryStorage = {
+                gameState: { ...this.gameState },
                 uiState: {
-                    completedDrinks: this.uiState.completedDrinks
+                    completedDrinks: { ...this.uiState.completedDrinks }
                 },
                 timestamp: Date.now()
             };
             
-            localStorage.setItem('starbucks-game-progress', JSON.stringify(saveData));
-            console.log('💾 Progress saved');
+            console.log('💾 Progress saved to memory');
+            
+            // Emit event for external storage if needed
+            this.dispatchGameEvent('progress:saved', this.memoryStorage);
         } catch (error) {
             console.warn('⚠️ Failed to save progress:', error);
         }
     }
 
     /**
-     * Load progress from localStorage
+     * Load progress from in-memory storage
      */
     loadProgress() {
-        if (!this.config.saveProgress) return;
+        if (!this.config.useInMemoryStorage) return;
         
         try {
-            const savedData = localStorage.getItem('starbucks-game-progress');
-            if (savedData) {
-                const data = JSON.parse(savedData);
-                
+            if (this.memoryStorage.gameState) {
                 // Restore game state
-                this.gameState = { ...this.gameState, ...data.gameState };
+                this.gameState = { 
+                    ...this.gameState, 
+                    ...this.memoryStorage.gameState,
+                    isInitialized: false // Reset initialization flag
+                };
                 
                 // Restore UI state
-                if (data.uiState) {
-                    this.uiState.completedDrinks = data.uiState.completedDrinks || {};
+                if (this.memoryStorage.uiState) {
+                    this.uiState.completedDrinks = {
+                        ...this.memoryStorage.uiState.completedDrinks
+                    };
                 }
                 
-                console.log('📁 Progress loaded');
+                console.log('📁 Progress loaded from memory');
             }
         } catch (error) {
             console.warn('⚠️ Failed to load progress:', error);
@@ -1380,7 +1589,10 @@ class StarbucksGame {
      */
     clearProgress() {
         try {
-            localStorage.removeItem('starbucks-game-progress');
+            this.memoryStorage = {
+                gameState: null,
+                uiState: null
+            };
             console.log('🗑️ Progress cleared');
         } catch (error) {
             console.warn('⚠️ Failed to clear progress:', error);
@@ -1388,10 +1600,93 @@ class StarbucksGame {
     }
 
     /**
-     * Delay utility
+     * Dispatch custom game events
+     */
+    dispatchGameEvent(eventName, detail = {}) {
+        const event = new CustomEvent(`starbucksgame:${eventName}`, {
+            detail,
+            bubbles: true
+        });
+        this.container.dispatchEvent(event);
+    }
+
+    /**
+     * Show toast notification (optimized)
+     */
+    showToast(message, type = 'info') {
+        console.log(`${type.toUpperCase()}: ${message}`);
+        
+        // Remove any existing toasts
+        const existingToasts = this.container.querySelectorAll('.game-toast');
+        existingToasts.forEach(toast => toast.remove());
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `game-toast ${type}`;
+        toast.textContent = message;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'polite');
+        
+        // Add to container
+        this.container.appendChild(toast);
+        
+        // Auto remove after delay
+        const timeout = setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                
+                const removeTimeout = setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                    this._timeouts.delete(removeTimeout);
+                }, 300);
+                
+                this._timeouts.add(removeTimeout);
+            }
+            this._timeouts.delete(timeout);
+        }, 3000);
+        
+        this._timeouts.add(timeout);
+    }
+
+    /**
+     * Play sound effect with event dispatch
+     */
+    playSound(type) {
+        if (!this.config.soundEnabled) return;
+        
+        // Placeholder for sound effects
+        console.log(`🎵 Playing ${type} sound`);
+        
+        // Dispatch event for external sound handling
+        this.dispatchGameEvent('sound:play', { type });
+    }
+
+    /**
+     * HTML escape utility for security
+     */
+    escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    /**
+     * Optimized delay utility using Promise
      */
     delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+        return new Promise(resolve => {
+            const timeout = setTimeout(() => {
+                resolve();
+                this._timeouts.delete(timeout);
+            }, ms);
+            this._timeouts.add(timeout);
+        });
     }
 
     /**
@@ -1400,26 +1695,41 @@ class StarbucksGame {
     cleanup() {
         console.log('🧹 Cleaning up Starbucks Game');
         
-        // Remove event listeners
-        if (this.container) {
-            this.container.removeEventListener('click', this.handleClick);
-            this.container.removeEventListener('input', this.handleInput);
-            this.container.removeEventListener('keydown', this.handleKeydown);
-        }
+        // Cancel all animations and timeouts
+        this.cancelAnimations();
         
-        // Clear any timeouts
-        // (implement if you add timeouts/intervals)
+        // Remove event listeners
+        this.removeEventHandlers();
         
         // Save final progress
         this.saveProgress();
+        
+        // Clear container
+        if (this.container) {
+            this.container.innerHTML = '';
+        }
+        
+        // Dispatch cleanup event
+        this.dispatchGameEvent('cleanup');
     }
 
     /**
      * Handle resize for responsiveness
      */
     handleResize() {
-        // Handle responsive updates if needed
-        console.log('📱 Game handling resize');
+        // Debounce resize handling
+        if (this._resizeTimeout) {
+            clearTimeout(this._resizeTimeout);
+            this._timeouts.delete(this._resizeTimeout);
+        }
+        
+        this._resizeTimeout = setTimeout(() => {
+            console.log('📱 Game handling resize');
+            // Add any specific resize logic here
+            this._timeouts.delete(this._resizeTimeout);
+        }, 250);
+        
+        this._timeouts.add(this._resizeTimeout);
     }
 
     /**
@@ -1433,8 +1743,25 @@ class StarbucksGame {
             streak: this.gameState.streak,
             maxStreak: this.gameState.maxStreak,
             badges: this.gameState.badges.length,
-            completedDrinks: Object.keys(this.uiState.completedDrinks).length
+            completedDrinks: Object.keys(this.uiState.completedDrinks).length,
+            isActive: this.gameState.isInitialized
         };
+    }
+
+    /**
+     * Pause game (for page visibility changes)
+     */
+    pause() {
+        this.cancelAnimations();
+        this.saveProgress();
+        console.log('⏸️ Game paused');
+    }
+
+    /**
+     * Resume game
+     */
+    resume() {
+        console.log('▶️ Game resumed');
     }
 }
 

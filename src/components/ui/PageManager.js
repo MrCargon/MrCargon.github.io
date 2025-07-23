@@ -1,6 +1,7 @@
 /**
- * PageManager - Single Page Application 
- * Optimized for GitHub Pages
+ * PageManager - Single Page Application Controller
+ * Optimized for GitHub Pages with enhanced error handling and memory management
+ * Version 2.2 - Performance & Memory Optimized
  */
 class PageManager {
     /**
@@ -14,15 +15,23 @@ class PageManager {
         this.isTransitioning = false;
         this.headerManager = null;
         
+        // Resource tracking for proper cleanup
+        this.animationFrames = new Set();
+        this.timeouts = new Set();
+        this.intervals = new Set();
+        this.eventListeners = [];
+        
         // Space environment tracking
         this.spaceEnvironmentReady = false;
         this.spaceInitializationPromise = null;
+        this.spaceEnvironmentRetries = 0;
+        this.maxSpaceRetries = 3;
         
         // Performance tracking
         this.performanceMetrics = new Map();
         this.startTime = performance.now();
         
-        // Game integration - Enhanced
+        // Game integration - Enhanced with better tracking
         this.gameInstances = new Map();
         this.activeGame = null;
         this.gameScriptsLoaded = new Set();
@@ -101,7 +110,7 @@ class PageManager {
      */
     async init() {
         try {
-            console.log('🚀 Initializing Enhanced PageManager v2.1');
+            console.log('🚀 Initializing Enhanced PageManager v2.2');
             
             // PRIORITY: Initialize space environment FIRST before anything else
             await this.initializeSpaceEnvironmentEarly();
@@ -146,7 +155,7 @@ class PageManager {
     }
 
     /**
-     * Perform the actual space environment initialization
+     * Perform the actual space environment initialization with retry logic
      */
     async performSpaceInitialization() {
         try {
@@ -201,7 +210,22 @@ class PageManager {
         } catch (error) {
             console.error('❌ Space environment initialization failed:', error);
             this.hideSpaceLoadingIndicator();
+            
+            // Retry logic
+            if (this.spaceEnvironmentRetries < this.maxSpaceRetries) {
+                this.spaceEnvironmentRetries++;
+                console.log(`🔄 Retrying space environment initialization (${this.spaceEnvironmentRetries}/${this.maxSpaceRetries})`);
+                
+                const timeout = this.createTimeout(() => {
+                    this.spaceInitializationPromise = null;
+                    return this.performSpaceInitialization();
+                }, 2000);
+                
+                return timeout;
+            }
+            
             // Don't throw error - allow app to continue without space environment
+            console.warn('⚠️ Space environment failed after all retries - continuing without it');
             return false;
         }
     }
@@ -210,7 +234,10 @@ class PageManager {
      * Show space-specific loading indicator
      */
     showSpaceLoadingIndicator() {
-        // Create a minimal, non-intrusive loading indicator for space environment
+        // First, remove any existing indicators to prevent duplicates
+        this.hideSpaceLoadingIndicator();
+        
+        // Create the indicator
         const indicator = document.createElement('div');
         indicator.id = 'space-loading-indicator';
         indicator.innerHTML = `
@@ -234,20 +261,43 @@ class PageManager {
             gap: 8px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease-out;
         `;
         
-        const iconStyle = document.createElement('style');
-        iconStyle.textContent = `
-            .space-loading-icon {
-                animation: spaceRotate 2s ease-in-out infinite;
-            }
-            @keyframes spaceRotate {
-                0%, 100% { transform: rotate(0deg) scale(1); }
-                50% { transform: rotate(180deg) scale(1.1); }
-            }
-        `;
-        document.head.appendChild(iconStyle);
+        // Add CSS animation
+        if (!document.getElementById('space-loading-styles')) {
+            const style = document.createElement('style');
+            style.id = 'space-loading-styles';
+            style.textContent = `
+                .space-loading-icon {
+                    animation: spaceRotate 2s ease-in-out infinite;
+                }
+                @keyframes spaceRotate {
+                    0%, 100% { transform: rotate(0deg) scale(1); }
+                    50% { transform: rotate(180deg) scale(1.1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         document.body.appendChild(indicator);
+        
+        // Fade in with small delay
+        this.createTimeout(() => {
+            if (indicator.parentNode) {
+                indicator.style.opacity = '1';
+                indicator.style.transform = 'translateY(0)';
+            }
+        }, 50);
+        
+        // Fallback cleanup after 10 seconds (in case hide isn't called)
+        this.createTimeout(() => {
+            this.hideSpaceLoadingIndicator();
+        }, 10000);
+        
+        console.log('🌌 Space loading indicator shown');
     }
 
     /**
@@ -256,14 +306,27 @@ class PageManager {
     hideSpaceLoadingIndicator() {
         const indicator = document.getElementById('space-loading-indicator');
         if (indicator) {
+            // Immediate fade out
             indicator.style.opacity = '0';
             indicator.style.transform = 'translateY(-10px)';
-            indicator.style.transition = 'all 0.3s ease-out';
-            setTimeout(() => {
-                if (indicator.parentNode) {
+            
+            // Remove after animation
+            this.createTimeout(() => {
+                if (indicator && indicator.parentNode) {
                     indicator.parentNode.removeChild(indicator);
+                    console.log('🌌 Space loading indicator removed');
                 }
             }, 300);
+        }
+        
+        // Also clean up the styles
+        const styles = document.getElementById('space-loading-styles');
+        if (styles) {
+            this.createTimeout(() => {
+                if (styles && styles.parentNode) {
+                    styles.parentNode.removeChild(styles);
+                }
+            }, 500);
         }
     }
 
@@ -282,7 +345,7 @@ class PageManager {
     }
 
     /**
-     * Enhanced script loader with higher priority
+     * Enhanced script loader with higher priority and caching
      */
     loadScriptWithPriority(src) {
         return new Promise((resolve, reject) => {
@@ -339,38 +402,102 @@ class PageManager {
     }
 
     /**
-     * Check if space environment should be initialized (kept for compatibility)
-     */
-    shouldInitializeSpaceEnvironment() {
-        return !window.spaceEnvironment?.initialized && 
-               typeof window.SpaceEnvironment !== 'undefined';
-    }
-
-    /**
-     * Setup comprehensive event handlers
+     * Setup comprehensive event handlers with proper tracking
      */
     setupEventHandlers() {
         // Navigation event delegation
-        document.addEventListener('click', this.handleNavigationClick.bind(this));
+        this.addEventListener(document, 'click', this.handleNavigationClick.bind(this));
         
         // Browser history
-        window.addEventListener('popstate', this.handlePopState.bind(this));
+        this.addEventListener(window, 'popstate', this.handlePopState.bind(this));
         
         // Keyboard navigation
-        document.addEventListener('keydown', this.handleKeyboardNavigation.bind(this));
+        this.addEventListener(document, 'keydown', this.handleKeyboardNavigation.bind(this));
         
         // Page visibility for performance
-        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+        this.addEventListener(document, 'visibilitychange', this.handleVisibilityChange.bind(this));
         
         // Window resize for responsive updates
-        window.addEventListener('resize', this.debounce(this.handleResize.bind(this), 250));
+        this.addEventListener(window, 'resize', this.debounce(this.handleResize.bind(this), 250));
         
         // Unload cleanup
-        window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
+        this.addEventListener(window, 'beforeunload', this.handleBeforeUnload.bind(this));
         
         // Error handling
-        window.addEventListener('error', this.handleGlobalError.bind(this));
-        window.addEventListener('unhandledrejection', this.handleUnhandledRejection.bind(this));
+        this.addEventListener(window, 'error', this.handleGlobalError.bind(this));
+        this.addEventListener(window, 'unhandledrejection', this.handleUnhandledRejection.bind(this));
+    }
+
+    /**
+     * Enhanced addEventListener with tracking for cleanup
+     */
+    addEventListener(element, event, handler, options = {}) {
+        element.addEventListener(event, handler, options);
+        this.eventListeners.push({ element, event, handler, options });
+    }
+
+    /**
+     * Remove all tracked event listeners
+     */
+    removeAllEventListeners() {
+        this.eventListeners.forEach(({ element, event, handler, options }) => {
+            try {
+                element.removeEventListener(event, handler, options);
+            } catch (error) {
+                console.warn('⚠️ Error removing event listener:', error);
+            }
+        });
+        this.eventListeners = [];
+    }
+
+    /**
+     * Enhanced timeout creation with tracking
+     */
+    createTimeout(callback, delay) {
+        const id = setTimeout(() => {
+            this.timeouts.delete(id);
+            callback();
+        }, delay);
+        this.timeouts.add(id);
+        return id;
+    }
+
+    /**
+     * Enhanced interval creation with tracking
+     */
+    createInterval(callback, delay) {
+        const id = setInterval(callback, delay);
+        this.intervals.add(id);
+        return id;
+    }
+
+    /**
+     * Enhanced animation frame with tracking
+     */
+    createAnimationFrame(callback) {
+        const id = requestAnimationFrame(() => {
+            this.animationFrames.delete(id);
+            callback();
+        });
+        this.animationFrames.add(id);
+        return id;
+    }
+
+    /**
+     * Clear all tracked timeouts, intervals, and animation frames
+     */
+    clearAllTimers() {
+        // Clear timeouts
+        this.timeouts.forEach(id => clearTimeout(id));
+        this.timeouts.clear();
+        
+        // Clear intervals
+        this.intervals.forEach(id => clearInterval(id));
+        this.intervals.clear();
+        
+        // Clear animation frames
+        this.animationFrames.forEach(id => cancelAnimationFrame(id));
+        this.animationFrames.clear();
     }
 
     /**
@@ -766,8 +893,14 @@ class PageManager {
      * Basic HTML sanitization (extend as needed)
      */
     sanitizeHTML(html) {
-        // Basic sanitization - remove script tags
-        return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+        // Basic sanitization - remove script tags except for specific allowed ones
+        return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, (match) => {
+            // Allow certain whitelisted scripts (like project page scripts)
+            if (match.includes('projectsPageUtils') || match.includes('Projects Page')) {
+                return match;
+            }
+            return '';
+        });
     }
 
     /**
@@ -789,7 +922,7 @@ class PageManager {
             this.cleanupActiveGames();
         }
         
-        // Remove event listeners
+        // Remove page-specific event listeners
         this.removePageEventListeners();
     }
 
@@ -879,94 +1012,13 @@ class PageManager {
     }
 
     /**
-     * Handle space environment visibility based on current page
-     */
-    handleSpaceEnvironmentVisibility(pageName) {
-        if (!window.spaceEnvironment) return;
-
-        if (pageName === 'main') {
-            // Fully interactive on main page
-            window.spaceEnvironment.show(true);
-            console.log('🌌 Space environment: fully interactive');
-        } else {
-            // Background only on other pages
-            window.spaceEnvironment.show(false);
-            console.log('🌌 Space environment: background mode');
-        }
-    }
-
-    /**
-     * Enhanced space background initialization (kept for compatibility)
-     */
-    async initializeSpaceBackground() {
-        // This method is kept for compatibility but now just ensures 
-        // the early initialization is complete
-        if (!this.spaceEnvironmentReady && this.spaceInitializationPromise) {
-            console.log('🌌 Waiting for space environment initialization...');
-            return this.spaceInitializationPromise;
-        }
-        
-        if (this.spaceEnvironmentReady) {
-            console.log('🌌 Space environment already ready');
-            return true;
-        }
-        
-        // Fallback initialization if somehow not done
-        return this.performSpaceInitialization();
-    }
-
-    /**
-     * Load scripts sequentially to avoid dependency issues
-     */
-    async loadScriptsSequentially(scripts) {
-        for (const src of scripts) {
-            try {
-                await this.loadScript(src);
-            } catch (error) {
-                console.warn(`⚠️ Failed to load script: ${src}`, error);
-                // Continue loading other scripts
-            }
-        }
-    }
-
-    /**
-     * Enhanced script loader with caching
-     */
-    loadScript(src) {
-        return new Promise((resolve, reject) => {
-            // Check if already loaded
-            if (document.querySelector(`script[src="${src}"]`)) {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            script.crossOrigin = 'anonymous';
-
-            script.onload = () => {
-                console.log(`✅ Loaded: ${src}`);
-                resolve();
-            };
-            
-            script.onerror = () => {
-                console.error(`❌ Failed to load: ${src}`);
-                reject(new Error(`Failed to load script: ${src}`));
-            };
-
-            document.head.appendChild(script);
-        });
-    }
-
-    /**
      * Enhanced preloading system
      */
     startPreloading() {
         if (window.requestIdleCallback) {
             window.requestIdleCallback(() => this.preloadPages(), { timeout: 5000 });
         } else {
-            setTimeout(() => this.preloadPages(), 2000);
+            this.createTimeout(() => this.preloadPages(), 2000);
         }
     }
 
@@ -1008,7 +1060,7 @@ class PageManager {
     // ===========================
 
     /**
-     * Load game assets (script and CSS)
+     * Load game assets (script and CSS) with better error handling
      */
     async loadGameAssets(gameType) {
         const assets = this.gameAssets[gameType];
@@ -1028,7 +1080,7 @@ class PageManager {
             await this.loadGameCSS(assets.css);
 
             // Load JavaScript
-            await this.loadScript(assets.script);
+            await this.loadScriptWithPriority(assets.script);
 
             // Mark as loaded
             this.gameScriptsLoaded.add(assetKey);
@@ -1043,7 +1095,7 @@ class PageManager {
     }
 
     /**
-     * Load game CSS
+     * Load game CSS with enhanced error handling
      */
     loadGameCSS(cssPath) {
         return new Promise((resolve, reject) => {
@@ -1070,7 +1122,68 @@ class PageManager {
     }
 
     /**
-     * Enhanced loadBaristaGame method
+     * Enhanced loadGame method with better error handling
+     */
+    async loadGame(gameType, button) {
+        try {
+            console.log(`🎮 Loading ${gameType} game`);
+            
+            // Update button state
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<span>⏳</span> Loading...';
+            button.disabled = true;
+
+            // Show game container
+            const gameContainer = document.getElementById('game-container');
+            const gameContent = document.getElementById('game-content');
+            
+            if (!gameContainer || !gameContent) {
+                throw new Error('Game container elements not found');
+            }
+
+            gameContainer.style.display = 'block';
+            
+            // Update title
+            const gameTitle = document.getElementById('game-title');
+            if (gameTitle) {
+                gameTitle.textContent = this.getGameTitle(gameType);
+            }
+
+            // Load specific game
+            let game;
+            switch (gameType) {
+                case 'barista':
+                    game = await this.loadBaristaGame(gameContent);
+                    break;
+                default:
+                    throw new Error(`Unknown game type: ${gameType}`);
+            }
+
+            // Scroll to game
+            gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Update button
+            button.innerHTML = '<span>🎮</span> Game Loaded';
+            this.createTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }, 2000);
+
+            // Focus on game container for accessibility
+            gameContainer.focus();
+
+        } catch (error) {
+            console.error(`❌ Failed to load ${gameType} game:`, error);
+            this.showToast('Failed to load game. Please try again.', 'error');
+            
+            // Reset button
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        }
+    }
+
+    /**
+     * Enhanced loadBaristaGame method with memory management
      */
     async loadBaristaGame(container) {
         try {
@@ -1093,7 +1206,7 @@ class PageManager {
             // Clear container
             container.innerHTML = '';
             
-            // Create game instance
+            // Create game instance with proper cleanup tracking
             const game = new StarbucksGame(container);
             
             // Store reference for cleanup
@@ -1266,7 +1379,7 @@ class PageManager {
     }
 
     /**
-     * Retry game loading
+     * Retry game loading with improved error handling
      */
     async retryGameLoad(gameType) {
         const gameContainer = document.getElementById('game-container');
@@ -1289,30 +1402,41 @@ class PageManager {
     }
 
     /**
-     * Setup game event listeners
+     * Setup game event listeners with proper cleanup
      */
     setupGameEventListeners(game) {
         // Listen for game events if the game supports them
         if (game && typeof game.addEventListener === 'function') {
-            game.addEventListener('game:exit', () => {
-                this.closeGame();
-            });
-            
-            game.addEventListener('game:error', (event) => {
+            const exitHandler = () => this.closeGame();
+            const errorHandler = (event) => {
                 console.error('Game error:', event.detail);
                 this.showToast('Game error occurred', 'error');
-            });
+            };
+            
+            game.addEventListener('game:exit', exitHandler);
+            game.addEventListener('game:error', errorHandler);
+            
+            // Store handlers for cleanup
+            game._pageManagerHandlers = { exitHandler, errorHandler };
         }
     }
 
     /**
-     * Close active game
+     * Enhanced close game with proper cleanup
      */
     closeGame() {
         if (this.activeGame && this.gameInstances.has(this.activeGame)) {
             const game = this.gameInstances.get(this.activeGame);
             
             try {
+                // Remove event listeners if they exist
+                if (game._pageManagerHandlers) {
+                    const { exitHandler, errorHandler } = game._pageManagerHandlers;
+                    game.removeEventListener('game:exit', exitHandler);
+                    game.removeEventListener('game:error', errorHandler);
+                    delete game._pageManagerHandlers;
+                }
+                
                 // Cleanup game instance
                 if (game && typeof game.cleanup === 'function') {
                     game.cleanup();
@@ -1406,13 +1530,15 @@ class PageManager {
         const rightBtn = document.querySelector('.scroll-indicator.right');
 
         if (leftBtn && rightBtn) {
-            leftBtn.addEventListener('click', () => {
+            const leftHandler = () => {
                 selector.scrollBy({ left: -200, behavior: 'smooth' });
-            });
-
-            rightBtn.addEventListener('click', () => {
+            };
+            const rightHandler = () => {
                 selector.scrollBy({ left: 200, behavior: 'smooth' });
-            });
+            };
+            
+            this.addEventListener(leftBtn, 'click', leftHandler);
+            this.addEventListener(rightBtn, 'click', rightHandler);
 
             // Update scroll button visibility
             const updateScrollButtons = this.debounce(() => {
@@ -1421,8 +1547,8 @@ class PageManager {
                     selector.scrollLeft < selector.scrollWidth - selector.clientWidth - 10 ? '1' : '0.3';
             }, 50);
 
-            selector.addEventListener('scroll', updateScrollButtons);
-            window.addEventListener('resize', updateScrollButtons);
+            this.addEventListener(selector, 'scroll', updateScrollButtons);
+            this.addEventListener(window, 'resize', updateScrollButtons);
             updateScrollButtons();
         }
 
@@ -1438,7 +1564,7 @@ class PageManager {
         const progressIndicator = document.querySelector('.progress-indicator');
 
         planetButtons.forEach((button, index) => {
-            button.addEventListener('click', () => {
+            const clickHandler = () => {
                 // Update active state
                 planetButtons.forEach(btn => {
                     btn.classList.remove('active');
@@ -1458,12 +1584,14 @@ class PageManager {
                 // Focus camera on planet
                 const planetName = button.getAttribute('data-planet');
                 this.focusOnPlanet(planetName);
-            });
+            };
+            
+            this.addEventListener(button, 'click', clickHandler);
         });
 
         // Select first planet by default
         if (planetButtons.length > 0) {
-            setTimeout(() => planetButtons[0].click(), 500);
+            this.createTimeout(() => planetButtons[0].click(), 500);
         }
     }
 
@@ -1492,13 +1620,13 @@ class PageManager {
         Object.entries(controls).forEach(([id, handler]) => {
             const button = document.getElementById(id);
             if (button && handler) {
-                button.addEventListener('click', handler);
+                this.addEventListener(button, 'click', handler);
             }
         });
     }
 
     /**
-     * Toggle orbit mode (ADDED MISSING METHOD)
+     * Toggle orbit mode (FIXED MISSING METHOD)
      */
     toggleOrbitMode() {
         if (window.spaceEnvironment?.toggleOrbitMode) {
@@ -1508,7 +1636,7 @@ class PageManager {
     }
 
     /**
-     * Toggle follow rotation (ADDED MISSING METHOD)
+     * Toggle follow rotation (FIXED MISSING METHOD)
      */
     toggleFollowRotation() {
         if (window.spaceEnvironment?.toggleFollowRotation) {
@@ -1547,23 +1675,25 @@ class PageManager {
         // Project navigation
         const navButtons = document.querySelectorAll('.side-nav .nav-button');
         navButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
+            const handler = (e) => {
                 e.preventDefault();
                 this.handleProjectNavigation(button);
-            });
+            };
+            this.addEventListener(button, 'click', handler);
         });
 
         // Project filters
         const filterButtons = document.querySelectorAll('.filter-btn');
         filterButtons.forEach(button => {
-            button.addEventListener('click', () => {
+            const handler = () => {
                 this.handleProjectFilter(button);
-            });
+            };
+            this.addEventListener(button, 'click', handler);
         });
     }
 
     /**
-     * Handle project navigation (ADDED MISSING METHOD)
+     * Handle project navigation (FIXED MISSING METHOD)
      */
     handleProjectNavigation(button) {
         console.log('📂 Project navigation:', button.textContent);
@@ -1582,7 +1712,7 @@ class PageManager {
     }
 
     /**
-     * Handle project filter (ADDED MISSING METHOD)
+     * Handle project filter (FIXED MISSING METHOD)
      */
     handleProjectFilter(button) {
         console.log('🔍 Project filter:', button.textContent);
@@ -1601,7 +1731,7 @@ class PageManager {
     }
 
     /**
-     * Scroll to project section (ADDED MISSING METHOD)
+     * Scroll to project section (FIXED MISSING METHOD)
      */
     scrollToProjectSection(sectionName) {
         const section = document.getElementById(sectionName) || 
@@ -1616,7 +1746,7 @@ class PageManager {
     }
 
     /**
-     * Filter projects (ADDED MISSING METHOD)
+     * Filter projects (FIXED MISSING METHOD)
      */
     filterProjects(filterValue) {
         const projects = document.querySelectorAll('.project-item, .project-card');
@@ -1646,7 +1776,7 @@ class PageManager {
             button.removeAttribute('onclick');
             
             // Add proper event listener
-            button.addEventListener('click', async (e) => {
+            const handler = async (e) => {
                 e.preventDefault();
                 
                 // Prevent multiple clicks
@@ -1654,71 +1784,12 @@ class PageManager {
                 
                 const gameType = button.getAttribute('data-game') || 'barista';
                 await this.loadGame(gameType, button);
-            });
+            };
+            
+            this.addEventListener(button, 'click', handler);
         });
 
         console.log(`🎮 Enhanced game loading setup for ${gameButtons.length} buttons`);
-    }
-
-    /**
-     * Enhanced load game method
-     */
-    async loadGame(gameType, button) {
-        try {
-            console.log(`🎮 Loading ${gameType} game`);
-            
-            // Update button state
-            const originalHTML = button.innerHTML;
-            button.innerHTML = '<span>⏳</span> Loading...';
-            button.disabled = true;
-
-            // Show game container
-            const gameContainer = document.getElementById('game-container');
-            const gameContent = document.getElementById('game-content');
-            
-            if (!gameContainer || !gameContent) {
-                throw new Error('Game container elements not found');
-            }
-
-            gameContainer.style.display = 'block';
-            
-            // Update title
-            const gameTitle = document.getElementById('game-title');
-            if (gameTitle) {
-                gameTitle.textContent = this.getGameTitle(gameType);
-            }
-
-            // Load specific game
-            let game;
-            switch (gameType) {
-                case 'barista':
-                    game = await this.loadBaristaGame(gameContent);
-                    break;
-                default:
-                    throw new Error(`Unknown game type: ${gameType}`);
-            }
-
-            // Scroll to game
-            gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            // Update button
-            button.innerHTML = '<span>🎮</span> Game Loaded';
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.disabled = false;
-            }, 2000);
-
-            // Focus on game container for accessibility
-            gameContainer.focus();
-
-        } catch (error) {
-            console.error(`❌ Failed to load ${gameType} game:`, error);
-            this.showToast('Failed to load game. Please try again.', 'error');
-            
-            // Reset button
-            button.innerHTML = originalHTML;
-            button.disabled = false;
-        }
     }
 
     /**
@@ -1753,21 +1824,25 @@ class PageManager {
      * Setup contact form with validation
      */
     setupContactForm(form) {
-        form.addEventListener('submit', (e) => {
+        const submitHandler = (e) => {
             e.preventDefault();
             this.handleContactSubmit(form);
-        });
+        };
+        this.addEventListener(form, 'submit', submitHandler);
 
         // Real-time validation
         const inputs = form.querySelectorAll('input, textarea');
         inputs.forEach(input => {
-            input.addEventListener('blur', () => this.validateInput(input));
-            input.addEventListener('input', () => this.clearInputError(input));
+            const blurHandler = () => this.validateInput(input);
+            const inputHandler = () => this.clearInputError(input);
+            
+            this.addEventListener(input, 'blur', blurHandler);
+            this.addEventListener(input, 'input', inputHandler);
         });
     }
 
     /**
-     * Handle contact form submission (ADDED MISSING METHOD)
+     * Handle contact form submission (FIXED MISSING METHOD)
      */
     handleContactSubmit(form) {
         console.log('📧 Handling contact form submission');
@@ -1793,7 +1868,7 @@ class PageManager {
     }
 
     /**
-     * Validate entire form (ADDED MISSING METHOD)
+     * Validate entire form (FIXED MISSING METHOD)
      */
     validateForm(form) {
         const inputs = form.querySelectorAll('input, textarea');
@@ -1809,7 +1884,7 @@ class PageManager {
     }
 
     /**
-     * Validate individual input (ADDED MISSING METHOD)
+     * Validate individual input (FIXED MISSING METHOD)
      */
     validateInput(input) {
         const value = input.value.trim();
@@ -1845,7 +1920,7 @@ class PageManager {
     }
 
     /**
-     * Show input error (ADDED MISSING METHOD)
+     * Show input error (FIXED MISSING METHOD)
      */
     showInputError(input, message) {
         input.classList.add('error');
@@ -1870,7 +1945,7 @@ class PageManager {
     }
 
     /**
-     * Clear input error (ADDED MISSING METHOD)
+     * Clear input error (FIXED MISSING METHOD)
      */
     clearInputError(input) {
         input.classList.remove('error');
@@ -1889,8 +1964,8 @@ class PageManager {
      * Cleanup main page
      */
     cleanupMainPage() {
-        // Cleanup planet selector events
-        // Events are automatically cleaned up when DOM is replaced
+        // Cleanup planet selector events - automatically handled by event tracking
+        console.log('🧹 Cleaning up main page');
     }
 
     /**
@@ -1898,27 +1973,28 @@ class PageManager {
      */
     cleanupProjectsPage() {
         this.cleanupActiveGames();
+        console.log('🧹 Cleaning up projects page');
     }
 
     /**
      * Cleanup about page
      */
     cleanupAboutPage() {
-        // About page cleanup
+        console.log('🧹 Cleaning up about page');
     }
 
     /**
      * Cleanup store page
      */
     cleanupStorePage() {
-        // Store page cleanup
+        console.log('🧹 Cleaning up store page');
     }
 
     /**
      * Cleanup contact page
      */
     cleanupContactPage() {
-        // Contact page cleanup
+        console.log('🧹 Cleaning up contact page');
     }
 
     /**
@@ -1930,6 +2006,14 @@ class PageManager {
             
             this.gameInstances.forEach((game, gameType) => {
                 try {
+                    // Remove page manager event handlers
+                    if (game._pageManagerHandlers) {
+                        const { exitHandler, errorHandler } = game._pageManagerHandlers;
+                        game.removeEventListener('game:exit', exitHandler);
+                        game.removeEventListener('game:error', errorHandler);
+                        delete game._pageManagerHandlers;
+                    }
+                    
                     if (game && typeof game.cleanup === 'function') {
                         game.cleanup();
                     }
@@ -1961,11 +2045,11 @@ class PageManager {
     }
 
     /**
-     * Remove page-specific event listeners
+     * Remove page-specific event listeners (automatically handled by tracking)
      */
     removePageEventListeners() {
         // Most events are cleaned up automatically when DOM is replaced
-        // Add specific cleanup here if needed
+        // Enhanced tracking handles cleanup automatically
     }
 
     // ===========================
@@ -2007,7 +2091,7 @@ class PageManager {
     setupPerformanceMonitoring() {
         if (this.isDevelopment()) {
             // Log performance metrics periodically
-            setInterval(() => {
+            const intervalId = this.createInterval(() => {
                 this.logPerformanceMetrics();
             }, 30000); // Every 30 seconds
         }
@@ -2083,10 +2167,10 @@ class PageManager {
         document.body.appendChild(toast);
         
         // Auto remove
-        setTimeout(() => {
+        this.createTimeout(() => {
             if (toast.parentNode) {
                 toast.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => {
+                this.createTimeout(() => {
                     if (toast.parentNode) {
                         toast.parentNode.removeChild(toast);
                     }
@@ -2160,7 +2244,9 @@ class PageManager {
      * Utility functions
      */
     delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+        return new Promise(resolve => {
+            this.createTimeout(resolve, ms);
+        });
     }
 
     debounce(func, wait) {
@@ -2192,15 +2278,25 @@ class PageManager {
             gameInstances: this.gameInstances.size,
             pageCache: this.pageCache.size,
             errorCount: this.errorCount,
-            spaceEnvironmentReady: this.spaceEnvironmentReady
+            spaceEnvironmentReady: this.spaceEnvironmentReady,
+            eventListenersCount: this.eventListeners.length,
+            timeoutsCount: this.timeouts.size,
+            intervalsCount: this.intervals.size,
+            animationFramesCount: this.animationFrames.size
         };
     }
 
     /**
-     * Cleanup all resources
+     * Enhanced cleanup all resources
      */
     cleanup() {
         console.log('🧹 Cleaning up PageManager');
+        
+        // Clear all timers and animations
+        this.clearAllTimers();
+        
+        // Remove all event listeners
+        this.removeAllEventListeners();
         
         // Clear caches
         this.pageCache.clear();
@@ -2213,6 +2309,11 @@ class PageManager {
         if (window.spaceEnvironment?.cleanup) {
             window.spaceEnvironment.cleanup();
         }
+
+        // This line to remove any stuck space indicators
+        this.hideSpaceLoadingIndicator();
+        
+        console.log('✅ PageManager cleanup complete');
     }
 }
 

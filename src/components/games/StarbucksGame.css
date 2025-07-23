@@ -1,0 +1,1310 @@
+/* StarbucksGame.css - Optimized game styling that matches project design */
+
+/* Base Game Container */
+.game-screen {
+    width: 100%;
+    height: 100%;
+    min-height: 500px;
+    background: linear-gradient(135deg, #1a1a2e 0%, rgba(16, 185, 129, 0.1) 100%);
+    border-radius: var(--border-radius, 12px);
+    overflow: hidden;
+    position: relative;
+    font-family: inherit;
+    color: var(--text-color, #ffffff);
+}
+
+.game-content {
+    padding: 2rem;
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color, #10b981) rgba(30, 30, 30, 0.5);
+}
+
+/* Webkit scrollbar styling */
+.game-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.game-content::-webkit-scrollbar-track {
+    background: rgba(30, 30, 30, 0.5);
+    border-radius: 10px;
+}
+
+.game-content::-webkit-scrollbar-thumb {
+    background: var(--primary-color, #10b981);
+    border-radius: 10px;
+}
+
+.game-content::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color, #059669);
+}
+
+/* Welcome Screen */
+.welcome-screen {
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.welcome-header {
+    margin-bottom: 2rem;
+}
+
+.game-title {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, #10b981, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
+.game-subtitle {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0;
+}
+
+/* Barista Avatar */
+.barista-avatar {
+    margin-bottom: 2rem;
+}
+
+.avatar-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.barista-avatar h2 {
+    color: var(--primary-color, #10b981);
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.barista-avatar p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.name-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.name-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.name-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #10b981);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Buttons */
+.start-button {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.start-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.start-button:disabled {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.start-button.enabled {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Welcome Features */
+.welcome-features {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.feature {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    min-width: 120px;
+    transition: all 0.3s ease;
+}
+
+.feature:hover {
+    background: rgba(16, 185, 129, 0.1);
+    transform: translateY(-3px);
+}
+
+.feature-icon {
+    font-size: 2rem;
+}
+
+/* Main Screen */
+.main-screen .game-content {
+    padding: 1.5rem;
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.player-info h1 {
+    color: var(--primary-color, #10b981);
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+}
+
+.player-stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.player-stats span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-button {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid var(--primary-color, #10b981);
+    color: var(--primary-color, #10b981);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.badge-button:hover {
+    background: var(--primary-color, #10b981);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Tip Section */
+.tip-section {
+    margin-bottom: 2rem;
+}
+
+.barista-tip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.barista-character {
+    flex-shrink: 0;
+}
+
+.barista-emoji {
+    font-size: 3rem;
+    display: block;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.tip-content h3 {
+    color: var(--primary-color, #10b981);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.tip-content p {
+    margin: 0;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Streak Indicator */
+.streak-indicator {
+    background: linear-gradient(45deg, #ff6b35, #ff8500);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.streak-indicator::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shine 2s infinite;
+}
+
+@keyframes shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.streak-content {
+    position: relative;
+    z-index: 1;
+}
+
+.streak-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+}
+
+.streak-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Action Buttons */
+.main-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.action-button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.action-button:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--primary-color, #10b981);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
+}
+
+.action-button.primary {
+    background: linear-gradient(45deg, #10b981, #059669);
+    border-color: transparent;
+    color: white;
+}
+
+.action-button.primary:hover {
+    background: linear-gradient(45deg, #059669, #047857);
+    transform: translateY(-3px) scale(1.02);
+}
+
+.button-icon {
+    font-size: 2rem;
+}
+
+.button-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.button-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin: 0;
+}
+
+/* Random Tip */
+.random-tip {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.random-tip h3 {
+    color: #ffc107;
+    margin-bottom: 0.5rem;
+}
+
+.random-tip p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Progress Info */
+.progress-info {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-text, .level-progress {
+    margin: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+}
+
+/* Categories Screen */
+.categories-screen .game-content {
+    padding: 2rem;
+}
+
+.screen-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.screen-header h2 {
+    color: var(--primary-color, #10b981);
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+}
+
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.category-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.category-card:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--primary-color, #10b981);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
+}
+
+.category-card.red { border-color: #ef4444; }
+.category-card.red:hover { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+.category-card.blue { border-color: #3b82f6; }
+.category-card.blue:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+
+.category-card.purple { border-color: #8b5cf6; }
+.category-card.purple:hover { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+
+.category-card.pink { border-color: #ec4899; }
+.category-card.pink:hover { border-color: #ec4899; background: rgba(236, 72, 153, 0.1); }
+
+.category-icon {
+    font-size: 3rem;
+}
+
+.category-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.3rem;
+}
+
+.category-info p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.category-progress {
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Challenge Screen */
+.challenge-screen .game-content {
+    padding: 1.5rem;
+}
+
+.challenge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.challenge-header h2 {
+    color: var(--primary-color, #10b981);
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+.challenge-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.challenge-stats span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.challenge-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+.challenge-card.correct {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    animation: successPulse 0.6s ease-out;
+}
+
+.challenge-card.wrong {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    animation: errorShake 0.6s ease-out;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+@keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.drink-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.drink-icon {
+    font-size: 3rem;
+}
+
+.drink-info h3 {
+    margin: 0 0 0.25rem 0;
+    color: var(--primary-color, #10b981);
+    font-size: 1.5rem;
+}
+
+.size-info {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    font-size: 1rem;
+}
+
+.drink-description {
+    margin-bottom: 1.5rem;
+}
+
+.drink-description p {
+    margin: 0 0 0.5rem 0;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+}
+
+.challenge-prompt {
+    color: var(--primary-color, #10b981);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Recipe Inputs */
+.recipe-inputs {
+    margin-bottom: 2rem;
+}
+
+.inputs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color, #10b981);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.label-icon {
+    font-size: 1.2rem;
+}
+
+.recipe-input {
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.recipe-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #10b981);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.recipe-input:disabled {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Challenge Actions */
+.challenge-actions {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.check-button {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.check-button:hover {
+    background: linear-gradient(45deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Challenge Result */
+.challenge-result {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 2px solid;
+    animation: slideIn 0.5s ease-out;
+}
+
+.challenge-result.correct {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.challenge-result.incorrect {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.result-icon {
+    font-size: 3rem;
+}
+
+.result-text h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.5rem;
+}
+
+.result-text p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.correct-recipe {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.correct-recipe h4 {
+    color: var(--primary-color, #10b981);
+    margin: 0 0 0.5rem 0;
+}
+
+.correct-recipe ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.correct-recipe li {
+    margin-bottom: 0.25rem;
+}
+
+.fun-fact {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.fun-fact p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Navigation */
+.challenge-navigation, .screen-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.nav-button, .back-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.nav-button:hover, .back-button:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: var(--primary-color, #10b981);
+    transform: translateY(-2px);
+}
+
+/* Badges Screen */
+.badges-screen .game-content {
+    padding: 2rem;
+}
+
+.badges-summary {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.badges-summary p {
+    margin: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.badge-count {
+    color: var(--primary-color, #10b981);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.badge-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.badge-card.earned {
+    border-color: var(--primary-color, #10b981);
+    background: rgba(16, 185, 129, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);
+}
+
+.badge-card.locked {
+    opacity: 0.4;
+    filter: grayscale(1);
+}
+
+.badge-card:hover.earned {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+}
+
+.badge-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.badge-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color, #10b981);
+    font-size: 1.2rem;
+}
+
+.badge-info p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+}
+
+/* Toast Notifications */
+.game-toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.game-toast.info {
+    background: #3b82f6;
+    border: 1px solid #1d4ed8;
+}
+
+.game-toast.success {
+    background: #10b981;
+    border: 1px solid #047857;
+}
+
+.game-toast.error {
+    background: #ef4444;
+    border: 1px solid #dc2626;
+}
+
+/* Error Screen */
+.error-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.error-content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: #ef4444;
+}
+
+.error-content h2 {
+    color: #ef4444;
+    margin-bottom: 1rem;
+}
+
+.error-content p {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 1rem;
+}
+
+.error-button {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.error-button:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
+/* Recipe Book Screens */
+.recipes-screen .game-content {
+    padding: 2rem;
+}
+
+.recipe-intro {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.recipe-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.recipe-category-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    color: inherit;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.recipe-category-card:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--primary-color, #10b981);
+    transform: translateY(-3px);
+}
+
+.recipe-category-card .category-icon {
+    font-size: 2rem;
+}
+
+.recipe-category-card .category-name {
+    font-weight: 600;
+    color: var(--primary-color, #10b981);
+}
+
+/* Drinks Grid */
+.drinks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.drink-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    color: inherit;
+    text-decoration: none;
+    position: relative;
+}
+
+.drink-card:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--primary-color, #10b981);
+    transform: translateY(-3px);
+}
+
+.drink-card.completed {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.drink-card h3 {
+    margin: 0.5rem 0;
+    color: var(--primary-color, #10b981);
+}
+
+.drink-card p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+}
+
+.completed-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #10b981;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* Recipe Detail */
+.recipe-detail-screen .game-content {
+    padding: 2rem;
+}
+
+.recipe-detail-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.recipe-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.drink-icon-large {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.drink-description {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.recipe-sizes h3, .fun-fact-section h3 {
+    color: var(--primary-color, #10b981);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.recipe-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.recipe-table th,
+.recipe-table td {
+    padding: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.recipe-table th {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--primary-color, #10b981);
+    font-weight: 600;
+}
+
+.recipe-table tr:last-child td {
+    border-bottom: none;
+}
+
+.fun-fact-section {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.fun-fact-section h3 {
+    color: #ffc107;
+}
+
+.fun-fact-section p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+}
+
+.practice-button {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.practice-button:hover {
+    background: linear-gradient(45deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .game-content {
+        padding: 1rem;
+    }
+    
+    .welcome-features {
+        gap: 1rem;
+    }
+    
+    .feature {
+        min-width: 100px;
+        padding: 0.75rem;
+    }
+    
+    .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .player-stats {
+        justify-content: flex-start;
+    }
+    
+    .barista-tip {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .main-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .categories-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .challenge-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .inputs-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .result-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .challenge-navigation,
+    .screen-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .badges-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .recipe-categories {
+        grid-template-columns: 1fr;
+    }
+    
+    .drinks-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .recipe-table {
+        font-size: 0.8rem;
+    }
+    
+    .recipe-table th,
+    .recipe-table td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-content {
+        padding: 0.75rem;
+    }
+    
+    .game-title {
+        font-size: 1.5rem;
+    }
+    
+    .avatar-icon {
+        font-size: 3rem;
+    }
+    
+    .name-input {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .welcome-features {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .game-toast {
+        left: 0.5rem;
+        right: 0.5rem;
+        max-width: none;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Focus States */
+.start-button:focus,
+.action-button:focus,
+.category-card:focus,
+.challenge-card:focus,
+.nav-button:focus,
+.back-button:focus,
+.recipe-input:focus,
+.check-button:focus,
+.practice-button:focus,
+.drink-card:focus,
+.recipe-category-card:focus {
+    outline: 2px solid var(--primary-color, #10b981);
+    outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .game-screen {
+        background: #000;
+        color: #fff;
+    }
+    
+    .challenge-card,
+    .action-button,
+    .category-card {
+        border-width: 2px;
+    }
+}

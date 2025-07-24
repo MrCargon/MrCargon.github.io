@@ -89,20 +89,30 @@
     display: none;
     background: transparent;
     border: none;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     cursor: pointer;
     padding: 0;
     z-index: 1010;
     margin-left: auto;
     color: var(--text-color);
     position: relative;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    /* Enhanced touch target */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
-/* Mobile button hover - kept the same */
+/* Enhanced mobile button interactions */
 .mobile-menu-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
+    background-color: rgba(255, 165, 0, 0.1);
+    border-radius: 6px;
+}
+
+.mobile-menu-toggle:active {
+    transform: scale(0.95);
+    background-color: rgba(255, 165, 0, 0.15);
 }
 
 /* Hamburger icon - performance optimized with will-change */
@@ -278,18 +288,25 @@
         order: 2;
     }
     
-    /* Navigation container for mobile */
+    /* Navigation container for mobile - Enhanced with smooth animation */
     .nav-container {
         flex-basis: 100%;
         order: 3;
         display: none;
         width: 100%;
         margin-top: 15px;
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
     }
     
-    /* Show navigation when mobile menu is active */
+    /* Show navigation when mobile menu is active - Smooth slide down */
     .header-content.menu-active .nav-container {
         display: block !important;
+        max-height: 400px;
+        opacity: 1;
+        margin-top: 15px;
     }
     
     /* Navigation styling for mobile */
@@ -312,6 +329,12 @@
         width: 100%;
         justify-content: center;
         text-align: center;
+        /* Enhanced mobile touch targets */
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
     }
     
     .status-badge {
@@ -421,7 +444,7 @@
 }
 
 /* Ensure menu is always visible above a certain width and logo is hidden on desktop */
-@media (min-width: 769px) {
+@media (min-width: 836px) {
     .logo {
         display: none;
     }
@@ -430,7 +453,7 @@
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 835px) {
     .logo {
         display: block;
     }

@@ -237,3 +237,233 @@ body, html {
 .nav-button {
   will-change: transform;
 }
+
+/* Component Loading States - Enhanced UI */
+.component-loading {
+  background: var(--panel-bg);
+  border-radius: var(--border-radius-sm);
+  margin: 0.5rem;
+  animation: componentPulse 1.5s ease-in-out infinite;
+}
+
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 165, 0, 0.3);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.component-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--border-radius-sm);
+  margin: 0.5rem;
+}
+
+.error-container {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.error-container .error-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.error-container h3 {
+  color: #ef4444;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.error-container .error-message {
+  margin-bottom: 1rem;
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.error-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.retry-button, .fallback-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.retry-button {
+  background: var(--primary-color);
+  color: #000;
+}
+
+.retry-button:hover {
+  background: var(--secondary-color);
+  transform: translateY(-1px);
+}
+
+.fallback-button {
+  background: var(--panel-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.fallback-button:hover {
+  background: var(--hover-bg);
+  border-color: var(--border-hover);
+}
+
+.error-details {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.error-details summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.error-details pre {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+/* Fallback Content Styling */
+.fallback-header {
+  background: var(--panel-bg);
+  padding: 1rem;
+  border-radius: var(--border-radius-sm);
+  margin: 0.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.fallback-header .main-nav {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.fallback-header .main-nav a {
+  color: var(--text-color);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition);
+}
+
+.fallback-header .main-nav a:hover {
+  background: var(--hover-bg);
+  color: var(--primary-color);
+}
+
+.fallback-footer {
+  background: var(--panel-bg);
+  padding: 1rem;
+  text-align: center;
+  border-radius: var(--border-radius-sm);
+  margin: 0.5rem;
+  border: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.fallback-content {
+  background: var(--panel-bg);
+  padding: 2rem;
+  text-align: center;
+  border-radius: var(--border-radius-sm);
+  margin: 1rem;
+  border: 1px solid var(--border-color);
+}
+
+.fallback-content h2 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+/* Error Fallback (PageManager failure) */
+.error-fallback {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Component Loading Animations */
+@keyframes componentPulse {
+  0%, 100% { 
+    background: var(--panel-bg);
+    opacity: 0.8;
+  }
+  50% { 
+    background: rgba(255, 165, 0, 0.1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth transitions for content reveal */
+#content {
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+}
+
+#content.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Loading progress enhancement */
+#loading-progress {
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+#loading-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--primary-color);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}

@@ -339,7 +339,7 @@ PROJECTS PAGE
                     <!-- Empty State (hidden by default) -->
                     <div class="empty-state" style="display: none;" role="status">
                         <p>No projects found matching your criteria.</p>
-                        <button class="project-btn" onclick="clearFilters()">Clear Filters</button>
+                        <button class="project-btn" data-action="clear-filters">Clear Filters</button>
                     </div>
                 </div>
             </main>
@@ -351,7 +351,7 @@ PROJECTS PAGE
         <header class="panel-header">
             <h2 id="game-title">Interactive Game</h2>
             <div class="header-controls">
-                <button class="project-btn" onclick="window.pageManager?.closeGame()" aria-label="Close game">
+                <button class="project-btn" data-action="close-game" aria-label="Close game">
                     <span>✕</span> Close
                 </button>
             </div>

@@ -207,13 +207,13 @@ class HeaderManager {
     _handleResize() {
         clearTimeout(this.resizeTimer);
         this.resizeTimer = setTimeout(() => {
-            // Reset mobile menu on desktop view
-            if (window.innerWidth > 768 && this.headerContent.classList.contains('menu-active')) {
+            // Reset mobile menu on desktop view - FIXED BREAKPOINT
+            if (window.innerWidth > 835 && this.headerContent.classList.contains('menu-active')) {
                 this.closeMobileMenu();
             }
             
-            // Update logo text based on screen width (for mobile only)
-            if (window.innerWidth <= 768 && this.logoElement) {
+            // Update logo text based on screen width (for mobile only) - FIXED BREAKPOINT
+            if (window.innerWidth <= 835 && this.logoElement) {
                 this.updateMobileLogoText();
             }
         }, 250);
@@ -268,7 +268,7 @@ class HeaderManager {
         window.addEventListener('resize', this._handleResize);
         
         // Initial update for mobile logo text if we're on mobile
-        if (window.innerWidth <= 768 && this.logoElement) {
+        if (window.innerWidth <= 835 && this.logoElement) {
             this.updateMobileLogoText();
         }
     }
@@ -310,12 +310,12 @@ class HeaderManager {
         this.currentPageName = activeFound ? activePageName : '';
         
         // Update logo text only if on mobile
-        if (window.innerWidth <= 768 && this.logoElement) {
+        if (window.innerWidth <= 835 && this.logoElement) {
             this.updateMobileLogoText();
         }
         
         // Close mobile menu after navigation on mobile devices
-        if (window.innerWidth <= 768) {
+        if (window.innerWidth <= 835) {
             this.closeMobileMenu();
         }
     }

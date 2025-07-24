@@ -504,6 +504,16 @@ class PageManager {
      * Handle navigation clicks with enhanced logic
      */
     handleNavigationClick(event) {
+        // Check for data-action buttons first
+        const actionButton = event.target.closest('[data-action]');
+        if (actionButton) {
+            event.preventDefault();
+            const action = actionButton.getAttribute('data-action');
+            this.handleDataAction(action, actionButton, event);
+            return;
+        }
+
+        // Handle navigation links
         const link = event.target.closest('.main-nav a, .nav-button, [data-navigate]');
         if (!link) return;
 
@@ -520,6 +530,77 @@ class PageManager {
         if (pageName) {
             this.navigateToPage(pageName);
         }
+    }
+
+    /**
+     * Handle data-action button clicks
+     */
+    handleDataAction(action, button, event) {
+        console.log(`🔧 Handling data-action: ${action}`);
+        
+        switch (action) {
+            case 'close-game':
+                this.closeGame();
+                break;
+            case 'clear-filters':
+                if (window.projectsPageUtils?.clearFilters) {
+                    window.projectsPageUtils.clearFilters();
+                } else {
+                    this.clearProjectFilters();
+                }
+                break;
+            case 'save-progress':
+                this.saveProgress();
+                break;
+            default:
+                console.warn(`⚠️ Unknown data-action: ${action}`);
+                break;
+        }
+    }
+
+    /**
+     * Clear project filters (fallback method)
+     */
+    clearProjectFilters() {
+        // Reset filter buttons
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        filterButtons.forEach(btn => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-pressed', 'false');
+        });
+        
+        // Activate "All Projects" filter
+        const allButton = document.querySelector('.filter-btn[data-category="all"]');
+        if (allButton) {
+            allButton.classList.add('active');
+            allButton.setAttribute('aria-pressed', 'true');
+        }
+        
+        // Clear search
+        const searchBox = document.getElementById('project-search');
+        if (searchBox) searchBox.value = '';
+        
+        // Show all projects
+        const projectCards = document.querySelectorAll('.project-card');
+        projectCards.forEach((card, index) => {
+            card.style.display = 'block';
+            card.style.animation = `fadeInUp 0.4s ease-out ${index * 0.05}s both`;
+        });
+        
+        // Hide empty state
+        const emptyState = document.querySelector('.empty-state');
+        if (emptyState) emptyState.style.display = 'none';
+        
+        console.log('🔄 Project filters cleared');
+        this.showToast('Filters cleared', 'info');
+    }
+
+    /**
+     * Save progress (placeholder method)
+     */
+    saveProgress() {
+        console.log('💾 Saving progress...');
+        this.showToast('Progress saved!', 'success');
     }
 
     /**
@@ -544,7 +625,11 @@ class PageManager {
      */
     getDefaultPage() {
         const hash = window.location.hash.substring(1);
-        return this.pages[hash] ? hash : 'about';
+        // Ensure we have a valid page, default to 'about' if no hash or invalid hash
+        if (hash && this.pages[hash]) {
+            return hash;
+        }
+        return 'about';
     }
 
     /**

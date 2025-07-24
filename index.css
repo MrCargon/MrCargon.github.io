@@ -53,30 +53,32 @@ body, html {
   background-color: var(--overlay-bg);
   color: var(--text-color);
   line-height: 1.6;
-  overflow-x: hidden;
-  min-height: 100vh;
+  overflow: hidden; /* CRITICAL: Prevent global scrolling */
+  height: 100vh; /* Fixed viewport height */
+  width: 100vw; /* Fixed viewport width */
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 #content {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh; /* Fixed viewport height - no growing */
+  width: 100vw;
+  overflow: hidden; /* No content overflow */
 }
 
-/* Main container needs to grow to fill space */
+/* Fixed layout structure */
 #page-container {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Allow shrinking */
+  overflow: hidden;
 }
 
 #footer-container {
-  margin-top: auto;
+  flex-shrink: 0; /* Footer always visible */
 }
 
 /* Loading Screen - optimized animation properties */

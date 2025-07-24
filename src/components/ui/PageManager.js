@@ -1676,22 +1676,36 @@ class PageManager {
     }
 
     /**
-     * Toggle orbit mode (FIXED MISSING METHOD)
+     * Toggle orbit mode (ENHANCED IMPLEMENTATION)
      */
     toggleOrbitMode() {
         if (window.spaceEnvironment?.toggleOrbitMode) {
             window.spaceEnvironment.toggleOrbitMode();
             console.log('🌌 Toggled orbit mode');
+            this.showToast('Orbit mode toggled', 'info');
+        } else if (window.spaceEnvironment?.solarSystem?.toggleOrbits) {
+            window.spaceEnvironment.solarSystem.toggleOrbits();
+            console.log('🌌 Toggled orbits via solar system');
+            this.showToast('Planet orbits toggled', 'info');
+        } else {
+            console.warn('⚠️ Orbit mode toggle not available');
         }
     }
 
     /**
-     * Toggle follow rotation (FIXED MISSING METHOD)
+     * Toggle follow rotation (ENHANCED IMPLEMENTATION)
      */
     toggleFollowRotation() {
         if (window.spaceEnvironment?.toggleFollowRotation) {
             window.spaceEnvironment.toggleFollowRotation();
             console.log('🌌 Toggled follow rotation');
+            this.showToast('Follow rotation toggled', 'info');
+        } else if (window.spaceEnvironment?.solarSystem?.toggleFollowMode) {
+            window.spaceEnvironment.solarSystem.toggleFollowMode();
+            console.log('🌌 Toggled follow mode via solar system');
+            this.showToast('Camera follow mode toggled', 'info');
+        } else {
+            console.warn('⚠️ Follow rotation toggle not available');
         }
     }
 

@@ -1,20 +1,22 @@
 /* aboutPage.css - Updated for consistency with contactPage.css */
 
-/* Main Section - Aligned with contact page structure */
+/* Main Section - Fixed Viewport Layout */
 .main-section {
     max-width: var(--content-width);
     width: 92%;
-    margin: var(--spacing-xl) auto;
-    margin-bottom: var(--spacing-xl);
-    padding: 0;
-    overflow-x: hidden;
+    margin: 0 auto; /* Remove vertical margins to prevent overflow */
+    padding: var(--spacing-md) 0; /* Minimal vertical padding */
+    overflow: hidden; /* Prevent any overflow */
+    height: calc(100vh - 120px); /* Fixed height within viewport */
+    display: flex;
+    flex-direction: column;
 }
 
-/* Section Title - Standardized with contact page */
+/* Section Title - Optimized for Fixed Viewport */
 .section-title {
     color: var(--primary-color);
-    margin-bottom: var(--spacing-lg);
-    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    margin-bottom: var(--spacing-md); /* Reduced from lg to md */
+    font-size: clamp(1.4rem, 3vw, 1.8rem); /* Reduced by ~30% */
     position: relative;
     display: inline-block;
 }
@@ -29,13 +31,16 @@
     background-color: var(--primary-color);
 }
 
-/* Profile Panel Styles - optimized for performance and aligned with contact-grid */
+/* Profile Panel Styles - Space Optimized for Fixed Viewport */
 .profile-panel {
     width: 100%;
-    margin-top: var(--spacing-lg);
+    margin-top: var(--spacing-sm); /* Reduced from lg to sm */
     animation: fadeIn 0.8s ease-out;
     will-change: opacity;
     contain: content;
+    flex: 1; /* Take remaining space in main section */
+    display: flex;
+    flex-direction: column;
 }
 
 .panel-container {
@@ -121,7 +126,33 @@
     padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    flex: 1; /* Take remaining space */
+    min-height: 0; /* Allow shrinking */
+    overflow-y: auto; /* Internal scrolling only */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(30, 30, 30, 0.5);
+}
+
+/* Custom scrollbar for panel content */
+.panel-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+    background: rgba(30, 30, 30, 0.5);
+    border-radius: 4px;
+    margin: 2px;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+    box-shadow: 0 0 6px rgba(255, 165, 0, 0.3);
 }
 
 /* Accessibility improvement - skip link */

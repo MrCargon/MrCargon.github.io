@@ -1,12 +1,16 @@
 /* contactPage.css */
 
+/* Main Section Container - Fixed Viewport Layout */
 .main-section.contact-section {
     max-width: var(--content-width);
     width: 92%;
-    margin: var(--spacing-xl) auto;
-    margin-bottom: var(--spacing-xl); /* Consistent bottom margin */
-    padding: 0;
-  }
+    margin: 0 auto; /* Remove vertical margins to prevent overflow */
+    padding: var(--spacing-md) 0; /* Minimal vertical padding */
+    overflow: hidden; /* Prevent any overflow */
+    height: calc(100vh - 120px); /* Fixed height within viewport */
+    display: flex;
+    flex-direction: column;
+}
 
 /* Section Title - Standalone like in screenshot */
 .section-title {
@@ -45,7 +49,7 @@
     background-color: var(--primary-color);
   }
   
-  /* Contact Grid - Use panel styling like About page */
+  /* Contact Grid - Fixed Viewport Layout */
   .contact-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -54,6 +58,8 @@
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-medium);
     overflow: hidden;
+    flex: 1; /* Take remaining space in main section */
+    min-height: 0; /* Allow shrinking */
   }
 
 /* Left column - Info panel */

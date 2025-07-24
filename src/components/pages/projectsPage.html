@@ -7,7 +7,7 @@ PROJECTS PAGE
         <header class="panel-header">
             <h2 id="projects-title">My Projects</h2>
             <div class="header-controls">
-                <span class="project-count" id="project-count" aria-live="polite">6 Projects</span>
+                <span class="project-count" id="project-count" aria-live="polite">5 Projects</span>
             </div>
         </header>
 
@@ -131,263 +131,227 @@ PROJECTS PAGE
                 </div>
 
                 <!-- Enhanced Project Grid -->
-                <div class="project-grid" role="grid" aria-label="Projects grid">
-                    
-                    <!-- Interactive Game Project - Barista Game -->
-                    <article class="project-card interactive-game" 
-                             id="barista-game" 
-                             tabindex="0" 
-                             role="gridcell"
-                             data-category="interactive"
-                             data-featured="true"
-                             aria-labelledby="barista-title">
-                        <div class="project-image">
-                            <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=200&fit=crop&crop=center" 
-                                 alt="Starbucks Barista Game - Interactive coffee making simulator" 
-                                 loading="lazy">
-                        </div>
-                        <div class="project-info">
-                            <div class="project-meta">
-                                <span class="project-type">Interactive Game</span>
-                                <span class="project-date">2025</span>
+                <div class="project-grid-container">
+                    <div class="project-grid" role="grid" aria-label="Projects grid">
+                        
+                        <!-- Interactive Game Project - Barista Game -->
+                        <article class="project-card interactive-game" 
+                                id="barista-game" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="interactive"
+                                data-featured="true"
+                                aria-labelledby="barista-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Starbucks Barista Game - Interactive coffee making simulator" 
+                                    loading="lazy">
                             </div>
-                            <h3 id="barista-title">Starbucks Barista Adventure</h3>
-                            <p>
-                                An engaging educational game where you learn to make authentic Starbucks drinks through 
-                                interactive challenges. Master recipes, earn badges, and become the ultimate barista!
-                            </p>
-                            <div class="project-tags">
-                                <span class="tag">React</span>
-                                <span class="tag">Interactive</span>
-                                <span class="tag">Educational</span>
-                                <span class="tag">Game Design</span>
-                                <span class="tag">UI/UX</span>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Interactive Game</span>
+                                    <span class="project-date">2025</span>
+                                </div>
+                                <h3 id="barista-title">Starbucks Barista Adventure</h3>
+                                <p>
+                                    An engaging educational game where you learn to make authentic Starbucks drinks through 
+                                    interactive challenges. Master recipes, earn badges, and become the ultimate barista!
+                                </p>
+                                <div class="project-tags">
+                                    <span class="tag">React</span>
+                                    <span class="tag">Interactive</span>
+                                    <span class="tag">Educational</span>
+                                    <span class="tag">Game Design</span>
+                                    <span class="tag">UI/UX</span>
+                                </div>
+                                <div class="project-actions">
+                                    <button class="project-btn primary" 
+                                            data-game="barista"
+                                            aria-describedby="barista-title">
+                                        <span>🎮</span> Play Game
+                                    </button>
+                                    <a href="#" class="project-btn" aria-label="View Barista Game source code">
+                                        <span>🔗</span> Code
+                                    </a>
+                                </div>
                             </div>
-                            <div class="project-actions">
-                                <button class="project-btn primary" 
-                                        data-game="barista"
-                                        aria-describedby="barista-title">
-                                    <span>🎮</span> Play Game
-                                </button>
-                                <a href="#" class="project-btn" aria-label="View Barista Game source code">
-                                    <span>🔗</span> Code
-                                </a>
-                            </div>
-                        </div>
-                    </article>
+                        </article>
 
-                    <!-- Portfolio Website Project -->
-                    <article class="project-card" 
-                             id="portfolio-site" 
-                             tabindex="0" 
-                             role="gridcell"
-                             data-category="web"
-                             aria-labelledby="portfolio-title">
-                        <div class="project-image">
-                            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop&crop=center" 
-                                 alt="Modern portfolio website with space theme" 
-                                 loading="lazy">
-                        </div>
-                        <div class="project-info">
-                            <div class="project-meta">
-                                <span class="project-type">Web Development</span>
-                                <span class="project-date">2025</span>
+                        <!-- Portfolio Website Project -->
+                        <article class="project-card" 
+                                id="portfolio-site" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="web"
+                                data-featured="true"
+                                aria-labelledby="portfolio-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Modern portfolio website with space theme" 
+                                    loading="lazy">
                             </div>
-                            <h3 id="portfolio-title">Interactive Portfolio</h3>
-                            <p>
-                                A modern, responsive portfolio website featuring an interactive 3D solar system, 
-                                smooth animations, and optimized performance. Built with vanilla JavaScript and Three.js.
-                            </p>
-                            <div class="project-tags">
-                                <span class="tag">JavaScript</span>
-                                <span class="tag">Three.js</span>
-                                <span class="tag">CSS3</span>
-                                <span class="tag">Responsive</span>
-                                <span class="tag">Performance</span>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Web Development</span>
+                                    <span class="project-date">2025</span>
+                                </div>
+                                <h3 id="portfolio-title">Interactive Portfolio</h3>
+                                <p>
+                                    A modern, responsive portfolio website featuring an interactive 3D solar system, 
+                                    smooth animations, and optimized performance. Built with vanilla JavaScript and Three.js.
+                                </p>
+                                <div class="project-tags">
+                                    <span class="tag">JavaScript</span>
+                                    <span class="tag">Three.js</span>
+                                    <span class="tag">CSS3</span>
+                                    <span class="tag">Responsive</span>
+                                    <span class="tag">Performance</span>
+                                </div>
+                                <div class="project-actions">
+                                    <a href="#" class="project-btn primary" aria-describedby="portfolio-title">
+                                        <span>🌐</span> Live Site
+                                    </a>
+                                    <a href="#" class="project-btn" aria-label="View portfolio source code">
+                                        <span>🔗</span> Code
+                                    </a>
+                                </div>
                             </div>
-                            <div class="project-actions">
-                                <a href="#" class="project-btn primary" aria-describedby="portfolio-title">
-                                    <span>🌐</span> Live Site
-                                </a>
-                                <a href="#" class="project-btn" aria-label="View portfolio source code">
-                                    <span>🔗</span> Code
-                                </a>
-                            </div>
-                        </div>
-                    </article>
+                        </article>
 
-                    <!-- Solar System Project -->
-                    <article class="project-card" 
-                             id="solar-system" 
-                             tabindex="0" 
-                             role="gridcell"
-                             data-category="3d"
-                             aria-labelledby="solar-title">
-                        <div class="project-image">
-                            <img src="src/assets/textures/sun/sun_map.jpg" 
-                                 alt="3D Solar System simulation with realistic planet textures" 
-                                 loading="lazy"
-                                 onerror="this.src='https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=200&fit=crop&crop=center'">
-                        </div>
-                        <div class="project-info">
-                            <div class="project-meta">
-                                <span class="project-type">3D Simulation</span>
-                                <span class="project-date">2024</span>
+                        <!-- Solar System Project -->
+                        <article class="project-card" 
+                                id="solar-system" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="3d"
+                                data-featured="true"
+                                aria-labelledby="solar-title">
+                            <div class="project-image">
+                                <img src="src/assets/textures/sun/sun_map.jpg" 
+                                    alt="3D Solar System simulation with realistic planet textures" 
+                                    loading="lazy"
+                                    onerror="this.src='https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=200&fit=crop&crop=center'">
                             </div>
-                            <h3 id="solar-title">Solar System Simulator</h3>
-                            <p>
-                                Immersive 3D solar system with accurate planetary orbits, realistic textures, 
-                                and interactive controls. Features dynamic lighting and camera controls.
-                            </p>
-                            <div class="project-tags">
-                                <span class="tag">Three.js</span>
-                                <span class="tag">WebGL</span>
-                                <span class="tag">3D Graphics</span>
-                                <span class="tag">Physics</span>
-                                <span class="tag">Astronomy</span>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">3D Simulation</span>
+                                    <span class="project-date">2024</span>
+                                </div>
+                                <h3 id="solar-title">Solar System Simulator</h3>
+                                <p>
+                                    Immersive 3D solar system with accurate planetary orbits, realistic textures, 
+                                    and interactive controls. Features dynamic lighting and camera controls.
+                                </p>
+                                <div class="project-tags">
+                                    <span class="tag">Three.js</span>
+                                    <span class="tag">WebGL</span>
+                                    <span class="tag">3D Graphics</span>
+                                    <span class="tag">Physics</span>
+                                    <span class="tag">Astronomy</span>
+                                </div>
+                                <div class="project-actions">
+                                    <a href="#main" class="project-btn primary" aria-describedby="solar-title">
+                                        <span>🪐</span> Explore
+                                    </a>
+                                    <a href="#" class="project-btn" aria-label="View solar system source code">
+                                        <span>🔗</span> Code
+                                    </a>
+                                </div>
                             </div>
-                            <div class="project-actions">
-                                <a href="#main" class="project-btn primary" aria-describedby="solar-title">
-                                    <span>🪐</span> Explore
-                                </a>
-                                <a href="#" class="project-btn" aria-label="View solar system source code">
-                                    <span>🔗</span> Code
-                                </a>
-                            </div>
-                        </div>
-                    </article>
+                        </article>
 
-                    <!-- Space Explorer Game -->
-                    <article class="project-card" 
-                             id="space-explorer" 
-                             tabindex="0" 
-                             role="gridcell"
-                             data-category="game"
-                             aria-labelledby="space-title">
-                        <div class="project-image">
-                            <img src="https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=200&fit=crop&crop=center" 
-                                 alt="Space exploration game with spacecraft and planets" 
-                                 loading="lazy">
-                        </div>
-                        <div class="project-info">
-                            <div class="project-meta">
-                                <span class="project-type">Game Development</span>
-                                <span class="project-date">2024</span>
+                        <!-- Space Explorer Game -->
+                        <article class="project-card" 
+                                id="space-explorer" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="game"
+                                aria-labelledby="space-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Space exploration game with spacecraft and planets" 
+                                    loading="lazy">
                             </div>
-                            <h3 id="space-title">Space Explorer</h3>
-                            <p>
-                                An adventure game where players navigate through space, discover planets, 
-                                and collect resources. Built with Godot engine and custom physics.
-                            </p>
-                            <div class="project-tags">
-                                <span class="tag">Godot</span>
-                                <span class="tag">GDScript</span>
-                                <span class="tag">Game Design</span>
-                                <span class="tag">Physics</span>
-                                <span class="tag">Procedural</span>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Game Development</span>
+                                    <span class="project-date">2024</span>
+                                </div>
+                                <h3 id="space-title">Space Explorer</h3>
+                                <p>
+                                    An adventure game where players navigate through space, discover planets, 
+                                    and collect resources. Built with Godot engine and custom physics.
+                                </p>
+                                <div class="project-tags">
+                                    <span class="tag">Godot</span>
+                                    <span class="tag">GDScript</span>
+                                    <span class="tag">Game Design</span>
+                                    <span class="tag">Physics</span>
+                                    <span class="tag">Procedural</span>
+                                </div>
+                                <div class="project-actions">
+                                    <button class="project-btn primary" disabled aria-describedby="space-title">
+                                        <span>🚧</span> In Development
+                                    </button>
+                                    <a href="#" class="project-btn" aria-label="View space explorer source code">
+                                        <span>🔗</span> Code
+                                    </a>
+                                </div>
                             </div>
-                            <div class="project-actions">
-                                <button class="project-btn primary" disabled aria-describedby="space-title">
-                                    <span>🚧</span> In Development
-                                </button>
-                                <a href="#" class="project-btn" aria-label="View space explorer source code">
-                                    <span>🔗</span> Code
-                                </a>
-                            </div>
-                        </div>
-                    </article>
+                        </article>
 
-                    <!-- Data Visualization Project -->
-                    <article class="project-card" 
-                             id="data-viz" 
-                             tabindex="0" 
-                             role="gridcell"
-                             data-category="web"
-                             aria-labelledby="data-title">
-                        <div class="project-image">
-                            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop&crop=center" 
-                                 alt="Interactive data visualization dashboard with charts and graphs" 
-                                 loading="lazy">
-                        </div>
-                        <div class="project-info">
-                            <div class="project-meta">
-                                <span class="project-type">Data Visualization</span>
-                                <span class="project-date">2024</span>
+                        <!-- Data Visualization Project -->
+                        <article class="project-card" 
+                                id="data-viz" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="web"
+                                aria-labelledby="data-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Interactive data visualization dashboard with charts and graphs" 
+                                    loading="lazy">
                             </div>
-                            <h3 id="data-title">Interactive Dashboard</h3>
-                            <p>
-                                Dynamic data visualization platform with real-time charts, filtering capabilities, 
-                                and responsive design. Processes large datasets efficiently.
-                            </p>
-                            <div class="project-tags">
-                                <span class="tag">D3.js</span>
-                                <span class="tag">Chart.js</span>
-                                <span class="tag">Data Analysis</span>
-                                <span class="tag">Real-time</span>
-                                <span class="tag">Responsive</span>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Data Visualization</span>
+                                    <span class="project-date">2024</span>
+                                </div>
+                                <h3 id="data-title">Interactive Dashboard</h3>
+                                <p>
+                                    Dynamic data visualization platform with real-time charts, filtering capabilities, 
+                                    and responsive design. Processes large datasets efficiently.
+                                </p>
+                                <div class="project-tags">
+                                    <span class="tag">D3.js</span>
+                                    <span class="tag">Chart.js</span>
+                                    <span class="tag">Data Analysis</span>
+                                    <span class="tag">Real-time</span>
+                                    <span class="tag">Responsive</span>
+                                </div>
+                                <div class="project-actions">
+                                    <a href="#" class="project-btn primary" aria-describedby="data-title">
+                                        <span>📊</span> View Demo
+                                    </a>
+                                    <a href="#" class="project-btn" aria-label="View dashboard source code">
+                                        <span>🔗</span> Code
+                                    </a>
+                                </div>
                             </div>
-                            <div class="project-actions">
-                                <a href="#" class="project-btn primary" aria-describedby="data-title">
-                                    <span>📊</span> View Demo
-                                </a>
-                                <a href="#" class="project-btn" aria-label="View dashboard source code">
-                                    <span>🔗</span> Code
-                                </a>
-                            </div>
-                        </div>
-                    </article>
+                        </article>
+                    </div>
 
-                    <!-- Mobile App Project -->
-                    <article class="project-card" 
-                             id="mobile-app" 
-                             tabindex="0" 
-                             role="gridcell"
-                             data-category="mobile"
-                             aria-labelledby="mobile-title">
-                        <div class="project-image">
-                            <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=200&fit=crop&crop=center" 
-                                 alt="Mobile productivity app interface design" 
-                                 loading="lazy">
-                        </div>
-                        <div class="project-info">
-                            <div class="project-meta">
-                                <span class="project-type">Mobile Development</span>
-                                <span class="project-date">2024</span>
-                            </div>
-                            <h3 id="mobile-title">Productivity Assistant</h3>
-                            <p>
-                                Cross-platform mobile app for task management and productivity tracking. 
-                                Features offline support, notifications, and intuitive gesture controls.
-                            </p>
-                            <div class="project-tags">
-                                <span class="tag">React Native</span>
-                                <span class="tag">TypeScript</span>
-                                <span class="tag">SQLite</span>
-                                <span class="tag">Push Notifications</span>
-                                <span class="tag">Offline-First</span>
-                            </div>
-                            <div class="project-actions">
-                                <a href="#" class="project-btn primary" aria-describedby="mobile-title">
-                                    <span>📱</span> Download Beta
-                                </a>
-                                <a href="#" class="project-btn" aria-label="View mobile app source code">
-                                    <span>🔗</span> Code
-                                </a>
-                            </div>
-                        </div>
-                    </article>
-                </div>
+                    <!-- Loading State (hidden by default) -->
+                    <div class="loading-state" style="display: none;" role="status" aria-live="polite">
+                        <div class="loading-spinner" aria-hidden="true"></div>
+                        <p>Loading projects...</p>
+                    </div>
 
-                <!-- Loading State (hidden by default) -->
-                <div class="loading-state" style="display: none;" role="status" aria-live="polite">
-                    <div class="loading-spinner" aria-hidden="true"></div>
-                    <p>Loading projects...</p>
-                </div>
-
-                <!-- Empty State (hidden by default) -->
-                <div class="empty-state" style="display: none;" role="status">
-                    <p>No projects found matching your criteria.</p>
-                    <button class="project-btn" onclick="clearFilters()">Clear Filters</button>
+                    <!-- Empty State (hidden by default) -->
+                    <div class="empty-state" style="display: none;" role="status">
+                        <p>No projects found matching your criteria.</p>
+                        <button class="project-btn" onclick="clearFilters()">Clear Filters</button>
+                    </div>
                 </div>
             </main>
         </div>
@@ -413,140 +377,343 @@ PROJECTS PAGE
 <script>
 /**
  * Projects Page Enhanced Functionality
- * Fully integrated with PageManager v2.1
+ * Streamlined and optimized integration with PageManager v2.2
  */
 
-// Initialize projects page when DOM is ready
+// Only initialize if not already handled by PageManager
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if PageManager will handle initialization
+    if (window.pageManager && window.pageManager.pages && window.pageManager.pages.projects) {
+        console.log('📂 Projects page will be initialized by PageManager');
+        return;
+    }
+    
+    // Fallback initialization if PageManager is not available
     if (document.getElementById('projects')) {
-        initializeProjectsPage();
+        setTimeout(() => initializeProjectsPageFallback(), 100);
     }
 });
 
 /**
- * Initialize projects page functionality
- * Integrates with PageManager's enhanced game loading
+ * Fallback initialization when PageManager is not available
  */
-function initializeProjectsPage() {
-    console.log('📂 Initializing projects page integration');
+function initializeProjectsPageFallback() {
+    console.log('📂 Fallback: Initializing projects page directly');
     
     setupProjectNavigation();
     setupProjectFilters();
     setupProjectSearch();
     setupProjectInteractions();
-    setupEnhancedGameButtons();
+    setupGameButtons();
+    
+    // Initialize with featured projects only
+    showFeaturedProjectsOnly();
     updateProjectCount();
     
-    console.log('✅ Projects page integration complete');
+    console.log('✅ Projects page fallback initialization complete');
 }
 
 /**
- * Setup enhanced game loading buttons
- * Works seamlessly with PageManager
+ * Show only featured projects by default
  */
-function setupEnhancedGameButtons() {
-    const gameButtons = document.querySelectorAll('[data-game]');
+function showFeaturedProjectsOnly() {
+    const projectCards = document.querySelectorAll('.project-card');
+    const featuredProjects = document.querySelectorAll('.project-card[data-featured="true"]');
+    
+    console.log(`🌟 Filtering to show ${featuredProjects.length} featured projects out of ${projectCards.length} total`);
+    
+    // Hide all non-featured projects
+    projectCards.forEach((card, index) => {
+        const isFeatured = card.getAttribute('data-featured') === 'true';
+        
+        if (isFeatured) {
+            card.style.display = 'block';
+            card.style.animation = `fadeInUp 0.6s ease-out ${index * 0.2}s both`;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Update filter button to show "Featured" as active
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
+    
+    // Add featured filter button if it doesn't exist
+    addFeaturedFilterButton();
+    
+    // Activate featured filter
+    const featuredButton = document.querySelector('.filter-btn[data-category="featured"]');
+    if (featuredButton) {
+        featuredButton.classList.add('active');
+        featuredButton.setAttribute('aria-pressed', 'true');
+    }
+    
+    // Update navigation to show only featured projects
+    updateNavigationForFeatured();
+}
+
+/**
+ * Add Featured filter button as the first option
+ */
+function addFeaturedFilterButton() {
+    const filterGroup = document.querySelector('.filter-group');
+    let featuredButton = document.querySelector('.filter-btn[data-category="featured"]');
+    
+    if (!featuredButton && filterGroup) {
+        featuredButton = document.createElement('button');
+        featuredButton.className = 'filter-btn';
+        featuredButton.setAttribute('data-category', 'featured');
+        featuredButton.setAttribute('aria-pressed', 'false');
+        featuredButton.innerHTML = '⭐ Featured';
+        
+        // Insert as first button
+        filterGroup.insertBefore(featuredButton, filterGroup.firstChild);
+        
+        // Add event listener
+        featuredButton.addEventListener('click', function() {
+            const category = this.getAttribute('data-category');
+            
+            // Update active filter
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            
+            // Filter projects
+            if (category === 'featured') {
+                showFeaturedProjectsOnly();
+            } else {
+                filterProjects(category, document.querySelectorAll('.project-card'));
+            }
+            updateProjectCount();
+        });
+        
+        console.log('⭐ Added Featured filter button');
+    }
+}
+
+/**
+ * Update navigation to highlight only featured projects
+ */
+function updateNavigationForFeatured() {
+    const navButtons = document.querySelectorAll('.nav-button');
+    const featuredProjects = ['barista-game', 'portfolio-site', 'solar-system'];
+    
+    navButtons.forEach(button => {
+        const href = button.getAttribute('href');
+        const projectId = href ? href.substring(1) : '';
+        
+        if (featuredProjects.includes(projectId)) {
+            button.style.opacity = '1';
+            button.style.transform = 'none';
+            button.setAttribute('aria-hidden', 'false');
+        } else {
+            button.style.opacity = '0.4';
+            button.style.transform = 'translateX(-10px)';
+            button.setAttribute('aria-hidden', 'true');
+        }
+    });
+}
+
+/**
+ * Setup game loading buttons with improved error handling
+ */
+function setupGameButtons() {
+    const gameButtons = document.querySelectorAll('[data-game], .project-btn[onclick*="Game"]');
     
     gameButtons.forEach(button => {
-        // Enhanced click handler that works with PageManager
+        // Remove any existing onclick handlers
+        button.removeAttribute('onclick');
+        
+        // Add enhanced click handler
         button.addEventListener('click', function(e) {
             e.preventDefault();
             
-            const gameType = this.getAttribute('data-game');
+            // Prevent multiple clicks
+            if (this.disabled) return;
             
-            // Use PageManager's enhanced game loading if available
+            const gameType = this.getAttribute('data-game') || 'barista';
+            
+            // Try PageManager first, then fallback
             if (window.pageManager && typeof window.pageManager.loadGame === 'function') {
-                console.log(`🎮 Loading ${gameType} via PageManager`);
-                
-                // Show game container first
-                const gameContainer = document.getElementById('game-container');
-                if (gameContainer) {
-                    gameContainer.style.display = 'block';
-                    gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-                
-                // Load game through PageManager
                 window.pageManager.loadGame(gameType, this).catch(error => {
-                    console.error('Game loading failed:', error);
+                    console.error('PageManager game loading failed:', error);
+                    loadGameFallback(gameType, this);
                 });
             } else {
-                console.warn('PageManager not available, falling back to basic loading');
                 loadGameFallback(gameType, this);
             }
         });
     });
     
-    console.log(`🎮 Enhanced game loading setup for ${gameButtons.length} buttons`);
+    console.log(`🎮 Game loading setup for ${gameButtons.length} buttons`);
 }
 
 /**
- * Fallback game loading if PageManager is not available
+ * Improved fallback game loading
  */
 function loadGameFallback(gameType, button) {
     const originalHTML = button.innerHTML;
     button.innerHTML = '<span>⏳</span> Loading...';
     button.disabled = true;
     
-    const gameContainer = document.getElementById('game-container');
-    const gameContent = document.getElementById('game-content');
-    
-    if (gameContainer && gameContent) {
+    try {
+        const gameContainer = document.getElementById('game-container');
+        const gameContent = document.getElementById('game-content');
+        
+        if (!gameContainer || !gameContent) {
+            throw new Error('Game container elements not found');
+        }
+        
+        // Show container
         gameContainer.style.display = 'block';
-        gameContent.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; text-align: center; padding: 2rem;">
-                <div>
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎮</div>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Game Loading</h3>
-                    <p style="margin-bottom: 2rem; opacity: 0.9;">PageManager integration required for full functionality</p>
-                    <button onclick="closeGameFallback()" style="padding: 0.75rem 1.5rem; background: white; color: #059669; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        Close
-                    </button>
+        
+        // Create loading content
+        gameContent.innerHTML = createGameLoadingContent(gameType);
+        
+        // Scroll to game
+        gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Simulate loading process
+        setTimeout(() => {
+            if (gameType === 'barista' && window.StarbucksGame) {
+                try {
+                    gameContent.innerHTML = '';
+                    new StarbucksGame(gameContent);
+                    button.innerHTML = '<span>🎮</span> Game Loaded';
+                } catch (error) {
+                    console.error('Game initialization failed:', error);
+                    showGameError(gameContent, error);
+                }
+            } else {
+                showGamePlaceholder(gameContent, gameType);
+            }
+            
+            // Reset button after delay
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }, 2000);
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Game loading error:', error);
+        button.innerHTML = '<span>❌</span> Error';
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        }, 3000);
+    }
+}
+
+/**
+ * Create loading content for games
+ */
+function createGameLoadingContent(gameType) {
+    const gameInfo = {
+        barista: { name: 'Starbucks Barista Adventure', icon: '☕', color: '#10b981' },
+        default: { name: 'Interactive Game', icon: '🎮', color: '#3b82f6' }
+    };
+    
+    const info = gameInfo[gameType] || gameInfo.default;
+    
+    return `
+        <div class="game-loading-state" style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, ${info.color}, ${adjustColor(info.color, -20)}); color: white; text-align: center; padding: 2rem;">
+            <div>
+                <div style="font-size: 4rem; margin-bottom: 1rem; animation: bounce 2s infinite;">${info.icon}</div>
+                <h3 style="font-size: 1.5rem; margin-bottom: 1rem; font-weight: 600;">Loading ${info.name}</h3>
+                <p style="margin-bottom: 2rem; opacity: 0.9;">Preparing your interactive experience...</p>
+                <div style="width: 200px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; margin: 0 auto; overflow: hidden;">
+                    <div style="width: 100%; height: 100%; background: white; transform: translateX(-100%); animation: loadProgress 1.5s ease-out forwards;"></div>
                 </div>
             </div>
-        `;
-        
-        gameContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    
-    // Reset button
-    setTimeout(() => {
-        button.innerHTML = originalHTML;
-        button.disabled = false;
-    }, 2000);
+        </div>
+        <style>
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+            @keyframes loadProgress {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(0); }
+            }
+        </style>
+    `;
 }
 
 /**
- * Fallback close game function
+ * Show game error state
  */
-function closeGameFallback() {
-    const gameContainer = document.getElementById('game-container');
-    if (gameContainer) {
-        gameContainer.style.display = 'none';
+function showGameError(container, error) {
+    container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #ef4444; color: white; text-align: center; padding: 2rem;">
+            <div>
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Game Loading Failed</h3>
+                <p style="margin-bottom: 1rem; opacity: 0.9;">Unable to load the game</p>
+                <p style="font-size: 0.875rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 4px; margin-bottom: 1.5rem;">${error.message}</p>
+                <button onclick="closeGame()" style="padding: 0.75rem 1.5rem; background: white; color: #ef4444; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Close</button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Show game placeholder
+ */
+function showGamePlaceholder(container, gameType) {
+    container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; text-align: center; padding: 2rem;">
+            <div>
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🎮</div>
+                <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Game Preview</h3>
+                <p style="margin-bottom: 2rem; opacity: 0.9;">This is a placeholder for the ${gameType} game</p>
+                <button onclick="closeGame()" style="padding: 0.75rem 1.5rem; background: white; color: #6366f1; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Close Preview</button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Close game function
+ */
+function closeGame() {
+    if (window.pageManager && typeof window.pageManager.closeGame === 'function') {
+        window.pageManager.closeGame();
+    } else {
+        // Fallback close
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            gameContainer.style.display = 'none';
+            const gameContent = document.getElementById('game-content');
+            if (gameContent) gameContent.innerHTML = '';
+        }
         
-        const gameContent = document.getElementById('game-content');
-        if (gameContent) {
-            gameContent.innerHTML = '';
+        // Scroll back to projects
+        const projectsSection = document.getElementById('projects');
+        if (projectsSection) {
+            projectsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
-    
-    // Scroll back to projects
-    const projectsSection = document.getElementById('projects');
-    if (projectsSection) {
-        projectsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
 }
 
 /**
- * Setup project navigation
+ * Setup project navigation with improved UX
  */
 function setupProjectNavigation() {
     const navButtons = document.querySelectorAll('.nav-button');
     
-    navButtons.forEach(button => {
+    navButtons.forEach((button, index) => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             
-            // Update active state
+            // Update active state with smooth transition
             navButtons.forEach(btn => {
                 btn.classList.remove('active');
                 btn.setAttribute('aria-current', 'false');
@@ -555,31 +722,42 @@ function setupProjectNavigation() {
             this.classList.add('active');
             this.setAttribute('aria-current', 'true');
             
-            // Scroll to target project
+            // Scroll to target project with enhanced behavior
             const targetId = this.getAttribute('href');
             const targetProject = document.querySelector(targetId);
             
             if (targetProject) {
+                // Smooth scroll with better positioning
                 targetProject.scrollIntoView({ 
                     behavior: 'smooth', 
-                    block: 'center' 
+                    block: 'center',
+                    inline: 'nearest'
                 });
                 
-                // Add highlight effect
+                // Enhanced highlight effect
                 targetProject.classList.add('highlight');
-                setTimeout(() => {
-                    targetProject.classList.remove('highlight');
-                }, 2000);
+                setTimeout(() => targetProject.classList.remove('highlight'), 2000);
                 
-                // Focus on the project for accessibility
-                targetProject.focus();
+                // Improved accessibility
+                setTimeout(() => targetProject.focus(), 600);
+            }
+        });
+        
+        // Add keyboard navigation
+        button.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' && navButtons[index + 1]) {
+                e.preventDefault();
+                navButtons[index + 1].focus();
+            } else if (e.key === 'ArrowUp' && navButtons[index - 1]) {
+                e.preventDefault();
+                navButtons[index - 1].focus();
             }
         });
     });
 }
 
 /**
- * Setup project filters
+ * Setup project filters with animations
  */
 function setupProjectFilters() {
     const filterButtons = document.querySelectorAll('.filter-btn');
@@ -589,7 +767,7 @@ function setupProjectFilters() {
         button.addEventListener('click', function() {
             const category = this.getAttribute('data-category');
             
-            // Update active filter
+            // Update active filter with transition
             filterButtons.forEach(btn => {
                 btn.classList.remove('active');
                 btn.setAttribute('aria-pressed', 'false');
@@ -598,7 +776,7 @@ function setupProjectFilters() {
             this.classList.add('active');
             this.setAttribute('aria-pressed', 'true');
             
-            // Filter projects
+            // Animate filter transition
             filterProjects(category, projectCards);
             updateProjectCount();
         });
@@ -606,25 +784,47 @@ function setupProjectFilters() {
 }
 
 /**
- * Filter projects by category
+ * Enhanced project filtering with animations
  */
 function filterProjects(category, projectCards) {
     let visibleCount = 0;
     
-    projectCards.forEach(card => {
+    projectCards.forEach((card, index) => {
         const cardCategory = card.getAttribute('data-category');
-        const shouldShow = category === 'all' || cardCategory === category;
+        const isFeatured = card.getAttribute('data-featured') === 'true';
+        
+        let shouldShow = false;
+        
+        if (category === 'featured') {
+            shouldShow = isFeatured;
+        } else if (category === 'all') {
+            shouldShow = true;
+        } else {
+            shouldShow = cardCategory === category;
+        }
         
         if (shouldShow) {
             card.style.display = 'block';
-            card.style.animation = 'fadeInUp 0.6s ease-out';
+            card.style.animation = `fadeInUp 0.6s ease-out ${index * 0.1}s both`;
             visibleCount++;
         } else {
-            card.style.display = 'none';
+            card.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                if (card.style.animation.includes('fadeOut')) {
+                    card.style.display = 'none';
+                }
+            }, 300);
         }
     });
     
-    // Show/hide empty state
+    // Update navigation visibility based on filter
+    if (category === 'featured') {
+        updateNavigationForFeatured();
+    } else {
+        resetNavigationVisibility();
+    }
+    
+    // Handle empty state
     const emptyState = document.querySelector('.empty-state');
     if (emptyState) {
         emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
@@ -632,96 +832,150 @@ function filterProjects(category, projectCards) {
 }
 
 /**
- * Setup project search
+ * Reset navigation visibility to show all projects
+ */
+function resetNavigationVisibility() {
+    const navButtons = document.querySelectorAll('.nav-button');
+    
+    navButtons.forEach(button => {
+        button.style.opacity = '1';
+        button.style.transform = 'none';
+        button.setAttribute('aria-hidden', 'false');
+    });
+}
+
+/**
+ * Setup enhanced search functionality
  */
 function setupProjectSearch() {
     const searchBox = document.getElementById('project-search');
     if (!searchBox) return;
     
+    let searchTimeout;
+    
     searchBox.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const projectCards = document.querySelectorAll('.project-card');
-        let visibleCount = 0;
+        clearTimeout(searchTimeout);
+        const searchTerm = this.value.toLowerCase().trim();
         
-        projectCards.forEach(card => {
-            const title = card.querySelector('h3').textContent.toLowerCase();
-            const description = card.querySelector('p').textContent.toLowerCase();
-            const tags = Array.from(card.querySelectorAll('.tag'))
-                .map(tag => tag.textContent.toLowerCase())
-                .join(' ');
-            
-            const shouldShow = title.includes(searchTerm) || 
-                             description.includes(searchTerm) || 
-                             tags.includes(searchTerm);
-            
-            if (shouldShow) {
-                card.style.display = 'block';
-                visibleCount++;
-            } else {
-                card.style.display = 'none';
-            }
-        });
-        
-        // Update project count and empty state
-        updateProjectCount();
-        const emptyState = document.querySelector('.empty-state');
-        if (emptyState) {
-            emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+        // Debounce search for better performance
+        searchTimeout = setTimeout(() => {
+            performSearch(searchTerm);
+        }, 300);
+    });
+    
+    // Handle search on Enter key
+    searchBox.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            performSearch(this.value.toLowerCase().trim());
         }
     });
 }
 
 /**
- * Setup project card interactions
+ * Perform search with highlighting
+ */
+function performSearch(searchTerm) {
+    const projectCards = document.querySelectorAll('.project-card');
+    let visibleCount = 0;
+    
+    projectCards.forEach(card => {
+        const title = card.querySelector('h3').textContent.toLowerCase();
+        const description = card.querySelector('p').textContent.toLowerCase();
+        const tags = Array.from(card.querySelectorAll('.tag'))
+            .map(tag => tag.textContent.toLowerCase())
+            .join(' ');
+        
+        const shouldShow = !searchTerm || 
+                          title.includes(searchTerm) || 
+                          description.includes(searchTerm) || 
+                          tags.includes(searchTerm);
+        
+        if (shouldShow) {
+            card.style.display = 'block';
+            card.style.animation = 'fadeInUp 0.4s ease-out';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    updateProjectCount();
+    
+    // Handle empty state
+    const emptyState = document.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+    }
+}
+
+/**
+ * Setup enhanced project card interactions
  */
 function setupProjectInteractions() {
     const projectCards = document.querySelectorAll('.project-card');
     
     projectCards.forEach(card => {
-        // Click handler for card
+        // Enhanced click feedback
         card.addEventListener('click', function(e) {
-            // Don't trigger if clicking on buttons or links
-            if (e.target.closest('.project-btn') || e.target.closest('a')) {
-                return;
-            }
+            if (e.target.closest('.project-btn') || e.target.closest('a')) return;
             
-            // Add interaction feedback
             this.style.transform = 'scale(0.98)';
+            this.style.transition = 'transform 0.1s ease';
+            
             setTimeout(() => {
                 this.style.transform = '';
+                this.style.transition = '';
             }, 150);
         });
         
-        // Keyboard navigation
+        // Improved keyboard navigation
         card.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                
-                // Focus on the main action button
                 const primaryBtn = this.querySelector('.project-btn.primary');
-                if (primaryBtn) {
-                    primaryBtn.click();
-                }
+                if (primaryBtn) primaryBtn.click();
             }
+        });
+        
+        // Add hover effects for better UX
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px) scale(1.01)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = '';
         });
     });
 }
 
 /**
- * Update project count display
+ * Enhanced project count update
  */
 function updateProjectCount() {
     const projectCount = document.getElementById('project-count');
-    if (projectCount) {
-        const visibleProjects = document.querySelectorAll('.project-card[style*="display: block"], .project-card:not([style*="display: none"])').length;
-        const totalProjects = document.querySelectorAll('.project-card').length;
-        
-        projectCount.textContent = `${visibleProjects} of ${totalProjects} Projects`;
-    }
+    if (!projectCount) return;
+    
+    const visibleProjects = document.querySelectorAll('.project-card:not([style*="display: none"])').length;
+    const totalProjects = document.querySelectorAll('.project-card').length;
+    
+    const countText = visibleProjects === totalProjects 
+        ? `${totalProjects} Projects` 
+        : `${visibleProjects} of ${totalProjects} Projects`;
+    
+    // Animate count change
+    projectCount.style.transition = 'opacity 0.2s ease';
+    projectCount.style.opacity = '0.5';
+    
+    setTimeout(() => {
+        projectCount.textContent = countText;
+        projectCount.style.opacity = '1';
+    }, 100);
 }
 
 /**
- * Clear all filters
+ * Clear all filters with animation
  */
 function clearFilters() {
     // Reset filter buttons
@@ -740,52 +994,102 @@ function clearFilters() {
     
     // Clear search
     const searchBox = document.getElementById('project-search');
-    if (searchBox) {
-        searchBox.value = '';
-    }
+    if (searchBox) searchBox.value = '';
     
-    // Show all projects
+    // Show all projects with staggered animation
     const projectCards = document.querySelectorAll('.project-card');
-    projectCards.forEach(card => {
+    projectCards.forEach((card, index) => {
         card.style.display = 'block';
+        card.style.animation = `fadeInUp 0.4s ease-out ${index * 0.05}s both`;
     });
     
     // Hide empty state
     const emptyState = document.querySelector('.empty-state');
-    if (emptyState) {
-        emptyState.style.display = 'none';
-    }
+    if (emptyState) emptyState.style.display = 'none';
     
     updateProjectCount();
 }
 
-// Export functions for potential use by PageManager
+/**
+ * Utility functions
+ */
+function adjustColor(color, amount) {
+    return color.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+}
+
+// Export enhanced utilities for PageManager integration
 if (typeof window !== 'undefined') {
     window.projectsPageUtils = {
-        initializeProjectsPage,
-        setupEnhancedGameButtons,
+        initializeProjectsPage: initializeProjectsPageFallback,
+        setupGameButtons,
         filterProjects,
         updateProjectCount,
-        clearFilters
+        clearFilters,
+        performSearch
     };
 }
 
-// Add highlight animation CSS
-const highlightCSS = document.createElement('style');
-highlightCSS.textContent = `
+// Add enhanced CSS animations
+const enhancedCSS = document.createElement('style');
+enhancedCSS.textContent = `
     .project-card.highlight {
-        animation: highlightPulse 1s ease-out;
+        animation: highlightPulse 1.5s ease-out;
         border-color: var(--primary-color, #ffa500) !important;
-        box-shadow: 0 0 20px rgba(255, 165, 0, 0.5) !important;
+        box-shadow: 0 0 25px rgba(255, 165, 0, 0.6) !important;
     }
     
     @keyframes highlightPulse {
         0% { transform: scale(1); }
-        50% { transform: scale(1.02); }
+        25% { transform: scale(1.02); }
+        50% { transform: scale(1.05); }
+        75% { transform: scale(1.02); }
         100% { transform: scale(1); }
     }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(-20px); }
+    }
+    
+    /* Enhanced loading animations */
+    .project-card {
+        animation: fadeInUp 0.6s ease-out both;
+    }
+    
+    /* Improved scrollbar for better UX */
+    .project-grid-container {
+        scroll-behavior: smooth;
+    }
+    
+    /* Enhanced focus styles */
+    .project-card:focus-visible {
+        outline: 3px solid var(--primary-color);
+        outline-offset: 3px;
+        box-shadow: 0 0 0 6px rgba(255, 165, 0, 0.2);
+    }
+    
+    /* Better hover transitions */
+    .project-btn {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .project-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .project-btn:hover::before {
+        left: 100%;
+    }
 `;
-document.head.appendChild(highlightCSS);
+document.head.appendChild(enhancedCSS);
 
-console.log('📂 Projects page integration script loaded');
+console.log('📂 Enhanced projects page integration loaded');
 </script>

@@ -2,27 +2,31 @@
    PROJECTS PAGE STYLES
    ============================================== */
 
-/* Main Section Container */
+/* Main Section Container - Fixed Viewport Layout */
 .main-section.projects-section {
     max-width: var(--content-width);
     width: 92%;
-    margin: var(--spacing-xl) auto var(--spacing-xl) auto;
-    padding: 0;
-    min-height: unset;
-    display: block;
+    margin: 0 auto; /* Remove vertical margins to prevent overflow */
+    padding: var(--spacing-md) 0; /* Minimal vertical padding */
+    overflow: hidden; /* Prevent any overflow */
+    height: calc(100vh - 120px); /* Fixed height within viewport */
+    display: flex;
+    flex-direction: column;
 }
 
-/* Projects Panel - Consistent with About Page Design */
+/* Projects Panel - Fixed Viewport Layout */
 .projects-panel {
     background-color: var(--panel-bg);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-medium);
     overflow: hidden;
-    margin-bottom: var(--spacing-lg);
+    flex: 1; /* Take remaining space in main section */
     position: relative;
     z-index: 10;
     transition: box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .projects-panel:hover {
@@ -76,7 +80,7 @@
     border: 1px solid rgba(255, 165, 0, 0.2);
 }
 
-/* Projects Content Area */
+/* Projects Content Area - Fixed Viewport Layout */
 .projects-content {
     display: flex;
     padding: var(--spacing-lg);
@@ -84,21 +88,47 @@
     background-color: var(--panel-bg);
     position: relative;
     z-index: 5;
-    min-height: 600px;
+    flex: 1; /* Take remaining space in panel */
+    min-height: 0; /* Allow shrinking */
+    overflow: hidden; /* Prevent overflow */
 }
 
-/* Side Navigation - Enhanced */
+/* Side Navigation - Fixed Viewport Layout */
 .side-nav {
     width: 280px;
     flex-shrink: 0;
     background: rgba(30, 30, 30, 0.6);
     border-radius: var(--border-radius-sm);
     padding: var(--spacing-md);
-    height: fit-content;
-    position: sticky;
-    top: var(--spacing-md);
+    height: 100%; /* Use full available height */
+    position: static; /* Remove sticky positioning */
     border: 1px solid rgba(255, 165, 0, 0.15);
     backdrop-filter: blur(8px);
+    overflow-y: auto; /* Allow scrolling if needed */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(255, 255, 255, 0.05);
+}
+
+/* Side navigation scrollbar styling */
+.side-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.side-nav::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    margin: 2px;
+}
+
+.side-nav::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--primary-color), rgba(255, 165, 0, 0.7));
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.side-nav::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--primary-color), var(--primary-color));
+    box-shadow: 0 0 6px rgba(255, 165, 0, 0.3);
 }
 
 .nav-content h3 {
@@ -183,10 +213,61 @@
     margin-top: var(--spacing-xs);
 }
 
-/* Main Content Area - Enhanced */
+/* Main Content Area - Fixed Viewport Layout */
 .main-content {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Allow flex shrinking */
+    height: 100%; /* Use full available height */
     overflow: hidden;
+}
+
+/* Fixed elements */
+.content-header,
+.projects-filters {
+    flex-shrink: 0; /* Never shrink */
+}
+
+.project-grid-container {
+    flex: 1;
+    min-height: 0; /* Critical for flex scrolling */
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 12px;
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--primary-color) rgba(255, 255, 255, 0.05); /* Firefox */
+    /* Enhanced scrolling performance */
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+/* Cross-browser scrollbar styling */
+.project-grid-container::-webkit-scrollbar {
+    width: 10px;
+}
+
+.project-grid-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    margin: 2px;
+}
+
+.project-grid-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--primary-color), var(--primary-color-light));
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.project-grid-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--primary-color-light), var(--primary-color));
+    box-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
+}
+
+.project-grid-container::-webkit-scrollbar-corner {
+    background: transparent;
 }
 
 .content-header {
@@ -326,6 +407,7 @@
     line-height: 1.6;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

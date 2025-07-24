@@ -7,16 +7,16 @@
     margin: 0 auto; /* Remove vertical margins to prevent overflow */
     padding: var(--spacing-md) 0; /* Minimal vertical padding */
     overflow: hidden; /* Prevent any overflow */
-    height: calc(100vh - 120px); /* Fixed height within viewport */
+    height: calc(100vh - 110px); /* Updated for accurate header/footer space */
     display: flex;
     flex-direction: column;
 }
 
-/* Section Title - Standalone like in screenshot */
+/* Section Title - Optimized for viewport */
 .section-title {
     color: var(--primary-color);
-    margin-bottom: var(--spacing-lg);
-    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    margin-bottom: var(--spacing-md);
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
     position: relative;
     display: inline-block;
 }
@@ -31,23 +31,6 @@
     background-color: var(--primary-color);
 }
 
-.contact-section .section-title {
-    color: var(--primary-color);
-    margin-bottom: var(--spacing-lg);
-    font-size: var(--title-font-size);
-    position: relative;
-    display: inline-block;
-  }
-  
-  .contact-section .section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background-color: var(--primary-color);
-  }
   
   /* Contact Grid - Fixed Viewport Layout */
   .contact-grid {
@@ -142,12 +125,12 @@
 /* Right column - Form */
 .contact-form {
     background-color: rgba(25, 25, 25, 0.45);
-    padding: var(--spacing-xl);
+    padding: var(--spacing-md);
 }
 
 /* Form field groups */
 .form-group {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-sm);
 }
 
 .form-group label {
@@ -161,7 +144,7 @@
 .form-group input,
 .form-group textarea {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     background: rgba(40, 40, 40, 0.8);
     border: 1px solid rgba(60, 60, 60, 0.8);
     border-radius: var(--border-radius-sm);
@@ -186,7 +169,7 @@
 /* Submit button - Matching screenshot */
 .submit-button {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     background: var(--primary-color);
     color: #000;
     border: none;
@@ -244,7 +227,7 @@
     
     .contact-info,
     .contact-form {
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
     }
 }
 

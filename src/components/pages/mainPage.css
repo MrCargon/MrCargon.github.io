@@ -3,11 +3,12 @@
 .main-section.hero-section {
     max-width: var(--content-width);
     width: 96%;
-    margin: var(--spacing-md) auto; 
-    min-height: 70vh;
+    margin: 0 auto; /* Remove vertical margins to prevent overflow */
+    padding: var(--spacing-md) 0; /* Minimal vertical padding */
+    overflow: hidden; /* Prevent any overflow */
+    height: calc(100vh - 110px); /* Updated for accurate header/footer space */
     display: flex;
     flex-direction: column;
-    padding: 0;
     position: relative;
 }
 

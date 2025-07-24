@@ -7,7 +7,7 @@
     margin: 0 auto; /* Remove vertical margins to prevent overflow */
     padding: var(--spacing-md) 0; /* Minimal vertical padding */
     overflow: hidden; /* Prevent any overflow */
-    height: calc(100vh - 120px); /* Fixed height within viewport */
+    height: calc(100vh - 110px); /* Updated for accurate header/footer space */
     display: flex;
     flex-direction: column;
 }
@@ -15,8 +15,8 @@
 /* Section Title - Optimized for Fixed Viewport */
 .section-title {
     color: var(--primary-color);
-    margin-bottom: var(--spacing-md); /* Reduced from lg to md */
-    font-size: clamp(1.4rem, 3vw, 1.8rem); /* Reduced by ~30% */
+    margin-bottom: var(--spacing-md);
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
     position: relative;
     display: inline-block;
 }

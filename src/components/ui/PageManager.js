@@ -1554,6 +1554,56 @@ class PageManager {
 
         // Planet selection
         this.setupPlanetSelection();
+
+        // 🔧 FIX: Add toggle button functionality
+        this.setupPlanetDetailsToggle();
+    }
+
+    /**
+     * Setup planet details panel toggle functionality (NEW METHOD)
+     */
+    setupPlanetDetailsToggle() {
+        const toggleBtn = document.querySelector('.toggle-info-btn');
+        const planetDetails = document.querySelector('.planet-details');
+        
+        if (!toggleBtn || !planetDetails) {
+            console.warn('⚠️ Toggle button or planet details not found');
+            return;
+        }
+
+        const toggleHandler = () => {
+            // Toggle collapsed state
+            const isCollapsed = planetDetails.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                // Expand the panel
+                planetDetails.classList.remove('collapsed');
+                toggleBtn.classList.remove('collapsed');
+                toggleBtn.setAttribute('aria-label', 'Collapse information panel');
+                console.log('🔽 Planet details panel expanded');
+            } else {
+                // Collapse the panel
+                planetDetails.classList.add('collapsed');
+                toggleBtn.classList.add('collapsed');
+                toggleBtn.setAttribute('aria-label', 'Expand information panel');
+                console.log('🔼 Planet details panel collapsed');
+            }
+        };
+
+        // Add click event listener
+        this.addEventListener(toggleBtn, 'click', toggleHandler);
+        
+        // Optional: Add keyboard support (Enter/Space)
+        const keyHandler = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleHandler();
+            }
+        };
+        
+        this.addEventListener(toggleBtn, 'keydown', keyHandler);
+        
+        console.log('✅ Planet details toggle functionality initialized');
     }
 
     /**

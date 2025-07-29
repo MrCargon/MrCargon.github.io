@@ -125,7 +125,7 @@
 /* Right column - Form */
 .contact-form {
     background-color: rgba(25, 25, 25, 0.45);
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
 }
 
 /* Form field groups */
@@ -200,12 +200,12 @@
 
 .success-message {
     color: #4CAF50;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     background: rgba(76, 175, 80, 0.1);
     border-radius: var(--border-radius-sm);
     border: 1px solid rgba(76, 175, 80, 0.3);
     text-align: center;
-    margin-top: var(--spacing-md);
+    margin-top: var(--spacing-sm);
 }
 
 /* Responsive Adjustments */
@@ -227,14 +227,14 @@
     
     .contact-info,
     .contact-form {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
     }
 }
 
 @media (max-width: 480px) {
     .contact-info,
     .contact-form {
-        padding: var(--spacing-md);
+        padding: var(--spacing-sm);
     }
     
     .social-links {

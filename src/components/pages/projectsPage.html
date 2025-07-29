@@ -3,81 +3,66 @@ PROJECTS PAGE
 -->
 <section class="main-section projects-section" id="projects" role="main" aria-labelledby="projects-title">
     <div class="projects-panel">
-        <!-- Enhanced Panel Header -->
+<!-- Enhanced Panel Header with Integrated Filters -->
         <header class="panel-header">
             <h2 id="projects-title">My Projects</h2>
+            
+            <!-- NEW: Collapsible Filter Panel Container -->
+            <div class="header-filters-container">
+                <button class="filters-toggle-btn collapsed" 
+                        aria-expanded="false" 
+                        aria-controls="projects-filters-panel"
+                        aria-label="Toggle project filters">
+                    <span class="filters-icon">🔽</span>
+                    <span class="filters-text">Filters</span>
+                </button>
+                
+                <!-- Moved Filter Panel from Main Content -->
+                <div id="projects-filters-panel" 
+                     class="filters-panel collapsed"
+                     role="region" 
+                     aria-label="Project filters"
+                     aria-hidden="true">
+                    <div class="filters-content">
+                        <div class="filter-group" role="group" aria-label="Category filters">
+                            <button class="filter-btn" data-category="all" aria-pressed="false">
+                                All Projects
+                            </button>
+                            <button class="filter-btn" data-category="interactive" aria-pressed="false">
+                                Interactive
+                            </button>
+                            <button class="filter-btn" data-category="web" aria-pressed="false">
+                                Web Dev
+                            </button>
+                            <button class="filter-btn" data-category="3d" aria-pressed="false">
+                                3D/Graphics
+                            </button>
+                            <button class="filter-btn" data-category="game" aria-pressed="false">
+                                Games
+                            </button>
+                            <button class="filter-btn" data-category="mobile" aria-pressed="false">
+                                Mobile
+                            </button>
+                        </div>
+                        <div class="search-group">
+                            <input type="search" 
+                                   class="search-box" 
+                                   placeholder="Search projects..." 
+                                   aria-label="Search projects"
+                                   id="project-search">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="header-controls">
                 <span class="project-count" id="project-count" aria-live="polite">5 Projects</span>
             </div>
         </header>
 
-        <!-- Projects Content Area -->
+        <!-- Projects Content Area - Full Width Layout -->
         <div class="projects-content">
-            <!-- Enhanced Side Navigation -->
-            <nav class="side-nav" aria-label="Project navigation" role="navigation">
-                <div class="nav-content">
-                    <h3>Browse Projects</h3>
-                    <ul class="nav-list" role="list">
-                        <li>
-                            <a href="#barista-game" 
-                               class="nav-button" 
-                               aria-current="false"
-                               data-category="interactive"
-                               role="listitem">
-                                <span class="project-title">Starbucks Barista Game</span>
-                                <span class="project-category">Interactive Game</span>
-                                <span class="project-status">🎮 Live Demo</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#portfolio-site" 
-                               class="nav-button" 
-                               aria-current="false"
-                               data-category="web"
-                               role="listitem">
-                                <span class="project-title">Portfolio Website</span>
-                                <span class="project-category">Web Development</span>
-                                <span class="project-status">🌐 Live Site</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#solar-system" 
-                               class="nav-button" 
-                               aria-current="false"
-                               data-category="3d"
-                               role="listitem">
-                                <span class="project-title">Solar System Simulation</span>
-                                <span class="project-category">3D Modeling</span>
-                                <span class="project-status">🪐 Interactive</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#space-explorer" 
-                               class="nav-button" 
-                               aria-current="false"
-                               data-category="game"
-                               role="listitem">
-                                <span class="project-title">Space Explorer</span>
-                                <span class="project-category">Game Development</span>
-                                <span class="project-status">🚀 In Progress</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#data-viz" 
-                               class="nav-button" 
-                               aria-current="false"
-                               data-category="web"
-                               role="listitem">
-                                <span class="project-title">Data Visualization</span>
-                                <span class="project-category">Web Development</span>
-                                <span class="project-status">📊 Complete</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-
-            <!-- Main Content Area -->
+            <!-- Main Content Area - Now Full Width -->
             <main class="main-content">
                 <!-- Content Header with Filters -->
                 <div class="content-header">
@@ -88,36 +73,6 @@ PROJECTS PAGE
                     </p>
                 </div>
 
-                <!-- Enhanced Filters and Search -->
-                <div class="projects-filters" role="toolbar" aria-label="Project filters">
-                    <div class="filter-group" role="group" aria-label="Category filters">
-                        <button class="filter-btn active" data-category="all" aria-pressed="true">
-                            All Projects
-                        </button>
-                        <button class="filter-btn" data-category="interactive" aria-pressed="false">
-                            Interactive
-                        </button>
-                        <button class="filter-btn" data-category="web" aria-pressed="false">
-                            Web Dev
-                        </button>
-                        <button class="filter-btn" data-category="3d" aria-pressed="false">
-                            3D/Graphics
-                        </button>
-                        <button class="filter-btn" data-category="game" aria-pressed="false">
-                            Games
-                        </button>
-                        <button class="filter-btn" data-category="mobile" aria-pressed="false">
-                            Mobile
-                        </button>
-                    </div>
-                    <div class="search-group">
-                        <input type="search" 
-                               class="search-box" 
-                               placeholder="Search projects..." 
-                               aria-label="Search projects"
-                               id="project-search">
-                    </div>
-                </div>
 
                 <!-- Enhanced Project Grid -->
                 <div class="project-grid-container">
@@ -362,6 +317,9 @@ PROJECTS PAGE
     </div>
 </section>
 
+<!-- ProjectFiltersManager Script -->
+<script src="src/components/pages/ProjectFiltersManager.js"></script>
+
 <!-- Enhanced JavaScript for Projects Page Integration -->
 <script>
 /**
@@ -369,8 +327,23 @@ PROJECTS PAGE
  * Streamlined and optimized integration with PageManager v2.2
  */
 
-// Only initialize if not already handled by PageManager
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize ProjectFiltersManager
+let projectFiltersManager = null;
+
+// Initialize when the page content is actually loaded
+function initializeProjectsFilters() {
+    console.log('🔧 Initializing projects filters...');
+    
+    // Initialize the ProjectFiltersManager
+    if (typeof ProjectFiltersManager !== 'undefined') {
+        projectFiltersManager = new ProjectFiltersManager();
+        console.log('🔽 ProjectFiltersManager initialized');
+    } else {
+        console.warn('⚠️ ProjectFiltersManager class not found - adding fallback');
+        // Add fallback filter toggle functionality
+        setupFallbackFilterToggle();
+    }
+    
     // Check if PageManager will handle initialization
     if (window.pageManager && window.pageManager.pages && window.pageManager.pages.projects) {
         console.log('📂 Projects page will be initialized by PageManager');
@@ -381,7 +354,39 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('projects')) {
         setTimeout(() => initializeProjectsPageFallback(), 100);
     }
-});
+}
+
+// Try multiple initialization approaches
+document.addEventListener('DOMContentLoaded', initializeProjectsFilters);
+
+// Also try when the specific content is loaded
+setTimeout(() => {
+    if (document.querySelector('.filters-toggle-btn')) {
+        console.log('🔧 Late initialization attempt...');
+        initializeProjectsFilters();
+    }
+}, 1000);
+
+// Observer to detect when projects content is loaded
+if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                const toggleBtn = document.querySelector('.filters-toggle-btn');
+                if (toggleBtn && !toggleBtn.hasAttribute('data-initialized')) {
+                    console.log('🔧 Filter toggle detected, initializing...');
+                    toggleBtn.setAttribute('data-initialized', 'true');
+                    initializeProjectsFilters();
+                }
+            }
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
 
 /**
  * Fallback initialization when PageManager is not available
@@ -997,6 +1002,89 @@ function clearFilters() {
     if (emptyState) emptyState.style.display = 'none';
     
     updateProjectCount();
+}
+
+/**
+ * Fallback filter toggle functionality when ProjectFiltersManager is not available
+ */
+function setupFallbackFilterToggle() {
+    console.log('🔧 Setting up fallback filter toggle functionality');
+    
+    const toggleBtn = document.querySelector('.filters-toggle-btn');
+    const filtersPanel = document.getElementById('projects-filters-panel');
+    
+    if (!toggleBtn || !filtersPanel) {
+        console.warn('⚠️ Filter toggle elements not found');
+        return;
+    }
+    
+    // Add click event listener to toggle button
+    toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('🔽 Filter toggle clicked');
+        
+        const isCollapsed = this.classList.contains('collapsed');
+        const icon = this.querySelector('.filters-icon');
+        
+        if (isCollapsed) {
+            // Expand the panel
+            this.classList.remove('collapsed');
+            this.setAttribute('aria-expanded', 'true');
+            filtersPanel.classList.remove('collapsed');
+            filtersPanel.setAttribute('aria-hidden', 'false');
+            if (icon) icon.textContent = '🔼';
+            
+            console.log('📂 Filter panel expanded');
+        } else {
+            // Collapse the panel
+            this.classList.add('collapsed');
+            this.setAttribute('aria-expanded', 'false');
+            filtersPanel.classList.add('collapsed');
+            filtersPanel.setAttribute('aria-hidden', 'true');
+            if (icon) icon.textContent = '🔽';
+            
+            console.log('📁 Filter panel collapsed');
+        }
+    });
+    
+    // Set up filter buttons functionality
+    const filterButtons = filtersPanel.querySelectorAll('.filter-btn');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const category = this.getAttribute('data-category');
+            console.log(`🎯 Filter clicked: ${category}`);
+            
+            // Update active filter
+            filterButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
+            });
+            
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            
+            // Filter projects
+            filterProjects(category, document.querySelectorAll('.project-card'));
+            updateProjectCount();
+        });
+    });
+    
+    // Set up search box functionality
+    const searchBox = filtersPanel.querySelector('#project-search');
+    if (searchBox) {
+        let searchTimeout;
+        
+        searchBox.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const searchTerm = this.value.toLowerCase().trim();
+            
+            searchTimeout = setTimeout(() => {
+                performSearch(searchTerm);
+            }, 300);
+        });
+    }
+    
+    console.log('✅ Fallback filter toggle functionality set up');
 }
 
 /**

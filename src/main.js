@@ -761,9 +761,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn(`⚠️ ${successCount}/${totalCount} components loaded successfully`);
         }
         
-        // Initialize PageManager regardless of component loading results
-        setTimeout(() => {
+        // Load page-specific managers first, then initialize PageManager
+        setTimeout(async () => {
             try {
+                // Load essential page managers
+                await loadPageManagers();
+                
                 window.pageManager = new PageManager();
                 console.log('✅ PageManager initialized');
             } catch (error) {
@@ -1047,6 +1050,44 @@ class PerformanceMonitor {
             recommendations: this.generateRecommendations()
         };
     }
+}
+
+/**
+ * Load essential page managers
+ */
+async function loadPageManagers() {
+    const managers = [
+        'src/components/pages/ProjectsPageManager.js',
+        'src/components/pages/ProjectFiltersManager.js'
+    ];
+    
+    for (const managerPath of managers) {
+        try {
+            // Check if already loaded
+            if (document.querySelector(`script[src="${managerPath}"]`)) {
+                continue;
+            }
+            
+            await loadScript(managerPath);
+            console.log(`✅ Loaded: ${managerPath}`);
+        } catch (error) {
+            console.warn(`⚠️ Failed to load ${managerPath}:`, error);
+        }
+    }
+}
+
+/**
+ * Load script with promise
+ */
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(script);
+    });
 }
 
 // Initialize performance monitoring

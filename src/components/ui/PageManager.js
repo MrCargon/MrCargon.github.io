@@ -21,6 +21,9 @@ class PageManager {
         this.intervals = new Set();
         this.eventListeners = [];
         
+        // Page managers
+        this.projectsPageManager = null;
+        
         // Space environment tracking
         this.spaceEnvironmentReady = false;
         this.spaceInitializationPromise = null;
@@ -1801,9 +1804,12 @@ class PageManager {
         console.log('📂 Initializing projects page');
 
         try {
-            // Use existing projects page utilities if available
-            if (window.projectsPageUtils?.initializeProjectsPage) {
-                window.projectsPageUtils.initializeProjectsPage();
+            // Initialize ProjectsPageManager if available
+            if (window.ProjectsPageManager) {
+                if (!this.projectsPageManager) {
+                    this.projectsPageManager = new ProjectsPageManager();
+                }
+                await this.projectsPageManager.init();
             } else {
                 // Fallback initialization
                 this.setupBasicProjectsPage();
@@ -2122,6 +2128,13 @@ class PageManager {
      */
     cleanupProjectsPage() {
         this.cleanupActiveGames();
+        
+        // Cleanup ProjectsPageManager if it exists
+        if (this.projectsPageManager) {
+            this.projectsPageManager.cleanup();
+            this.projectsPageManager = null;
+        }
+        
         console.log('🧹 Cleaning up projects page');
     }
 

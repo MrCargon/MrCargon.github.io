@@ -1229,7 +1229,8 @@ class PageManager {
                 throw new Error('Game container elements not found');
             }
 
-            gameContainer.style.display = 'block';
+            // CRITICAL FIX: Use CSS class system instead of manual display
+            gameContainer.classList.add('active');
             
             // Update title
             const gameTitle = document.getElementById('game-title');
@@ -1542,16 +1543,19 @@ class PageManager {
             this.activeGame = null;
         }
         
-        // Hide game container
+        // Hide game container using CSS class system
         const gameContainer = document.getElementById('game-container');
         if (gameContainer) {
-            gameContainer.style.display = 'none';
+            // CRITICAL FIX: Use CSS class system for consistent hiding
+            gameContainer.classList.remove('active');
             
-            // Clear content
-            const gameContent = document.getElementById('game-content');
-            if (gameContent) {
-                gameContent.innerHTML = '';
-            }
+            // Clear content after animation completes
+            this.createTimeout(() => {
+                const gameContent = document.getElementById('game-content');
+                if (gameContent) {
+                    gameContent.innerHTML = '';
+                }
+            }, 400); // Wait for CSS transition
         }
         
         // Scroll back to projects

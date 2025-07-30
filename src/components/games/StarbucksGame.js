@@ -61,12 +61,11 @@ class StarbucksGame {
         this._timeouts = new Set();
         this._intervals = new Set();
 
-        // Initialize the game
-        this.init();
+        // Don't auto-initialize - let the caller control when to initialize
     }
 
     /**
-     * Initialize the game with enhanced error handling
+     * Initialize the game with enhanced error handling - MUST be called after construction
      */
     async init() {
         try {
@@ -252,7 +251,7 @@ class StarbucksGame {
     }
 
     /**
-     * Update container content with optimized animation
+     * Update container content with enhanced viewport-safe animation - FIXED VISIBILITY
      */
     async updateContainerContent(content) {
         if (this.uiState.isAnimating) return;
@@ -262,38 +261,53 @@ class StarbucksGame {
         // Cancel any existing animations
         this.cancelAnimations();
         
-        // Use requestAnimationFrame for better performance
-        const animFrame = requestAnimationFrame(() => {
-            // Fade out
-            this.container.style.opacity = '0';
-            this.container.style.transform = 'translateY(10px)';
-            
-            const timeout = setTimeout(() => {
-                // Update content
-                this.container.innerHTML = content;
-                
-                // Force reflow
-                void this.container.offsetHeight;
-                
-                // Fade in
-                this.container.style.opacity = '1';
-                this.container.style.transform = 'translateY(0)';
-                
-                const innerTimeout = setTimeout(() => {
-                    this.uiState.isAnimating = false;
-                    this.manageFocus();
-                    this._timeouts.delete(innerTimeout);
-                }, this.config.animationDuration);
-                
-                this._timeouts.add(innerTimeout);
-                this._timeouts.delete(timeout);
-            }, this.config.animationDuration);
-            
-            this._timeouts.add(timeout);
-            this._animationFrames.delete(animFrame);
-        });
+        // CRITICAL: Ensure container has proper styling for visibility
+        if (this.container) {
+            // Apply critical styles immediately for visibility
+            this.container.style.cssText = `
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: 100% !important;
+                opacity: 1 !important;
+                transform: translateY(0) !important;
+                transition: all 0.3s ease !important;
+                overflow: hidden !important;
+                background: linear-gradient(135deg, 
+                    rgba(26, 26, 46, 0.95) 0%, 
+                    rgba(16, 185, 129, 0.1) 100%
+                ) !important;
+                color: white !important;
+                position: relative !important;
+                z-index: 1 !important;
+            `;
+        }
         
-        this._animationFrames.add(animFrame);
+        // SIMPLIFIED: Direct content update without complex animations for better reliability
+        try {
+            // Update content immediately
+            this.container.innerHTML = content;
+            
+            // Force reflow for layout stability
+            void this.container.offsetHeight;
+            
+            // Ensure visibility after content update
+            this.container.style.opacity = '1';
+            this.container.style.visibility = 'visible';
+            
+            // Manage focus after content is ready
+            setTimeout(() => {
+                this.uiState.isAnimating = false;
+                this.manageFocus();
+                console.log('✅ Game content updated and visible');
+            }, 100);
+            
+        } catch (error) {
+            console.error('❌ Error updating game content:', error);
+            this.uiState.isAnimating = false;
+            this.showErrorScreen(error);
+        }
     }
 
     /**

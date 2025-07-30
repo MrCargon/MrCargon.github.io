@@ -69,17 +69,18 @@ class ProjectFiltersManager {
      * Find required DOM elements
      */
     findElements() {
-        this.filtersToggleBtn = document.querySelector('.filters-toggle-btn');
-        this.filtersPanel = document.querySelector('.filters-panel');
-        this.filterButtons = document.querySelectorAll('.filter-btn');
-        this.searchBox = document.getElementById('project-search');
+        // FIXED: Use correct selectors that match the actual HTML
+        this.filtersToggleBtn = document.querySelector('.current-filter-btn');
+        this.filtersPanel = document.querySelector('.inline-filters-bar');
+        this.filterButtons = document.querySelectorAll('.inline-filter-btn');
+        this.searchBox = document.getElementById('inline-project-search');
         this.projectCards = document.querySelectorAll('.project-card');
         this.projectCount = document.getElementById('project-count');
         this.emptyState = document.querySelector('.empty-state');
         
         // Validate required elements
         if (!this.filtersToggleBtn || !this.filtersPanel) {
-            throw new Error('Required filter elements not found');
+            throw new Error(`Required filter elements not found - Toggle: ${!!this.filtersToggleBtn}, Panel: ${!!this.filtersPanel}`);
         }
         
         console.log(`🔍 Found ${this.filterButtons.length} filter buttons, ${this.projectCards.length} project cards`);
@@ -173,12 +174,13 @@ class ProjectFiltersManager {
      * Add Featured filter button as the first option
      */
     addFeaturedFilterButton() {
-        const filterGroup = document.querySelector('.filter-group');
-        let featuredButton = document.querySelector('.filter-btn[data-category="featured"]');
+        // FIXED: Use correct selector that matches the actual HTML
+        const filterGroup = document.querySelector('.filters-row');
+        let featuredButton = document.querySelector('.inline-filter-btn[data-category="featured"]');
         
         if (!featuredButton && filterGroup) {
             featuredButton = document.createElement('button');
-            featuredButton.className = 'filter-btn';
+            featuredButton.className = 'inline-filter-btn';
             featuredButton.setAttribute('data-category', 'featured');
             featuredButton.setAttribute('aria-pressed', 'false');
             featuredButton.innerHTML = '⭐ Featured';
@@ -190,7 +192,7 @@ class ProjectFiltersManager {
             this.addEventListener(featuredButton, 'click', this.handleFilterClick);
             
             // Update filterButtons collection
-            this.filterButtons = document.querySelectorAll('.filter-btn');
+            this.filterButtons = document.querySelectorAll('.inline-filter-btn');
             
             console.log('⭐ Added Featured filter button');
         }

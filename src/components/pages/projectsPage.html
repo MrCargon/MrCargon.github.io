@@ -79,17 +79,30 @@ PROJECTS PAGE
         <div class="projects-content">
             <!-- Main Content Area - Now Full Width -->
             <main class="main-content">
-                <!-- Content Header with Filters -->
+                <!-- Content Header with Collapsible Filters -->
                 <div class="content-header">
-                    <h3 class="content-title">Featured Projects</h3>
-                    <p class="content-description">
-                        Interactive applications, games, and web experiences showcasing diverse technologies and skills.
-                    </p>
+                    <div class="content-header-top">
+                        <h3 class="content-title">Featured Projects</h3>
+                        <button class="description-toggle" 
+                                id="description-toggle"
+                                aria-expanded="true" 
+                                aria-controls="content-description"
+                                title="Toggle description">
+                            <span class="toggle-icon">▼</span>
+                        </button>
+                    </div>
+                    <div class="content-description" 
+                         id="content-description" 
+                         role="region" 
+                         aria-labelledby="description-toggle">
+                        <p>Interactive applications, games, and web experiences showcasing diverse technologies and skills.</p>
+                    </div>
                 </div>
 
-                <!-- Enhanced Project Grid -->
-                <div class="project-grid-container">
-                    <div class="project-grid" role="grid" aria-label="Projects grid">
+
+            <!-- Enhanced Project Grid -->
+            <div class="project-grid-container">
+                <div class="project-grid" role="grid" aria-label="Projects grid">
                         
                         <!-- Interactive Game Project - Barista Game -->
                         <article class="project-card interactive-game" 

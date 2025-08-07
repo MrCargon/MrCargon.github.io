@@ -761,29 +761,24 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn(`⚠️ ${successCount}/${totalCount} components loaded successfully`);
         }
         
-        // Load page-specific managers first, then initialize PageManager
+        // Load page-specific managers - PageManager will auto-initialize itself
         setTimeout(async () => {
             try {
                 // Load essential page managers
                 await loadPageManagers();
                 
-                window.pageManager = new PageManager();
-                console.log('✅ PageManager initialized');
+                // PageManager auto-initializes itself, so we don't need to create it here
+                // Just wait a moment for it to initialize
+                setTimeout(() => {
+                    if (window.pageManager) {
+                        console.log('✅ PageManager auto-initialized successfully');
+                    } else {
+                        console.warn('⚠️ PageManager auto-initialization may have failed');
+                    }
+                }, 100);
+                
             } catch (error) {
-                console.error('❌ PageManager initialization failed:', error);
-                // Show basic error in page container if PageManager fails
-                const pageContainer = document.getElementById('page-container');
-                if (pageContainer && !pageContainer.innerHTML.trim()) {
-                    pageContainer.innerHTML = `
-                        <div class="error-fallback" style="padding: 2rem; text-align: center; color: var(--text-color); background: var(--panel-bg); margin: 1rem; border-radius: var(--border-radius-sm);">
-                            <h2 style="color: #ef4444; margin-bottom: 1rem;">⚠️ Page Loading Error</h2>
-                            <p style="margin-bottom: 1rem;">Unable to initialize page navigation system.</p>
-                            <button onclick="window.location.reload()" style="padding: 0.75rem 1.5rem; background: var(--primary-color); color: #000; border: none; border-radius: var(--border-radius-sm); cursor: pointer; font-weight: 500;">
-                                Reload Application
-                            </button>
-                        </div>
-                    `;
-                }
+                console.error('❌ Page managers loading failed:', error);
             }
         }, 300);
         

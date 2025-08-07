@@ -1,13 +1,13 @@
 /* aboutPage.css - Updated for consistency with contactPage.css */
 
-/* Main Section - Fixed Viewport Layout */
+/* VIEWPORT-FIRST: Main Section - Fixed Viewport Layout */
 .main-section {
     max-width: var(--content-width);
     width: 92%;
-    margin: 0 auto; /* Remove vertical margins to prevent overflow */
-    padding: var(--spacing-md) 0; /* Minimal vertical padding */
-    overflow: hidden; /* Prevent any overflow */
-    height: calc(100vh - 110px); /* Updated for accurate header/footer space */
+    margin: 0 auto;
+    padding: var(--spacing-md) 0;
+    overflow: hidden; /* VIEWPORT-FIRST: Page contained within bounds */
+    height: calc(100vh - 110px); /* FIXED: Exact height for viewport containment */
     display: flex;
     flex-direction: column;
 }

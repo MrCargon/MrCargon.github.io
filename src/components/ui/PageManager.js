@@ -1,7 +1,6 @@
 /**
- * PageManager - Single Page Application Controller
- * Optimized for GitHub Pages with enhanced error handling and memory management
- * Version 2.2 - Performance & Memory Optimized
+ * PageManager - Streamlined Single Page Application Controller
+ * Version 3.0 - Optimized & Simplified Architecture
  */
 class PageManager {
     /**
@@ -15,11 +14,9 @@ class PageManager {
         this.isTransitioning = false;
         this.headerManager = null;
         
-        // Resource tracking for proper cleanup
-        this.animationFrames = new Set();
-        this.timeouts = new Set();
-        this.intervals = new Set();
-        this.eventListeners = [];
+        // Simplified resource tracking
+        this.activeTimeouts = new Set();
+        this.activeIntervals = new Set();
         
         // Page managers
         this.projectsPageManager = null;
@@ -27,17 +24,10 @@ class PageManager {
         // Space environment tracking
         this.spaceEnvironmentReady = false;
         this.spaceInitializationPromise = null;
-        this.spaceEnvironmentRetries = 0;
-        this.maxSpaceRetries = 3;
         
-        // Performance tracking
-        this.performanceMetrics = new Map();
-        this.startTime = performance.now();
-        
-        // Game integration - Enhanced with better tracking
+        // Game integration - Simplified
         this.gameInstances = new Map();
         this.activeGame = null;
-        this.gameScriptsLoaded = new Set();
         this.gameAssets = {
             'barista': {
                 script: 'src/components/games/StarbucksGame.js',
@@ -104,6 +94,12 @@ class PageManager {
         this.errorCount = 0;
         this.maxErrors = 5;
         
+        // Simplified tracking for missing properties
+        this.performanceMetrics = new Map();
+        this.gameScriptsLoaded = new Set();
+        this.spaceEnvironmentRetries = 0;
+        this.maxSpaceRetries = 3;
+        
         // Initialize
         this.init();
     }
@@ -167,10 +163,17 @@ class PageManager {
             // Show early loading indicator specifically for space environment
             this.showSpaceLoadingIndicator();
 
-            // Load required scripts in order with higher priority
-            const scripts = [
-                'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
-                'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
+            // Load THREE.js first and wait for it to be available
+            await this.loadScriptWithPriority('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js');
+            
+            // Wait for THREE to be globally available
+            await this.waitForGlobal('THREE', 5000);
+            
+            // Load OrbitControls after THREE is confirmed available
+            await this.loadScriptWithPriority('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
+            
+            // Load remaining scripts
+            const remainingScripts = [
                 'src/utils/ResourceLoader.js',
                 'src/utils/MemoryManager.js',
                 'src/components/simulation/solarsystem/Planets/Planet.js',
@@ -190,7 +193,7 @@ class PageManager {
                 'src/components/simulation/solarsystem/SpaceEnvironment.js'
             ];
 
-            await this.loadScriptsSequentiallyWithPriority(scripts);
+            await this.loadScriptsSequentiallyWithPriority(remainingScripts);
 
             // Initialize space environment immediately
             if (window.SpaceEnvironment && !window.spaceEnvironment) {
@@ -383,6 +386,40 @@ class PageManager {
     }
 
     /**
+     * Wait for a global variable to be available
+     * Purpose: Ensure dependencies are loaded before continuing
+     * @param {string} globalName - Name of global variable to wait for
+     * @param {number} timeout - Maximum time to wait in ms
+     * @returns {Promise<boolean>} - True if found, false if timeout
+     */
+    waitForGlobal(globalName, timeout = 5000) {
+        return new Promise((resolve) => {
+            // Check if already available
+            if (window[globalName]) {
+                resolve(true);
+                return;
+            }
+
+            const checkInterval = 50; // Check every 50ms
+            let elapsed = 0;
+            
+            const intervalId = setInterval(() => {
+                elapsed += checkInterval;
+                
+                if (window[globalName]) {
+                    clearInterval(intervalId);
+                    console.log(`✅ Global ${globalName} is now available`);
+                    resolve(true);
+                } else if (elapsed >= timeout) {
+                    clearInterval(intervalId);
+                    console.warn(`⚠️ Timeout waiting for global ${globalName}`);
+                    resolve(false);
+                }
+            }, checkInterval);
+        });
+    }
+
+    /**
      * Initialize core systems (after space environment is ready)
      */
     async initializeCore() {
@@ -432,75 +469,44 @@ class PageManager {
     }
 
     /**
-     * Enhanced addEventListener with tracking for cleanup
+     * Simplified addEventListener - no excessive tracking
      */
     addEventListener(element, event, handler, options = {}) {
         element.addEventListener(event, handler, options);
-        this.eventListeners.push({ element, event, handler, options });
     }
 
     /**
-     * Remove all tracked event listeners
-     */
-    removeAllEventListeners() {
-        this.eventListeners.forEach(({ element, event, handler, options }) => {
-            try {
-                element.removeEventListener(event, handler, options);
-            } catch (error) {
-                console.warn('⚠️ Error removing event listener:', error);
-            }
-        });
-        this.eventListeners = [];
-    }
-
-    /**
-     * Enhanced timeout creation with tracking
+     * Simplified timeout creation with minimal tracking
      */
     createTimeout(callback, delay) {
         const id = setTimeout(() => {
-            this.timeouts.delete(id);
+            this.activeTimeouts.delete(id);
             callback();
         }, delay);
-        this.timeouts.add(id);
+        this.activeTimeouts.add(id);
         return id;
     }
 
     /**
-     * Enhanced interval creation with tracking
+     * Simplified interval creation with minimal tracking
      */
     createInterval(callback, delay) {
         const id = setInterval(callback, delay);
-        this.intervals.add(id);
+        this.activeIntervals.add(id);
         return id;
     }
 
     /**
-     * Enhanced animation frame with tracking
-     */
-    createAnimationFrame(callback) {
-        const id = requestAnimationFrame(() => {
-            this.animationFrames.delete(id);
-            callback();
-        });
-        this.animationFrames.add(id);
-        return id;
-    }
-
-    /**
-     * Clear all tracked timeouts, intervals, and animation frames
+     * Clear active timers - simplified cleanup
      */
     clearAllTimers() {
         // Clear timeouts
-        this.timeouts.forEach(id => clearTimeout(id));
-        this.timeouts.clear();
+        this.activeTimeouts.forEach(id => clearTimeout(id));
+        this.activeTimeouts.clear();
         
         // Clear intervals
-        this.intervals.forEach(id => clearInterval(id));
-        this.intervals.clear();
-        
-        // Clear animation frames
-        this.animationFrames.forEach(id => cancelAnimationFrame(id));
-        this.animationFrames.clear();
+        this.activeIntervals.forEach(id => clearInterval(id));
+        this.activeIntervals.clear();
     }
 
     /**
@@ -542,6 +548,10 @@ class PageManager {
         console.log(`🔧 Handling data-action: ${action}`);
         
         switch (action) {
+            case 'launch-game':
+                const gameType = button.getAttribute('data-game') || 'barista';
+                this.loadGame(gameType, button);
+                break;
             case 'close-game':
                 this.closeGame();
                 break;
@@ -1298,6 +1308,9 @@ class PageManager {
             // Create game instance with proper cleanup tracking
             const game = new StarbucksGame(container);
             
+            // CRITICAL FIX: Initialize the game after creation
+            await game.init();
+            
             // Store reference for cleanup
             this.gameInstances.set('barista', game);
             this.activeGame = 'barista';
@@ -1305,7 +1318,7 @@ class PageManager {
             // Setup game event listeners
             this.setupGameEventListeners(game);
             
-            console.log('✅ Barista Game loaded successfully');
+            console.log('✅ Barista Game loaded and initialized successfully');
             
             // Dispatch game loaded event
             this.dispatchEvent('game:loaded', { 

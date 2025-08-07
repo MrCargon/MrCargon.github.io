@@ -1,0 +1,108 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 12,
+    "sourceType": "module"
+  },
+  "rules": {
+    "// Power of Ten Rule Enforcement": "off",
+    
+    "// Rule 1: Simple Control Flow": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "WithStatement",
+        "message": "With statements are not allowed (Rule 1)"
+      },
+      {
+        "selector": "LabeledStatement",
+        "message": "Labeled statements (goto-like) are not allowed (Rule 1)"
+      },
+      {
+        "selector": "CallExpression[callee.name='eval']",
+        "message": "eval() is not allowed (Rule 1)"
+      }
+    ],
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-with": "error",
+    "no-labels": "error",
+    
+    "// Rule 2: Bounded Loops": "off",
+    "no-unreachable-loop": "error",
+    "no-constant-condition": ["error", { "checkLoops": true }],
+    
+    "// Rule 4: Function Length": "off",
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 60,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "max-statements": ["error", 50],
+    "max-params": ["error", 6],
+    
+    "// Rule 1: Nesting Depth": "off",
+    "max-depth": ["error", 4],
+    "complexity": ["error", 15],
+    
+    "// Rule 7: Check Returns": "off",
+    "consistent-return": "error",
+    "no-unused-vars": ["error", { "args": "all" }],
+    
+    "// Rule 10: Compiler Warnings": "off",
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-debugger": "error",
+    "no-alert": "error",
+    "no-unused-expressions": "error",
+    "no-undef": "error",
+    "no-redeclare": "error",
+    "no-shadow": "error",
+    "no-shadow-restricted-names": "error",
+    
+    "// Additional Safety Rules": "off",
+    "strict": ["error", "safe"],
+    "eqeqeq": ["error", "always"],
+    "no-implicit-globals": "error",
+    "no-implicit-coercion": "error",
+    "no-mixed-operators": "error",
+    "no-multi-spaces": "error",
+    "no-multiple-empty-lines": ["error", { "max": 2 }],
+    "no-nested-ternary": "error",
+    "no-new": "error",
+    "no-new-func": "error",
+    "no-new-wrappers": "error",
+    "no-param-reassign": "error",
+    "no-return-assign": "error",
+    "no-self-compare": "error",
+    "no-sequences": "error",
+    "no-throw-literal": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-unused-private-class-members": "error",
+    "no-use-before-define": "error",
+    "no-useless-call": "error",
+    "no-useless-concat": "error",
+    "no-useless-return": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "radix": "error",
+    "require-await": "error",
+    "yoda": "error"
+  },
+  "overrides": [
+    {
+      "files": ["src/golden-rules/**/*.js"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
+}

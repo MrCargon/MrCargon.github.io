@@ -11,12 +11,6 @@ class MemoryManager {
     }
     
     cleanUp() {
-        // Track cleanup metrics
-        const startTime = performance.now();
-        let geometriesDisposed = 0;
-        let materialsDisposed = 0;
-        let texturesDisposed = 0;
-
         // Systematically dispose tracked objects
         this.disposables.forEach(obj => {
             if (obj.dispose) {
@@ -27,37 +21,20 @@ class MemoryManager {
         // Clear the tracking list
         this.disposables = [];
         
-        // Dispose scene objects with metrics tracking
-        this.disposeSceneObjects(this.scene, {
-            onGeometryDisposed: () => geometriesDisposed++,
-            onMaterialDisposed: () => materialsDisposed++,
-            onTextureDisposed: () => texturesDisposed++
-        });
+        // Dispose scene objects
+        this.disposeSceneObjects(this.scene);
         
         // Force renderer to release memory
         this.renderer.dispose();
-        
-        // Log cleanup metrics
-        console.debug(`Memory cleanup complete in ${(performance.now() - startTime).toFixed(2)}ms:
-            - Geometries disposed: ${geometriesDisposed}
-            - Materials disposed: ${materialsDisposed}
-            - Textures disposed: ${texturesDisposed}`);
     }
     
-    disposeSceneObjects(obj, callbacks = {}) {
+    disposeSceneObjects(obj) {
         if (!obj) return;
-        
-        // Get callbacks
-        const { 
-            onGeometryDisposed = () => {}, 
-            onMaterialDisposed = () => {}, 
-            onTextureDisposed = () => {} 
-        } = callbacks;
         
         // Dispose children first
         if (obj.children) {
             while (obj.children.length > 0) {
-                this.disposeSceneObjects(obj.children[0], callbacks);
+                this.disposeSceneObjects(obj.children[0]);
                 obj.remove(obj.children[0]);
             }
         }
@@ -65,24 +42,21 @@ class MemoryManager {
         // Dispose geometries
         if (obj.geometry) {
             obj.geometry.dispose();
-            onGeometryDisposed();
         }
         
         // Dispose materials
         if (obj.material) {
             if (Array.isArray(obj.material)) {
                 obj.material.forEach(material => {
-                    this.disposeMaterial(material, onTextureDisposed);
-                    onMaterialDisposed();
+                    this.disposeMaterial(material);
                 });
             } else {
-                this.disposeMaterial(obj.material, onTextureDisposed);
-                onMaterialDisposed();
+                this.disposeMaterial(obj.material);
             }
         }
     }
     
-    disposeMaterial(material, onTextureDisposed = () => {}) {
+    disposeMaterial(material) {
         if (!material) return;
         
         // Dispose textures
@@ -90,7 +64,6 @@ class MemoryManager {
             if (!material[prop]) return;
             if (material[prop].isTexture) {
                 material[prop].dispose();
-                onTextureDisposed();
             }
         });
         

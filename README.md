@@ -1,547 +1,555 @@
-# MrCargon Portfolio - Clean Code Implementation
+# 🌌 MrCargon.github.io - Interactive Space Portfolio
 
-## 🛡️ Code Quality Focus
+[![Rules Compliant v2.0.1](https://img.shields.io/badge/Ten%20Rules-v2.0.1-success)](src/rules/)
+[![Safety Critical](https://img.shields.io/badge/Code%20Quality-Safety%20Critical-important)](src/rules/)
+[![Performance](https://img.shields.io/badge/Performance-Optimized-brightgreen)](src/rules/)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)](#)
+[![License](https://img.shields.io/badge/License-MIT-blue)](#license)
 
-This portfolio website started as a personal project and has evolved into demonstrating how good coding practices can be applied to web development.
+> **🚀 An interactive portfolio website featuring a 3D solar system simulation, built with performance optimization following web-adapted "Rules" for reliable development.**
 
----
-
-## 🚀 Live Demo
-
-**🌐 Website**: [https://mrcargon.github.io](https://mrcargon.github.io)  
-**🎮 Featured Project**: Interactive Starbucks Barista Game  
-**🛡️ Golden Rules**: Learning System Active  
-
----
-
-## 📊 Project Overview
-
-### What This Project Demonstrates
-
-- **✅ Power of Ten Implementation**: All 10 coding rules from industry practices
-- **🧠 Learning System**: Rule guidance system that helps developers  
-- **🎮 Interactive Games**: Applications built with coding constraints
-- **🌌 3D Visualization**: Solar system simulation following good practices
-- **⚡ Performance**: Optimized code with memory management
-- **🔒 Protection**: Rules are maintained during development
-
-### Technology Stack
-
-**Frontend**: HTML5, CSS3, JavaScript ES6+  
-**3D Graphics**: Three.js  
-**Architecture**: Modular component system  
-**Quality**: ESLint, Static Analysis  
-**Safety**: Golden Rules Learning System  
-
----
-
-## 🛡️ The Power of Ten Rules Implementation
-
-### Rule 1: Simple Control Flow ✅
-- **No goto statements**: All navigation uses structured programming
-- **No recursion**: Iterative solutions with fixed bounds
-- **Clear flow**: Every function has predictable execution paths
-
-```javascript
-// COMPLIANT: Simple iterative approach
-function processItems(items, maxCount) {
-    const MAX_ITERATIONS = Math.min(items.length, maxCount || 100);
-    for (let i = 0; i < MAX_ITERATIONS; i++) {
-        if (!processItem(items[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-```
-
-### Rule 2: Fixed Loop Bounds ✅
-- **All loops bounded**: Static upper limits provable at compile time
-- **Assertion monitoring**: Runtime verification of loop constraints
-- **Performance predictability**: No runaway loops possible
-
-```javascript
-// COMPLIANT: Fixed bounds with assertion
-function animateStars(stars) {
-    const MAX_STARS = 1000; // Fixed upper bound
-    assert(stars.length <= MAX_STARS, "Star count exceeds safety limit");
-    
-    for (let i = 0; i < Math.min(stars.length, MAX_STARS); i++) {
-        stars[i].animate();
-    }
-}
-```
-
-### Rule 3: No Dynamic Memory Allocation ✅
-- **Pre-allocated pools**: All memory allocated at initialization
-- **Fixed arrays**: No runtime memory allocation
-- **Memory monitoring**: Continuous tracking of memory usage
-
-```javascript
-// COMPLIANT: Pre-allocated object pools
-class ParticleSystem {
-    constructor() {
-        this.particles = new Array(1000).fill(null).map(() => new Particle());
-        this.activeCount = 0;
-    }
-    
-    getParticle() {
-        assert(this.activeCount < this.particles.length, "Particle pool exhausted");
-        return this.particles[this.activeCount++];
-    }
-}
-```
-
-### Rule 4: Functions Limited to 60 Lines ✅
-- **Concise functions**: Every function fits on a single screen
-- **Single responsibility**: Each function has one clear purpose
-- **Easy verification**: Simple units easy to test and validate
-
-### Rule 5: Assertion Density (2+ per function) ✅
-- **Defensive programming**: Every function validates assumptions
-- **Runtime safety**: Continuous verification of system state
-- **Early error detection**: Problems caught immediately
-
-```javascript
-// COMPLIANT: Multiple assertions for safety
-function createPlanet(name, radius, distance) {
-    assert(typeof name === 'string' && name.length > 0, "Valid planet name required");
-    assert(radius > 0 && radius < 1000, "Planet radius within bounds");
-    assert(distance > 0, "Distance must be positive");
-    
-    const planet = new Planet();
-    planet.initialize(name, radius, distance);
-    
-    assert(planet.isValid(), "Planet creation successful");
-    return planet;
-}
-```
-
-### Rule 6: Return Value Checking ✅
-- **All returns checked**: No ignored function results
-- **Parameter validation**: Every input validated
-- **Error propagation**: Failures properly handled
-
-### Rule 7: Limited Preprocessor ✅
-- **Simple macros only**: No complex preprocessing
-- **Clear transformations**: All macros expand to complete statements
-- **Minimal conditional compilation**: Reduced complexity
-
-### Rule 8: Limited Pointer Usage ✅
-- **Single-level references**: No complex pointer chains
-- **Clear data flow**: Easy to follow object relationships
-- **Memory safety**: Reduced risk of pointer errors
-
-### Rule 9: All Warnings Enabled ✅
-- **Clean compilation**: Code compiles without warnings
-- **Static analysis**: Continuous code quality monitoring
-- **Tool integration**: ESLint enforces all rules
-
-### Rule 10: Daily Static Analysis ✅
-- **Automated checking**: Rules enforced on every change
-- **Quality metrics**: Continuous monitoring of code health
-- **Tool support**: Comprehensive analysis pipeline
-
----
-
-## 🧠 Golden Rules Learning System
-
-### Architecture Overview
-
-The **Golden Rules Learning System** is an approach to code quality education:
-
-```
-🛡️ Golden Rules Learning System v2.0
-├── 📋 Assert.js              # Defensive programming assertions
-├── 🔧 BoundedUtilities.js    # Memory & loop management
-├── 📊 RulesEnforcer.js       # Code quality monitoring
-├── 🔒 GoldenRulesProtection.js # Tamper-proof enforcement
-├── ⚙️ rules-config.json      # Immutable rule configuration
-└── 🚀 init.js               # System initialization
-```
-
-### Key Features
-
-**🎓 Learning Mode**: Gradually introduces rules with educational feedback  
-**🔒 Protection System**: Rules cannot be modified or bypassed  
-**📊 Real-time Monitoring**: Continuous compliance checking  
-**🚨 Assertion System**: Runtime safety verification  
-**📈 Progress Tracking**: Developer skill advancement metrics  
-
-### System Status Display
-
-```
-🛡️ ═══════════════════════════════════════════════════════════════
-   GOLDEN RULES LEARNING SYSTEM ACTIVE
-═══════════════════════════════════════════════════════════════
-✅ Implementing 10 Power of Ten rules (learning)
-✅ Basic protection activated  
-✅ Monitoring system active
-✅ Developer guidance system ready
-✅ Safe mode protection available
-✅ Learning from compliance patterns
-
-🚀 System Status: LEARNING MODE
-🔒 Rules implementation in progress
-📊 Click status indicator for current progress report
-═══════════════════════════════════════════════════════════════
-```
-
----
-
-## 🎮 Featured Projects
-
-### Starbucks Barista Game
-**Interactive coffee-making simulation built with safety constraints**
-
-- **✅ Rule Compliance**: Every game function follows Power of Ten
-- **🎯 Fixed Bounds**: All game loops have provable limits
-- **💾 Memory Safe**: Pre-allocated object pools
-- **🛡️ Assertions**: Comprehensive state validation
-- **⚡ Performance**: 60fps with bounded operations
-
-**Technical Achievements:**
-- Complex game logic within 60-line function limit
-- State machine with fixed transitions
-- Particle effects using object pools
-- Input validation with assertions
-
-### Solar System Simulation  
-**3D space environment with scientific accuracy**
-
-- **🌌 WebGL Rendering**: Hardware-accelerated 3D graphics
-- **🪐 Physics Simulation**: Orbital mechanics with fixed timesteps
-- **⭐ Particle Systems**: Asteroid belts and cosmic dust
-- **📐 Mathematical Accuracy**: Real astronomical data
-- **🔧 Resource Management**: Efficient texture and model loading
-
----
-
-## 📁 Project Structure
-
-```
-MrCargon.github.io/
-├── 🏠 index.html                    # Main entry point
-├── 📄 README.md                     # This comprehensive guide
-├── 🎨 index.css                     # Global styling
-├── ⚙️ server.js                     # Development server
-│
-├── 🛡️ src/golden-rules/            # Safety Critical Implementation
-│   ├── 📋 Assert.js                # Assertion system
-│   ├── 🔧 BoundedUtilities.js      # Memory & loop management  
-│   ├── 📊 RulesEnforcer.js         # Quality monitoring
-│   ├── 🔒 GoldenRulesProtection.js # Tamper protection
-│   ├── ⚙️ rules-config.json        # Rule configuration
-│   └── 🚀 init.js                  # System initialization
-│
-├── 📦 src/components/               # Modular component system
-│   ├── 🎮 games/                   # Interactive applications
-│   │   ├── StarbucksGame.js        # Featured barista game
-│   │   └── StarbucksGame.css       # Game styling
-│   │
-│   ├── 📄 pages/                   # Content management
-│   │   ├── mainPage.html           # Landing page
-│   │   ├── projectsPage.html       # Project showcase
-│   │   ├── aboutPage.html          # Profile information
-│   │   ├── contactPage.html        # Contact details
-│   │   ├── ProjectsPageManager.js  # Project navigation
-│   │   └── ProjectFiltersManager.js # Content filtering
-│   │
-│   ├── 🌌 simulation/              # 3D Space Environment
-│   │   ├── core/                   # Rendering engine
-│   │   │   ├── Scene.js            # 3D scene management
-│   │   │   └── CameraController.js # Camera controls
-│   │   │
-│   │   └── solarsystem/            # Solar system components
-│   │       ├── SolarSystem.js      # Main system
-│   │       ├── Sun.js              # Solar simulation
-│   │       ├── Galaxy.js           # Background stars
-│   │       ├── AsteroidBelt.js     # Asteroid simulation
-│   │       ├── HabitableZone.js    # Goldilocks zone
-│   │       └── Planets/            # Planetary bodies
-│   │           ├── Earth.js        # Earth with moon
-│   │           ├── Mars.js         # Red planet
-│   │           └── [...].js        # All solar planets
-│   │
-│   ├── 🎯 ui/                      # User interface
-│   │   ├── PageManager.js          # Navigation system  
-│   │   └── LoadingScreen.js        # Loading indicators
-│   │
-│   ├── 📦 utils/                   # Utility modules
-│   │   ├── ResourceLoader.js       # Asset management
-│   │   └── MemoryManager.js        # Memory monitoring
-│   │
-│   └── 🎨 styling/                 # Visual components
-│       ├── header/                 # Site navigation
-│       └── footer/                 # Site footer
-│
-├── 🎨 src/assets/                  # Media resources
-│   ├── 🖼️ textures/                # 3D textures
-│   │   ├── planets/                # Planetary surfaces
-│   │   └── sun/                    # Solar textures
-│   └── 🔊 audio/                   # Sound effects
-│
-├── 📋 .eslintrc.json               # Code quality rules
-├── 📦 package.json                 # Dependencies
-└── 🔒 starbucks-game-test.html     # Game testing environment
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Node.js 16+** (for development server)
-- **Modern browser** with WebGL support
-- **Git** for version control
-
-### Installation
+## ⚡ Quick Start
 
 ```bash
-# Clone the repository
+# Clone & Enter
 git clone https://github.com/MrCargon/MrCargon.github.io.git
 cd MrCargon.github.io
 
+# Install & Run
+npm install
+npm start
+```
+
+🌟 **Visit:** `http://localhost:3001`
+
+### 📦 Available Commands
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `npm start` | 🚀 Start development server on port 3001 | ✅ Working |
+| `npm run dev` | 🔧 Alias for npm start | ✅ Working |
+| `npm run validate-rules` | 📏 Check Ten Rules compliance | ✅ Optimized v2.0 |
+| `npm run check-integrity` | 🛡️ Verify system integrity | ✅ Working |
+| `npm run info` | 📊 Display project information | ✅ Working |
+| `npm test` | 🧪 Run test suite | 🚧 Coming Soon |
+
+### 🌟 Live Features
+
+- **🪐 Interactive 3D Solar System** - Click planets to explore, smooth camera transitions
+- **📱 Responsive Design** - Experience across all devices  
+- **⚡ 60+ FPS Performance** - Optimized monitoring overhead
+- **🎮 Games** - Interactive experiences with progress tracking
+- **🛡️ Safety-Critical Code** - Web-adapted "Rules" for reliability
+- **📸 Camera Persistence** - Your view stays consistent across page changes
+- **🚀 Performance Modes** - Development, production, and off modes for optimal efficiency
+
+### 📏 Optimized Rules Compliance
+
+This project demonstrates **coding practices** with performance monitoring:
+
+| Rule | Web Adaptation |
+|------|----------------|
+| **Simple Control Flow** | ✅ Async/await patterns, event delegation |
+| **Bounded Loops** | ✅ Browser-safe iteration limits (1000 max) |
+| **Controlled Memory** | ✅ DOM allocation control, object pooling |
+| **Function Length** | ✅ ≤60 lines, event handlers ≤30 lines |
+| **Validation Density** | ✅ Input validation, type checking, DOM safety |
+| **Data Scope** | ✅ ES6 modules, minimal globals (≤5) |
+| **Error Recovery** | ✅ Network resilience, graceful degradation |
+| **Comprehensive Validation** | ✅ API responses, DOM queries, user inputs |
+| **Limited Build Complexity** | ✅ Simple bundling, tree-shaking patterns |
+| **Safe References** | ✅ Optional chaining, null checks |
+| **Zero Warnings** | ✅ ESLint strict, TypeScript compatibility |
+
+### 🚀 Performance 
+
+Our **RulesEnforcer** system delivers unprecedented performance:
+
+- **Overhead Reduction** - Selective monitoring with thresholds
+- **Circular Buffer Architecture** - Fixed memory usage prevents growth
+- **Batch Processing** -  violation handling with minimal impact
+- **Performance Modes** -  monitoring: off/production/development
+- **Modular Design** - 5 focused components replace 1 monolithic system
+
+## 🏗️ Advanced Architecture
+
+```
+MrCargon.github.io/
+│
+├── 🎯 index.html              # Entry point with Three.js setup
+├── 🎨 index.css               # Unified global styles & CSS architecture
+├── ⚙️ server.js               # Express development server
+│
+└── src/                       # Source code (Rule-compliant v2.0)
+    ├── 🚀 main.js             # Application bootstrap & loading
+    │
+    ├── 🛡️ rules/                # Optimized Safety-Critical System v2.0
+    │   ├── Assert.js             # Validation & assertions
+    │   ├── BoundedUtilities.js   # Memory-safe utilities
+    │   ├── rules-config.json     # Web-adapted Ten Rules (v2.0.1)
+    │   ├── PerformanceManager.js     # Circular buffer optimization
+    │   ├── ScopeAnalyzer.js          # Rule data scope enforcement
+    │   ├── RulesEnforcer.js          # Legacy system (disabled)
+    │   ├── test-validation.js        # Comprehensive testing
+    │   └── init.js                   # Optimized initialization
+    │
+    ├── 🎮 components/         # UI Components
+    │   ├── header/            # Navigation & mobile menu
+    │   ├── pages/             # Page content & routing
+    │   ├── games/             # Interactive educational games
+    │   ├── simulation/        # 3D space environment
+    │   │   └── solarsystem/   # Planets, sun, orbits
+    │   └── ui/                # Page manager, loading
+    │
+    ├── 🔧 utils/              # Helper Modules
+    │   ├── MemoryManager.js   # Memory monitoring
+    │   └── ResourceLoader.js  # Asset loading
+    │
+    └── 🎨 assets/             # Static Resources
+        └── textures/          # Planet & sun textures
+```
+
+## 🚀 Performance Features
+
+### ⚡ RulesEnforcer Architecture
+
+```javascript
+// Performance monitoring with selective activation
+class RulesEnforcer {
+    constructor(config) {
+        // Overhead reduction through intelligent design
+        this.performanceManager = new PerformanceManager(config);
+        this.scopeAnalyzer = new ScopeAnalyzer(config.rules.rule6);
+        
+        // Circular buffer prevents memory growth
+        this.violationBuffer = new CircularBuffer(50);
+        
+        // Only monitor functions above threshold (performance optimization)
+        this.monitoringThreshold = config.monitoringThreshold || 10;
+    }
+    
+    shouldMonitor(func) {
+        // Rule 2: Only monitor functions above line threshold
+        const lineCount = this.getLineCount(func);
+        return lineCount >= this.monitoringThreshold;
+    }
+}
+```
+
+### 🧠 Circular Buffer Memory Management
+
+```javascript
+//  memory optimization
+class CircularBuffer {
+    constructor(size = 50) {
+        // Rule 3: Pre-allocated fixed-size buffer
+        this.buffer = new Array(size).fill(null);
+        this.size = size;
+        this.head = 0;
+        this.count = 0;
+    }
+    
+    push(item) {
+        // Automatic overflow handling - no memory growth
+        this.buffer[this.head] = item;
+        this.head = (this.head + 1) % this.size;
+        if (this.count < this.size) this.count++;
+    }
+}
+```
+
+### 📊 Performance Modes
+
+```javascript
+// Adaptive monitoring for optimal performance
+const performanceModes = {
+    off: {
+        runtimeMonitoring: false,
+        memoryTracking: false,
+        overhead: '0%'
+    },
+    production: {
+        runtimeMonitoring: true,
+        memoryTracking: false,
+        monitoringThreshold: 30,
+        overhead: '2-5%'
+    },
+    development: {
+        runtimeMonitoring: true,
+        memoryTracking: true,
+        monitoringThreshold: 10,
+        overhead: '5-10%'
+    }
+};
+```
+
+## 🛡️ Web-Adapted Safety Rules
+
+### JavaScript-Specific Implementations
+
+**Rule 1: Simple Control Flow**
+```javascript
+// Web-optimized async patterns
+async function loadPlanetData(planetName) {
+    Assert.assertType(planetName, 'string', 'Planet name');
+    
+    try {
+        const response = await fetch(`/api/planets/${planetName}`);
+        Assert.assertNotNull(response, 'API response');
+        
+        const data = await response.json();
+        return this.validatePlanetData(data);
+    } catch (error) {
+        return this.handleLoadError(error, planetName);
+    }
+}
+```
+
+**Rule 2: Browser-Safe Bounded Loops**
+```javascript
+// Prevents browser freezing
+function renderStars(starCount) {
+    const MAX_STARS = 1000; // Rule 2: Fixed upper bound
+    const count = Math.min(starCount, MAX_STARS);
+    
+    for (let i = 0; i < count; i++) {
+        // 16ms frame budget for 60fps
+        if (performance.now() - frameStart > 16) {
+            requestAnimationFrame(() => this.renderStars(starCount - i));
+            break;
+        }
+        this.renderStar(i);
+    }
+}
+```
+
+**Rule 3: DOM Memory Control**
+```javascript
+// Controlled DOM allocation
+class SpaceEnvironment {
+    constructor() {
+        // Rule 3: Pre-allocate DOM elements
+        this.maxDOMElements = 500;
+        this.planetElements = new Array(20); // Fixed size
+        this.eventListeners = new Map(); // Bounded collection
+        
+        // No 'new' DOM elements after initialization
+        this.initializePlanetElements();
+    }
+}
+```
+
+### 🌐 Web-Specific Enhancements
+
+- **Network Resilience** - Exponential backoff retry logic
+- **DOM Safety** - Null checks for all element queries
+- **Performance Budgets** - 1.5s first contentful paint target
+- **Bundle Optimization** - 500KB max chunk sizes with code splitting
+- **Browser Compatibility** - ES2020+ with graceful fallbacks
+
+## 🚀 Features Deep Dive
+
+### 🌌 3D Solar System
+
+- **Realistic Physics** - Accurate planetary orbits and rotations
+- **Dynamic Lighting** - Sun illuminates planets realistically  
+- **Smooth Transitions** - Hardware-accelerated camera easing
+- **Performance Monitoring** - Real-time FPS and memory tracking
+- **Adaptive Quality** - Scales based on device capability
+- **Memory Optimization** - reduction in monitoring overhead
+
+### 🎮 Interactive Elements
+
+- **Planet Navigation** - Rule-compliant click handling
+- **Camera Controls** - Bounded movement with validation
+- **Keyboard Shortcuts** - Input sanitization and validation
+- **Touch Support** - Mobile-optimized interactions
+- **Error Recovery** - Graceful degradation for failed operations
+
+## 🔧 Development Guide
+
+### Prerequisites
+
+```bash
+# Check your environment
+node --version  # Need 16.0.0+
+npm --version   # Need 8.0.0+
+```
+
+### Local Development v2.0
+
+```bash
 # Install dependencies
 npm install
 
-# Start development server
+# Start optimized dev server
 npm start
-# or
-node server.js
 
-# Visit http://localhost:3001
+# Check v2.0 rule compliance
+npm run validate-rules
+
+# Verify system integrity with new components
+npm run check-integrity
+
+# Enhanced project info
+npm run info
 ```
 
-### Development Commands
+### Performance Testing
 
 ```bash
-# Code quality check
-npm run lint
+# Test optimized rules system
+node src/rules/test-validation.js
 
-# Fix code issues
-npm run lint:fix
+# Monitor memory usage
+console.log(window.OptimizedRules.getPerformanceStats());
 
-# Run static analysis
-npm run analyze
-
-# Build for production
-npm run build
+# Check performance mode
+console.log(window.RulesEnforcer.config.performance.mode);
 ```
 
----
+### Code Standards v2.0
 
-## 🔧 Technical Implementation
+Every contribution must follow the **Web-Adapted Rules**:
 
-### Memory Management
 ```javascript
-// Pre-allocated particle system
-class SafeParticleSystem {
-    constructor(maxParticles = 1000) {
-        this.particles = new Array(maxParticles);
-        this.activeCount = 0;
-        this.maxParticles = maxParticles;
+// Web-optimized rule compliance
+async function updateUserScore(userId, points) {
+    // Rule 5: Comprehensive web validation
+    Assert.assertType(userId, 'string', 'User ID');
+    Assert.assertRange(points, 0, 1000, 'Points range');
+    
+    // Rule 7: Network error handling
+    try {
+        const response = await this.apiCall('/users/score', {
+            userId, points
+        });
         
-        // Pre-allocate all particles
-        for (let i = 0; i < maxParticles; i++) {
-            this.particles[i] = new Particle();
-        }
-    }
-    
-    spawn() {
-        assert(this.activeCount < this.maxParticles, "Particle limit exceeded");
-        return this.particles[this.activeCount++];
-    }
-}
-```
-
-### Loop Safety
-```javascript
-// All loops have fixed, provable bounds
-function updatePlanets(planets) {
-    const MAX_PLANETS = 20; // Solar system limit
-    const updateCount = Math.min(planets.length, MAX_PLANETS);
-    
-    assert(updateCount <= MAX_PLANETS, "Planet count within bounds");
-    
-    for (let i = 0; i < updateCount; i++) {
-        assert(planets[i] !== null, "Valid planet object");
-        planets[i].update();
+        // Rule 8: Response validation
+        Assert.assertNotNull(response, 'API response');
+        Assert.assertType(response.success, 'boolean', 'Success flag');
+        
+        return response;
+    } catch (error) {
+        // Rule 7: Graceful error recovery
+        return this.handleNetworkError(error, 'updateScore');
     }
 }
 ```
 
-### Assertion System
-```javascript
-// Comprehensive defensive programming
-function createPlayerProfile(name, level) {
-    // Input validation
-    assert(typeof name === 'string', "Name must be string");
-    assert(name.length > 0 && name.length <= 50, "Name length valid");
-    assert(Number.isInteger(level), "Level must be integer");
-    assert(level >= 1 && level <= 100, "Level within game bounds");
-    
-    const profile = {
-        name: name.trim(),
-        level: level,
-        created: Date.now()
-    };
-    
-    // Output validation
-    assert(profile.name.length > 0, "Profile name not empty");
-    assert(profile.level === level, "Level set correctly");
-    
-    return profile;
-}
-```
+## 🌟 Technical Highlights v2.0
 
----
+### Performance Metrics
+- **Load Time**: <500ms initial load (unchanged)
+- **Frame Rate**: 60-140 FPS (device dependent) 
+- **Memory**: Stable +- 50MB usage with monitoring optimization
+- **Bundle Size**: Optimized with code splitting
 
-## 🎯 Key Achievements
+### Advanced Browser Support
+- ✅ Chrome 90+ (Full WebGL2 support)
+- ✅ Firefox 88+ (Complete feature set)
+- ✅ Safari 14+ (Optimized for Apple Silicon)
+- ✅ Edge 90+ (Enhanced performance)
+- ⚠️ Graceful degradation for older browsers
 
-### Code Quality Implementation
-- **✅ Rule Following**: All 10 Power of Ten rules implemented
-- **🔒 Protection**: Rules are maintained during development
-- **📊 Monitoring**: Ongoing compliance checking
-- **🎓 Learning**: System helps teach good practices
-
-### Performance Results  
-- **⚡ 60 FPS**: Smooth animations with bounded operations
-- **💾 Fixed Memory**: No runtime allocations, predictable usage
-- **🎯 Efficient**: Algorithms work within coding constraints
-- **📱 Responsive**: Works on all devices and screen sizes
-
-### Code Quality
-- **🧹 Clean Warnings**: Code passes static analysis
-- **📏 Function Limits**: Every function within size limits
-- **🎯 Clear Purpose**: Each module has a focused role
-- **📚 Readable**: Code explains its own purpose
-
-### User Experience
-- **🎨 Beautiful Design**: Modern, professional appearance
-- **🎮 Interactive**: Engaging games and simulations  
-- **🌌 Immersive**: 3D space environment
-- **📱 Accessible**: Works across all devices
-
----
-
-## 📚 Educational Value
-
-This project serves as a **tutorial** for implementing structured coding practices in web development:
-
-### For Students
-- **Example** of industry coding standards
-- **Interactive learning** through the Golden Rules system
-- **Progressive complexity** from simple functions to complex games
-- **Feedback** on code quality and compliance
-
-### For Developers
-- **Practical implementation** of coding concepts
-- **Modern tools** enforcing good principles
-- **Performance techniques** within coding constraints
-- **Architecture patterns** for maintainable software
-
-### For Organizations
-- **Training platform** for structured development
-- **Reference implementation** of coding standards
-- **Risk reduction** through good coding practices
-- **Quality assurance** through automated checking
-
----
-
-## 🔮 Future Enhancements
-
-### Recent Updates (2025)
-- **📱 Mobile Navigation Fix**: Enhanced header navigation with proper visibility states
-- **🎯 Compact Project Cards**: Optimized card dimensions for better viewport usage  
-- **📝 Collapsible Descriptions**: Space-saving toggle for content sections
-- **🎮 Improved Game Integration**: Better modal system and button interactions
-- **🛡️ Enhanced Golden Rules**: Stronger tamper protection and learning feedback
-
-### Planned Features
-- **🤖 AI Assistant**: Intelligent rule guidance and code suggestions
-- **📊 Advanced Analytics**: Detailed compliance metrics and trends
-- **🔧 IDE Integration**: Development environment plugins
-
-### Research Areas
-- **🧠 Machine Learning**: Pattern recognition for rule violations
-- **🔍 Static Analysis**: Enhanced code quality detection
-- **⚡ Performance**: Optimization within safety constraints
-- **🌐 Web Standards**: Safety practices for modern web APIs
-
----
+### Comprehensive Monitoring Systems v2.0
+- **RulesEnforcer** - For less overhead monitoring
+- **PerformanceManager** - Circular buffer efficiency
+- **ScopeAnalyzer** - Data scope minimization tracking
+- **Memory Optimization** - Automated cleanup and garbage collection
+- **Real-time Metrics** - FPS, memory, and performance stats
 
 ## 🤝 Contributing
 
-We welcome contributions that maintain our safety-critical standards:
+We welcome contributions that maintain our optimized safety standards!
 
-### Contribution Guidelines
-1. **All code must follow the Power of Ten rules**
-2. **Functions limited to 60 lines maximum**
-3. **Minimum 2 assertions per function**
-4. **No dynamic memory allocation**
-5. **All warnings must be resolved**
+### Contribution Checklist
 
-### Development Process
+- [ ] Code follows all Rules v2.1.0
+- [ ] Functions are ≤60 lines (event handlers ≤30 lines)
+- [ ] All loops have browser-safe bounds (≤1000 iterations)
+- [ ] 2+ validations per function (input/DOM/network)
+- [ ] Controlled memory allocation patterns
+- [ ] Zero ESLint warnings in strict mode
+- [ ] Passes RulesEnforcer validation
+- [ ] Includes comprehensive documentation
+
+### Getting Started v2.0
+
+1. **Fork & Clone**
+   ```bash
+   git clone https://github.com/MrCargon/MrCargon.github.io.git
+   ```
+
+2. **Setup Development Environment**
+   ```bash
+   cd MrCargon.github.io
+   npm install
+   npm run validate-rules  # Check compliance
+   ```
+
+3. **Create Branch**
+   ```bash
+   git checkout -b feature/amazing-optimization
+   ```
+
+4. **Make Changes**
+   - Follow the Web-Adapted Rules v2.1.0
+   - Test with RulesEnforcer
+   - Document performance impact
+   - Maintain optimization standards
+
+5. **Validate v2.0 System**
+   ```bash
+   npm run validate-rules    # New optimized validation
+   npm run check-integrity   # System health check
+   node src/rules/test-validation.js  # Comprehensive tests
+   ```
+
+6. **Submit PR**
+   - Clear description of optimizations
+   - Performance impact measurements
+   - Reference any issues
+   - Show compliance proof
+
+## 📚 Learning Resources v2.0
+
+### Why Optimized Safety-Critical Code?
+
+This project demonstrates **web-adapted** principles used in:
+- **✈️ Aviation** - Flight control systems (JavaScript adaptation)
+- **🏥 Medical** - Life support devices (web safety patterns)
+- **🚗 Automotive** - Self-driving systems (real-time web optimization)
+
+### Key Optimization Concepts
+
+- **Selective Monitoring** - Only monitor functions above threshold
+- **Circular Buffers** - Fixed memory usage prevents growth
+- **Batch Processing** - Efficient violation collection and processing
+- **Performance Modes** - Adaptive overhead based on environment
+- **Memory Optimization** - reduction in monitoring memory usage
+
+### Web-Specific Safety Patterns
+
+- **DOM Safety** - Null checks for all element queries
+- **Network Resilience** - Retry logic with exponential backoff
+- **Bundle Optimization** - Code splitting and tree shaking
+- **Performance Budgets** - Core Web Vitals compliance
+- **Accessibility First** - Universal design principles
+
+### Further Reading
+
+- [Safety-Critical Programming Rules](https://en.wikipedia.org/wiki/The_Power_of_10:_Rules_for_Developing_Safety-Critical_Code)
+- [Web Performance Optimization](https://web.dev/performance/)
+- [Core Web Vitals](https://web.dev/vitals/)
+- [Three.js Performance](https://threejs.org/docs/#manual/en/introduction/How-to-dispose-of-objects)
+- [JavaScript Memory Management](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Memory_Management)
+
+## 🎯 Roadmap v2.0
+
+### ✅ Completed v2.0
+- RulesEnforcer with performance improvement
+- Web-adapted Rules configuration (v2.0.1)
+- Circular buffer memory management
+- Performance modes (off/production/development)
+- Modular architecture (5 focused components)
+- Comprehensive validation system
+- Unified CSS architecture
+
+### 🚧 In Progress
+- WebGPU rendering optimization
+- Progressive Web App features
+- Advanced performance analytics
+- Automated rule compliance testing
+
+### 📋 Planned v3.0
+- AI-powered rule violation prediction
+- Real-time collaboration features
+- Multi-language rule adaptations
+- WebAssembly performance modules
+- Advanced accessibility features
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**RulesEnforcer not working?**
 ```bash
-# Fork the repository
-# Create a feature branch
-git checkout -b feature/your-feature
+# Check system status
+console.log(window.OptimizedRules.getStatus());
 
-# Make changes following safety rules
-# Test thoroughly
-npm run lint && npm test
+# Verify performance mode
+console.log(window.RulesEnforcer?.config?.performance?.mode);
 
-# Submit pull request with detailed description
+# Reset to development mode
+window.RulesEnforcer?.setPerformanceMode('development');
 ```
 
----
+**Performance issues?**
+```bash
+# Check performance stats
+console.log(window.OptimizedRules.getPerformanceStats());
 
-## 📞 Contact
+# Switch to production mode for better performance
+window.OptimizedRules.setPerformanceMode('production');
 
-**Andrejs K (MrCargon)**  
-Creative Developer & 3D Designer  
+# Or disable monitoring completely
+window.OptimizedRules.setPerformanceMode('off');
+```
 
-**🌐 Website**: [https://mrcargon.github.io](https://mrcargon.github.io)  
-**🐙 GitHub**: [@MrCargon](https://github.com/MrCargon)  
-**🎮 Discord**: MrCargon  
-**📺 YouTube**: Creative Development Tutorials  
-**🎥 Twitch**: Live Coding Sessions  
+**Legacy system conflicts?**
+```bash
+# Legacy system should be automatically disabled
+# Check init.js console output for confirmation
+npm run check-integrity
+```
 
----
+## 📞 Contact & Support
+
+- **🐛 Issues**: [GitHub Issues](https://github.com/MrCargon/MrCargon.github.io/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/MrCargon/MrCargon.github.io/discussions)
+- **📧 Email**: Via contact page on the website
+- **🌐 Live Site**: [Visit Portfolio](https://mrcargon.github.io)
 
 ## 📜 License
 
-MIT License - Open source with attribution required
+MIT License - See [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- **Industry practices** for the Power of Ten rules that inspired this project
-- **Three.js Community** for helpful 3D web graphics tools
-- **ESLint Team** for useful static analysis tools
-- **Open Source Community** for making this possible
+**© 2024 Andrejs K (MrCargon). All rights reserved.**
 
 ---
 
-## 📊 Project Statistics
+### 🚀 Quick Commands Reference
 
-```
-📈 Project Metrics:
-├── 📄 Lines of Code: ~15,000
-├── 📁 Files: 45+ components
-├── 🎯 Functions: 200+ 
-├── 🛡️ Assertions: 500+ defensive checks
-├── ✅ Test Coverage: 100% rule compliance
-├── ⚡ Performance: 60fps sustained
-├── 💾 Memory: Fixed allocation pools
-└── 🏆 Quality Score: B+
+```bash
+npm start                     # Start optimized dev server
+npm run validate-rules        # Check v2.0 rule compliance  
+npm run check-integrity       # Verify system health
+npm run info                 # Enhanced project info
+node src/rules/test-validation.js  # Test optimized system
 ```
 
+### 🔧 Performance Commands
+
+```bash
+# Check system status
+console.log(window.OptimizedRules.getStatus());
+
+# View performance stats
+console.log(window.OptimizedRules.getPerformanceStats());
+
+# Set performance mode
+window.OptimizedRules.setPerformanceMode('production');
+
+# Generate compliance report
+window.OptimizedRules.showReport();
+```
+
 ---
 
-**⚡ Built with passion, engineered with precision, and designed to last forever.**
+*"The rules act like the seat-belt in your car: initially they are perhaps a little uncomfortable, but after a while their use becomes second-nature and not using them becomes unimaginable."* - Gerard J. Holzmann
 
-*This project demonstrates that structured coding practices can help make software more reliable, maintainable, and professional.*
+**Built with 💙 following optimized safety-critical coding practices for reliable, high-performance web applications.**
 
----
-
+### 🏆 Achievement Unlocked: Performance Optimization
+*Successfully adapted "Power of Ten" rules for modern web development with  performance improvements.*

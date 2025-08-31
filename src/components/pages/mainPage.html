@@ -1,9 +1,9 @@
 <!-- mainPage.html -->
 <section class="main-section hero-section" id="main">
     
-    <!-- Space Exploration UI - Restructured -->
+    <!-- Space Exploration UI - Elegant Pop-up System -->
     <div class="space-exploration-container">
-        <!-- Planet Selection Bar - Moved up and optimized -->
+        <!-- Planet Selection Bar - Top navigation -->
         <div class="planet-selector-wrapper" role="navigation" aria-label="Planet Selection">
             <button class="scroll-indicator left" aria-label="Scroll left">
                 <span class="arrow" aria-hidden="true">←</span>
@@ -13,7 +13,7 @@
                 <button class="planet-btn active" 
                         role="tab" 
                         aria-selected="true"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Sun"
                         data-planet="Sun">
                     <span class="planet-icon" aria-hidden="true">☀️</span>
@@ -22,7 +22,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Mercury" 
                         data-planet="Mercury">
                     <span class="planet-icon" aria-hidden="true">🌑</span>
@@ -31,7 +31,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Venus" 
                         data-planet="Venus">
                     <span class="planet-icon" aria-hidden="true">🌕</span>
@@ -40,7 +40,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Earth" 
                         data-planet="Earth">
                     <span class="planet-icon" aria-hidden="true">🌍</span>
@@ -49,7 +49,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Mars" 
                         data-planet="Mars">
                     <span class="planet-icon" aria-hidden="true">🔴</span>
@@ -58,7 +58,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Jupiter" 
                         data-planet="Jupiter">
                     <span class="planet-icon" aria-hidden="true">⭕</span>
@@ -67,7 +67,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Saturn" 
                         data-planet="Saturn">
                     <span class="planet-icon" aria-hidden="true">🪐</span>
@@ -76,7 +76,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Uranus" 
                         data-planet="Uranus">
                     <span class="planet-icon" aria-hidden="true">🌌</span>
@@ -85,7 +85,7 @@
                 <button class="planet-btn" 
                         role="tab" 
                         aria-selected="false"
-                        aria-controls="planet-info-panel"
+                        aria-controls="planet-info-popup"
                         id="tab-Neptune" 
                         data-planet="Neptune">
                     <span class="planet-icon" aria-hidden="true">💫</span>
@@ -103,72 +103,153 @@
             <div class="progress-indicator"></div>
         </div>
 
-        <!-- Collapsible Planet Information Panel -->
-        <div id="planet-info-panel" class="planet-info-panel" role="tabpanel" aria-live="polite">
-            <div class="info-header">
-                <h2 id="planet-name" class="planet-title">Sun</h2>
-                <button class="toggle-info-btn" aria-label="Toggle information panel" title="Toggle details">
-                    <span class="icon" aria-hidden="true">↓</span>
-                </button>
+        <!-- LEFT POPUP: Planet Information -->
+        <div class="side-popup left-popup" id="planet-info-popup">
+            <!-- Collapsed Tab -->
+            <div class="popup-tab" 
+                 data-popup="planet-info"
+                 role="button" 
+                 aria-label="Show planet information"
+                 tabindex="0">
+                <div class="tab-icon">
+                    <span class="icon" aria-hidden="true">🪐</span>
+                </div>
+                <div class="tab-text">
+                    <span class="tab-title">Planet Info</span>
+                </div>
+                <div class="tab-arrow" aria-hidden="true">▶</div>
             </div>
             
-            <div class="planet-details">
-                <p id="planet-description" class="planet-description">The star at the center of our Solar System.</p>
+            <!-- Expanded Content -->
+            <div class="popup-content" role="tabpanel" aria-live="polite">
+                <div class="popup-header">
+                    <h2 id="planet-name" class="planet-title">Sun</h2>
+                    <button class="close-popup-btn" 
+                            aria-label="Close planet information" 
+                            data-popup="planet-info">
+                        <span class="icon" aria-hidden="true">✕</span>
+                    </button>
+                </div>
                 
-                <div class="planet-stats">
-                    <div class="stat-card">
-                        <label id="diameter-label">Diameter</label>
-                        <span id="planet-diameter" class="stat-value" aria-labelledby="diameter-label">1,392,700 km</span>
-                    </div>
-                    <div class="stat-card">
-                        <label id="distance-label">Distance from Sun</label>
-                        <span id="planet-distance" class="stat-value" aria-labelledby="distance-label">0 km</span>
-                    </div>
-                    <div class="stat-card">
-                        <label id="orbital-label">Orbital Period</label>
-                        <span id="planet-orbital-period" class="stat-value" aria-labelledby="orbital-label">N/A</span>
+                <div class="popup-body">
+                    <p id="planet-description" class="planet-description">
+                        The star at the center of our Solar System.
+                    </p>
+                    
+                    <div class="planet-stats">
+                        <div class="stat-card">
+                            <label class="stat-label">Diameter</label>
+                            <span id="planet-diameter" class="stat-value">1,392,700 km</span>
+                        </div>
+                        <div class="stat-card">
+                            <label class="stat-label">Distance from Sun</label>
+                            <span id="planet-distance" class="stat-value">0 km</span>
+                        </div>
+                        <div class="stat-card">
+                            <label class="stat-label">Orbital Period</label>
+                            <span id="planet-orbital-period" class="stat-value">N/A</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Camera Controls - Moved to the side as a floating panel -->
-        <div id="navigation-controls" class="camera-controls" role="toolbar" aria-label="Camera Controls">
-            <button id="reset-camera" 
-                    class="control-btn tooltip" 
-                    title="Reset Camera"
-                    aria-label="Reset Camera View">
-                <span class="icon" aria-hidden="true">⟲</span>
-                <span class="tooltip-text">Reset View</span>
-            </button>
-            <button id="toggle-rotation" 
-                    class="control-btn tooltip" 
-                    title="Toggle Auto-rotation"
-                    aria-label="Toggle Planet Rotation">
-                <span class="icon" aria-hidden="true">↻</span>
-                <span class="tooltip-text">Toggle Rotation</span>
-            </button>
-            <button id="toggle-orbit-mode" 
-                    class="control-btn tooltip" 
-                    title="Toggle Camera Orbit"
-                    aria-label="Toggle Camera Orbit">
-                <span class="icon" aria-hidden="true">⚲</span>
-                <span class="tooltip-text">Orbit Mode</span>
-            </button>
-            <button id="toggle-follow-rotation" 
-                    class="control-btn tooltip" 
-                    title="Follow Planet Rotation"
-                    aria-label="Follow Planet Rotation">
-                <span class="icon" aria-hidden="true">⥀</span>
-                <span class="tooltip-text">Follow Rotation</span>
-            </button>
-            <button id="toggle-orbit" 
-                    class="control-btn tooltip" 
-                    title="Toggle Orbit Lines"
-                    aria-label="Toggle Orbit Lines">
-                <span class="icon" aria-hidden="true">◯</span>
-                <span class="tooltip-text">Show Orbits</span>
-            </button>
+        <!-- RIGHT POPUP: Camera Controls -->
+        <div class="side-popup right-popup" id="camera-controls-popup">
+            <!-- Collapsed Tab -->
+            <div class="popup-tab" 
+                 data-popup="camera-controls"
+                 role="button" 
+                 aria-label="Show camera controls"
+                 tabindex="0">
+                <div class="tab-icon">
+                    <span class="icon" aria-hidden="true">📷</span>
+                </div>
+                <div class="tab-text">
+                    <span class="tab-title">Controls</span>
+                </div>
+                <div class="tab-arrow" aria-hidden="true">◀</div>
+            </div>
+            
+            <!-- Expanded Content -->
+            <div class="popup-content" role="toolbar" aria-label="Camera Controls">
+                <div class="popup-header">
+                    <h3 class="controls-title">Camera Controls</h3>
+                    <button class="close-popup-btn" 
+                            aria-label="Close camera controls" 
+                            data-popup="camera-controls">
+                        <span class="icon" aria-hidden="true">✕</span>
+                    </button>
+                </div>
+                
+                <div class="popup-body">
+                    <div class="control-group">
+                        <label class="group-label">View Controls</label>
+                        <div class="control-buttons">
+                            <button id="reset-camera" 
+                                    class="control-btn" 
+                                    title="Reset Camera View"
+                                    aria-label="Reset Camera View">
+                                <span class="icon" aria-hidden="true">⟲</span>
+                                <span class="btn-label">Reset View</span>
+                            </button>
+                            <button id="toggle-orbit-mode" 
+                                    class="control-btn" 
+                                    title="Toggle Camera Orbit Mode"
+                                    aria-label="Toggle Camera Orbit">
+                                <span class="icon" aria-hidden="true">⚲</span>
+                                <span class="btn-label">Auto Orbit</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="group-label">Animation Controls</label>
+                        <div class="control-buttons">
+                            <button id="toggle-rotation" 
+                                    class="control-btn" 
+                                    title="Toggle Planet Rotation"
+                                    aria-label="Toggle Planet Rotation">
+                                <span class="icon" aria-hidden="true">↻</span>
+                                <span class="btn-label">Rotation</span>
+                            </button>
+                            <button id="toggle-follow-rotation" 
+                                    class="control-btn" 
+                                    title="Follow Planet Movement"
+                                    aria-label="Follow Planet Rotation">
+                                <span class="icon" aria-hidden="true">⥀</span>
+                                <span class="btn-label">Follow</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="group-label">Display Options</label>
+                        <div class="control-buttons">
+                            <button id="toggle-orbit" 
+                                    class="control-btn" 
+                                    title="Toggle Orbit Lines"
+                                    aria-label="Toggle Orbit Lines">
+                                <span class="icon" aria-hidden="true">◯</span>
+                                <span class="btn-label">Orbit Lines</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Hint (Auto-hide) -->
+        <div class="keyboard-hints" id="keyboard-hints">
+            <div class="hint-item">
+                <kbd>I</kbd> <span>Info Panel</span>
+            </div>
+            <div class="hint-item">
+                <kbd>C</kbd> <span>Controls</span>
+            </div>
+            <div class="hint-item">
+                <kbd>R</kbd> <span>Reset View</span>
+            </div>
         </div>
     </div>
 

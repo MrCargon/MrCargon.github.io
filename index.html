@@ -26,7 +26,7 @@
                 <div class="bubble"></div>
             </div>
             <div id="loading-text">Loading components...</div>
-            <div id="loading-progress" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+            <div id="loading-progress" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Loading progress"></div>
         </div>
     
         <!-- Main Content -->
@@ -38,10 +38,84 @@
     
     <!-- Main Scripts -->
     <script src="src/components/ui/LoadingScreen.js"></script>
+    
+    <!-- 📏 Consolidated Rules System - Load in order -->
+    <script src="src/rules/Assert.js"></script>
+    <script src="src/rules/BoundedUtilities.js"></script>
+    <script src="src/rules/RulesEnforcer.js"></script>
+    <script src="src/rules/init.js"></script>
+    
+    <!-- 🛠️ Utility Classes (load before 3D components) -->
+    <script src="src/utils/MemoryManager.js"></script>
+    <script src="src/utils/ResourceLoader.js"></script>
+    
+    <!-- 🌌 THREE.js Library - Using CDN with proper OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script>
+      window.addEventListener('load', function() {
+        if (typeof THREE !== 'undefined') {
+          if (typeof THREE.OrbitControls !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('threejs-ready'));
+          } else {
+            THREE.OrbitControls = function(camera, domElement) {
+              this.camera = camera;
+              this.domElement = domElement || document;
+              this.enabled = true;
+              this.target = new THREE.Vector3();
+              this.enableDamping = false;
+              this.dampingFactor = 0.05;
+              this.enableZoom = true;
+              this.minDistance = 0;
+              this.maxDistance = Infinity;
+              this.addEventListener = function() {};
+              this.removeEventListener = function() {};
+              this.dispatchEvent = function() {};
+              this.update = function() { return false; };
+            };
+            window.dispatchEvent(new CustomEvent('threejs-ready'));
+          }
+        } else {
+          window.dispatchEvent(new CustomEvent('threejs-failed'));
+        }
+      });
+    </script>
+    
+    <!-- 🌌 3D Simulation Components (load in dependency order) -->
+    
+    <!-- Base Components First -->
+    <script src="src/components/simulation/solarsystem/Sun.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Planet.js"></script>
+    
+    <!-- Individual Planets (extend Planet base class) -->
+    <script src="src/components/simulation/solarsystem/Planets/Mercury.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Venus.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Earth.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Mars.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Jupiter.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Saturn.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Uranus.js"></script>
+    <script src="src/components/simulation/solarsystem/Planets/Neptune.js"></script>
+    
+    <!-- Space Environment Components -->
+    <script src="src/components/simulation/solarsystem/AsteroidBelt.js"></script>
+    <script src="src/components/simulation/solarsystem/HabitableZone.js"></script>
+    <script src="src/components/simulation/solarsystem/Galaxy.js"></script>
+    
+    <!-- Solar System Controller (depends on all above) -->
+    <script src="src/components/simulation/solarsystem/SolarSystem.js"></script>
+    
+    <!-- Space Environment Controller (orchestrates entire 3D experience) -->
+    <script src="src/components/simulation/solarsystem/SpaceEnvironment.js"></script>
+    
+    <!-- 📋 Page Management Components (load before PageManager) -->
+    <script src="src/components/pages/ProjectsPageManager.js"></script>
+    <script src="src/components/pages/ProjectFiltersManager.js"></script>
+    
+    <!-- � Core Components -->
     <script src="src/components/ui/PageManager.js"></script>
     <script src="src/components/header/HeaderManager.js"></script>
-    <!-- Golden Rules System -->
-    <script src="src/golden-rules/init.js"></script>
+    
     <script src="src/main.js" defer></script>
     </body>
 </html>

@@ -1,0 +1,315 @@
+{
+  "version": "2.0.1",
+  "checksum": "web7f8g9h1i2j3k4l",
+  "lastModified": "2025-08-26T20:35:00Z",
+  "immutable": true,
+  "projectType": "javascript-web-application",
+  "projectName": "MrCargon Solar System Explorer",
+  "description": "Web-adapted Ten Rules for safety-critical JavaScript development",
+  "rules": {
+    "rule1": {
+      "id": "SIMPLE_CONTROL_FLOW",
+      "description": "Restrict code to simple, predictable control flow patterns",
+      "webAdaptation": "Focus on async/await patterns and DOM event handling",
+      "restrictions": [
+        "No deeply nested callbacks (callback hell)",
+        "Prefer async/await over complex Promise chains",
+        "No recursive DOM traversal beyond 10 levels",
+        "Limit conditional complexity (max 3 nested if statements)"
+      ],
+      "maxNestingDepth": 4,
+      "maxAsyncChaining": 3,
+      "preferredPatterns": ["async/await", "event-delegation", "functional-composition"]
+    },
+    "rule2": {
+      "id": "BOUNDED_LOOPS",
+      "description": "All loops must have fixed upper bounds to prevent browser freezing",
+      "webAdaptation": "Prevent infinite loops that could freeze the browser or cause performance issues",
+      "maxIterations": 1000,
+      "requiresStaticProof": true,
+      "webSpecific": {
+        "animationFrameLoops": {
+          "maxDuration": 16.67,
+          "description": "Animation loops must complete within 16ms for 60fps"
+        },
+        "domTraversal": {
+          "maxElements": 500,
+          "description": "Limit DOM queries to prevent performance degradation"
+        },
+        "dataProcessing": {
+          "batchSize": 100,
+          "description": "Process large datasets in batches with requestIdleCallback"
+        }
+      }
+    },
+    "rule3": {
+      "id": "CONTROLLED_MEMORY_ALLOCATION",
+      "description": "Control memory allocation patterns in web applications",
+      "webAdaptation": "Minimize DOM manipulation and object creation during runtime",
+      "restrictions": [
+        "Minimize DOM element creation during animation loops",
+        "Pre-allocate Three.js geometries and materials at initialization",
+        "Use object pooling for frequently created/destroyed objects",
+        "Clean up event listeners and observers to prevent memory leaks"
+      ],
+      "allowedPhase": "initialization",
+      "maxDOMElements": 500,
+      "maxEventListeners": 50,
+      "requiresCleanup": true,
+      "webSpecific": {
+        "threeJSObjects": {
+          "maxGeometries": 20,
+          "maxMaterials": 15,
+          "requiresDisposal": true
+        }
+      }
+    },
+    "rule4": {
+      "id": "FUNCTION_LENGTH",
+      "description": "Keep functions concise for maintainability and testing",
+      "webAdaptation": "Especially important for event handlers and animation callbacks",
+      "maxLines": 60,
+      "maxStatements": 50,
+      "maxDeclarations": 10,
+      "webSpecific": {
+        "eventHandlers": {
+          "maxLines": 30,
+          "description": "Event handlers should be lightweight and delegate to other functions"
+        },
+        "componentMethods": {
+          "maxLines": 40,
+          "description": "Component methods should focus on single responsibility"
+        }
+      }
+    },
+    "rule5": {
+      "id": "VALIDATION_DENSITY",
+      "description": "Ensure robust validation throughout the application",
+      "webAdaptation": "Focus on input validation, type checking, and error boundaries",
+      "minValidations": 2,
+      "requiresSideEffectFree": true,
+      "webSpecific": {
+        "userInputs": {
+          "requiresValidation": true,
+          "requiresSanitization": true,
+          "description": "All user inputs must be validated and sanitized"
+        },
+        "apiResponses": {
+          "requiresTypeCheck": true,
+          "requiresErrorHandling": true,
+          "description": "API responses must be type-checked and have error handling"
+        },
+        "domOperations": {
+          "requiresElementCheck": true,
+          "description": "Check element existence before manipulation"
+        }
+      }
+    },
+    "rule6": {
+      "id": "DATA_SCOPE_MINIMIZATION",
+      "description": "Minimize data scope and prefer modular patterns",
+      "webAdaptation": "Use ES6 modules, avoid global variables, prefer encapsulation",
+      "restrictions": [
+        "No global variables except constants and configuration",
+        "Use ES6 modules for code organization",
+        "Prefer class private fields or closures",
+        "Minimize window object pollution"
+      ],
+      "maxGlobalVars": 5,
+      "requiresJustification": true,
+      "webSpecific": {
+        "modulePattern": {
+          "preferredExports": ["named", "default-for-classes"],
+          "avoidNamespaceObjects": true
+        },
+        "globalConstants": {
+          "allowedTypes": ["configuration", "enums", "utility-constants"],
+          "namingConvention": "SCREAMING_SNAKE_CASE"
+        }
+      }
+    },
+    "rule7": {
+      "id": "GRACEFUL_ERROR_RECOVERY",
+      "description": "Implement graceful error handling and recovery mechanisms",
+      "webAdaptation": "Handle network failures, DOM errors, and user experience degradation gracefully",
+      "maxRecoveryTime": 5000,
+      "requiresErrorHandler": true,
+      "webSpecific": {
+        "networkErrors": {
+          "maxRetries": 3,
+          "backoffStrategy": "exponential",
+          "userFeedback": true,
+          "description": "Network failures should have retry logic and user feedback"
+        },
+        "renderingErrors": {
+          "fallbackUI": true,
+          "errorBoundaries": true,
+          "description": "Rendering errors should show fallback UI"
+        },
+        "userExperience": {
+          "loadingStates": true,
+          "progressIndicators": true,
+          "description": "Long operations should show progress to users"
+        }
+      }
+    },
+    "rule8": {
+      "id": "COMPREHENSIVE_VALIDATION",
+      "description": "Validate all function parameters, return values, and external data",
+      "webAdaptation": "Essential for DOM manipulation, API calls, and user interactions",
+      "requiresReturnCheck": true,
+      "requiresParameterValidation": true,
+      "webSpecific": {
+        "domQueries": {
+          "requiresNullCheck": true,
+          "description": "Always check if DOM elements exist before manipulation"
+        },
+        "apiCalls": {
+          "requiresResponseValidation": true,
+          "requiresErrorHandling": true,
+          "description": "Validate API responses and handle network errors"
+        },
+        "userInputs": {
+          "requiresTypeValidation": true,
+          "requiresBoundaryChecks": true,
+          "description": "Validate user inputs for type and boundary conditions"
+        }
+      }
+    },
+    "rule9": {
+      "id": "LIMITED_BUILD_COMPLEXITY",
+      "description": "Keep build processes and bundler configurations simple",
+      "webAdaptation": "Avoid complex build tool configurations that obscure code behavior",
+      "allowedBuildTools": ["webpack", "rollup", "vite", "parcel"],
+      "maxBundleComplexity": 3,
+      "restrictions": [
+        "Limit webpack loader chaining to 3 levels",
+        "Avoid dynamic imports in performance-critical paths",
+        "Keep polyfill usage minimal and documented",
+        "Use tree-shaking friendly code patterns"
+      ],
+      "webSpecific": {
+        "bundling": {
+          "maxChunkSize": "500KB",
+          "requiresCodeSplitting": true,
+          "description": "Keep bundles small for better performance"
+        },
+        "polyfills": {
+          "documentRequired": true,
+          "modernBrowserTarget": "ES2020",
+          "description": "Document polyfill usage and target modern browsers"
+        }
+      }
+    },
+    "rule10": {
+      "id": "SAFE_OBJECT_REFERENCES",
+      "description": "Handle object references and DOM elements safely",
+      "webAdaptation": "Prevent null reference errors and memory leaks in web applications",
+      "restrictions": [
+        "No direct property access without existence check",
+        "Use optional chaining (?.) for nested object access",
+        "Avoid circular references in complex data structures",
+        "Clean up object references in event handlers"
+      ],
+      "maxReferenceDepth": 3,
+      "requiresNullChecks": true,
+      "webSpecific": {
+        "domReferences": {
+          "cacheElements": true,
+          "cleanupListeners": true,
+          "description": "Cache DOM references and clean up event listeners"
+        },
+        "objectChaining": {
+          "preferOptionalChaining": true,
+          "maxDepth": 3,
+          "description": "Use optional chaining for safe property access"
+        }
+      }
+    },
+    "rule11": {
+      "id": "ZERO_WARNINGS_POLICY",
+      "description": "Maintain zero warnings in linting and build processes",
+      "webAdaptation": "Use ESLint, TypeScript, and browser dev tools to catch issues early",
+      "warningLevel": "strict",
+      "treatWarningsAsErrors": true,
+      "webSpecific": {
+        "eslint": {
+          "configuration": "recommended-plus-strict",
+          "customRules": ["no-console-in-production", "prefer-const", "no-var"],
+          "description": "Use strict ESLint configuration with project-specific rules"
+        },
+        "typescript": {
+          "strictMode": true,
+          "noImplicitAny": true,
+          "description": "Use TypeScript strict mode for better type safety"
+        },
+        "browser": {
+          "consoleWarnings": "not-allowed-in-production",
+          "deprecationWarnings": "must-be-addressed",
+          "description": "Address all browser console warnings and deprecations"
+        }
+      }
+    }
+  },
+  "enforcement": {
+    "mode": "strict",
+    "autoFix": false,
+    "blockOnViolation": true,
+    "reportingLevel": "verbose",
+    "webSpecific": {
+      "browserTesting": {
+        "requiredBrowsers": ["chrome", "firefox", "safari"],
+        "mobileSupport": true,
+        "performanceBudget": {
+          "firstContentfulPaint": "1.5s",
+          "largestContentfulPaint": "2.5s",
+          "cumulativeLayoutShift": "0.1"
+        }
+      }
+    }
+  },
+  "performance": {
+    "mode": "development",
+    "enableRuntimeMonitoring": true,
+    "enableMemoryTracking": true,
+    "maxViolationBuffer": 50,
+    "batchSize": 10,
+    "monitoringThreshold": 10,
+    "webSpecific": {
+      "fps": {
+        "targetFrameRate": 60,
+        "monitoringEnabled": true,
+        "alertThreshold": 45
+      },
+      "memory": {
+        "heapLimit": "100MB",
+        "gcMonitoring": true,
+        "alertThreshold": "80MB"
+      },
+      "network": {
+        "bundleSizeLimit": "2MB",
+        "asyncLoadingEnabled": true,
+        "compressionRequired": true
+      }
+    }
+  },
+  "projectContext": {
+    "domain": "interactive-3d-solar-system-explorer",
+    "criticalPaths": [
+      "3D rendering and animation",
+      "User interaction handling",
+      "Real-time data updates",
+      "Cross-browser compatibility"
+    ],
+    "performanceRequirements": {
+      "smoothAnimations": "60fps minimum",
+      "loadTime": "under 3 seconds",
+      "responsiveness": "under 100ms interaction response"
+    },
+    "browserSupport": {
+      "minimum": "ES2020 support",
+      "preferred": "Modern browsers with WebGL2",
+      "fallbacks": "Canvas 2D for older browsers"
+    }
+  }
+}

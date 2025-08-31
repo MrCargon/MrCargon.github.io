@@ -85,13 +85,13 @@ PROJECTS PAGE
                         <h3 class="content-title">Featured Projects</h3>
                         <button class="description-toggle" 
                                 id="description-toggle"
-                                aria-expanded="true" 
+                                aria-expanded="false" 
                                 aria-controls="content-description"
                                 title="Toggle description">
                             <span class="toggle-icon">▼</span>
                         </button>
                     </div>
-                    <div class="content-description" 
+                    <div class="content-description collapsed" 
                          id="content-description" 
                          role="region" 
                          aria-labelledby="description-toggle">
@@ -114,35 +114,41 @@ PROJECTS PAGE
                                 aria-labelledby="barista-title">
                             <div class="project-image">
                                 <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=200&fit=crop&crop=center" 
-                                    alt="Starbucks Barista Game - Interactive coffee making simulator" 
-                                    loading="lazy">
+                                    alt="Starbucks Barista Game - Interactive coffee making simulator">
                             </div>
                             <div class="project-info">
                                 <div class="project-meta">
                                     <span class="project-type">Interactive Game</span>
                                     <span class="project-date">2025</span>
                                 </div>
-                                <h3 id="barista-title">Starbucks Barista Adventure</h3>
-                                <p>
-                                    An engaging educational game where you learn to make authentic Starbucks drinks through 
-                                    interactive challenges. Master recipes, earn badges, and become the ultimate barista!
-                                </p>
-                                <div class="project-tags">
-                                    <span class="tag">React</span>
-                                    <span class="tag">Interactive</span>
-                                    <span class="tag">Educational</span>
-                                    <span class="tag">Game Design</span>
-                                    <span class="tag">UI/UX</span>
-                                </div>
+                                <h3 id="barista-title">Starbucks Adventure</h3>
                                 <div class="project-actions">
-                                    <button class="project-btn primary" 
+                                    <button class="project-btn game-launch-btn" 
                                             data-game="barista"
-                                            aria-describedby="barista-title">
-                                        <span>🎮</span> Play Game
+                                            aria-describedby="barista-title"
+                                            title="Launch interactive Starbucks training game">
+                                        🎮 Play Game
                                     </button>
-                                    <a href="#" class="project-btn" aria-label="View Barista Game source code">
-                                        <span>🔗</span> Code
-                                    </a>
+                                    <button class="project-btn secondary view-details-btn" 
+                                            data-project="barista-game"
+                                            aria-describedby="barista-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        An engaging educational game where you learn to make authentic Starbucks drinks through 
+                                        interactive challenges. Master recipes, earn badges, and become the ultimate barista!
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">JavaScript</span>
+                                        <span class="tag">Interactive</span>
+                                        <span class="tag">Educational</span>
+                                        <span class="tag">Game Design</span>
+                                        <span class="tag">UI/UX</span>
+                                        <span class="tag">Golden Rules</span>
+                                    </div>
                                 </div>
                             </div>
                         </article>
@@ -157,8 +163,7 @@ PROJECTS PAGE
                                 aria-labelledby="portfolio-title">
                             <div class="project-image">
                                 <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop&crop=center" 
-                                    alt="Modern portfolio website with space theme" 
-                                    loading="lazy">
+                                    alt="Modern portfolio website with space theme">
                             </div>
                             <div class="project-info">
                                 <div class="project-meta">
@@ -166,24 +171,26 @@ PROJECTS PAGE
                                     <span class="project-date">2025</span>
                                 </div>
                                 <h3 id="portfolio-title">Interactive Portfolio</h3>
-                                <p>
-                                    A modern, responsive portfolio website featuring an interactive 3D solar system, 
-                                    smooth animations, and optimized performance. Built with vanilla JavaScript and Three.js.
-                                </p>
-                                <div class="project-tags">
-                                    <span class="tag">JavaScript</span>
-                                    <span class="tag">Three.js</span>
-                                    <span class="tag">CSS3</span>
-                                    <span class="tag">Responsive</span>
-                                    <span class="tag">Performance</span>
-                                </div>
                                 <div class="project-actions">
-                                    <a href="#" class="project-btn primary" aria-describedby="portfolio-title">
-                                        <span>🌐</span> Live Site
-                                    </a>
-                                    <a href="#" class="project-btn" aria-label="View portfolio source code">
-                                        <span>🔗</span> Code
-                                    </a>
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="portfolio-site"
+                                            aria-describedby="portfolio-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        A modern, responsive portfolio website featuring an interactive 3D solar system, 
+                                        smooth animations, and optimized performance. Built with vanilla JavaScript and Three.js.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">JavaScript</span>
+                                        <span class="tag">Three.js</span>
+                                        <span class="tag">CSS3</span>
+                                        <span class="tag">Responsive</span>
+                                        <span class="tag">Performance</span>
+                                    </div>
                                 </div>
                             </div>
                         </article>
@@ -199,7 +206,6 @@ PROJECTS PAGE
                             <div class="project-image">
                                 <img src="src/assets/textures/sun/sun_map.jpg" 
                                     alt="3D Solar System simulation with realistic planet textures" 
-                                    loading="lazy"
                                     onerror="this.src='https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=200&fit=crop&crop=center'">
                             </div>
                             <div class="project-info">
@@ -208,24 +214,26 @@ PROJECTS PAGE
                                     <span class="project-date">2024</span>
                                 </div>
                                 <h3 id="solar-title">Solar System Simulator</h3>
-                                <p>
-                                    Immersive 3D solar system with accurate planetary orbits, realistic textures, 
-                                    and interactive controls. Features dynamic lighting and camera controls.
-                                </p>
-                                <div class="project-tags">
-                                    <span class="tag">Three.js</span>
-                                    <span class="tag">WebGL</span>
-                                    <span class="tag">3D Graphics</span>
-                                    <span class="tag">Physics</span>
-                                    <span class="tag">Astronomy</span>
-                                </div>
                                 <div class="project-actions">
-                                    <a href="#main" class="project-btn primary" aria-describedby="solar-title">
-                                        <span>🪐</span> Explore
-                                    </a>
-                                    <a href="#" class="project-btn" aria-label="View solar system source code">
-                                        <span>🔗</span> Code
-                                    </a>
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="solar-system"
+                                            aria-describedby="solar-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        Immersive 3D solar system with accurate planetary orbits, realistic textures, 
+                                        and interactive controls. Features dynamic lighting and camera controls.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">Three.js</span>
+                                        <span class="tag">WebGL</span>
+                                        <span class="tag">3D Graphics</span>
+                                        <span class="tag">Physics</span>
+                                        <span class="tag">Astronomy</span>
+                                    </div>
                                 </div>
                             </div>
                         </article>
@@ -239,8 +247,7 @@ PROJECTS PAGE
                                 aria-labelledby="space-title">
                             <div class="project-image">
                                 <img src="https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=200&fit=crop&crop=center" 
-                                    alt="Space exploration game with spacecraft and planets" 
-                                    loading="lazy">
+                                    alt="Space exploration game with spacecraft and planets">
                             </div>
                             <div class="project-info">
                                 <div class="project-meta">
@@ -248,24 +255,26 @@ PROJECTS PAGE
                                     <span class="project-date">2024</span>
                                 </div>
                                 <h3 id="space-title">Space Explorer</h3>
-                                <p>
-                                    An adventure game where players navigate through space, discover planets, 
-                                    and collect resources. Built with Godot engine and custom physics.
-                                </p>
-                                <div class="project-tags">
-                                    <span class="tag">Godot</span>
-                                    <span class="tag">GDScript</span>
-                                    <span class="tag">Game Design</span>
-                                    <span class="tag">Physics</span>
-                                    <span class="tag">Procedural</span>
-                                </div>
                                 <div class="project-actions">
-                                    <button class="project-btn primary" disabled aria-describedby="space-title">
-                                        <span>🚧</span> In Development
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="space-explorer"
+                                            aria-describedby="space-title">
+                                        View Details
                                     </button>
-                                    <a href="#" class="project-btn" aria-label="View space explorer source code">
-                                        <span>🔗</span> Code
-                                    </a>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        An adventure game where players navigate through space, discover planets, 
+                                        and collect resources. Built with Godot engine and custom physics.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">Godot</span>
+                                        <span class="tag">GDScript</span>
+                                        <span class="tag">Game Design</span>
+                                        <span class="tag">Physics</span>
+                                        <span class="tag">Procedural</span>
+                                    </div>
                                 </div>
                             </div>
                         </article>
@@ -279,8 +288,7 @@ PROJECTS PAGE
                                 aria-labelledby="data-title">
                             <div class="project-image">
                                 <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop&crop=center" 
-                                    alt="Interactive data visualization dashboard with charts and graphs" 
-                                    loading="lazy">
+                                    alt="Interactive data visualization dashboard with charts and graphs">
                             </div>
                             <div class="project-info">
                                 <div class="project-meta">
@@ -288,37 +296,39 @@ PROJECTS PAGE
                                     <span class="project-date">2024</span>
                                 </div>
                                 <h3 id="data-title">Interactive Dashboard</h3>
-                                <p>
-                                    Dynamic data visualization platform with real-time charts, filtering capabilities, 
-                                    and responsive design. Processes large datasets efficiently.
-                                </p>
-                                <div class="project-tags">
-                                    <span class="tag">D3.js</span>
-                                    <span class="tag">Chart.js</span>
-                                    <span class="tag">Data Analysis</span>
-                                    <span class="tag">Real-time</span>
-                                    <span class="tag">Responsive</span>
-                                </div>
                                 <div class="project-actions">
-                                    <a href="#" class="project-btn primary" aria-describedby="data-title">
-                                        <span>📊</span> View Demo
-                                    </a>
-                                    <a href="#" class="project-btn" aria-label="View dashboard source code">
-                                        <span>🔗</span> Code
-                                    </a>
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="data-viz"
+                                            aria-describedby="data-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        Dynamic data visualization platform with real-time charts, filtering capabilities, 
+                                        and responsive design. Processes large datasets efficiently.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">D3.js</span>
+                                        <span class="tag">Chart.js</span>
+                                        <span class="tag">Data Analysis</span>
+                                        <span class="tag">Real-time</span>
+                                        <span class="tag">Responsive</span>
+                                    </div>
                                 </div>
                             </div>
                         </article>
                     </div>
 
                     <!-- Loading State (hidden by default) -->
-                    <div class="loading-state" style="display: none;" role="status" aria-live="polite">
+                    <div class="loading-state hidden-content" role="status" aria-live="polite">
                         <div class="loading-spinner" aria-hidden="true"></div>
                         <p>Loading projects...</p>
                     </div>
 
                     <!-- Empty State (hidden by default) -->
-                    <div class="empty-state" style="display: none;" role="status">
+                    <div class="empty-state hidden-content" role="status">
                         <p>No projects found matching your criteria.</p>
                         <button class="project-btn" data-action="clear-filters">Clear Filters</button>
                     </div>
@@ -337,8 +347,23 @@ PROJECTS PAGE
                 </button>
             </div>
         </header>
-        <div class="game-container" id="game-content">
+        <div id="game-content">
             <!-- Game will be loaded here dynamically by PageManager -->
+        </div>
+    </div>
+
+    <!-- Project Info Modal - Viewport Responsive -->
+    <div id="project-info-modal" class="projects-panel modal-panel" role="dialog" aria-modal="true" aria-labelledby="project-info-title">
+        <header class="panel-header">
+            <h2 id="project-info-title">Project Details</h2>
+            <div class="header-controls">
+                <button class="project-btn" data-action="close-project-info" aria-label="Close project details">
+                    <span>✕</span> Close
+                </button>
+            </div>
+        </header>
+        <div class="project-info-content" id="project-info-content">
+            <!-- Project info will be loaded here dynamically -->
         </div>
     </div>
 </section>

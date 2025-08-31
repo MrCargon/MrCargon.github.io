@@ -17,7 +17,7 @@ class Sun {
         this.coronaTemperature = 1000000; // Kelvin
         
         // Visual settings
-        this.coronaSize = this.data.radius * 2.5; // More extensive corona
+        this.coronaSize = this.data.radius * 1.5; // Corona
         this.coronaDensity = 0.8;
         
         // Solar features
@@ -38,13 +38,10 @@ class Sun {
     
     async init() {
         try {
-            console.log(`Initializing Sun with radius ${this.data.radius}`);
-            
             // Try to load texture with fallback
             let texture;
             try {
                 texture = await this.resourceLoader.loadTexture(this.data.texturePath);
-                console.log("Sun texture loaded successfully");
             } catch (error) {
                 console.warn("Failed to load sun texture, using scientifically accurate fallback:", error);
                 texture = this.createScientificSolarTexture();
@@ -71,7 +68,6 @@ class Sun {
             // Create solar flares
             this.createSolarFlares();
             
-            console.log("Scientific Sun initialized successfully");
             return true;
         } catch (error) {
             console.error('Failed to initialize Sun:', error);
@@ -217,7 +213,7 @@ class Sun {
     
     createLight() {
         // Scientific values for solar illumination
-        this.light = new THREE.PointLight(0xffffff, 2, 1000);
+        this.light = new THREE.PointLight(0xffffff, 2, 1);
         this.mesh.add(this.light);
         
         // Add ambient light for general illumination

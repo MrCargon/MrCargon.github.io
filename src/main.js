@@ -1,15 +1,46 @@
 /**
- * ComponentLoader - Optimized component loading system
- * Enhanced with better error handling, caching, and memory management
- * Version 2.3 - Production Ready
+ * main.js - Rule-compliant application entry point
+ * Purpose: Initialize application components following all 10 Rules
+ * @version 2.0.1
+ */
+
+// Consolidated rules system loads automatically via index.html
+// No manual loading needed to prevent conflicts
+
+/**
+ * ComponentLoader - Rule-compliant component loading system
+ * Purpose: Load HTML components with safety and bounds
+ * Rule 4: All methods ≤60 lines | Rule 5: 2+ assertions per method
  */
 class ComponentLoader {
-    // Enhanced static cache with metadata
-    static componentCache = new Map();
-    static loadingPromises = new Map(); // Prevent duplicate loads
-    static loadingState = new Set(); // Track currently loading components
-    static retryAttempts = new Map(); // Track retry attempts
-    static maxRetries = 3;
+    // Static properties initialized after class definition
+    // (ES2015 compatible approach for broader browser support)
+    
+    /**
+     * Initialize static properties (called once)
+     * Purpose: Setup static state with fixed memory allocation
+     * Rule 3: Pre-allocated memory | Rule 5: Environment validation
+     */
+    static initialize() {
+        // Rule 5: Validate environment
+        if (typeof document === 'undefined') {
+            throw new Error('Document object required for ComponentLoader');
+        }
+        
+        if (typeof Map === 'undefined') {
+            throw new Error('Map constructor required for ComponentLoader');
+        }
+        
+        // Initialize static properties if not already done
+        if (!ComponentLoader.componentCache) {
+            ComponentLoader.componentCache = new Map();
+            ComponentLoader.loadingPromises = new Map();
+            ComponentLoader.loadingState = new Set();
+            ComponentLoader.retryAttempts = new Map();
+            ComponentLoader.maxRetries = 3; // Rule 2: Fixed retry limit
+            ComponentLoader.maxCacheSize = 10; // Rule 2: Fixed cache limit
+        }
+    }
     
     /**
      * Load a component HTML into a container element with enhanced error handling
@@ -64,79 +95,92 @@ class ComponentLoader {
 
     /**
      * Internal method to perform the actual loading
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 1: Simple flow
      */
     static async _performLoad(url, containerId, options) {
-        const { retries, cache, timeout, priority } = options;
-        const container = document.getElementById(containerId);
+        // Rule 5: Validate input parameters
+        if (!url || typeof url !== 'string') {
+            throw new Error('Invalid URL for component loading');
+        }
         
+        if (!containerId || typeof containerId !== 'string') {
+            throw new Error('Invalid container ID for component loading');
+        }
+        
+        const container = document.getElementById(containerId);
         this.loadingState.add(containerId);
 
-        // Check cache first
-        if (cache && this.componentCache.has(url)) {
-            const cachedData = this.componentCache.get(url);
-            console.log(`📋 Using cached content for ${containerId}`);
-            
-            try {
-                await this._insertContent(container, cachedData.content, containerId);
-                this._updateCacheStats(url, 'hit');
-                return true;
-            } catch (error) {
-                console.warn(`⚠️ Cache content invalid for ${url}, reloading...`);
-                this.componentCache.delete(url);
-            }
+        // Try cache first
+        const cacheResult = await this._tryLoadFromCache(url, containerId, options.cache, container);
+        if (cacheResult) {
+            return true;
         }
 
-        // Perform loading with retries
+        // Perform network loading with retries
+        return await this._performNetworkLoad(url, containerId, options, container);
+    }
+
+    /**
+     * Try to load content from cache
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 6: Error recovery
+     */
+    static async _tryLoadFromCache(url, containerId, useCache, container) {
+        // Rule 5: Validate cache parameters
+        if (!container || container.innerHTML === undefined) {
+            console.warn('Invalid container for cache loading');
+            return false;
+        }
+        
+        if (typeof useCache !== 'boolean') {
+            console.warn('Invalid cache flag, defaulting to false');
+            return false;
+        }
+
+        if (!useCache || !this.componentCache.has(url)) {
+            return false;
+        }
+
+        try {
+            const cachedData = this.componentCache.get(url);
+            await this._insertContent(container, cachedData.content, containerId);
+            this._updateCacheStats(url, 'hit');
+            return true;
+            
+        } catch (error) {
+            this.componentCache.delete(url);
+            return false;
+        }
+    }
+
+    /**
+     * Perform network loading with retries
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 2: Bounded retries
+     */
+    static async _performNetworkLoad(url, containerId, options, container) {
+        // Rule 5: Validate network loading parameters
+        if (!options || typeof options.retries !== 'number') {
+            throw new Error('Invalid retry configuration for network loading');
+        }
+        
+        if (!container || typeof container.innerHTML === 'undefined') {
+            throw new Error('Invalid container for network loading');
+        }
+
+        const { retries, cache, timeout } = options;
         let attempt = 0;
         let lastError;
 
-        while (attempt < retries) {
+        // Rule 2: Bounded retry loop
+        while (attempt < Math.min(retries, 5)) {
             try {
-                console.log(`📥 Loading ${containerId} (attempt ${attempt + 1}/${retries})`);
-                
-                // Show loading state
                 this._showLoadingState(container, containerId, attempt);
-
-                // Fetch with timeout and priority
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-                const response = await fetch(url, {
-                    signal: controller.signal,
-                    cache: cache ? 'default' : 'no-cache',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Cache-Control': cache ? 'max-age=300' : 'no-cache'
-                    }
-                });
-
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const content = await response.text();
+                const content = await this._fetchWithTimeout(url, timeout, cache);
                 
-                // Validate content
-                if (!content || content.trim().length === 0) {
-                    throw new Error('Empty response received');
-                }
-
-                // Cache the component with metadata
                 if (cache) {
-                    this.componentCache.set(url, {
-                        content,
-                        timestamp: Date.now(),
-                        size: content.length,
-                        hits: 0
-                    });
+                    this._cacheContent(url, content);
                 }
 
-                // Insert content and initialize
                 await this._insertContent(container, content, containerId);
-
-                console.log(`✅ Successfully loaded ${containerId}`);
                 this._updateCacheStats(url, 'miss');
                 return true;
 
@@ -147,11 +191,9 @@ class ComponentLoader {
                 console.warn(`⚠️ Attempt ${attempt} failed for ${containerId}:`, error.message);
 
                 if (attempt < retries) {
-                    // Exponential backoff with jitter
                     const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000);
                     await this._delay(delay);
                 } else {
-                    // Final attempt failed
                     console.error(`❌ All attempts failed for ${containerId}`, lastError);
                     await this._showErrorState(container, containerId, lastError, url);
                 }
@@ -159,6 +201,85 @@ class ComponentLoader {
         }
 
         return false;
+    }
+
+    /**
+     * Fetch content with timeout protection
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 2: Bounded timeout
+     */
+    static async _fetchWithTimeout(url, timeout, useCache) {
+        // Rule 5: Validate fetch parameters
+        if (!url || typeof url !== 'string') {
+            throw new Error('Invalid URL for fetch operation');
+        }
+        
+        if (!timeout || timeout < 0 || timeout > 30000) {
+            throw new Error('Invalid timeout value for fetch operation');
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                cache: useCache ? 'default' : 'no-cache',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': useCache ? 'max-age=300' : 'no-cache'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const content = await response.text();
+            
+            if (!content || content.trim().length === 0) {
+                throw new Error('Empty response received');
+            }
+
+            return content;
+            
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    /**
+     * Cache content with metadata
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 3: Bounded cache
+     */
+    static _cacheContent(url, content) {
+        // Rule 5: Validate cache inputs
+        if (!url || typeof url !== 'string') {
+            console.error('Invalid URL for caching');
+            return false;
+        }
+        
+        if (!content || typeof content !== 'string' || content.trim().length === 0) {
+            console.error('Invalid content for caching');
+            return false;
+        }
+
+        // Rule 3: Bounded cache size
+        if (this.componentCache.size >= this.maxCacheSize) {
+            // Remove oldest entry
+            const firstKey = this.componentCache.keys().next().value;
+            if (firstKey) {
+                this.componentCache.delete(firstKey);
+            }
+        }
+
+        this.componentCache.set(url, {
+            content,
+            timestamp: Date.now(),
+            size: content.length,
+            hits: 0
+        });
+
+        return true;
     }
 
     /**
@@ -352,8 +473,6 @@ class ComponentLoader {
      */
     static async initializeComponent(containerId) {
         try {
-            console.log(`🔧 Initializing component: ${containerId}`);
-
             // Component-specific initialization
             switch(containerId) {
                 case 'header-container':
@@ -384,8 +503,6 @@ class ComponentLoader {
      * Enhanced header initialization
      */
     static async initializeHeader() {
-        console.log('📋 Initializing header component');
-        
         try {
             // Set active navigation state
             this._updateNavigationState();
@@ -406,8 +523,6 @@ class ComponentLoader {
      * Initialize page container
      */
     static async initializePage() {
-        console.log('📄 Initializing page container');
-        
         // Setup page-specific functionality
         this._setupPageInteractions();
         this._setupAccessibility();
@@ -417,8 +532,6 @@ class ComponentLoader {
      * Initialize footer container
      */
     static async initializeFooter() {
-        console.log('👣 Initializing footer container');
-        
         // Setup footer functionality
         this._setupFooterLinks();
     }
@@ -458,9 +571,6 @@ class ComponentLoader {
             try {
                 // Check if HeaderManager is available
                 if (typeof HeaderManager === 'undefined') {
-                    if (retryCount === 0) {
-                        console.log('⏳ Waiting for HeaderManager...');
-                    }
                     await this._delay(100 * (retryCount + 1));
                     retryCount++;
                     continue;
@@ -469,12 +579,10 @@ class ComponentLoader {
                 // Create HeaderManager instance
                 if (!window.headerManager) {
                     window.headerManager = new HeaderManager();
-                    console.log('✅ HeaderManager initialized successfully');
                 } else {
                     // Reinitialize if it already exists
                     if (typeof window.headerManager.reinitialize === 'function') {
                         window.headerManager.reinitialize();
-                        console.log('🔄 HeaderManager reinitialized');
                     }
                 }
                 return;
@@ -710,6 +818,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Performance timer start
     const startTime = performance.now();
     
+    // Initialize ComponentLoader static properties
+    ComponentLoader.initialize();
+    
     // Create loading screen instance
     window.loadingScreen = new LoadingScreen();
     
@@ -821,231 +932,13 @@ if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
             - DOM Content Loaded: ${window.perf.domLoaded.toFixed(2)}ms
             - Components Loaded: ${window.perf.componentsLoaded?.toFixed(2) || 'N/A'}ms
             - Page Fully Loaded: ${window.perf.pageReady.toFixed(2)}ms
-            - Total Load Time: ${(window.perf.pageReady - performance.timing.navigationStart).toFixed(2)}ms
+            - Total Load Time: ${window.perf.pageReady.toFixed(2)}ms
         `);
     });
 }
 
-class PerformanceMonitor {
-    constructor() {
-        this.metrics = {
-            pageLoads: {},
-            componentLoads: {},
-            renderTimes: []
-        };
-        
-        this.isActive = location.hostname === 'localhost' || 
-                        location.hostname === '127.0.0.1' ||
-                        location.search.includes('debug=true');
-        
-        // Only monitor in development or with debug flag
-        if (this.isActive) {
-            this.setupMonitoring();
-        }
-    }
-    
-    setupMonitoring() {
-        // Set navigationStartTime for page load tracking
-        window.navigationStartTime = performance.now();
-        
-        // Monitor page navigation
-        window.addEventListener('pagemanager:navigation:complete', e => {
-            this.recordPageLoad(e.detail.page);
-        });
-        
-        // Monitor component loads
-        window.addEventListener('component:loaded', e => {
-            this.recordComponentLoad(e.detail.component, e.detail.loadTime);
-        });
-        
-        // Setup FPS monitoring for 3D content
-        this.setupFpsMonitoring();
-        
-        console.log('Performance monitoring active');
-    }
-    
-    recordPageLoad(pageName) {
-        if (!this.isActive) return;
-        
-        const loadTime = performance.now() - (window.navigationStartTime || 0);
-        
-        if (!this.metrics.pageLoads[pageName]) {
-            this.metrics.pageLoads[pageName] = [];
-        }
-        
-        this.metrics.pageLoads[pageName].push(loadTime);
-        
-        console.log(`Page ${pageName} loaded in ${loadTime.toFixed(2)}ms`);
-    }
-    
-    // Missing method implementation - Add this!
-    recordComponentLoad(componentName, loadTime) {
-        if (!this.isActive) return;
-        
-        if (!this.metrics.componentLoads[componentName]) {
-            this.metrics.componentLoads[componentName] = [];
-        }
-        
-        this.metrics.componentLoads[componentName].push(loadTime);
-        
-        // Only log if significant
-        if (loadTime > 500) {
-            console.debug(`Component ${componentName} loaded in ${loadTime.toFixed(2)}ms`);
-        }
-    }
-    
-    setupFpsMonitoring() {
-        // Skip if we're not in an environment with requestAnimationFrame
-        if (typeof requestAnimationFrame !== 'function') return;
-        
-        this.fpsHistory = [];
-        this.lastFrameTime = performance.now();
-        this.frameCount = 0;
-        
-        // Check if we have a solar system environment to monitor
-        const checkForEnvironment = () => {
-            if (window.spaceEnvironment?.initialized) {
-                // We found an active environment, start monitoring
-                this.startFpsMonitoring();
-            } else {
-                // Check again later
-                setTimeout(checkForEnvironment, 1000);
-            }
-        };
-        
-        checkForEnvironment();
-    }
-    
-    startFpsMonitoring() {
-        // Create a monitoring loop
-        const monitorFrame = () => {
-            this.frameCount++;
-            const now = performance.now();
-            const elapsed = now - this.lastFrameTime;
-            
-            // Calculate FPS every second
-            if (elapsed >= 1000) {
-                const fps = Math.round((this.frameCount * 1000) / elapsed);
-                
-                // Store in history (keep last 60 readings - 1 minute)
-                this.fpsHistory.push(fps);
-                if (this.fpsHistory.length > 60) {
-                    this.fpsHistory.shift();
-                }
-                
-                // Reset counters
-                this.frameCount = 0;
-                this.lastFrameTime = now;
-                
-                // Log if significant change or every 10 seconds
-                if (this.fpsHistory.length % 10 === 0 || 
-                    (this.fpsHistory.length > 1 && 
-                     Math.abs(fps - this.fpsHistory[this.fpsHistory.length - 2]) > 5)) {
-                    console.debug(`Current FPS: ${fps}`);
-                }
-                
-                // Dispatch event for other parts of the app
-                window.dispatchEvent(new CustomEvent('fps-update', { detail: { fps } }));
-            }
-            
-            // Continue monitoring if still active
-            if (this.isActive && window.spaceEnvironment?.initialized) {
-                requestAnimationFrame(monitorFrame);
-            }
-        };
-        
-        // Start the monitoring loop
-        requestAnimationFrame(monitorFrame);
-    }
-
-    // Add missing methods referenced in getReport()
-    calculateAverageLoadTimes() {
-        const result = {};
-        
-        Object.entries(this.metrics.pageLoads).forEach(([page, times]) => {
-            if (times.length === 0) return;
-            
-            const sum = times.reduce((acc, time) => acc + time, 0);
-            result[page] = sum / times.length;
-        });
-        
-        return result;
-    }
-    
-    identifySlowestComponents() {
-        const components = [];
-        
-        Object.entries(this.metrics.componentLoads).forEach(([component, times]) => {
-            if (times.length === 0) return;
-            
-            const sum = times.reduce((acc, time) => acc + time, 0);
-            const average = sum / times.length;
-            
-            components.push({
-                name: component,
-                averageLoadTime: average,
-                maxLoadTime: Math.max(...times)
-            });
-        });
-        
-        // Sort from slowest to fastest
-        return components.sort((a, b) => b.averageLoadTime - a.averageLoadTime);
-    }
-    
-    calculateFpsStats() {
-        if (!this.fpsHistory || this.fpsHistory.length === 0) {
-            return { average: 0, min: 0, max: 0, stable: true };
-        }
-        
-        const sum = this.fpsHistory.reduce((acc, fps) => acc + fps, 0);
-        const average = sum / this.fpsHistory.length;
-        const min = Math.min(...this.fpsHistory);
-        const max = Math.max(...this.fpsHistory);
-        
-        // Calculate stability - less than 10% variation is considered stable
-        const stable = (max - min) / average < 0.1;
-        
-        return { average, min, max, stable };
-    }
-    
-    generateRecommendations() {
-        const recommendations = [];
-        const fpsStats = this.calculateFpsStats();
-        
-        // Check for FPS issues
-        if (fpsStats.average < 30) {
-            recommendations.push({
-                severity: 'high',
-                issue: 'Low frame rate',
-                suggestion: 'Consider reducing scene complexity, implement level-of-detail, or optimize render loop.'
-            });
-        }
-        
-        // Check for slow components
-        const slowComponents = this.identifySlowestComponents().filter(c => c.averageLoadTime > 500);
-        if (slowComponents.length > 0) {
-            recommendations.push({
-                severity: 'medium',
-                issue: `Slow component loading: ${slowComponents.map(c => c.name).join(', ')}`,
-                suggestion: 'Consider code splitting, lazy loading, or optimizing component initialization.'
-            });
-        }
-        
-        return recommendations;
-    }
-
-    getReport() {
-        if (!this.isActive) return null;
-        
-        // Generate comprehensive performance report
-        return {
-            averagePageLoadTimes: this.calculateAverageLoadTimes(),
-            slowestComponents: this.identifySlowestComponents(),
-            fpsStats: this.calculateFpsStats(),
-            recommendations: this.generateRecommendations()
-        };
-    }
-}
+// Performance monitoring consolidated with rules system
+// Let PerformanceManager handle all performance monitoring
 
 /**
  * Load essential page managers
@@ -1085,5 +978,5 @@ function loadScript(src) {
     });
 }
 
-// Initialize performance monitoring
-window.perfMonitor = new PerformanceMonitor();
+// Performance monitoring handled by PerformanceManager in rules system
+// No separate instantiation needed - consolidated architecture

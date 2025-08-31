@@ -5,19 +5,19 @@
  */
 class ProjectsPageManager {
     constructor() {
-        // Essential elements only
+ // Essential elements only
         this.projectsSection = null;
         this.gameContainer = null;
         this.gameContent = null;
         this.projectCards = null;
         this.filtersManager = null;
         
-        // Smart state management
+ // Smart state management
         this.activeGame = null;
         this.gameInstances = new Map();
         this.resources = new Set(); // Unified resource tracking
         
-        // Game assets registry
+ // Game assets registry
         this.gameAssets = {
             barista: {
                 script: 'src/components/games/StarbucksGame.js',
@@ -27,7 +27,7 @@ class ProjectsPageManager {
         };
         this.loadedAssets = new Set();
         
-        // Modern event handling
+ // Modern event handling
         this.abortController = new AbortController();
         this.eventOptions = { signal: this.abortController.signal };
     }
@@ -36,29 +36,22 @@ class ProjectsPageManager {
      * PHASE 1: Streamlined Initialization
      */
     async init() {
-        const startTime = performance.now();
-        
         try {
-            console.log('🚀 Initializing Modern ProjectsPageManager');
-            
-            // Find essential elements
+ // Find essential elements
             this.findElements();
             
-            // Setup in optimal order
+ // Setup in optimal order
             await Promise.all([
                 this.setupFilters(),
                 this.setupGameSystem(),
                 this.setupInteractions()
             ]);
             
-            // Initialize Smart Repositioning System for all project cards
+ // Initialize Smart Repositioning System for all project cards
             this.setupProjectCards();
             
-            // Show featured projects by default
+ // Show featured projects by default
             this.applyInitialFilter();
-            
-            const initTime = (performance.now() - startTime).toFixed(1);
-            console.log(`✅ ProjectsPageManager ready in ${initTime}ms`);
             
             return true;
             
@@ -80,22 +73,19 @@ class ProjectsPageManager {
         if (!this.projectsSection) {
             throw new Error('Projects section not found');
         }
-        
-        console.log(`📂 Found ${this.projectCards.length} project cards`);
     }
     
     /**
      * PHASE 1: Smart Filter Integration
      */
     async setupFilters() {
-        // Try to use ProjectFiltersManager if available
+ // Try to use ProjectFiltersManager if available
         if (window.ProjectFiltersManager) {
             try {
                 this.filtersManager = new ProjectFiltersManager();
                 const success = await this.filtersManager.init();
                 
                 if (success) {
-                    console.log('✅ ProjectFiltersManager integrated');
                     return;
                 }
             } catch (error) {
@@ -103,7 +93,7 @@ class ProjectsPageManager {
             }
         }
         
-        // Smart fallback system
+ // Smart fallback system
         this.setupFilterFallback();
     }
     
@@ -116,7 +106,7 @@ class ProjectsPageManager {
         
         if (!toggleBtn || !filterBar) return;
         
-        // Toggle functionality
+ // Toggle functionality
         toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
             const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
@@ -124,7 +114,7 @@ class ProjectsPageManager {
             this.toggleFilters(toggleBtn, filterBar, !isExpanded);
         }, this.eventOptions);
         
-        // Filter button handlers
+ // Filter button handlers
         filterBar.addEventListener('click', (e) => {
             const filterBtn = e.target.closest('.inline-filter-btn');
             if (!filterBtn) return;
@@ -133,7 +123,7 @@ class ProjectsPageManager {
             this.handleFilterChange(filterBtn);
         }, this.eventOptions);
         
-        // Search functionality
+ // Search functionality
         const searchBox = filterBar.querySelector('#inline-project-search');
         if (searchBox) {
             searchBox.addEventListener('input', this.debounce((e) => {
@@ -141,14 +131,12 @@ class ProjectsPageManager {
             }, 300), this.eventOptions);
         }
         
-        // Close on outside click
+ // Close on outside click
         document.addEventListener('click', (e) => {
             if (!toggleBtn.contains(e.target) && !filterBar.contains(e.target)) {
                 this.toggleFilters(toggleBtn, filterBar, false);
             }
         }, this.eventOptions);
-        
-        console.log('🔧 Filter fallback system active');
     }
     
     /**
@@ -160,7 +148,7 @@ class ProjectsPageManager {
         filterBar.setAttribute('aria-hidden', !expand);
         
         if (expand) {
-            // Position filter bar smartly
+ // Position filter bar smartly
             const rect = toggleBtn.getBoundingClientRect();
             filterBar.style.top = `${rect.bottom + 4}px`;
             filterBar.style.left = `${rect.left}px`;
@@ -175,7 +163,7 @@ class ProjectsPageManager {
         const category = filterBtn.getAttribute('data-category');
         if (!category) return;
         
-        // Update active state
+ // Update active state
         filterBtn.closest('.filters-row')
             .querySelectorAll('.inline-filter-btn')
             .forEach(btn => {
@@ -183,18 +171,18 @@ class ProjectsPageManager {
                 btn.setAttribute('aria-pressed', btn === filterBtn);
             });
         
-        // Update current filter display
+ // Update current filter display
         const toggleBtn = document.getElementById('current-filter-btn');
         const currentText = toggleBtn?.querySelector('.current-filter-text');
         if (currentText) {
             currentText.textContent = filterBtn.textContent.replace(/^[^\s]+\s/, '');
         }
         
-        // Apply filter
+ // Apply filter
         this.filterProjects(category);
         this.updateProjectCount();
         
-        // Auto-collapse on mobile
+ // Auto-collapse on mobile
         if (window.innerWidth <= 768) {
             setTimeout(() => {
                 this.toggleFilters(toggleBtn, filterBtn.closest('.inline-filters-bar'), false);
@@ -225,7 +213,7 @@ class ProjectsPageManager {
             }
         });
         
-        // Handle empty state
+ // Handle empty state
         const emptyState = document.querySelector('.empty-state');
         if (emptyState) {
             emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
@@ -275,11 +263,11 @@ class ProjectsPageManager {
      * PHASE 2: Modern Game System - DUPLICATE PREVENTION
      */
     setupGameSystem() {
-        // CRITICAL: Check if PageManager already handled game buttons
+ // CRITICAL: Check if PageManager already handled game buttons
         if (window.pageManager && typeof window.pageManager.setupEnhancedGameLoading === 'function') {
             console.log('🎮 Game system: PageManager detected, skipping duplicate handlers');
             
-            // Only setup close buttons (PageManager doesn't handle these)
+ // Only setup close buttons (PageManager doesn't handle these)
             document.addEventListener('click', (e) => {
                 const closeBtn = e.target.closest('[data-action="close-game"]');
                 if (!closeBtn) return;
@@ -292,7 +280,7 @@ class ProjectsPageManager {
             return;
         }
         
-        // FALLBACK: Setup game launch buttons only if PageManager isn't handling them
+ // FALLBACK: Setup game launch buttons only if PageManager isn't handling them
         document.addEventListener('click', (e) => {
             const gameBtn = e.target.closest('[data-game]');
             if (!gameBtn) return;
@@ -302,7 +290,7 @@ class ProjectsPageManager {
             this.launchGame(gameType, gameBtn);
         }, this.eventOptions);
         
-        // Setup close buttons
+ // Setup close buttons
         document.addEventListener('click', (e) => {
             const closeBtn = e.target.closest('[data-action="close-game"]');
             if (!closeBtn) return;
@@ -318,30 +306,30 @@ class ProjectsPageManager {
      * STREAMLINED: Launch game with optimized fixed viewport integration
      */
     async launchGame(gameType, button) {
-        // Prevent duplicate launches
+ // Prevent duplicate launches
         if (this.activeGame === gameType || button.disabled) {
             console.log(`🎮 Game launch blocked: already active (${gameType})`);
             return;
         }
         
-        // Set active game immediately
+ // Set active game immediately
         this.activeGame = gameType;
         
-        // Show modal and loading state
+ // Show modal and loading state
         this.showGameModal();
         this.setButtonLoading(button, true);
         
         try {
             console.log(`🎮 Launching ${gameType} game`);
             
-            // Load and initialize in parallel for speed
+ // Load and initialize in parallel for speed
             await this.loadGameAssets(gameType);
             const game = await this.initializeGame(gameType);
             
-            // Store reference
+ // Store reference
             this.gameInstances.set(gameType, game);
             
-            // Setup controls
+ // Setup controls
             this.setupGameControls();
             
             console.log(`✅ ${gameType} game launched successfully`);
@@ -350,10 +338,10 @@ class ProjectsPageManager {
             console.error(`❌ Failed to launch ${gameType}:`, error);
             this.showGameError(error.message);
             
-            // Reset state on error
+ // Reset state on error
             this.activeGame = null;
         } finally {
-            // Reset button after delay
+ // Reset button after delay
             setTimeout(() => this.setButtonLoading(button, false), 1000);
         }
     }
@@ -388,13 +376,13 @@ class ProjectsPageManager {
             return;
         }
         
-        // Load CSS and JS in parallel
+ // Load CSS and JS in parallel
         await Promise.all([
             this.loadCSS(assets.css),
             this.loadScript(assets.script)
         ]);
         
-        // Verify game class is available
+ // Verify game class is available
         if (!window[assets.class]) {
             throw new Error(`${assets.class} not found after loading`);
         }
@@ -456,10 +444,10 @@ class ProjectsPageManager {
             throw new Error(`${assets.class} not available`);
         }
         
-        // Clear container
+ // Clear container
         this.gameContent.innerHTML = '';
         
-        // Create and initialize game
+ // Create and initialize game
         const game = new GameClass(this.gameContent);
         
         if (typeof game.init === 'function') {
@@ -477,17 +465,17 @@ class ProjectsPageManager {
         
         console.log('🎮 Showing game modal');
         
-        // CRITICAL: Reset display first (in case it was set to none)
+ // CRITICAL: Reset display first (in case it was set to none)
         this.gameContainer.style.display = 'flex';
         
-        // CRITICAL: Use CSS classes for proper activation
+ // CRITICAL: Use CSS classes for proper activation
         this.gameContainer.classList.add('active');
         console.log('✅ Game modal activated with .active class');
         
-        // Disable body scroll
+ // Disable body scroll
         document.body.style.overflow = 'hidden';
         
-        // Show loading state
+ // Show loading state
         this.showGameLoading();
     }
     /**
@@ -496,7 +484,7 @@ class ProjectsPageManager {
     closeGame() {
         console.log('🎮 Closing game modal');
         
-        // Cleanup active game
+ // Cleanup active game
         if (this.activeGame && this.gameInstances.has(this.activeGame)) {
             const game = this.gameInstances.get(this.activeGame);
             
@@ -508,11 +496,11 @@ class ProjectsPageManager {
             this.activeGame = null;
         }
         
-        // CRITICAL: Use CSS class system for proper closing
+ // CRITICAL: Use CSS class system for proper closing
         if (this.gameContainer) {
             this.gameContainer.classList.remove('active');
             
-            // Wait for animation to complete before hiding
+ // Wait for animation to complete before hiding
             setTimeout(() => {
                 this.gameContainer.style.display = 'none';
                 this.gameContent.innerHTML = '';
@@ -520,7 +508,7 @@ class ProjectsPageManager {
             }, 300);
         }
         
-        // Re-enable body scroll
+ // Re-enable body scroll
         document.body.style.overflow = '';
         
         console.log('✅ Game closed');
@@ -600,7 +588,7 @@ class ProjectsPageManager {
      * PHASE 3: Smart Interactions
      */
     setupInteractions() {
-        // Project card hover effects
+ // Project card hover effects
         this.projectCards.forEach(card => {
             card.addEventListener('mouseenter', () => {
                 card.style.transform = 'translateY(-4px)';
@@ -611,7 +599,7 @@ class ProjectsPageManager {
             }, this.eventOptions);
         });
         
-        // Setup collapsible description toggle
+ // Setup collapsible description toggle
         this.setupDescriptionToggle();
         
         console.log('🎯 Interactions ready');
@@ -625,7 +613,7 @@ class ProjectsPageManager {
         const toggleBtn = document.getElementById('description-toggle');
         const description = document.getElementById('content-description');
         
-        // GOLDEN RULE 5: Assertions for error checking
+ // GOLDEN RULE 5: Assertions for error checking
         if (!this.c_assert(toggleBtn !== null)) {
             console.warn('⚠️ Description toggle button not found');
             return;
@@ -636,7 +624,7 @@ class ProjectsPageManager {
             return;
         }
         
-        // GOLDEN RULE 1: Simple control flow with single event handler
+ // GOLDEN RULE 1: Simple control flow with single event handler
         toggleBtn.addEventListener('click', (event) => {
             event.preventDefault();
             this.handleDescriptionToggle(toggleBtn, description);
@@ -650,34 +638,34 @@ class ProjectsPageManager {
      * Rule compliance: Function under 60 lines, simple control flow
      */
     handleDescriptionToggle(toggleBtn, description) {
-        // GOLDEN RULE 5: Parameter validation with assertions
+ // GOLDEN RULE 5: Parameter validation with assertions
         if (!this.c_assert(toggleBtn !== null && description !== null)) {
             console.error('❌ Invalid toggle parameters');
             return false;
         }
         
-        // Get current state
+ // Get current state
         const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
         const newState = !isExpanded;
         
-        // Update ARIA attributes for accessibility
+ // Update ARIA attributes for accessibility
         toggleBtn.setAttribute('aria-expanded', newState.toString());
         
-        // Update visual state with CSS classes
+ // Update visual state with CSS classes
         if (newState) {
-            // Show description
+ // Show description
             description.classList.remove('collapsed');
             console.log('📝 Description expanded');
         } else {
-            // Hide description
+ // Hide description
             description.classList.add('collapsed');
             console.log('📝 Description collapsed');
         }
         
-        // Update button text if needed (optional enhancement)
+ // Update button text if needed (optional enhancement)
         const toggleIcon = toggleBtn.querySelector('.toggle-icon');
         if (toggleIcon) {
-            // CSS handles rotation, but we can update for screen readers
+ // CSS handles rotation, but we can update for screen readers
             toggleIcon.setAttribute('aria-label', 
                 newState ? 'Collapse description' : 'Expand description');
         }
@@ -695,7 +683,7 @@ class ProjectsPageManager {
         }
         
         if (!condition) {
-            // In production, log error instead of throwing
+ // In production, log error instead of throwing
             const stack = new Error().stack;
             console.error('🔴 Assertion failed:', {
                 condition: 'Failed',
@@ -711,14 +699,14 @@ class ProjectsPageManager {
      * Apply initial filter (Featured projects)
      */
     applyInitialFilter() {
-        // Set featured filter as active
+ // Set featured filter as active
         const featuredBtn = document.querySelector('.inline-filter-btn[data-category="featured"]');
         if (featuredBtn) {
             featuredBtn.classList.add('active');
             featuredBtn.setAttribute('aria-pressed', 'true');
         }
         
-        // Filter to show only featured projects
+ // Filter to show only featured projects
         this.filterProjects('featured');
         this.updateProjectCount();
         
@@ -726,30 +714,20 @@ class ProjectsPageManager {
     }
     
     /**
-     * Setup project cards with Pure Info Overlay System + Double-Click Game Launch
+     * Setup project cards with single button and modal system
      */
     setupProjectCards() {
         const projectCards = document.querySelectorAll('.project-card');
         
         projectCards.forEach(card => {
-            // Initialize Pure Info Transformation
-            this.initializePureInfoTransformation(card);
-            
-            // Simple hover interactions - no button management
+ // Simple hover interactions for visual feedback only
             const hoverHandler = () => this.handleCardHover(card);
             const leaveHandler = () => this.handleCardLeave(card);
             
             this.addEventListenerWithCleanup(card, 'mouseenter', hoverHandler);
             this.addEventListenerWithCleanup(card, 'mouseleave', leaveHandler);
             
-            // SOLUTION: Double-click to launch games while maintaining clean design
-            const dblClickHandler = (e) => {
-                e.preventDefault();
-                this.handleCardDoubleClick(card);
-            };
-            this.addEventListenerWithCleanup(card, 'dblclick', dblClickHandler);
-            
-            // Keyboard accessibility - activate first button or launch game
+ // Keyboard accessibility
             const keyHandler = (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -757,19 +735,22 @@ class ProjectsPageManager {
                 }
             };
             this.addEventListenerWithCleanup(card, 'keydown', keyHandler);
-            
-            // Add visual indicator for interactive cards
-            this.addGameLaunchIndicator(card);
         });
         
-        console.log('🎯 Pure Info Overlay System ready for all cards');
+ // Setup View Details button handlers
+        this.setupViewDetailsButtons();
+        
+ // Setup project info modal
+        this.setupProjectInfoModal();
+        
+        console.log('🎯 Project cards with modal system ready');
     }
 
     /**
      * Add event listener with automatic cleanup tracking
      */
     addEventListenerWithCleanup(element, event, handler, options = {}) {
-        // Merge with global options (includes AbortController signal)
+ // Merge with global options (includes AbortController signal)
         const mergedOptions = { ...this.eventOptions, ...options };
         element.addEventListener(event, handler, mergedOptions);
     }
@@ -778,7 +759,7 @@ class ProjectsPageManager {
      * Handle card hover events - Pure information display
      */
     handleCardHover(card) {
-        // Apply clean hover effect - handled by CSS
+ // Apply clean hover effect - handled by CSS
         console.log('✅ Pure info overlay shown');
     }
 
@@ -786,7 +767,7 @@ class ProjectsPageManager {
      * Handle card leave events - Clean reset
      */
     handleCardLeave(card) {
-        // Reset handled by CSS - no JavaScript needed
+ // Reset handled by CSS - no JavaScript needed
         console.log('✅ Info overlay hidden');
     }
 
@@ -794,7 +775,7 @@ class ProjectsPageManager {
      * Handle card activation (keyboard navigation)
      */
     handleCardActivate(card) {
-        // For keyboard navigation, launch game directly if available
+ // For keyboard navigation, launch game directly if available
         this.handleCardDoubleClick(card);
     }
 
@@ -802,7 +783,7 @@ class ProjectsPageManager {
      * Handle double-click to launch games - Clean solution for game access
      */
     handleCardDoubleClick(card) {
-        // Check if this card has a game available
+ // Check if this card has a game available
         const gameBtn = card.querySelector('[data-game]');
         if (!gameBtn) {
             console.log('🎮 No game available for this card');
@@ -814,7 +795,7 @@ class ProjectsPageManager {
         
         console.log(`🎮 Double-click detected: launching ${gameType} game`);
         
-        // Launch the game using existing infrastructure
+ // Launch the game using existing infrastructure
         this.launchGame(gameType, gameBtn);
     }
 
@@ -822,15 +803,15 @@ class ProjectsPageManager {
      * Add visual indicator for cards that can launch games
      */
     addGameLaunchIndicator(card) {
-        // Check if this card has a game available
+ // Check if this card has a game available
         const gameBtn = card.querySelector('[data-game]');
         if (!gameBtn) return;
         
-        // Add subtle visual indicator that this card is interactive
+ // Add subtle visual indicator that this card is interactive
         card.style.cursor = 'pointer';
         card.setAttribute('title', 'Double-click to launch game');
         
-        // Add a subtle corner indicator
+ // Add a subtle corner indicator
         const indicator = document.createElement('div');
         indicator.innerHTML = '🎮';
         indicator.style.cssText = `
@@ -849,7 +830,7 @@ class ProjectsPageManager {
         
         card.appendChild(indicator);
         
-        // Show/hide indicator on hover
+ // Show/hide indicator on hover
         card.addEventListener('mouseenter', () => {
             indicator.style.opacity = '0.9';
         });
@@ -869,10 +850,471 @@ class ProjectsPageManager {
         
         if (!projectInfo) return;
         
-        // Mark as initialized - no button data needed
+ // Mark as initialized - no button data needed
         card.setAttribute('data-transformation-ready', 'true');
         
         console.log(`✅ Pure Info Transformation initialized for card`);
+    }
+
+    /**
+     * Setup View Details button handlers - Golden Rules compliant
+     */
+    setupViewDetailsButtons() {
+        // GOLDEN RULE 1: Simple control flow with delegation
+        document.addEventListener('click', (e) => {
+            const viewBtn = e.target.closest('.view-details-btn');
+            if (!viewBtn) return;
+            
+            e.preventDefault();
+            const projectId = viewBtn.getAttribute('data-project');
+            
+            // GOLDEN RULE 5: Assertions for validation
+            if (!this.c_assert(projectId !== null)) {
+                console.warn('⚠️ Project ID not found on button');
+                return;
+            }
+            
+            this.showProjectInfo(projectId);
+        }, this.eventOptions);
+        
+        console.log('📋 View Details buttons ready');
+    }
+    
+    /**
+     * Setup project info modal system - Golden Rules compliant  
+     */
+    setupProjectInfoModal() {
+        // Find modal elements
+        this.projectInfoModal = document.getElementById('project-info-modal');
+        this.projectInfoContent = document.getElementById('project-info-content');
+        
+        // GOLDEN RULE 5: Assertions for error checking
+        if (!this.c_assert(this.projectInfoModal !== null)) {
+            console.warn('⚠️ Project info modal not found');
+            return;
+        }
+        
+        // Setup close button handler
+        document.addEventListener('click', (e) => {
+            const closeBtn = e.target.closest('[data-action="close-project-info"]');
+            if (!closeBtn) return;
+            
+            e.preventDefault();
+            this.closeProjectInfo();
+        }, this.eventOptions);
+        
+        // Setup escape key handler
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.projectInfoModal.classList.contains('active')) {
+                this.closeProjectInfo();
+            }
+        }, this.eventOptions);
+        
+        // Setup backdrop click handler
+        this.projectInfoModal.addEventListener('click', (e) => {
+            if (e.target === this.projectInfoModal) {
+                this.closeProjectInfo();
+            }
+        }, this.eventOptions);
+        
+        console.log('🖼️ Project info modal ready');
+    }
+    
+    /**
+     * Show project info modal - Golden Rules compliant
+     * Rule compliance: Function under 60 lines, simple control flow
+     */
+    showProjectInfo(projectId) {
+        // GOLDEN RULE 5: Parameter validation
+        if (!this.c_assert(typeof projectId === 'string' && projectId.length > 0)) {
+            console.error('❌ Invalid project ID');
+            return false;
+        }
+        
+        if (!this.c_assert(this.projectInfoModal !== null)) {
+            console.error('❌ Project info modal not available');
+            return false;
+        }
+        
+        // Get project data
+        const projectData = this.getProjectData(projectId);
+        if (!projectData) {
+            console.error('❌ Project data not found:', projectId);
+            return false;
+        }
+        
+        // Generate modal content
+        this.generateModalContent(projectData);
+        
+        // Show modal with CSS class system
+        this.projectInfoModal.style.display = 'flex';
+        this.projectInfoModal.classList.add('active');
+        
+        // Disable body scroll
+        document.body.classList.add('project-modal-open');
+        document.body.style.overflow = 'hidden';
+        
+        console.log('📋 Project info modal shown:', projectId);
+        return true;
+    }
+    
+    /**
+     * Close project info modal - Golden Rules compliant
+     */
+    closeProjectInfo() {
+        if (!this.projectInfoModal) return;
+        
+        // Hide modal with CSS class system
+        this.projectInfoModal.classList.remove('active');
+        
+        // Re-enable body scroll
+        document.body.classList.remove('project-modal-open');
+        document.body.style.overflow = '';
+        
+        // Wait for animation before hiding
+        setTimeout(() => {
+            this.projectInfoModal.style.display = 'none';
+            if (this.projectInfoContent) {
+                this.projectInfoContent.innerHTML = '';
+            }
+        }, 300);
+        
+        console.log('📋 Project info modal closed');
+    }
+    
+    /**
+     * Get project data from HTML card - Updated for hidden data extraction
+     * Rule compliance: Simple control flow, bounded iterations
+     */
+    getProjectData(projectId) {
+        // GOLDEN RULE 5: Parameter validation
+        if (!this.c_assert(typeof projectId === 'string')) {
+            return null;
+        }
+        
+        // Find project card by data attribute or ID
+        const projectCard = document.querySelector(`[data-project="${projectId}"]`)?.closest('.project-card') ||
+                           document.getElementById(projectId);
+        
+        if (!projectCard) {
+            console.warn('⚠️ Project card not found:', projectId);
+            return null;
+        }
+        
+        // Extract visible data
+        const getTextContent = (selector) => projectCard.querySelector(selector)?.textContent?.trim() || '';
+        const getImageSrc = (selector) => projectCard.querySelector(selector)?.src || '';
+        
+        // Extract hidden data for modal
+        const hiddenData = projectCard.querySelector('.project-hidden-data');
+        const getHiddenDescription = () => hiddenData?.querySelector('[data-description]')?.textContent?.trim() || '';
+        const getHiddenTags = () => Array.from(hiddenData?.querySelectorAll('.tag') || []).map(tag => tag.textContent.trim());
+        
+        // Build project data object
+        const projectData = {
+            id: projectId,
+            title: getTextContent('h3'),
+            description: getHiddenDescription(),
+            type: getTextContent('.project-type'),
+            date: getTextContent('.project-date'),
+            image: getImageSrc('img'),
+            tags: getHiddenTags(),
+            hasGame: projectCard.querySelector('[data-game]') !== null,
+            gameType: projectCard.querySelector('[data-game]')?.getAttribute('data-game') || null
+        };
+        
+        return projectData;
+    }
+    
+    /**
+     * Generate modal content - Golden Rules compliant
+     * Rule compliance: Function under 60 lines
+     */
+    generateModalContent(projectData) {
+        // GOLDEN RULE 5: Parameter validation
+        if (!this.c_assert(projectData && typeof projectData === 'object')) {
+            console.error('❌ Invalid project data for modal');
+            return;
+        }
+        
+        const { title, description, type, date, image, tags, hasGame, gameType } = projectData;
+        
+        // Generate action buttons based on project type
+        const actionButtons = this.generateActionButtons(hasGame, gameType);
+        
+        // Generate modal HTML
+        const modalHTML = `
+            <div class="modal-project-details">
+                <div class="modal-project-image">
+                    <img src="${image}" alt="${title}">
+                </div>
+                <div class="modal-project-info">
+                    <h2 class="modal-project-title">${title}</h2>
+                    <div class="modal-project-meta">
+                        <span class="modal-project-type">${type}</span>
+                        <span class="modal-project-date">${date}</span>
+                    </div>
+                    <p class="modal-project-description">${description}</p>
+                    <div class="modal-project-tags">
+                        ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
+                    <div class="modal-project-actions">
+                        ${actionButtons}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (this.projectInfoContent) {
+            this.projectInfoContent.innerHTML = modalHTML;
+        }
+        
+        // Setup action button handlers
+        this.setupModalActionButtons(hasGame, gameType);
+    }
+    
+    /**
+     * Generate action buttons for modal - Golden Rules compliant
+     * Enhanced with proper data attributes for event handling
+     */
+    generateActionButtons(hasGame, gameType) {
+        // GOLDEN RULE 5: Parameter validation
+        if (!this.c_assert(typeof hasGame === 'boolean')) {
+            console.warn('⚠️ Invalid hasGame parameter');
+            hasGame = false;
+        }
+        
+        if (hasGame && gameType) {
+            return `
+                <button class="modal-action-btn" data-modal-game="${gameType}" data-action="play-game">
+                    <span>🎮</span> Play Game
+                </button>
+                <button class="modal-action-btn secondary" data-action="view-code" data-project="${gameType}">
+                    <span>🔗</span> View Code
+                </button>
+            `;
+        } else {
+            return `
+                <button class="modal-action-btn" data-action="live-demo" data-project="demo">
+                    <span>🌐</span> Live Demo
+                </button>
+                <button class="modal-action-btn secondary" data-action="view-code" data-project="demo">
+                    <span>🔗</span> View Code
+                </button>
+            `;
+        }
+    }
+    
+    /**
+     * Setup modal action button handlers - Golden Rules compliant
+     * Enhanced to handle all action button types with user feedback
+     */
+    setupModalActionButtons(hasGame, gameType) {
+        // COMPREHENSIVE: Setup handlers for all modal action buttons
+        document.addEventListener('click', (e) => {
+            const actionBtn = e.target.closest('[data-action]');
+            if (!actionBtn || !this.projectInfoModal?.classList.contains('active')) return;
+            
+            e.preventDefault();
+            const action = actionBtn.getAttribute('data-action');
+            const project = actionBtn.getAttribute('data-project') || gameType;
+            
+            this.handleModalAction(action, project, actionBtn);
+        }, this.eventOptions);
+        
+        console.log('🔧 Modal action buttons ready');
+    }
+    
+    /**
+     * Handle modal action button clicks - Golden Rules compliant
+     * Rule compliance: Function under 60 lines, simple control flow
+     */
+    handleModalAction(action, project, button) {
+        // GOLDEN RULE 5: Parameter validation
+        if (!this.c_assert(typeof action === 'string' && action.length > 0)) {
+            console.error('❌ Invalid action parameter');
+            return false;
+        }
+        
+        // Show loading state
+        this.setButtonLoading(button, true);
+        
+        // GOLDEN RULE 1: Simple control flow with switch statement
+        switch (action) {
+            case 'play-game':
+                this.handlePlayGameAction(project, button);
+                break;
+            case 'live-demo':
+                this.handleLiveDemoAction(project, button);
+                break;
+            case 'view-code':
+                this.handleViewCodeAction(project, button);
+                break;
+            default:
+                console.warn('⚠️ Unknown action:', action);
+                this.setButtonLoading(button, false);
+                this.showUserFeedback('Action not available', 'warning');
+                return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Handle play game action - Golden Rules compliant
+     */
+    handlePlayGameAction(gameType, button) {
+        // Close modal first
+        this.closeProjectInfo();
+        
+        // Launch game after modal animation completes
+        setTimeout(() => {
+            this.launchGame(gameType, button);
+        }, 300);
+        
+        console.log('🎮 Play game action triggered:', gameType);
+    }
+    
+    /**
+     * Handle live demo action - Golden Rules compliant
+     */
+    handleLiveDemoAction(project, button) {
+        // GOLDEN RULE 5: Assertions for validation
+        if (!this.c_assert(typeof project === 'string')) {
+            this.setButtonLoading(button, false);
+            this.showUserFeedback('Demo not available', 'error');
+            return;
+        }
+        
+        // Define demo URLs for different projects
+        const demoUrls = {
+            'barista-game': '#',  // Game launches in modal, no separate demo
+            'portfolio-site': window.location.origin,  // Current portfolio site
+            'solar-system': '#',  // Solar system is part of main page
+            'space-explorer': '#',  // Would be external game
+            'data-viz': '#'  // Would be external demo
+        };
+        
+        const demoUrl = demoUrls[project];
+        
+        setTimeout(() => {
+            this.setButtonLoading(button, false);
+            
+            if (demoUrl && demoUrl !== '#') {
+                // Open live demo in new window
+                window.open(demoUrl, '_blank', 'noopener,noreferrer');
+                this.showUserFeedback('Live demo opened in new tab', 'success');
+            } else {
+                // For projects without separate demos, show appropriate message
+                if (project === 'barista-game') {
+                    this.showUserFeedback('Use "Play Game" button to try the interactive game', 'info');
+                } else if (project === 'portfolio-site') {
+                    this.showUserFeedback('You are currently viewing the live demo!', 'info');
+                } else {
+                    this.showUserFeedback('Demo not available - check the code repository', 'info');
+                }
+            }
+        }, 800);
+        
+        console.log('🌐 Live demo action triggered:', project);
+    }
+    
+    /**
+     * Handle view code action - Golden Rules compliant
+     */
+    handleViewCodeAction(project, button) {
+        // GOLDEN RULE 5: Assertions for validation
+        if (!this.c_assert(typeof project === 'string')) {
+            this.setButtonLoading(button, false);
+            this.showUserFeedback('Code repository not available', 'error');
+            return;
+        }
+        
+        // Define GitHub repository URLs for different projects
+        const repoUrls = {
+            'barista-game': 'https://github.com/MrCargon/MrCargon.github.io/tree/main/src/components/games',
+            'portfolio-site': 'https://github.com/MrCargon/MrCargon.github.io',
+            'solar-system': 'https://github.com/MrCargon/MrCargon.github.io/tree/main/src/components/simulation',
+            'space-explorer': 'https://github.com/MrCargon/MrCargon.github.io',  // Would be separate repo
+            'data-viz': 'https://github.com/MrCargon/MrCargon.github.io'  // Would be separate repo
+        };
+        
+        const repoUrl = repoUrls[project] || 'https://github.com/MrCargon/MrCargon.github.io';
+        
+        setTimeout(() => {
+            this.setButtonLoading(button, false);
+            
+            // Open GitHub repository in new window
+            window.open(repoUrl, '_blank', 'noopener,noreferrer');
+            this.showUserFeedback('GitHub repository opened in new tab', 'success');
+        }, 600);
+        
+        console.log('🔗 View code action triggered:', project, 'URL:', repoUrl);
+    }
+    
+    /**
+     * Show user feedback with toast notification - Golden Rules compliant
+     */
+    showUserFeedback(message, type = 'info') {
+        // GOLDEN RULE 5: Parameter validation
+        if (!this.c_assert(typeof message === 'string' && message.length > 0)) {
+            console.error('❌ Invalid feedback message');
+            return;
+        }
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `feedback-toast toast-${type}`;
+        toast.textContent = message;
+        
+        // Style the toast
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: ${this.getToastColor(type)};
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 999999;
+            font-weight: 600;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        `;
+        
+        // Add to page
+        document.body.appendChild(toast);
+        
+        // Animate in
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+        }, 10);
+        
+        // Auto-remove after delay
+        setTimeout(() => {
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+        
+        console.log(`💬 User feedback: ${message} (${type})`);
+    }
+    
+    /**
+     * Get toast color based on type - Golden Rules compliant
+     */
+    getToastColor(type) {
+        // GOLDEN RULE 1: Simple control flow
+        const colors = {
+            'info': 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+            'success': 'linear-gradient(135deg, #10b981, #059669)',
+            'warning': 'linear-gradient(135deg, #f59e0b, #d97706)',
+            'error': 'linear-gradient(135deg, #ef4444, #dc2626)'
+        };
+        
+        return colors[type] || colors.info;
     }
 
     /**
@@ -899,7 +1341,7 @@ class ProjectsPageManager {
             loadedAssets: Array.from(this.loadedAssets),
             gameInstances: this.gameInstances.size,
             projectCardsCount: this.projectCards.length,
-            hasFiltersManager: !!this.filtersManager
+            hasFiltersManager: Boolean(this.filtersManager)
         };
     }
     
@@ -909,12 +1351,12 @@ class ProjectsPageManager {
     cleanup() {
         console.log('🧹 Cleaning up ProjectsPageManager');
         
-        // Close active game
+ // Close active game
         if (this.activeGame) {
             this.closeGame();
         }
         
-        // Cleanup all game instances
+ // Cleanup all game instances
         this.gameInstances.forEach(game => {
             if (game && typeof game.cleanup === 'function') {
                 game.cleanup();
@@ -922,19 +1364,19 @@ class ProjectsPageManager {
         });
         this.gameInstances.clear();
         
-        // Cleanup resources
+ // Cleanup resources
         this.resources.forEach(cleanup => cleanup());
         this.resources.clear();
         
-        // Abort all event listeners
+ // Abort all event listeners
         this.abortController.abort();
         
-        // Cleanup filters manager
+ // Cleanup filters manager
         if (this.filtersManager && typeof this.filtersManager.cleanup === 'function') {
             this.filtersManager.cleanup();
         }
         
-        // Reset references
+ // Reset references
         this.projectsSection = null;
         this.gameContainer = null;
         this.gameContent = null;
@@ -946,8 +1388,7 @@ class ProjectsPageManager {
 }
 
 // Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ProjectsPageManager;
-} else {
+// Browser-only export
+if (typeof window !== 'undefined') {
     window.ProjectsPageManager = ProjectsPageManager;
 }

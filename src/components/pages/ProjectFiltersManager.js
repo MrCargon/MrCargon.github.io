@@ -8,7 +8,7 @@ class ProjectFiltersManager {
      * Create a new ProjectFiltersManager instance
      */
     constructor() {
-        // Core elements
+ // Core elements
         this.filtersToggleBtn = null;
         this.filtersPanel = null;
         this.filterButtons = null;
@@ -17,23 +17,23 @@ class ProjectFiltersManager {
         this.projectCount = null;
         this.emptyState = null;
         
-        // State
+ // State
         this.isCollapsed = true;
         this.currentFilter = 'featured'; // Start with featured projects
         this.searchTerm = '';
         
-        // Event handlers bound to this context
+ // Event handlers bound to this context
         this.handleToggleClick = this.handleToggleClick.bind(this);
         this.handleFilterClick = this.handleFilterClick.bind(this);
         this.handleSearchInput = this.handleSearchInput.bind(this);
         this.handleKeydown = this.handleKeydown.bind(this);
         this.handleClearFilters = this.handleClearFilters.bind(this);
         
-        // Resource tracking for cleanup
+ // Resource tracking for cleanup
         this.eventListeners = [];
         this.timeouts = new Set();
         
-        // Search debounce
+ // Search debounce
         this.searchTimeout = null;
     }
     
@@ -44,16 +44,16 @@ class ProjectFiltersManager {
         try {
             console.log('🔍 Initializing ProjectFiltersManager');
             
-            // Find DOM elements
+ // Find DOM elements
             this.findElements();
             
-            // Setup event listeners
+ // Setup event listeners
             this.setupEventListeners();
             
-            // Setup initial state
+ // Setup initial state
             this.setupInitialState();
             
-            // Initialize with featured projects
+ // Initialize with featured projects
             this.filterProjects('featured');
             
             console.log('✅ ProjectFiltersManager initialized successfully');
@@ -69,7 +69,7 @@ class ProjectFiltersManager {
      * Find required DOM elements
      */
     findElements() {
-        // FIXED: Use correct selectors that match the actual HTML
+ // FIXED: Use correct selectors that match the actual HTML
         this.filtersToggleBtn = document.querySelector('.current-filter-btn');
         this.filtersPanel = document.querySelector('.inline-filters-bar');
         this.filterButtons = document.querySelectorAll('.inline-filter-btn');
@@ -78,9 +78,9 @@ class ProjectFiltersManager {
         this.projectCount = document.getElementById('project-count');
         this.emptyState = document.querySelector('.empty-state');
         
-        // Validate required elements
+ // Validate required elements
         if (!this.filtersToggleBtn || !this.filtersPanel) {
-            throw new Error(`Required filter elements not found - Toggle: ${!!this.filtersToggleBtn}, Panel: ${!!this.filtersPanel}`);
+            throw new Error(`Required filter elements not found - Toggle: ${Boolean(this.filtersToggleBtn)}, Panel: ${Boolean(this.filtersPanel)}`);
         }
         
         console.log(`🔍 Found ${this.filterButtons.length} filter buttons, ${this.projectCards.length} project cards`);
@@ -90,18 +90,18 @@ class ProjectFiltersManager {
      * Setup event listeners with proper tracking
      */
     setupEventListeners() {
-        // Toggle button
+ // Toggle button
         if (this.filtersToggleBtn) {
             this.addEventListener(this.filtersToggleBtn, 'click', this.handleToggleClick);
             this.addEventListener(this.filtersToggleBtn, 'keydown', this.handleKeydown);
         }
         
-        // Filter buttons
+ // Filter buttons
         this.filterButtons.forEach(button => {
             this.addEventListener(button, 'click', this.handleFilterClick);
         });
         
-        // Search box
+ // Search box
         if (this.searchBox) {
             this.addEventListener(this.searchBox, 'input', this.handleSearchInput);
             this.addEventListener(this.searchBox, 'keydown', (e) => {
@@ -112,13 +112,13 @@ class ProjectFiltersManager {
             });
         }
         
-        // Clear filters button
+ // Clear filters button
         const clearButton = document.querySelector('[data-action="clear-filters"]');
         if (clearButton) {
             this.addEventListener(clearButton, 'click', this.handleClearFilters);
         }
         
-        // Document click to close panel when clicking outside
+ // Document click to close panel when clicking outside
         this.addEventListener(document, 'click', (e) => {
             if (!this.isCollapsed && 
                 !this.filtersPanel.contains(e.target) && 
@@ -127,7 +127,7 @@ class ProjectFiltersManager {
             }
         });
         
-        // Escape key to close panel
+ // Escape key to close panel
         this.addEventListener(document, 'keydown', (e) => {
             if (e.key === 'Escape' && !this.isCollapsed) {
                 this.collapsePanel();
@@ -148,10 +148,10 @@ class ProjectFiltersManager {
      * Setup initial state
      */
     setupInitialState() {
-        // Add featured filter button if not present
+ // Add featured filter button if not present
         this.addFeaturedFilterButton();
         
-        // Set initial collapsed state
+ // Set initial collapsed state
         this.isCollapsed = true;
         
         if (this.filtersToggleBtn) {
@@ -164,7 +164,7 @@ class ProjectFiltersManager {
             this.filtersPanel.setAttribute('aria-hidden', 'true');
         }
         
-        // Set featured as active filter
+ // Set featured as active filter
         this.setActiveFilter('featured');
         
         console.log('🔧 Initial state setup complete');
@@ -174,7 +174,7 @@ class ProjectFiltersManager {
      * Add Featured filter button as the first option
      */
     addFeaturedFilterButton() {
-        // FIXED: Use correct selector that matches the actual HTML
+ // FIXED: Use correct selector that matches the actual HTML
         const filterGroup = document.querySelector('.filters-row');
         let featuredButton = document.querySelector('.inline-filter-btn[data-category="featured"]');
         
@@ -185,13 +185,13 @@ class ProjectFiltersManager {
             featuredButton.setAttribute('aria-pressed', 'false');
             featuredButton.innerHTML = '⭐ Featured';
             
-            // Insert as first button
+ // Insert as first button
             filterGroup.insertBefore(featuredButton, filterGroup.firstChild);
             
-            // Add event listener
+ // Add event listener
             this.addEventListener(featuredButton, 'click', this.handleFilterClick);
             
-            // Update filterButtons collection
+ // Update filterButtons collection
             this.filterButtons = document.querySelectorAll('.inline-filter-btn');
             
             console.log('⭐ Added Featured filter button');
@@ -232,29 +232,29 @@ class ProjectFiltersManager {
         
         this.isCollapsed = false;
         
-        // Update button state
+ // Update button state
         if (this.filtersToggleBtn) {
             this.filtersToggleBtn.setAttribute('aria-expanded', 'true');
             this.filtersToggleBtn.classList.remove('collapsed');
             
-            // Update icon
+ // Update icon
             const icon = this.filtersToggleBtn.querySelector('.filters-icon');
             if (icon) icon.textContent = '🔼';
         }
         
-        // Show panel
+ // Show panel
         if (this.filtersPanel) {
             this.filtersPanel.classList.remove('collapsed');
             this.filtersPanel.setAttribute('aria-hidden', 'false');
             
-            // Focus first filter button for accessibility
+ // Focus first filter button for accessibility
             const firstFilter = this.filterButtons[0];
             if (firstFilter) {
                 this.createTimeout(() => firstFilter.focus(), 100);
             }
         }
         
-        // Dispatch event
+ // Dispatch event
         this.dispatchEvent('filters:expanded');
     }
     
@@ -268,23 +268,23 @@ class ProjectFiltersManager {
         
         this.isCollapsed = true;
         
-        // Update button state
+ // Update button state
         if (this.filtersToggleBtn) {
             this.filtersToggleBtn.setAttribute('aria-expanded', 'false');
             this.filtersToggleBtn.classList.add('collapsed');
             
-            // Update icon
+ // Update icon
             const icon = this.filtersToggleBtn.querySelector('.filters-icon');
             if (icon) icon.textContent = '🔽';
         }
         
-        // Hide panel
+ // Hide panel
         if (this.filtersPanel) {
             this.filtersPanel.classList.add('collapsed');
             this.filtersPanel.setAttribute('aria-hidden', 'true');
         }
         
-        // Dispatch event
+ // Dispatch event
         this.dispatchEvent('filters:collapsed');
     }
     
@@ -299,16 +299,16 @@ class ProjectFiltersManager {
         
         console.log(`🔍 Filtering by: ${category}`);
         
-        // Update active filter
+ // Update active filter
         this.setActiveFilter(category);
         
-        // Filter projects
+ // Filter projects
         this.filterProjects(category);
         
-        // Update project count
+ // Update project count
         this.updateProjectCount();
         
-        // Auto-collapse panel on mobile
+ // Auto-collapse panel on mobile
         if (window.innerWidth <= 768) {
             this.createTimeout(() => this.collapsePanel(), 500);
         }
@@ -320,7 +320,7 @@ class ProjectFiltersManager {
     setActiveFilter(category) {
         this.currentFilter = category;
         
-        // Update button states
+ // Update button states
         this.filterButtons.forEach(btn => {
             const btnCategory = btn.getAttribute('data-category');
             const isActive = btnCategory === category;
@@ -350,7 +350,7 @@ class ProjectFiltersManager {
                 shouldShow = cardCategory === category;
             }
             
-            // Apply search filter if active
+ // Apply search filter if active
             if (shouldShow && this.searchTerm) {
                 shouldShow = this.matchesSearch(card, this.searchTerm);
             }
@@ -369,7 +369,7 @@ class ProjectFiltersManager {
             }
         });
         
-        // Handle empty state
+ // Handle empty state
         if (this.emptyState) {
             this.emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
         }
@@ -383,12 +383,12 @@ class ProjectFiltersManager {
     handleSearchInput(e) {
         const searchTerm = e.target.value.toLowerCase().trim();
         
-        // Clear previous timeout
+ // Clear previous timeout
         if (this.searchTimeout) {
             clearTimeout(this.searchTimeout);
         }
         
-        // Debounce search
+ // Debounce search
         this.searchTimeout = setTimeout(() => {
             this.performSearch(searchTerm);
         }, 300);
@@ -402,10 +402,10 @@ class ProjectFiltersManager {
         
         console.log(`🔍 Searching for: "${searchTerm}"`);
         
-        // Re-filter with current category and search term
+ // Re-filter with current category and search term
         this.filterProjects(this.currentFilter);
         
-        // Update project count
+ // Update project count
         this.updateProjectCount();
     }
     
@@ -432,22 +432,22 @@ class ProjectFiltersManager {
     handleClearFilters() {
         console.log('🔄 Clearing all filters');
         
-        // Reset search
+ // Reset search
         if (this.searchBox) {
             this.searchBox.value = '';
         }
         this.searchTerm = '';
         
-        // Reset to "All Projects" filter
+ // Reset to "All Projects" filter
         this.setActiveFilter('all');
         
-        // Show all projects
+ // Show all projects
         this.filterProjects('all');
         
-        // Update count
+ // Update count
         this.updateProjectCount();
         
-        // Show toast notification
+ // Show toast notification
         this.showToast('Filters cleared', 'info');
     }
     
@@ -464,7 +464,7 @@ class ProjectFiltersManager {
             ? `${totalProjects} Projects` 
             : `${visibleProjects} of ${totalProjects} Projects`;
         
-        // Animate count change
+ // Animate count change
         this.projectCount.style.transition = 'opacity 0.2s ease';
         this.projectCount.style.opacity = '0.5';
         
@@ -480,7 +480,7 @@ class ProjectFiltersManager {
     showToast(message, type = 'info') {
         console.log(`${type.toUpperCase()}: ${message}`);
         
-        // Create toast element
+ // Create toast element
         const toast = document.createElement('div');
         toast.className = `filter-toast ${type}`;
         toast.textContent = message;
@@ -499,7 +499,7 @@ class ProjectFiltersManager {
         
         document.body.appendChild(toast);
         
-        // Auto remove
+ // Auto remove
         this.createTimeout(() => {
             if (toast.parentNode) {
                 toast.style.animation = 'slideOut 0.3s ease-out';
@@ -556,17 +556,17 @@ class ProjectFiltersManager {
     cleanup() {
         console.log('🧹 Cleaning up ProjectFiltersManager');
         
-        // Clear timeouts
+ // Clear timeouts
         this.timeouts.forEach(id => clearTimeout(id));
         this.timeouts.clear();
         
-        // Clear search timeout
+ // Clear search timeout
         if (this.searchTimeout) {
             clearTimeout(this.searchTimeout);
             this.searchTimeout = null;
         }
         
-        // Remove event listeners
+ // Remove event listeners
         this.eventListeners.forEach(({ element, event, handler, options }) => {
             try {
                 element.removeEventListener(event, handler, options);
@@ -576,7 +576,7 @@ class ProjectFiltersManager {
         });
         this.eventListeners = [];
         
-        // Reset references
+ // Reset references
         this.filtersToggleBtn = null;
         this.filtersPanel = null;
         this.filterButtons = null;
@@ -590,8 +590,7 @@ class ProjectFiltersManager {
 }
 
 // Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ProjectFiltersManager;
-} else {
+// Browser-only export
+if (typeof window !== 'undefined') {
     window.ProjectFiltersManager = ProjectFiltersManager;
 }

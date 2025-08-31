@@ -133,7 +133,7 @@
     scrollbar-color: var(--primary-color) rgba(30, 30, 30, 0.5);
 }
 
-/* Custom scrollbar for panel content */
+/* Custom scrollbar for panel content - Safari compatibility */
 .panel-content::-webkit-scrollbar {
     width: 8px;
 }
@@ -183,7 +183,7 @@
     border: 0;
 }
 
-/* Scrollable content area - optimized scrollbar */
+/* Scrollable content area - Safari compatible scrollbar */
 .scrollable-content {
     overflow-y: auto;
     padding-right: var(--spacing-sm);
@@ -192,7 +192,7 @@
     scrollbar-color: var(--primary-color) rgba(30, 30, 30, 0.5);
 }
 
-/* Webkit scrollbar styling */
+/* Safari compatible webkit scrollbar styling */
 .scrollable-content::-webkit-scrollbar {
     width: 8px;
 }

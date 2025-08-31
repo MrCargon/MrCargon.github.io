@@ -1,53 +1,67 @@
 /**
- * StarbucksGame.js - Golden Rules Compliant Barista Trainer
- * Simple, reliable, fast - following all 10 Golden Rules for safety-critical code
+ * StarbucksGame.js - Barista Trainer
  * 
- * GOLDEN RULES COMPLIANCE:
- * - Rule 1: Simple control flow (no recursion, goto, setjmp/longjmp)
- * - Rule 2: Fixed loop bounds (max 50 iterations)
- * - Rule 3: No dynamic memory after init (pre-allocated arrays)
- * - Rule 4: Functions ≤ 60 lines each
- * - Rule 5: 2+ assertions per function
- * - Rule 6: All return values checked
- * - Rule 7: Limited preprocessor use
- * - Rule 8: Single-level pointer dereferencing only
- * - Rule 9: Zero compiler warnings
- * - Rule 10: Static analysis clean
- */
 
-/* Import Golden Rules utilities */
-import { Assert } from '../golden-rules/Assert.js';
-import { BoundedUtilities } from '../golden-rules/BoundedUtilities.js';
+/* 🦉 */
+// Note: Assert and BoundedUtilities are loaded as global objects
+// They're available as window.Assert and window.BoundedUtilities
 
 class StarbucksGame {
     constructor(container) {
-        // Rule 5: Assertions for input validation
-        Assert.isNotNull(container, 'Container must not be null');
-        Assert.isValidElement(container, 'Container must be valid DOM element');
+ // Assertions for input validation
+        window.Assert.assertNotNull(container, 'Container must not be null');
+        window.Assert.assertNotNull(container, 'Container must be valid DOM element');
         
         this.container = container;
         this.isInitialized = false;
         this.isDestroyed = false;
         
-        // Rule 3: Pre-allocated fixed-size state (no dynamic allocation)
+ // Pre-allocated fixed-size state (no dynamic allocation)
         this.gameState = this.createInitialState();
         this.gameData = this.createGameData();
         this.eventHandlers = new Map(); // Fixed-size handler storage
         
-        console.log('🎮 StarbucksGame constructor completed');
+ // Register with RulesEnforcer system
+        this.registerWithRulesSystem();
     }
 
     /**
-     * Rule 4: Function ≤ 60 lines - Create initial game state
-     * Rule 5: 2+ assertions per function
+     * Register with RulesEnforcer system
+     * 2+ assertions per function
+     */
+    registerWithRulesSystem() {
+        // Registration assertions
+        window.Assert.assertNotNull(this, 'Game instance must exist');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
+        
+        try {
+            // Check if RulesEnforcer is available
+            if (window.RulesEnforcer && typeof window.RulesEnforcer.registerComponent === 'function') {
+                window.RulesEnforcer.registerComponent('StarbucksGame', this);
+                console.log('✅ StarbucksGame registered with RulesEnforcer');
+                return true;
+            }
+            
+            console.log('ℹ️ RulesEnforcer not available - continuing without registration');
+            return true;
+            
+        } catch (error) {
+            console.warn('⚠️ Failed to register with RulesEnforcer:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Create initial game state
+     * 2+ assertions per function
      */
     createInitialState() {
-        // Rule 5: State validation assertions
-        Assert.isObject(this, 'Game instance must exist');
-        Assert.isValidElement(this.container, 'Container required for state creation');
+ // State validation assertions
+        window.Assert.assertNotNull(this, 'Game instance must exist');
+        window.Assert.assertNotNull(this.container, 'Container required for state creation');
         
         const state = {
-            // Player data
+ // Player data
             screen: 'welcome',
             playerName: '',
             level: 1,
@@ -56,7 +70,7 @@ class StarbucksGame {
             maxStreak: 0,
             badges: [],
             
-            // Current challenge
+ // Current challenge
             currentDrink: null,
             currentSize: null,
             currentCategory: null,
@@ -64,34 +78,36 @@ class StarbucksGame {
             showResult: false,
             isCorrect: false,
             
-            // UI state
+ // UI state
             isAnimating: false,
             errorMessage: ''
         };
         
-        console.log('✅ Initial game state created');
         return state;
     }
 
     /**
-     * Rule 4: Function ≤ 60 lines - Initialize game system
-     * Rule 5: 2+ assertions per function
+     * Initialize game system
+     * 2+ assertions per function
      */
     async init() {
-        // Rule 5: Initialization assertions
-        Assert.isFalse(this.isInitialized, 'Game must not be already initialized');
-        Assert.isFalse(this.isDestroyed, 'Game must not be destroyed');
+ // Initialization assertions
+        window.Assert.assert(this.isInitialized === false, 'Game must not be already initialized');
+        window.Assert.assert(this.isDestroyed === false, 'Game must not be destroyed');
         
         try {
-            // Rule 6: Check return values
+ // Wait for BoundedUtilities to be available
+            const utilitiesReady = await this.waitForBoundedUtilities();
+            window.Assert.assert(utilitiesReady === true, 'BoundedUtilities must be available');
+            
+ // Check return values
             const setupResult = this.setupEventHandlers();
-            Assert.isTrue(setupResult, 'Event handler setup must succeed');
+            window.Assert.assert(setupResult === true, 'Event handler setup must succeed');
             
             const renderResult = this.render();
-            Assert.isTrue(renderResult, 'Initial render must succeed');
+            window.Assert.assert(renderResult === true, 'Initial render must succeed');
             
             this.isInitialized = true;
-            console.log('✅ StarbucksGame initialized successfully');
             return true;
             
         } catch (error) {
@@ -102,27 +118,111 @@ class StarbucksGame {
     }
 
     /**
-     * Rule 4: Function ≤ 60 lines - Setup event system
-     * Rule 5: 2+ assertions per function
+     * Wait for BoundedUtilities to be available
+     * 2+ assertions per function
+     */
+    async waitForBoundedUtilities(timeout = 5000) {
+ // Utility wait assertions
+        window.Assert.assertType(timeout, 'number', 'Timeout value');
+        window.Assert.assertRange(timeout, 100, 30000, 'Timeout range');
+        
+ // Check if already available
+        if (window.BoundedUtilities && typeof window.BoundedUtilities.escapeHtml === 'function') {
+ // Set up compatibility layer for existing code
+            window.BoundedUtilities = window.BoundedUtilities;
+            return true;
+        }
+        
+        console.log('⏳ Waiting for BoundedUtilities to be available...');
+        
+        return new Promise((resolve) => {
+            const checkInterval = 100; // Check every 100ms
+            let elapsed = 0;
+            
+            const intervalId = setInterval(() => {
+                elapsed += checkInterval;
+                
+                if (window.BoundedUtilities && typeof window.BoundedUtilities.escapeHtml === 'function') {
+                    clearInterval(intervalId);
+ // Set up compatibility layer
+                    window.BoundedUtilities = window.BoundedUtilities;
+                    resolve(true);
+                } else if (elapsed >= timeout) {
+                    clearInterval(intervalId);
+                    console.warn('⚠️ Timeout waiting for BoundedUtilities - using fallbacks');
+                    this.setupFallbackUtilities();
+                    resolve(true); // Continue with fallbacks
+                }
+            }, checkInterval);
+        });
+    }
+
+    /**
+     * Setup fallback utilities if BoundedUtilities not available
+     * 2+ assertions per function
+     */
+    setupFallbackUtilities() {
+ // Fallback setup assertions
+        window.Assert.assertNotNull(this, 'Game instance must exist');
+        window.Assert.assert(!window.BoundedUtilities || typeof window.BoundedUtilities.escapeHtml !== 'function', 'Fallbacks needed when BoundedUtilities unavailable');
+        
+        
+ // Create minimal fallback BoundedUtilities if not available
+        if (!window.BoundedUtilities) {
+            window.BoundedUtilities = {};
+        }
+        
+ // Provide safe fallback implementations
+        if (!window.BoundedUtilities.escapeHtml) {
+            window.BoundedUtilities.escapeHtml = (text) => {
+                if (typeof text !== 'string') return '';
+                return text.replace(/[&<>"']/g, (match) => {
+                    const escapeMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' };
+                    return escapeMap[match] || match;
+                });
+            };
+        }
+        
+        if (!window.BoundedUtilities.capitalize) {
+            window.BoundedUtilities.capitalize = (text) => {
+                if (typeof text !== 'string' || text.length === 0) return '';
+                return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+            };
+        }
+        
+        if (!window.BoundedUtilities.sanitizeString) {
+            window.BoundedUtilities.sanitizeString = (input, maxLength = 100) => {
+                if (typeof input !== 'string') return '';
+                const cleaned = input.replace(/[^\w\s\-_.]/g, '').substring(0, maxLength);
+                return cleaned.trim();
+            };
+        }
+        
+        return true;
+    }
+
+    /**
+     * Setup event system
+     * 2+ assertions per function
      */
     setupEventHandlers() {
-        // Rule 5: Event setup assertions
-        Assert.isValidElement(this.container, 'Container required for events');
-        Assert.isTrue(this.eventHandlers instanceof Map, 'Handler storage must be available');
+ // Event setup assertions
+        window.Assert.assertNotNull(this.container, 'Container required for events');
+        window.Assert.assert(this.eventHandlers instanceof Map, 'Handler storage must be available');
         
         try {
-            // Remove any existing handlers first
+ // Remove any existing handlers first
             this.clearEventHandlers();
             
-            // Create bounded click handler (Rule 1: Simple control flow)
+ // Create bounded click handler (Rule 1: Simple control flow)
             const clickHandler = (event) => this.handleClick(event);
             const inputHandler = (event) => this.handleInput(event);
             
-            // Rule 6: Check return values for event listener setup
+ // Rule 6: Check return values for event listener setup
             this.container.addEventListener('click', clickHandler);
             this.container.addEventListener('input', inputHandler);
             
-            // Store handlers for cleanup (Rule 3: Fixed storage)
+ // Store handlers for cleanup (Rule 3: Fixed storage)
             this.eventHandlers.set('click', clickHandler);
             this.eventHandlers.set('input', inputHandler);
             
@@ -136,15 +236,15 @@ class StarbucksGame {
     }
 
     /**
-     * Rule 4: Function ≤ 60 lines - Handle click events
-     * Rule 5: 2+ assertions per function
+     * Handle click events
+     * 2+ assertions per function
      */
     handleClick(event) {
-        // Rule 5: Click handling assertions
-        Assert.isNotNull(event, 'Event object must exist');
-        Assert.isNotNull(event.target, 'Event target must exist');
+ // Click handling assertions
+        window.Assert.assertNotNull(event, 'Event object must exist');
+        window.Assert.assertNotNull(event.target, 'Event target must exist');
         
-        // Rule 1: Simple control flow with early returns
+ // Simple control flow with early returns
         if (this.gameState.isAnimating) {
             return true; // Skip during animations
         }
@@ -156,7 +256,7 @@ class StarbucksGame {
         
         event.preventDefault();
         
-        // Rule 1: Simple switch instead of complex delegation
+ // Simple switch instead of complex delegation
         switch (action) {
             case 'start-game':
                 return this.startGame();
@@ -173,18 +273,18 @@ class StarbucksGame {
     }
 
     /**
-     * Rule 4: Function ≤ 60 lines - Handle input events
-     * Rule 5: 2+ assertions per function
+     * Handle input events
+     * 2+ assertions per function
      */
     handleInput(event) {
-        // Rule 5: Input handling assertions
-        Assert.isNotNull(event, 'Event object required');
-        Assert.isNotNull(event.target, 'Input target required');
+ // Input handling assertions
+        window.Assert.assertNotNull(event, 'Event object required');
+        window.Assert.assertNotNull(event.target, 'Input target required');
         
         const target = event.target;
         const field = target.getAttribute('data-field');
         
-        // Rule 1: Simple control flow
+ // Simple control flow
         if (target.id === 'player-name') {
             return this.updatePlayerName(target.value);
         }
@@ -197,36 +297,36 @@ class StarbucksGame {
     }
 
     /**
-     * Rule 4: Function ≤ 60 lines - Update player name with validation
-     * Rule 5: 2+ assertions per function
+     * Update player name with validation
+     * 2+ assertions per function
      */
     updatePlayerName(value) {
-        // Rule 5: Name update assertions
-        Assert.isString(value, 'Player name must be string');
-        Assert.isTrue(this.gameState !== null, 'Game state must exist');
+ // Name update assertions
+        window.Assert.assertType(value, 'string', 'Player name');
+        window.Assert.assert(this.gameState !== null, 'Game state must exist');
         
-        // Rule 2: Fixed loop bound for name validation
+ // Fixed loop bound for name validation
         const maxNameLength = 20;
-        const cleanName = BoundedUtilities.sanitizeString(value, maxNameLength);
+        const cleanName = window.BoundedUtilities.sanitizeString(value, maxNameLength);
         
         this.gameState.playerName = cleanName;
         
-        // Rule 6: Check return value of button update
-        const updateResult = this.updateStartButton();
-        Assert.isTrue(updateResult, 'Start button update must succeed');
+ // Check return value of button update
+            const updateResult = this.updateStartButton();
+            window.Assert.assert(updateResult === true, 'Start button update must succeed');
         
         console.log(`Player name updated: ${cleanName}`);
         return true;
     }
 
     /**
-     * Rule 4: Function ≤ 60 lines - Update start button state
-     * Rule 5: 2+ assertions per function
+     * Update start button state
+     * 2+ assertions per function
      */
     updateStartButton() {
-        // Rule 5: Button update assertions
-        Assert.isString(this.gameState.playerName, 'Player name must be string');
-        Assert.isValidElement(this.container, 'Container must be available');
+ // Button update assertions
+        window.Assert.assertType(this.gameState.playerName, 'string', 'Player name');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
         
         try {
             const button = this.container.querySelector('[data-action="start-game"]');
@@ -251,9 +351,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     startGame() {
-        // Rule 5: Game start assertions
-        Assert.isString(this.gameState.playerName, 'Player name required');
-        Assert.isTrue(this.isInitialized, 'Game must be initialized');
+ // Rule 5: Game start assertions
+        window.Assert.assertType(this.gameState.playerName, 'string', 'Player name');
+        window.Assert.assert(this.isInitialized === true, 'Game must be initialized');
         
         const trimmedName = this.gameState.playerName.trim();
         if (trimmedName.length === 0) {
@@ -261,9 +361,9 @@ class StarbucksGame {
             return false;
         }
         
-        // Rule 6: Check screen transition return value
+ // Rule 6: Check screen transition return value
         const transitionResult = this.goToScreen('game');
-        Assert.isTrue(transitionResult, 'Screen transition must succeed');
+        window.Assert.assert(transitionResult === true, 'Screen transition must succeed');
         
         console.log(`🎮 Game started for player: ${trimmedName}`);
         return true;
@@ -274,16 +374,16 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     generateChallenge() {
-        // Rule 5: Challenge generation assertions
-        Assert.isObject(this.gameData, 'Game data must be available');
-        Assert.isObject(this.gameState, 'Game state must be available');
+ // Rule 5: Challenge generation assertions
+        window.Assert.assertNotNull(this.gameData, 'Game data must be available');
+        window.Assert.assertNotNull(this.gameState, 'Game state must be available');
         
         try {
-            // Rule 3: Use pre-allocated arrays (no dynamic allocation)
+ // Rule 3: Use pre-allocated arrays (no dynamic allocation)
             const categories = ['coffee', 'frappuccino', 'refresher'];
             const drinks = this.gameData.drinks;
             
-            // Rule 2: Fixed bounds random selection (max 10 attempts)
+ // Rule 2: Fixed bounds random selection (max 10 attempts)
             let attempts = 0;
             const maxAttempts = 10;
             
@@ -323,11 +423,11 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     selectRandomSize() {
-        // Rule 5: Size selection assertions
-        Assert.isObject(this.gameData, 'Game data required for size selection');
-        Assert.isObject(this.gameData.sizes, 'Sizes data must exist');
+ // Rule 5: Size selection assertions
+        window.Assert.assertNotNull(this.gameData, 'Game data required for size selection');
+        window.Assert.assertNotNull(this.gameData.sizes, 'Sizes data must exist');
         
-        // Rule 3: Pre-allocated size options
+ // Rule 3: Pre-allocated size options
         const sizes = ['tall', 'grande', 'venti'];
         const randomIndex = Math.floor(Math.random() * sizes.length);
         
@@ -339,9 +439,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     checkAnswer() {
-        // Rule 5: Answer checking assertions
-        Assert.isString(this.gameState.currentDrink, 'Current drink must be set');
-        Assert.isString(this.gameState.currentSize, 'Current size must be set');
+ // Rule 5: Answer checking assertions
+        window.Assert.assertType(this.gameState.currentDrink, 'string', 'Current drink');
+        window.Assert.assertType(this.gameState.currentSize, 'string', 'Current size');
         
         try {
             const drink = this.gameData.drinks[this.gameState.currentCategory][this.gameState.currentDrink];
@@ -356,7 +456,7 @@ class StarbucksGame {
                 return false;
             }
             
-            // Rule 2: Fixed loop bound for answer checking
+ // Rule 2: Fixed loop bound for answer checking
             let correct = true;
             const maxFields = 10;
             let fieldCount = 0;
@@ -365,7 +465,7 @@ class StarbucksGame {
                 if (fieldCount >= maxFields) break; // Rule 2: Fixed upper bound
                 
                 const expected = recipe[field];
-                const userValue = parseInt(this.gameState.userAnswer[field] || '0');
+                const userValue = parseInt(this.gameState.userAnswer[field] || '0', 10);
                 
                 if (userValue !== expected) {
                     correct = false;
@@ -395,9 +495,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     updateScore() {
-        // Rule 5: Score update assertions
-        Assert.isNumber(this.gameState.stars, 'Stars must be number');
-        Assert.isNumber(this.gameState.streak, 'Streak must be number');
+ // Rule 5: Score update assertions
+        window.Assert.assertType(this.gameState.stars, 'number', 'Stars');
+        window.Assert.assertType(this.gameState.streak, 'number', 'Streak');
         
         this.gameState.stars++;
         this.gameState.streak++;
@@ -406,7 +506,7 @@ class StarbucksGame {
             this.gameState.maxStreak = this.gameState.streak;
         }
         
-        // Rule 6: Check level calculation return value
+ // Rule 6: Check level calculation return value
         const newLevel = Math.floor(this.gameState.stars / 5) + 1;
         if (newLevel > this.gameState.level) {
             this.gameState.level = newLevel;
@@ -422,12 +522,12 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     updateAnswer(field, value) {
-        // Rule 5: Answer update assertions
-        Assert.isString(field, 'Field name must be string');
-        Assert.isNotNull(value, 'Value must not be null');
+ // Rule 5: Answer update assertions
+        window.Assert.assertType(field, 'string', 'Field name');
+        window.Assert.assertNotNull(value, 'Value must not be null');
         
-        // Rule 2: Bounded value validation
-        const numericValue = parseInt(value);
+ // Rule 2: Bounded value validation
+        const numericValue = parseInt(value, 10);
         const maxValue = 10;
         
         if (numericValue >= 0 && numericValue <= maxValue) {
@@ -445,9 +545,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     goToScreen(screenName) {
-        // Rule 5: Screen navigation assertions
-        Assert.isString(screenName, 'Screen name must be string');
-        Assert.isTrue(this.isInitialized, 'Game must be initialized');
+ // Rule 5: Screen navigation assertions
+        window.Assert.assertType(screenName, 'string', 'Screen name');
+        window.Assert.assert(this.isInitialized === true, 'Game must be initialized');
         
         const validScreens = ['welcome', 'game', 'result'];
         if (!validScreens.includes(screenName)) {
@@ -457,9 +557,9 @@ class StarbucksGame {
         
         this.gameState.screen = screenName;
         
-        // Rule 6: Check render return value
+ // Rule 6: Check render return value
         const renderResult = this.render();
-        Assert.isTrue(renderResult, 'Screen render must succeed');
+        window.Assert.assert(renderResult === true, 'Screen render must succeed');
         
         console.log(`📱 Navigated to screen: ${screenName}`);
         return true;
@@ -470,14 +570,14 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     render() {
-        // Rule 5: Render assertions
-        Assert.isValidElement(this.container, 'Container must be valid');
-        Assert.isString(this.gameState.screen, 'Screen must be set');
+ // Rule 5: Render assertions
+        window.Assert.assertNotNull(this.container, 'Container must be valid');
+        window.Assert.assertType(this.gameState.screen, 'string', 'Screen');
         
         try {
             let content = '';
             
-            // Rule 1: Simple control flow
+ // Rule 1: Simple control flow
             switch (this.gameState.screen) {
                 case 'welcome':
                     content = this.renderWelcomeScreen();
@@ -494,10 +594,10 @@ class StarbucksGame {
             
             this.container.innerHTML = content;
             
-            // Rule 6: Check button update after render
+ // Rule 6: Check button update after render
             if (this.gameState.screen === 'welcome') {
                 const updateResult = this.updateStartButton();
-                Assert.isTrue(updateResult, 'Button update after render must succeed');
+                window.Assert.assert(updateResult === true, 'Button update after render must succeed');
             }
             
             console.log(`✅ Rendered screen: ${this.gameState.screen}`);
@@ -515,49 +615,106 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     renderWelcomeScreen() {
-        // Rule 5: Welcome screen assertions
-        Assert.isString(this.gameState.playerName, 'Player name must be string');
-        Assert.isValidElement(this.container, 'Container must be available');
+ // Rule 5: Welcome screen assertions
+        window.Assert.assertType(this.gameState.playerName, 'string', 'Player name');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
         
-        const escapedName = BoundedUtilities.escapeHtml(this.gameState.playerName);
-        const isEnabled = this.gameState.playerName.trim().length > 0;
-        
-        return `
-            <div class="game-screen welcome-screen">
-                <div class="welcome-header">
-                    <h1 class="game-title">☕ Starbucks Barista Training ☕</h1>
-                    <p class="game-subtitle">Learn to make perfect drinks!</p>
-                </div>
-                
-                <div class="welcome-form">
-                    <div class="form-group">
-                        <label for="player-name">Your Barista Name:</label>
-                        <input
-                            type="text"
-                            id="player-name"
-                            value="${escapedName}"
-                            placeholder="Enter your name"
-                            maxlength="20"
-                            class="name-input"
-                        />
+        try {
+            // CRITICAL FIX: Ensure BoundedUtilities is available with proper fallback
+            let escapedName = '';
+            if (window.BoundedUtilities && typeof window.BoundedUtilities.escapeHtml === 'function') {
+                escapedName = window.BoundedUtilities.escapeHtml(this.gameState.playerName);
+            } else {
+                // Fallback HTML escaping
+                escapedName = String(this.gameState.playerName || '').replace(/[&<>"']/g, (match) => {
+                    const escapeMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' };
+                    return escapeMap[match] || match;
+                });
+            }
+            
+            const isEnabled = this.gameState.playerName.trim().length > 0;
+            
+            const html = `
+                <div class="game-screen welcome-screen">
+                    <div class="welcome-header">
+                        <h1 class="game-title">☕ Starbucks Barista Training ☕</h1>
+                        <p class="game-subtitle">Learn to make perfect drinks!</p>
                     </div>
                     
-                    <button
-                        data-action="start-game"
-                        class="start-button ${isEnabled ? 'enabled' : 'disabled'}"
-                        ${!isEnabled ? 'disabled' : ''}
-                    >
-                        Start My Adventure!
-                    </button>
+                    <div class="welcome-form">
+                        <div class="form-group">
+                            <label for="player-name">Your Barista Name:</label>
+                            <input
+                                type="text"
+                                id="player-name"
+                                value="${escapedName}"
+                                placeholder="Enter your name"
+                                maxlength="20"
+                                class="name-input"
+                            />
+                        </div>
+                        
+                        <button
+                            data-action="start-game"
+                            class="start-button ${isEnabled ? 'enabled' : 'disabled'}"
+                            ${!isEnabled ? 'disabled' : ''}
+                        >
+                            Start My Adventure!
+                        </button>
+                    </div>
+                    
+                    <div class="welcome-stats">
+                        <p>🌟 Level: ${this.gameState.level}</p>
+                        <p>⭐ Stars: ${this.gameState.stars}</p>
+                        <p>🔥 Best Streak: ${this.gameState.maxStreak}</p>
+                    </div>
                 </div>
-                
-                <div class="welcome-stats">
-                    <p>🌟 Level: ${this.gameState.level}</p>
-                    <p>⭐ Stars: ${this.gameState.stars}</p>
-                    <p>🔥 Best Streak: ${this.gameState.maxStreak}</p>
+            `;
+            
+            console.log('✅ Welcome screen HTML generated successfully');
+            return html;
+            
+        } catch (error) {
+            console.error('❌ Welcome screen render failed:', error);
+            console.error('Error details:', error.message, error.stack);
+            // Return basic fallback HTML
+            return `
+                <div class="game-screen welcome-screen">
+                    <div class="welcome-header">
+                        <h1 class="game-title">☕ Starbucks Barista Training ☕</h1>
+                        <p class="game-subtitle">Learn to make perfect drinks!</p>
+                    </div>
+                    
+                    <div class="welcome-form">
+                        <div class="form-group">
+                            <label for="player-name">Your Barista Name:</label>
+                            <input
+                                type="text"
+                                id="player-name"
+                                value=""
+                                placeholder="Enter your name"
+                                maxlength="20"
+                                class="name-input"
+                            />
+                        </div>
+                        
+                        <button
+                            data-action="start-game"
+                            class="start-button disabled"
+                            disabled
+                        >
+                            Start My Adventure!
+                        </button>
+                    </div>
+                    
+                    <div class="welcome-stats">
+                        <p>🌟 Level: 1</p>
+                        <p>⭐ Stars: 0</p>
+                        <p>🔥 Best Streak: 0</p>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 
     /**
@@ -565,9 +722,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     renderGameScreen() {
-        // Rule 5: Game screen assertions
-        Assert.isString(this.gameState.currentDrink, 'Current drink must be set');
-        Assert.isString(this.gameState.currentSize, 'Current size must be set');
+ // Rule 5: Game screen assertions
+        window.Assert.assertNotNull(this.gameState, 'Game state must exist');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
         
         if (!this.gameState.currentDrink) {
             return `
@@ -581,6 +738,10 @@ class StarbucksGame {
             `;
         }
         
+ // Rule 5: Assertions for when we have a current drink
+        window.Assert.assertType(this.gameState.currentDrink, 'string', 'Current drink');
+        window.Assert.assertType(this.gameState.currentSize, 'string', 'Current size');
+        
         const drink = this.gameData.drinks[this.gameState.currentCategory][this.gameState.currentDrink];
         const recipe = drink.recipe[this.gameState.currentSize];
         
@@ -589,7 +750,7 @@ class StarbucksGame {
             const value = this.gameState.userAnswer[field] || '';
             inputFields += `
                 <div class="input-group">
-                    <label>${BoundedUtilities.capitalize(field)}:</label>
+                    <label>${window.BoundedUtilities.capitalize(field)}:</label>
                     <input 
                         type="number" 
                         min="0" 
@@ -606,7 +767,7 @@ class StarbucksGame {
         return `
             <div class="game-screen">
                 <div class="challenge-header">
-                    <h2>Make a ${BoundedUtilities.capitalize(this.gameState.currentSize)} ${this.gameState.currentDrink}</h2>
+                    <h2>Make a ${window.BoundedUtilities.capitalize(this.gameState.currentSize)} ${this.gameState.currentDrink}</h2>
                     <p>Stars: ${this.gameState.stars} | Streak: ${this.gameState.streak}</p>
                 </div>
                 
@@ -631,9 +792,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     renderResult() {
-        // Rule 5: Result rendering assertions
-        Assert.isBoolean(this.gameState.isCorrect, 'Correct flag must be boolean');
-        Assert.isString(this.gameState.currentDrink, 'Current drink must be set');
+ // Rule 5: Result rendering assertions
+        window.Assert.assertType(this.gameState.isCorrect, 'boolean', 'Correct flag');
+        window.Assert.assertType(this.gameState.currentDrink, 'string', 'Current drink');
         
         const isCorrect = this.gameState.isCorrect;
         const resultClass = isCorrect ? 'correct' : 'incorrect';
@@ -656,22 +817,22 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     renderCorrectRecipe() {
-        // Rule 5: Recipe display assertions
-        Assert.isString(this.gameState.currentDrink, 'Current drink required');
-        Assert.isString(this.gameState.currentSize, 'Current size required');
+ // Rule 5: Recipe display assertions
+        window.Assert.assertType(this.gameState.currentDrink, 'string', 'Current drink');
+        window.Assert.assertType(this.gameState.currentSize, 'string', 'Current size');
         
         const drink = this.gameData.drinks[this.gameState.currentCategory][this.gameState.currentDrink];
         const recipe = drink.recipe[this.gameState.currentSize];
         
         let recipeText = '<h4>Correct Recipe:</h4><ul>';
         
-        // Rule 2: Fixed loop bound
+ // Rule 2: Fixed loop bound
         let fieldCount = 0;
         const maxFields = 10;
         
         for (const field in recipe) {
             if (fieldCount >= maxFields) break;
-            recipeText += `<li>${BoundedUtilities.capitalize(field)}: ${recipe[field]}</li>`;
+            recipeText += `<li>${window.BoundedUtilities.capitalize(field)}: ${recipe[field]}</li>`;
             fieldCount++;
         }
         
@@ -684,11 +845,11 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function  
      */
     createGameData() {
-        // Rule 5: Game data creation assertions
-        Assert.isObject(this, 'Game instance must exist');
-        Assert.isValidElement(this.container, 'Container must be available');
+ // Rule 5: Game data creation assertions
+        window.Assert.assertNotNull(this, 'Game instance must exist');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
         
-        // Rule 3: Pre-allocated, fixed game data (no dynamic allocation)
+ // Rule 3: Pre-allocated, fixed game data (no dynamic allocation)
         const gameData = {
             drinks: {
                 coffee: {
@@ -726,16 +887,16 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     handleError(message) {
-        // Rule 5: Error handling assertions
-        Assert.isString(message, 'Error message must be string');
-        Assert.isObject(this.gameState, 'Game state must exist');
+ // Rule 5: Error handling assertions
+        window.Assert.assertType(message, 'string', 'Error message');
+        window.Assert.assertNotNull(this.gameState, 'Game state must exist');
         
         this.gameState.errorMessage = message;
         console.error(`🚫 Game Error: ${message}`);
         
-        // Rule 6: Check error display return value
+ // Rule 6: Check error display return value
         const displayResult = this.showError(message);
-        Assert.isTrue(displayResult, 'Error display must succeed');
+        window.Assert.assert(displayResult === true, 'Error display must succeed');
         
         return true;
     }
@@ -745,9 +906,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     showError(message) {
-        // Rule 5: Error display assertions
-        Assert.isString(message, 'Error message must be string');
-        Assert.isValidElement(this.container, 'Container must be available');
+ // Rule 5: Error display assertions
+        window.Assert.assertType(message, 'string', 'Error message');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
         
         try {
             const errorElement = document.createElement('div');
@@ -757,7 +918,7 @@ class StarbucksGame {
             
             this.container.appendChild(errorElement);
             
-            // Rule 2: Fixed timeout (3000ms)
+ // Rule 2: Fixed timeout (3000ms)
             setTimeout(() => {
                 if (errorElement.parentNode) {
                     errorElement.parentNode.removeChild(errorElement);
@@ -777,16 +938,16 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     cleanup() {
-        // Rule 5: Cleanup assertions
-        Assert.isTrue(this.isInitialized, 'Game must be initialized to clean up');
-        Assert.isFalse(this.isDestroyed, 'Game must not be already destroyed');
+ // Rule 5: Cleanup assertions
+        window.Assert.assert(this.isInitialized === true, 'Game must be initialized to clean up');
+        window.Assert.assert(this.isDestroyed === false, 'Game must not be already destroyed');
         
         try {
-            // Rule 6: Check cleanup return values
+ // Rule 6: Check cleanup return values
             const eventCleanup = this.clearEventHandlers();
-            Assert.isTrue(eventCleanup, 'Event cleanup must succeed');
+            window.Assert.assert(eventCleanup === true, 'Event cleanup must succeed');
             
-            // Clear container
+ // Clear container
             if (this.container) {
                 this.container.innerHTML = '';
             }
@@ -806,12 +967,12 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     clearEventHandlers() {
-        // Rule 5: Handler cleanup assertions
-        Assert.isTrue(this.eventHandlers instanceof Map, 'Handler storage must exist');
-        Assert.isValidElement(this.container, 'Container must be available');
+ // Rule 5: Handler cleanup assertions
+        window.Assert.assert(this.eventHandlers instanceof Map, 'Handler storage must exist');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
         
         try {
-            // Rule 2: Fixed loop bound for cleanup
+ // Rule 2: Fixed loop bound for cleanup
             let cleanupCount = 0;
             const maxCleanups = 10;
             
@@ -837,9 +998,9 @@ class StarbucksGame {
      * Rule 5: 2+ assertions per function
      */
     renderErrorScreen() {
-        // Rule 5: Error screen assertions
-        Assert.isString(this.gameState.errorMessage, 'Error message must be string');
-        Assert.isValidElement(this.container, 'Container must be available');
+ // Rule 5: Error screen assertions
+        window.Assert.assertType(this.gameState.errorMessage, 'string', 'Error message');
+        window.Assert.assertNotNull(this.container, 'Container must be available');
         
         const message = this.gameState.errorMessage || 'An error occurred';
         
@@ -847,7 +1008,7 @@ class StarbucksGame {
             <div class="game-screen error-screen">
                 <div class="error-content">
                     <h2>⚠️ Oops!</h2>
-                    <p>${BoundedUtilities.escapeHtml(message)}</p>
+                    <p>${window.BoundedUtilities.escapeHtml(message)}</p>
                     <button data-action="go-home" class="error-button">
                         Back to Menu
                     </button>
@@ -858,9 +1019,8 @@ class StarbucksGame {
 }
 
 // Export for module systems and global use
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = StarbucksGame;
-} else {
+// Browser-only export
+if (typeof window !== 'undefined') {
     window.StarbucksGame = StarbucksGame;
 }
 

@@ -23,8 +23,8 @@
     position: sticky;
     top: 15px;
     z-index: 1000;
-    backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px);
     transition: var(--header-transition);
 }
 

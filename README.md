@@ -302,7 +302,7 @@ npm run info
 node src/rules/test-validation.js
 
 # Monitor memory usage
-console.log(window.OptimizedRules.getPerformanceStats());
+console.log(window.Rules.getPerformanceStats());
 
 # Check performance mode
 console.log(window.RulesEnforcer.config.performance.mode);

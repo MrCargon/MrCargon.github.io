@@ -421,7 +421,7 @@ This project demonstrates **web-adapted** principles used in:
 - **🏥 Medical** - Life support devices (web safety patterns)
 - **🚗 Automotive** - Self-driving systems (real-time web optimization)
 
-### Key Optimization Concepts
+### Optimization Concepts
 
 - **Selective Monitoring** - Only monitor functions above threshold
 - **Circular Buffers** - Fixed memory usage prevents growth
@@ -476,7 +476,7 @@ This project demonstrates **web-adapted** principles used in:
 **RulesEnforcer not working?**
 ```bash
 # Check system status
-console.log(window.OptimizedRules.getStatus());
+console.log(window.Rules.getStatus());
 
 # Verify performance mode
 console.log(window.RulesEnforcer?.config?.performance?.mode);
@@ -488,13 +488,13 @@ window.RulesEnforcer?.setPerformanceMode('development');
 **Performance issues?**
 ```bash
 # Check performance stats
-console.log(window.OptimizedRules.getPerformanceStats());
+console.log(window.Rules.getPerformanceStats());
 
 # Switch to production mode for better performance
-window.OptimizedRules.setPerformanceMode('production');
+window.Rules.setPerformanceMode('production');
 
 # Or disable monitoring completely
-window.OptimizedRules.setPerformanceMode('off');
+window.Rules.setPerformanceMode('off');
 ```
 
 **Legacy system conflicts?**
@@ -503,6 +503,40 @@ window.OptimizedRules.setPerformanceMode('off');
 # Check init.js console output for confirmation
 npm run check-integrity
 ```
+
+---
+
+### 🚀 Quick Commands Reference
+
+```bash
+npm start                     # Start optimized dev server
+npm run validate-rules        # Check v2.0 rule compliance  
+npm run check-integrity       # Verify system health
+npm run info                 # project info
+node src/rules/test-validation.js  # Test system
+```
+
+### 🔧 Performance Commands
+
+```bash
+# Check system status
+console.log(window.Rules.getStatus());
+
+# View performance stats
+console.log(window.Rules.getPerformanceStats());
+
+# Set performance mode
+window.Rules.setPerformanceMode('production');
+
+# Generate compliance report
+window.Rules.showReport();
+```
+
+---
+
+*"The rules act like the seat-belt in your car: initially they are perhaps a little uncomfortable, but after a while their use becomes second-nature and not using them becomes unimaginable."* - Gerard J. Holzmann
+
+**Built with passion & 💙.**
 
 ## 📞 Contact & Support
 
@@ -516,37 +550,3 @@ npm run check-integrity
 MIT License - See [LICENSE](LICENSE) file for details.
 
 **© 2024 Andrejs K (MrCargon). All rights reserved.**
-
----
-
-### 🚀 Quick Commands Reference
-
-```bash
-npm start                     # Start optimized dev server
-npm run validate-rules        # Check v2.0 rule compliance  
-npm run check-integrity       # Verify system health
-npm run info                 # Enhanced project info
-node src/rules/test-validation.js  # Test optimized system
-```
-
-### 🔧 Performance Commands
-
-```bash
-# Check system status
-console.log(window.OptimizedRules.getStatus());
-
-# View performance stats
-console.log(window.OptimizedRules.getPerformanceStats());
-
-# Set performance mode
-window.OptimizedRules.setPerformanceMode('production');
-
-# Generate compliance report
-window.OptimizedRules.showReport();
-```
-
----
-
-*"The rules act like the seat-belt in your car: initially they are perhaps a little uncomfortable, but after a while their use becomes second-nature and not using them becomes unimaginable."* - Gerard J. Holzmann
-
-**Built with 💙 following optimized safety-critical coding practices for reliable, high-performance web applications.**

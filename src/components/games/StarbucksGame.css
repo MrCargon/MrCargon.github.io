@@ -107,9 +107,8 @@
 .game-title {
     font-size: clamp(1.8rem, 4vw, 2.5rem);
     margin-bottom: 0.5rem;
-    background: linear-gradient(45deg, #10b981, #34d399);
+    background: linear-gradient(45deg, #ff8500, #ffa500);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
     font-weight: 700;
 }
@@ -139,7 +138,7 @@
 }
 
 .barista-avatar h2 {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     margin-bottom: 0.5rem;
     font-size: 1.5rem;
 }
@@ -159,12 +158,14 @@
     max-width: 300px;
     padding: 1rem;
     background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(16, 185, 129, 0.3);
+    border: 2px solid rgba(255, 133, 0, 0.3);
     border-radius: 8px;
     color: white;
     font-size: 1rem;
     text-align: center;
     transition: all 0.3s ease;
+    /* EMOJI FIX: Ensure emojis display with natural colors */
+    font-variant-emoji: unicode;
 }
 
 .name-input::placeholder {
@@ -173,14 +174,19 @@
 
 .name-input:focus {
     outline: none;
-    border-color: var(--primary-color, #10b981);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    border-color: var(--primary-color, #ff8500);
+    box-shadow: 0 0 0 3px rgba(255, 133, 0, 0.2);
     background: rgba(255, 255, 255, 0.15);
+}
+
+.name-input::selection {
+    background: rgba(255, 133, 0, 0.5);
+    color: white;
 }
 
 /* Buttons */
 .start-button {
-    background: linear-gradient(45deg, #10b981, #059669);
+    background: linear-gradient(45deg, #ff8500, #e67300);
     color: white;
     border: none;
     padding: 1rem 2rem;
@@ -197,7 +203,7 @@
 
 .start-button:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 8px 25px rgba(255, 133, 0, 0.3);
 }
 
 .start-button:disabled {
@@ -212,9 +218,9 @@
 }
 
 @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(255, 133, 0, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 133, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 133, 0, 0); }
 }
 
 /* Welcome Features */
@@ -234,13 +240,13 @@
     padding: 1rem;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(255, 133, 0, 0.2);
     min-width: 120px;
     transition: all 0.3s ease;
 }
 
 .feature:hover {
-    background: rgba(16, 185, 129, 0.1);
+    background: rgba(255, 133, 0, 0.1);
     transform: translateY(-3px);
 }
 
@@ -259,11 +265,11 @@
     align-items: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+    border-bottom: 1px solid rgba(255, 133, 0, 0.2);
 }
 
 .player-info h1 {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     margin-bottom: 0.5rem;
     font-size: 1.8rem;
 }
@@ -279,13 +285,13 @@
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.9rem;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(255, 133, 0, 0.3);
 }
 
 .badge-button {
-    background: rgba(16, 185, 129, 0.2);
-    border: 1px solid var(--primary-color, #10b981);
-    color: var(--primary-color, #10b981);
+    background: rgba(255, 133, 0, 0.2);
+    border: 1px solid var(--primary-color, #ff8500);
+    color: var(--primary-color, #ff8500);
     padding: 0.5rem 1rem;
     border-radius: 8px;
     cursor: pointer;
@@ -294,7 +300,7 @@
 }
 
 .badge-button:hover {
-    background: var(--primary-color, #10b981);
+    background: var(--primary-color, #ff8500);
     color: white;
     transform: translateY(-2px);
 }
@@ -306,7 +312,7 @@
 
 .barista-tip {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(255, 133, 0, 0.2);
     border-radius: 12px;
     padding: 1.5rem;
     display: flex;
@@ -330,7 +336,7 @@
 }
 
 .tip-content h3 {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     margin-bottom: 0.5rem;
     font-size: 1.2rem;
 }
@@ -395,7 +401,7 @@
 
 .action-button {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(255, 133, 0, 0.3);
     border-radius: 12px;
     padding: 1.5rem;
     cursor: pointer;
@@ -410,20 +416,20 @@
 }
 
 .action-button:hover {
-    background: rgba(16, 185, 129, 0.1);
-    border-color: var(--primary-color, #10b981);
+    background: rgba(255, 133, 0, 0.1);
+    border-color: var(--primary-color, #ff8500);
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 8px 25px rgba(255, 133, 0, 0.2);
 }
 
 .action-button.primary {
-    background: linear-gradient(45deg, #10b981, #059669);
+    background: linear-gradient(45deg, #ff8500, #e67300);
     border-color: transparent;
     color: white;
 }
 
 .action-button.primary:hover {
-    background: linear-gradient(45deg, #059669, #047857);
+    background: linear-gradient(45deg, #e67300, #cc5a00);
     transform: translateY(-3px) scale(1.02);
 }
 
@@ -486,11 +492,11 @@
     text-align: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+    border-bottom: 1px solid rgba(255, 133, 0, 0.2);
 }
 
 .screen-header h2 {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     margin-bottom: 0.5rem;
     font-size: 1.8rem;
 }
@@ -504,7 +510,7 @@
 
 .category-card {
     background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(16, 185, 129, 0.3);
+    border: 2px solid rgba(255, 133, 0, 0.3);
     border-radius: 12px;
     padding: 1.5rem;
     cursor: pointer;
@@ -519,10 +525,10 @@
 }
 
 .category-card:hover {
-    background: rgba(16, 185, 129, 0.1);
-    border-color: var(--primary-color, #10b981);
+    background: rgba(255, 133, 0, 0.1);
+    border-color: var(--primary-color, #ff8500);
     transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 10px 30px rgba(255, 133, 0, 0.2);
 }
 
 .category-card.red { border-color: #ef4444; }
@@ -571,11 +577,11 @@
     align-items: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+    border-bottom: 1px solid rgba(255, 133, 0, 0.2);
 }
 
 .challenge-header h2 {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     margin: 0;
     font-size: 1.6rem;
 }
@@ -590,12 +596,12 @@
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.9rem;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(255, 133, 0, 0.3);
 }
 
 .challenge-card {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(255, 133, 0, 0.3);
     border-radius: 12px;
     padding: 2rem;
     margin-bottom: 2rem;
@@ -603,8 +609,8 @@
 }
 
 .challenge-card.correct {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
+    border-color: #ff8500;
+    background: rgba(255, 133, 0, 0.1);
     animation: successPulse 0.6s ease-out;
 }
 
@@ -639,7 +645,7 @@
 
 .drink-info h3 {
     margin: 0 0 0.25rem 0;
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     font-size: 1.5rem;
 }
 
@@ -660,7 +666,7 @@
 }
 
 .challenge-prompt {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     font-weight: 600;
     font-size: 1.1rem;
 }
@@ -686,7 +692,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     font-weight: 600;
     font-size: 0.9rem;
 }
@@ -698,7 +704,7 @@
 .recipe-input {
     padding: 0.75rem;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(255, 133, 0, 0.3);
     border-radius: 8px;
     color: white;
     font-size: 1rem;
@@ -708,8 +714,8 @@
 
 .recipe-input:focus {
     outline: none;
-    border-color: var(--primary-color, #10b981);
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    border-color: var(--primary-color, #ff8500);
+    box-shadow: 0 0 0 2px rgba(255, 133, 0, 0.2);
     background: rgba(255, 255, 255, 0.15);
 }
 
@@ -726,7 +732,7 @@
 }
 
 .check-button {
-    background: linear-gradient(45deg, #10b981, #059669);
+    background: linear-gradient(45deg, #ff8500, #e67300);
     color: white;
     border: none;
     padding: 1rem 2rem;
@@ -740,9 +746,9 @@
 }
 
 .check-button:hover {
-    background: linear-gradient(45deg, #059669, #047857);
+    background: linear-gradient(45deg, #e67300, #cc5a00);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 8px 25px rgba(255, 133, 0, 0.3);
 }
 
 /* Challenge Result */
@@ -756,8 +762,8 @@
 }
 
 .challenge-result.correct {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
+    border-color: #ff8500;
+    background: rgba(255, 133, 0, 0.1);
 }
 
 .challenge-result.incorrect {
@@ -799,7 +805,7 @@
 }
 
 .correct-recipe h4 {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     margin: 0 0 0.5rem 0;
 }
 
@@ -836,7 +842,7 @@
 
 .nav-button, .back-button {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    border: 1px solid rgba(255, 133, 0, 0.3);
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
@@ -848,8 +854,8 @@
 }
 
 .nav-button:hover, .back-button:hover {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: var(--primary-color, #10b981);
+    background: rgba(255, 133, 0, 0.2);
+    border-color: var(--primary-color, #ff8500);
     transform: translateY(-2px);
 }
 
@@ -873,7 +879,7 @@
 }
 
 .badge-count {
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     font-weight: 600;
     font-size: 1.1rem;
 }
@@ -895,10 +901,10 @@
 }
 
 .badge-card.earned {
-    border-color: var(--primary-color, #10b981);
-    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--primary-color, #ff8500);
+    background: rgba(255, 133, 0, 0.1);
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 5px 15px rgba(255, 133, 0, 0.2);
 }
 
 .badge-card.locked {
@@ -908,7 +914,7 @@
 
 .badge-card:hover.earned {
     transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 10px 25px rgba(255, 133, 0, 0.3);
 }
 
 .badge-icon {
@@ -919,7 +925,7 @@
 
 .badge-info h3 {
     margin: 0 0 0.5rem 0;
-    color: var(--primary-color, #10b981);
+    color: var(--primary-color, #ff8500);
     font-size: 1.2rem;
 }
 

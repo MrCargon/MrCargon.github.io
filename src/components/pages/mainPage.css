@@ -763,12 +763,12 @@
 }
 
 .left-popup .popup-tab {
-    right: -60px;
+    right: -30px;
     border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
 }
 
 .right-popup .popup-tab {
-    left: -60px;
+    left: -30px;
     border-radius: var(--radius-md, 12px) 0 0 var(--radius-md, 12px);
 }
 

@@ -39,9 +39,11 @@
     <!-- Main Scripts -->
     <script src="src/components/ui/LoadingScreen.js"></script>
     
-    <!-- 📏 Consolidated Rules System - Load in order -->
+    <!-- 📏 Consolidated Rules System - Load in proper dependency order -->
     <script src="src/rules/Assert.js"></script>
     <script src="src/rules/BoundedUtilities.js"></script>
+    <script src="src/rules/PerformanceManager.js"></script>
+    <script src="src/rules/ScopeAnalyzer.js"></script>
     <script src="src/rules/RulesEnforcer.js"></script>
     <script src="src/rules/init.js"></script>
     

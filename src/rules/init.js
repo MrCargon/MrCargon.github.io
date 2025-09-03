@@ -7,13 +7,9 @@
 
 console.log('🚀 Starting rules system v2.0.1...');
 
-// Disable old rules system to prevent conflicts
-if (typeof initializeRulesEnforcement !== 'undefined') {
-    console.log('🚫 Disabling old RulesEnforcer to prevent conflicts');
-    window.initializeRulesEnforcement = () => {
-        console.log('⚠️ Old RulesEnforcer disabled - using OptimizedRulesEnforcer v2.0');
-        return false;
-    };
+// Ensure we have access to the initialization function
+if (typeof initializeRulesEnforcement === 'undefined') {
+    console.log('⚠️ RulesEnforcer initialization function not available - check load order');
 }
 
 /**
@@ -50,110 +46,193 @@ function initializeOptimizedRulesSystem() {
         success: 0
     };
     
-    // Rule 2: Fixed initialization sequence (bounded)
+    // Enhanced initialization sequence with better dependency checking
     const initSequence = [
         { 
             name: 'Assert', 
-            check: () => typeof Assert !== 'undefined',
-            init: () => true 
+            required: true,
+            check: () => {
+                return (typeof window !== 'undefined' && 
+                       window.Assert && 
+                       typeof window.Assert.assertNotNull === 'function');
+            },
+            init: () => window.Assert !== undefined
         },
         { 
             name: 'BoundedUtilities', 
-            check: () => typeof BoundedUtilities !== 'undefined',
-            init: () => true 
+            required: true,
+            check: () => {
+                return (typeof window !== 'undefined' && 
+                       window.BoundedUtilities && 
+                       typeof window.BoundedUtilities.escapeHtml === 'function');
+            },
+            init: () => window.BoundedUtilities !== undefined
         },
         { 
             name: 'PerformanceManager', 
+            required: true,
             check: () => typeof window.PerformanceManager !== 'undefined',
-            init: () => typeof window.PerformanceManager !== 'undefined'
+            init: () => {
+                // Create fallback if not loaded
+                if (typeof window.PerformanceManager === 'undefined') {
+                    console.warn('⚠️ PerformanceManager not loaded - creating fallback');
+                    if (typeof window.createPerformanceManagerFallback === 'function') {
+                        window.createPerformanceManagerFallback();
+                        return typeof window.PerformanceManager !== 'undefined';
+                    }
+                    return false;
+                }
+                return true;
+            }
         },
         { 
             name: 'ScopeAnalyzer', 
+            required: false, // Make non-critical since RulesEnforcer can work without it
             check: () => typeof window.ScopeAnalyzer !== 'undefined',
-            init: () => typeof window.ScopeAnalyzer !== 'undefined'
+            init: () => {
+                if (typeof window.ScopeAnalyzer === 'undefined') {
+                    console.warn('⚠️ ScopeAnalyzer not loaded - Rule 6 monitoring disabled');
+                    return false;
+                }
+                return true;
+            }
         },
         { 
-            name: 'OptimizedEnforcer', 
-            check: () => typeof window.optimizedRulesEnforcer !== 'undefined' && window.optimizedRulesEnforcer !== null,
+            name: 'RulesEnforcer', 
+            required: false,
+            check: () => typeof window.RulesEnforcer !== 'undefined' && window.RulesEnforcer !== null,
             init: () => {
-                if (typeof initializeOptimizedRulesEnforcement === 'function') {
-                    return initializeOptimizedRulesEnforcement();
+                // Initialize RulesEnforcer now that dependencies are ready
+                if (typeof initializeRulesEnforcement === 'function') {
+                    try {
+                        const success = initializeRulesEnforcement();
+                        if (success) {
+                            console.log('✅ RulesEnforcer v2.0.1 initialized successfully');
+                        }
+                        return success;
+                    } catch (error) {
+                        console.warn('⚠️ RulesEnforcer initialization failed:', error.message);
+                        return false;
+                    }
+                } else {
+                    console.warn('⚠️ initializeRulesEnforcement function not available');
+                    return false;
                 }
-                return window.optimizedRulesEnforcer !== null;
             }
         }
     ];
     
-    // Execute initialization sequence
+    // Execute initialization sequence with improved logging
+    let criticalFailures = 0;
+    
     initSequence.forEach(component => {
         results.total++;
         
-        if (component.check()) {
-            console.log(`✅ ${component.name} already available`);
-            results[component.name.toLowerCase().replace('optimized', '').replace('enforcer', 'optimizedEnforcer')] = true;
-            results.success++;
-        } else {
-            const success = safeInit(component.init, component.name);
-            results[component.name.toLowerCase().replace('optimized', '').replace('enforcer', 'optimizedEnforcer')] = success;
-            if (success) results.success++;
+        try {
+            if (component.check()) {
+                console.log(`✅ ${component.name} already available`);
+                results[component.name.toLowerCase().replace('optimized', '').replace('enforcer', 'optimizedEnforcer')] = true;
+                results.success++;
+            } else {
+                const success = component.required ? 
+                    safeInit(component.init, component.name) : 
+                    component.init();
+                
+                results[component.name.toLowerCase().replace('optimized', '').replace('enforcer', 'optimizedEnforcer')] = success;
+                
+                if (success) {
+                    results.success++;
+                } else if (component.required) {
+                    criticalFailures++;
+                }
+            }
+        } catch (error) {
+            console.warn(`⚠️ ${component.name} initialization error:`, error.message);
+            if (component.required) {
+                criticalFailures++;
+            }
         }
     });
     
-    // Summary
+    // Summary with improved criteria
     const successRate = Math.round((results.success / results.total) * 100);
     console.log(`📊 Optimized Rules System Initialization Complete: ${results.success}/${results.total} (${successRate}%)`);
     
-    if (successRate >= 80) {
-        console.log('🎉 Optimized rules components initialized successfully');
+    // Enhanced success criteria
+    if (criticalFailures === 0) {
+        console.log('🎉 All critical components loaded successfully');
         setupPerformanceMonitoring();
         addOptimizedStatusIndicator();
         createOptimizedRulesAPI();
         return true;
+    } else if (successRate >= 60) {
+        console.log('⚠️ Some non-critical components missing, but continuing');
+        setupPerformanceMonitoring();
+        createOptimizedRulesAPI();
+        return true;
     } else {
-        console.error('❌ Optimized rules system initialization failed');
+        console.warn('❌ Critical component failures detected');
+        // Try to setup basic functionality anyway
+        createOptimizedRulesAPI();
         return false;
     }
 }
 
 /**
- * Setup performance monitoring system
+ * Setup performance monitoring system with retry logic
  * Purpose: Initialize performance tracking and optimization
  * Rule 4: ≤60 lines | Rule 5: Performance validation
  */
 function setupPerformanceMonitoring() {
-    // Rule 5: Validate performance components
-    if (!window.optimizedRulesEnforcer) {
-        console.warn('⚠️ OptimizedRulesEnforcer not available for performance monitoring');
-        return false;
+    // Use retry logic to wait for RulesEnforcer initialization
+    const maxRetries = 10;
+    let retryCount = 0;
+    
+    function attemptSetup() {
+        // Rule 5: Validate performance components
+        if (!window.RulesEnforcer) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+                // Wait and retry - RulesEnforcer might still be initializing
+                setTimeout(attemptSetup, 100 * retryCount); // Exponential backoff
+                return;
+            } else {
+                console.warn('⚠️ RulesEnforcer initialization timeout - performance monitoring disabled');
+                return false;
+            }
+        }
+        
+        try {
+            // Setup global error handling for rule violations
+            window.addEventListener('error', handleRuleViolation);
+            window.addEventListener('unhandledrejection', handleAsyncRuleViolation);
+            
+            // Setup periodic performance optimization
+            setInterval(() => {
+                if (window.RulesEnforcer && window.RulesEnforcer.performanceManager) {
+                    window.RulesEnforcer.performanceManager.optimizeMemory();
+                }
+            }, 60000); // Every minute
+            
+            console.log('✅ Performance monitoring active');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Failed to setup performance monitoring:', error.message);
+            return false;
+        }
     }
     
-    try {
-        // Setup global error handling for optimized rule violations
-        window.addEventListener('error', handleOptimizedRuleViolation);
-        window.addEventListener('unhandledrejection', handleOptimizedAsyncRuleViolation);
-        
-        // Setup periodic performance optimization
-        setInterval(() => {
-            if (window.optimizedRulesEnforcer && window.optimizedRulesEnforcer.performanceManager) {
-                window.optimizedRulesEnforcer.performanceManager.optimizeMemory();
-            }
-        }, 60000); // Every minute
-        
-        console.log('✅ Performance monitoring active');
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Failed to setup performance monitoring:', error.message);
-        return false;
-    }
+    // Start the retry process
+    attemptSetup();
 }
 
 /**
- * Handle optimized rule violations from errors
- * Purpose: Process and log rule violations with performance optimization
+ * Handle rule violations from errors
+ * Purpose: Process and log rule violations
  * Rule 4: ≤60 lines | Rule 5: Error validation
  */
-function handleOptimizedRuleViolation(event) {
+function handleRuleViolation(event) {
     // Rule 5: Validate error event
     if (!event || typeof event !== 'object' || !event.message) {
         return;
@@ -166,8 +245,8 @@ function handleOptimizedRuleViolation(event) {
                            message.includes('bound exceeded') ||
                            message.includes('compliance error');
     
-    if (isRuleViolation && window.optimizedRulesEnforcer) {
-        window.optimizedRulesEnforcer.recordViolation({
+    if (isRuleViolation && window.RulesEnforcer) {
+        window.RulesEnforcer.recordViolation({
             type: 'ERROR_VIOLATION',
             message: message,
             severity: 'MEDIUM',
@@ -177,11 +256,11 @@ function handleOptimizedRuleViolation(event) {
 }
 
 /**
- * Handle async optimized rule violations
+ * Handle async rule violations
  * Purpose: Process unhandled promise rejections for rule violations
  * Rule 4: ≤60 lines | Rule 5: Promise validation
  */
-function handleOptimizedAsyncRuleViolation(event) {
+function handleAsyncRuleViolation(event) {
     // Rule 5: Validate promise rejection event
     if (!event || typeof event !== 'object' || !event.reason) {
         return;
@@ -192,8 +271,8 @@ function handleOptimizedAsyncRuleViolation(event) {
                            reason.includes('violation') ||
                            reason.includes('bound exceeded');
     
-    if (isRuleViolation && window.optimizedRulesEnforcer) {
-        window.optimizedRulesEnforcer.recordViolation({
+    if (isRuleViolation && window.RulesEnforcer) {
+        window.RulesEnforcer.recordViolation({
             type: 'ASYNC_VIOLATION',
             message: reason,
             severity: 'MEDIUM',
@@ -225,7 +304,7 @@ function addOptimizedStatusIndicator() {
         indicator.id = 'optimized-rules-status';
         
         // Get performance mode
-        const performanceMode = window.optimizedRulesEnforcer?.config?.performance?.mode || 'unknown';
+        const performanceMode = window.RulesEnforcer?.config?.performance?.mode || 'unknown';
         indicator.innerHTML = `⚡ Rules v2.0 (${performanceMode})`;
         
         // Rule 3: Pre-defined styles (no dynamic allocation)
@@ -269,22 +348,58 @@ function addOptimizedStatusIndicator() {
 }
 
 /**
- * Show optimized compliance report
+ * Show compliance report with wait logic
  * Purpose: Display current system compliance status with performance metrics
  * Rule 4: ≤60 lines | Rule 5: System validation
  */
 function showOptimizedComplianceReport() {
-    // Rule 5: Validate system components
-    if (!window.optimizedRulesEnforcer) {
-        console.warn('⚠️ Optimized rules system not initialized');
+    // Rule 5: Validate system components with retry logic
+    if (!window.RulesEnforcer) {
+        // Don't immediately fail - wait a bit for initialization
+        console.log('⏳ Waiting for rules system to initialize...');
+        
+        let waitCount = 0;
+        const maxWaitTime = 3000; // 3 seconds max wait
+        const waitInterval = 200; // Check every 200ms
+        
+        const waitForInit = setInterval(() => {
+            waitCount += waitInterval;
+            
+            if (window.RulesEnforcer) {
+                // System is now ready - clear interval and generate report
+                clearInterval(waitForInit);
+                generateComplianceReport();
+            } else if (waitCount >= maxWaitTime) {
+                // Timeout - system didn't initialize in time
+                clearInterval(waitForInit);
+                console.warn('⚠️ Rules system initialization timeout - cannot generate report');
+                console.log('💡 Try refreshing the page or check console for errors');
+            }
+        }, waitInterval);
+        
         return;
     }
     
-    console.group('⚡ Optimized Rules Compliance Report v2.0');
+    // RulesEnforcer is ready - generate report immediately
+    generateComplianceReport();
+}
+
+/**
+ * Generate the actual compliance report
+ * Purpose: Extract report generation logic for reuse
+ * Rule 4: ≤60 lines | Rule 5: Report validation
+ */
+function generateComplianceReport() {
+    if (!window.RulesEnforcer) {
+        console.error('❌ Cannot generate report - RulesEnforcer not available');
+        return;
+    }
+    
+    console.group('⚡ Rules Compliance Report v2.0');
     
     try {
         // Generate comprehensive report
-        const report = window.optimizedRulesEnforcer.generateReport();
+        const report = window.RulesEnforcer.generateReport();
         
         console.log(`📊 System Version: ${report.version}`);
         console.log(`⚡ Performance Mode: ${report.performance.mode}`);
@@ -309,15 +424,15 @@ function showOptimizedComplianceReport() {
         console.log(`⏰ Timestamp: ${new Date(report.timestamp).toISOString()}`);
         
     } catch (error) {
-        console.error('❌ Failed to generate optimized report:', error.message);
+        console.error('❌ Failed to generate report:', error.message);
     }
     
     console.groupEnd();
 }
 
 /**
- * Create optimized Rules API
- * Purpose: Provide external access to optimized rules system
+ * Create Rules API
+ * Purpose: Provide external access to rules system
  * Rule 4: ≤60 lines | Rule 5: API validation
  */
 function createOptimizedRulesAPI() {
@@ -330,33 +445,33 @@ function createOptimizedRulesAPI() {
     // Rule 3: Pre-allocated API object with performance features
     window.OptimizedRules = {
         version: '2.0.1',
-        initialized: () => !!(window.optimizedRulesEnforcer),
+        initialized: () => !!(window.RulesEnforcer),
         showReport: showOptimizedComplianceReport,
         setPerformanceMode: (mode) => {
-            if (window.optimizedRulesEnforcer) {
-                return window.optimizedRulesEnforcer.setPerformanceMode(mode);
+            if (window.RulesEnforcer) {
+                return window.RulesEnforcer.setPerformanceMode(mode);
             }
             return false;
         },
         getPerformanceStats: () => {
-            if (window.optimizedRulesEnforcer) {
-                return window.optimizedRulesEnforcer.generateReport();
+            if (window.RulesEnforcer) {
+                return window.RulesEnforcer.generateReport();
             }
             return null;
         },
         getStatus: () => ({
-            initialized: !!(window.optimizedRulesEnforcer),
+            initialized: !!(window.RulesEnforcer),
             performanceManagerLoaded: typeof window.PerformanceManager !== 'undefined',
             scopeAnalyzerLoaded: typeof window.ScopeAnalyzer !== 'undefined',
-            enforcerActive: !!(window.optimizedRulesEnforcer),
-            mode: window.optimizedRulesEnforcer?.config?.performance?.mode || 'unknown'
+            enforcerActive: !!(window.RulesEnforcer),
+            mode: window.RulesEnforcer?.config?.performance?.mode || 'unknown'
         })
     };
     
     // Backward compatibility
     window.Rules = window.OptimizedRules;
     
-    console.log('✅ Optimized Rules API created');
+    console.log('✅ Rules API created');
 }
 
 // Initialize immediately if DOM is ready, otherwise wait

@@ -5,12 +5,21 @@
  * @version 2.0.1
  */
 
-// Use centralized Assert system (loaded via Assert.js)
+// Use centralized Assert system (loaded via Assert.js) with improved fallback
 function getAssert() {
-    return window.Assert || {
+    // Check if full Assert system is available
+    if (window.Assert && typeof window.Assert.assertNotNull === 'function') {
+        return window.Assert;
+    }
+    
+    // Provide complete fallback Assert system
+    const fallbackAssert = {
         assert: (condition, msg) => {
-            if (!condition) console.warn('Assertion failed:', msg);
-            return condition;
+            if (!condition) {
+                console.warn('Assertion failed:', msg);
+                return false;
+            }
+            return true;
         },
         assertType: (value, expectedType, msg) => {
             const actualType = typeof value;
@@ -21,27 +30,35 @@ function getAssert() {
             return true;
         },
         assertRange: (value, min, max, msg) => {
-            if (value < min || value > max) {
+            if (typeof value !== 'number' || value < min || value > max) {
                 console.warn(`Range assertion failed: ${msg}. Value ${value} not in range [${min}, ${max}]`);
                 return false;
             }
             return true;
         },
         assertNotNull: (value, msg) => {
-            if (value === null) {
+            if (value === null || value === undefined) {
                 console.warn('Not null assertion failed:', msg);
                 return false;
             }
             return true;
         },
         assertLoopBound: (index, maxIterations) => {
-            if (index >= maxIterations) {
+            if (typeof index !== 'number' || index >= maxIterations) {
                 console.warn(`Loop bound exceeded: ${index} >= ${maxIterations}`);
                 return false;
             }
             return true;
         }
     };
+    
+    // Store fallback for future use
+    if (typeof window !== 'undefined' && !window.Assert) {
+        window.Assert = fallbackAssert;
+        console.log('📋 Fallback Assert system activated');
+    }
+    
+    return fallbackAssert;
 }
 
 /**
@@ -258,6 +275,7 @@ class SafeString {
      */
     static escapeHtml(text) {
  // Rule 5: Input validation assertions
+        const Assert = getAssert();
         Assert.assertNotNull(text, 'text');
         Assert.assertType(text, 'string', 'text');
         

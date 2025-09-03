@@ -454,27 +454,50 @@ function initializeRulesEnforcement(config = {}) {
     }
 }
 
-// Auto-initialize with performance optimization
-if (typeof window.PerformanceManager !== 'undefined') {
-    initializeRulesEnforcement();
-} else {
-    // Wait for dependencies with timeout
-    let attempts = 0;
-    const maxAttempts = 20; // Rule 2: Fixed retry limit
-    
-    const waitForDependencies = () => {
-        attempts++;
-        
-        if (typeof window.PerformanceManager !== 'undefined') {
-            initializeRulesEnforcement();
-        } else if (attempts < maxAttempts) {
-            setTimeout(waitForDependencies, 100); // Rule 2: Fixed interval
-        } else {
-            console.error('❌ RulesEnforcer dependencies not loaded after timeout');
-        }
-    };
-    
-    setTimeout(waitForDependencies, 100);
+/**
+ * Create minimal PerformanceManager fallback
+ * Purpose: Ensure RulesEnforcer can function without full PerformanceManager
+ * Rule 4: ≤60 lines | Rule 5: Fallback validation
+ */
+function createPerformanceManagerFallback() {
+    // Only create fallback if truly missing
+    if (typeof window.PerformanceManager === 'undefined') {
+        // Minimal PerformanceManager implementation
+        window.PerformanceManager = class FallbackPerformanceManager {
+            constructor(config = {}) {
+                this.mode = config.mode || 'development';
+                this.enableRuntimeMonitoring = config.enableRuntimeMonitoring !== false;
+                this.enableMemoryTracking = false; // Disabled in fallback
+            }
+            
+            shouldMonitor() { return this.enableRuntimeMonitoring; }
+            recordMetric() { /* No-op in fallback */ }
+            recordViolation(violation) { 
+                // Only log high-severity violations to reduce noise
+                if (violation && violation.severity === 'HIGH') {
+                    console.warn(`🚨 Rule Violation: ${violation.message}`);
+                }
+            }
+            getPerformanceStats() { 
+                return {
+                    mode: this.mode,
+                    runtimeMonitoring: this.enableRuntimeMonitoring,
+                    memoryTracking: false,
+                    violations: 0,
+                    batchSize: 0,
+                    metrics: 0
+                };
+            }
+            optimizeMemory() { /* No-op in fallback */ }
+            setPerformanceMode(mode) { 
+                this.mode = mode; 
+                return true; 
+            }
+        };
+    }
 }
+
+// Export for use by init.js - no auto-initialization
+window.createPerformanceManagerFallback = createPerformanceManagerFallback;
 
 console.log('✅ RulesEnforcer system loaded');

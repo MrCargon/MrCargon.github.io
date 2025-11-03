@@ -1643,26 +1643,27 @@ body.project-modal-open {
     box-sizing: border-box !important;
 }
 
-/* CRITICAL: Override any projects-panel styles when applied to game container */
+/* CRITICAL: Override ANY AND ALL projects-panel styles for game modal */
 #game-container.projects-panel {
-    /* FORCE FULL VIEWPORT: Override projects-panel constraints */
+    /* FORCE FULL VIEWPORT: Override EVERY constraint */
     width: 100vw !important;
     height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    
-    /* RESET INHERITED CONSTRAINTS: Remove projects-specific sizing */
-    flex: none !important;
+    max-width: none !important;
+    max-height: none !important;
+    min-width: 100vw !important;
     min-height: 100vh !important;
     
-    /* FULL SCREEN POSITIONING: Override any inherited positioning */
+    /* RESET ALL INHERITED CONSTRAINTS */
+    flex: none !important;
+    
+    /* ABSOLUTE FULL SCREEN: No room for error */
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     
-    /* REMOVE PROJECTS STYLING: Clear inherited background/borders */
+    /* RESET STYLING */
     background: linear-gradient(135deg, 
         hsl(220, 20%, 10%) 0%, 
         hsl(220, 25%, 15%) 50%,
@@ -1671,8 +1672,10 @@ body.project-modal-open {
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
     
-    /* FULL VIEWPORT ACCESS: Remove any overflow constraints */
+    /* NO RESTRICTIONS */
     overflow: hidden !important;
     contain: none !important;
 }
@@ -1706,19 +1709,89 @@ body.game-modal-open {
     overflow: hidden;
 }
 
-/* Game header styling */
+/* COMPREHENSIVE: Game modal header - ZERO restrictions */
 #game-container .panel-header {
     background: var(--surface-light, rgba(40, 40, 40, 0.95));
     border-bottom: 2px solid var(--primary, #ff8500);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
     z-index: 1000000;
+    
+    /* ABSOLUTE: Full width, no constraints */
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 100% !important;
+    box-sizing: border-box !important;
+    
+    /* Generous spacing */
+    padding: 1rem 2rem !important;
+    margin: 0 !important;
+    
+    /* FORCE flexbox display */
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 1rem !important;
 }
 
+/* FORCE title to NOT overflow */
+#game-container .panel-header h2 {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* COMPREHENSIVE: Remove ALL header-controls restrictions */
+#game-container .header-controls {
+    /* ZERO restrictions */
+    max-width: none !important;
+    min-width: auto !important;
+    width: auto !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    gap: 1rem !important;
+    
+    /* FORCE proper display */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    
+    /* NO restrictions */
+    overflow: visible !important;
+}
+
+/* COMPREHENSIVE: Proper close button - visible and clickable */
 #game-container .header-controls .project-btn {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: #ef4444;
-    color: #ef4444;
+    /* Styling */
+    background: rgba(239, 68, 68, 0.2) !important;
+    border: 1px solid #ef4444 !important;
+    color: #ef4444 !important;
+    
+    /* CRITICAL: Proper sizing - NO restrictions */
+    max-width: none !important;
+    min-width: 150px !important;
+    width: auto !important;
+    height: auto !important;
+    
+    /* Generous padding */
+    padding: 0.75rem 2rem !important;
+    
+    /* Readable text */
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    
+    /* FORCE visibility */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    
+    /* Make sure it's clickable */
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 #game-container .header-controls .project-btn:hover {
@@ -1726,34 +1799,66 @@ body.game-modal-open {
     transform: translateY(-2px) scale(1.05);
 }
 
-/* FIXED: Game content container - Clean environment for games */
+/* FIXED: Game content container - Properly constrained with scrolling */
 #game-content {
-    /* CRITICAL: Clean, isolated container for games */
+    /* CRITICAL: Proper flex layout that fills available space */
     flex: 1;
     width: 100%;
-    height: 100%;
     min-height: 0;
+    
+    /* FIXED: Constrain to parent bounds */
+    max-width: 100%;
+    max-height: 100%;
     
     /* REMOVED: No background - let games handle their own styling */
     background: transparent;
     
-    /* CLEAN: Minimal container styling */
-    display: block; /* Let game handle its own layout */
+    /* CLEAN: Flex display for game */
+    display: flex;
+    flex-direction: column;
     position: relative;
     
-    /* OPEN: No overflow restrictions - games manage their own bounds */
-    overflow: visible;
-    contain: none; /* Don't restrict game styling */
+    /* CRITICAL: Proper box model to prevent overflow */
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    border: none;
+    
+    /* CRITICAL: Enable vertical scrolling to handle overflow */
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Clean scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color, #ff8500) rgba(255, 255, 255, 0.1);
     
     /* NO transform - avoid conflicts */
     transform: none;
     will-change: auto;
-    
-    /* CLEAN SLATE: Reset all potentially conflicting styles */
-    padding: 0;
-    margin: 0;
-    border: none;
-    box-shadow: none;
+}
+
+/* Webkit scrollbar for #game-content */
+#game-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#game-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+#game-content::-webkit-scrollbar-thumb {
+    background: var(--primary-color, #ff8500);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+#game-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color-light, #ff9500);
 }
 
 /* GAME ISOLATION: Ensure game styles take precedence */

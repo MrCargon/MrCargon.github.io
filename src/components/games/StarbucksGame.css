@@ -2,12 +2,15 @@
    STARBUCKS GAME - OPTIMIZED FIXED VIEWPORT DESIGN
    =============================================== */
 
-/* STREAMLINED: Game Modal Base - Perfect Fixed Viewport Integration */
+/* FIXED: Game Modal Base - Container-Relative Sizing */
 .game-screen {
-    /* Perfect viewport integration */
+    /* FIXED: Natural sizing to fit content */
     width: 100%;
-    height: 100%;
-    min-height: 100%;
+    min-height: auto;
+    max-width: 100%;
+    
+    /* CRITICAL: Proper box model for container bounds */
+    box-sizing: border-box;
     
     /* Modern gradient background */
     background: linear-gradient(135deg, 
@@ -24,8 +27,10 @@
     color: white;
     border-radius: 0;
     
+    /* FIXED: Allow content to extend naturally - parent handles scrolling */
+    overflow: visible;
+    
     /* Performance optimizations */
-    contain: layout style paint;
     transform: translateZ(0);
     will-change: contents;
     
@@ -33,12 +38,17 @@
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* OPTIMIZED: Game container integration */
+/* FIXED: Game container integration */
 #game-content {
-    /* Perfect fixed viewport sizing */
+    /* FIXED: Container-relative sizing */
     width: 100%;
     height: 100%;
     min-height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    
+    /* CRITICAL: Proper box model */
+    box-sizing: border-box;
     
     /* Clean layout */
     position: relative;
@@ -48,21 +58,24 @@
     contain: layout style paint;
 }
 
-/* Enhanced Game Content - Proper Scrolling Container */
+/* FIXED: Enhanced Game Content - Works with parent scrolling */
 .game-content {
-    flex: 1;
-    padding: var(--spacing-md);
-    overflow-y: auto;
-    overflow-x: hidden;
-    height: 100%;
-    min-height: 0;
-    /* Enhanced scrollbar for better visibility */
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) rgba(255, 255, 255, 0.1);
+    /* FIXED: Minimal padding that won't cause overflow */
+    padding: clamp(0.75rem, 1.5vw, 1.25rem);
+    
+    /* FIXED: Let parent handle overflow */
+    overflow: visible;
+    
+    /* FIXED: Proper sizing to fit within scrollable parent */
+    width: 100%;
+    max-width: 100%;
+    min-height: min-content;
+    
+    /* CRITICAL: Proper box model to account for padding */
+    box-sizing: border-box;
+    
     /* Performance optimizations */
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    scroll-behavior: smooth;
 }
 
 /* ENHANCED: Cross-browser scrollbar styling */
@@ -1368,50 +1381,48 @@
 }
 
 /* ===============================================
-   GAME MODAL INTEGRATION FIXES
+   GAME MODAL INTEGRATION FIXES - CONTAINER-RELATIVE
    =============================================== */
 
-/* CRITICAL: Ensure game fits perfectly in modal without overflow */
+/* FIXED: Ensure game fits perfectly in modal container */
 .starbucks-game,
 .game-screen {
-    /* Perfect modal integration */
+    /* FIXED: Container-relative sizing (NOT viewport) */
     width: 100% !important;
-    height: 100% !important;
-    max-width: 100vw;
-    max-height: 100vh;
-    overflow: hidden;
+    max-width: 100% !important;
+    
+    /* CRITICAL: Proper box model */
+    box-sizing: border-box !important;
+    
+    /* CRITICAL: Allow content to extend - parent handles scrolling */
+    overflow: visible !important;
     position: relative;
     
-    /* Ensure no bleeding outside modal */
-    contain: layout style paint;
+    /* Remove contain that restricts overflow */
     border-radius: 0;
 }
 
-/* FIXED: Prevent game content from extending beyond modal bounds */
-.game-content {
-    width: 100%;
-    height: 100%;
-    max-height: calc(100vh - 4rem); /* Account for header */
-    overflow-y: auto;
-    overflow-x: hidden;
-    
-    /* Clean scrollbar only when needed */
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-color, #10b981) transparent;
-}
 
 /* MODAL COMPATIBILITY: Ensure proper backdrop integration */
 #game-container .game-screen {
     border-radius: 0;
     box-shadow: none;
     border: none;
+    
+    /* FIXED: Ensure container bounds respected */
+    max-width: 100%;
+    max-height: 100%;
+    box-sizing: border-box;
 }
 
-/* VIEWPORT FIX: Responsive game sizing */
+/* FIXED: Responsive game sizing - container-relative */
 @media (max-width: 768px) {
     .game-content {
-        max-height: calc(100vh - 3rem);
+        /* FIXED: Use container-relative sizing */
+        max-width: 100%;
+        max-height: 100%;
         padding: 0.75rem;
+        box-sizing: border-box;
     }
 }
 

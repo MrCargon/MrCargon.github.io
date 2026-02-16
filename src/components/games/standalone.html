@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- ACCESSIBLE: No zoom restrictions (Issue 5 fix) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starbucks Barista Game</title>
+
+    <!-- Game styles - loaded BEFORE module (using relative paths) -->
+    <link rel="stylesheet" href="./StarbucksGame.css" id="game-css">
+
+    <!-- Standalone-specific styles (inline) -->
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background: linear-gradient(135deg, hsl(220, 15%, 12%) 0%, hsl(158, 70%, 8%) 100%);
+            touch-action: pan-x pan-y;
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-message {
+            color: #00754a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 1.25rem;
+            text-align: center;
+        }
+        .error-message {
+            padding: 20px;
+            text-align: center;
+            color: #ff6b6b;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .standalone-exit-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10000;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            display: none; /* Hidden until game loads */
+        }
+        .standalone-exit-btn:hover,
+        .standalone-exit-btn:focus {
+            opacity: 1;
+            outline: 2px solid white;
+        }
+        .standalone-exit-btn.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- This file uses relative paths (./), so it works when you run a server from:
+         - The games folder: python -m http.server 8000 → localhost:8000/standalone.html
+         - The root folder: npm run dev → localhost:3000/src/components/games/standalone.html -->
+
+    <div id="game-container">
+        <p class="loading-message">Loading Barista Game...</p>
+    </div>
+
+    <!-- Exit button for standalone mode -->
+    <button id="standalone-exit" class="standalone-exit-btn" aria-label="Exit game" title="Exit game">
+        &times;
+    </button>
+
+    <!-- Fallback for browsers without ES6 module support -->
+    <script nomodule>
+        document.getElementById('game-container').innerHTML =
+            '<div class="error-message">' +
+            '<h2>Browser Not Supported</h2>' +
+            '<p>This game requires a modern browser with ES6 module support.</p>' +
+            '<p>Please upgrade to Chrome 61+, Firefox 60+, Safari 11+, or Edge 79+.</p>' +
+            '</div>';
+    </script>
+
+    <!-- Load game as ES6 module -->
+    <script type="module" src="./starbucks-game-loader.js"></script>
+</body>
+</html>

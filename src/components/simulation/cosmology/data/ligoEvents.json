@@ -1,0 +1,40 @@
+{
+  "events": [
+    {
+      "name": "GW150914",
+      "date": "2015-09-14T09:50:45Z",
+      "type": "Binary Black Hole",
+      "mass1": 36,
+      "mass2": 29,
+      "finalMass": 62,
+      "radiatedEnergy": 3,
+      "distance": 410,
+      "peakLuminosity": 3.6e49,
+      "description": "First direct detection of gravitational waves. Two black holes merged 1.3 billion years ago, releasing energy equivalent to 3 solar masses as gravitational waves. Nobel Prize 2017.",
+      "significance": "First Detection",
+      "nobelPrize": true,
+      "citation": "Abbott, B. P., et al. (2016). Observation of Gravitational Waves from a Binary Black Hole Merger. Physical Review Letters, 116(6), 061102."
+    },
+    {
+      "name": "GW170817",
+      "date": "2017-08-17T12:41:04Z",
+      "type": "Binary Neutron Star",
+      "mass1": 1.46,
+      "mass2": 1.27,
+      "distance": 40,
+      "description": "First gravitational wave from neutron star merger with electromagnetic counterpart (kilonova). Source of heavy elements like gold and platinum.",
+      "significance": "Multi-messenger Astronomy",
+      "electromagneticCounterpart": true,
+      "citation": "Abbott, B. P., et al. (2017). GW170817: Observation of Gravitational Waves from a Binary Neutron Star Inspiral. Physical Review Letters, 119(16), 161101."
+    }
+  ],
+  "dataSource": "LIGO Open Science Center",
+  "url": "https://losc.ligo.org/events/",
+  "lastVerified": "2025-12-31",
+  "units": {
+    "mass": "Solar masses",
+    "distance": "Megaparsecs (Mpc)",
+    "energy": "Solar masses equivalent",
+    "luminosity": "Watts"
+  }
+}

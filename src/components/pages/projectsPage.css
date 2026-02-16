@@ -1,0 +1,2267 @@
+/* ==============================================
+   PROJECTS PAGE - DYNAMIC RESPONSIVE DESIGN
+   Clean, flexible viewport with  scrolling
+   ============================================== */
+
+/* ------ VIEWPORT-CONSTRAINED SYSTEM - VIEWPORT-FIRST ------ */
+.projects-section {
+    /* VIEWPORT-FIRST: Constrain to viewport bounds */
+    width: 100%;
+    height: calc(100vh - 110px); /* Fixed height for viewport */
+    max-height: calc(100vh - 110px); /* Enforce viewport constraint */
+    max-width: 100%;
+    overflow: hidden; /* Prevent content from extending beyond viewport */
+    
+    /* RESPONSIVE: Adapt to content and container */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    
+    /* Dynamic padding based on screen size */
+    padding: clamp(0.5rem, 2vw, 1rem);
+    
+    /* Performance optimization */
+    contain: layout;
+    container-type: inline-size;
+}
+.projects-panel {
+    /* UNIFIED: Use global glass-panel class */
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%; /* Use full available height from parent */
+    max-height: 100%; /* Enforce viewport constraint */
+    overflow: hidden; /* Prevent panel from extending beyond bounds */
+}
+
+/* ------  SIMPLIFIED HEADER SYSTEM - GUARANTEED VIEWPORT SAFETY ------ */
+.panel-header {
+    /* SIMPLIFIED: Safe flexbox layout */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    
+    /* SAFE PADDING: Generous margins to prevent clipping */
+    padding: 1rem;
+    margin: 0;
+    
+    /* GUARANTEED VIEWPORT SAFETY: Conservative width constraints */
+    width: 100%; /* Use full container width */
+    max-width: 100%; /* Never exceed container */
+    box-sizing: border-box;
+    
+    /* VISUAL STYLING: Keep the design consistent */
+    background: var(--card-bg, rgba(40, 40, 40, 0.8));
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 12px 12px 0 0;
+    
+    flex-shrink: 0; /* Fixed header */
+    
+    /* Enhanced visual depth */
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.panel-header h2 {
+    color: var(--primary-color, #ff8500);
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin: 0;
+    text-shadow: 0 0 10px rgba(255, 133, 0, 0.3);
+    
+    /* FLEXIBLE TITLE: Allow natural text flow with safe bounds */
+    flex: 1;
+    min-width: 0; /* Allow shrinking if needed */
+    
+    /* OVERFLOW PROTECTION: Handle long titles safely */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    
+    /* CONSERVATIVE FONT SIZING: Prevent layout issues */
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+}
+
+.project-count {
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.7));
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--hover-bg, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    transition: all var(--transition);
+}
+
+/* FIXED: Header controls with ultra-safe viewport constraints */
+.header-controls {
+    /* ULTRA-SAFE LAYOUT: Prevent any possibility of overflow */
+    display: flex;
+    align-items: center;
+    gap: 0.25rem; /* Reduced gap */
+    
+    /* CRITICAL: Ultra-conservative sizing to prevent clipping */
+    flex-shrink: 1; /* Allow shrinking if needed */
+    max-width: min(120px, 20vw); /* Even more conservative */
+    min-width: 0; /* Allow complete compression */
+    
+    /* OVERFLOW PROTECTION: Handle content gracefully */
+    overflow: hidden;
+    box-sizing: border-box;
+    
+    /* DEBUGGING: Ensure we can see if there are issues */
+    position: relative;
+}
+
+/* ULTRA-SAFE CLOSE BUTTON: Maximum viewport safety */
+.header-controls .project-btn {
+    /* ULTRA-MINIMAL SIZING: Absolute priority on safety */
+    flex-shrink: 1; /* Allow compression */
+    min-width: 28px; /* Smaller minimum */
+    max-width: 60px; /* Much smaller maximum */
+    
+    /* ULTRA-COMPACT STYLING */
+    font-size: 0.7rem;
+    padding: 0.4rem 0.6rem;
+    
+    /* STRICT CONTAINMENT */
+    box-sizing: border-box;
+    
+    /* CRITICAL: Handle overflow gracefully */
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    
+    /* VISIBILITY GUARANTEED */
+    position: relative;
+    z-index: 10;
+    
+    /* EMERGENCY: If all else fails, hide text but keep functionality */
+    line-height: 1;
+}
+
+/* EMERGENCY RESPONSIVE: Handle ultra-small screens */
+@media (max-width: 600px) {
+    .header-controls {
+        max-width: min(80px, 15vw);
+        gap: 0.125rem;
+    }
+    
+    .header-controls .project-btn {
+        min-width: 24px;
+        max-width: 40px;
+        font-size: 0.6rem;
+        padding: 0.3rem 0.4rem;
+    }
+    
+    /* ULTRA-COMPACT: Show only essential content */
+    .header-controls .project-btn span {
+        display: none;
+    }
+    
+    .header-controls .project-btn::after {
+        content: "×";
+        font-size: 1rem;
+        font-weight: bold;
+    }
+}
+
+/* ------ INLINE FILTER SYSTEM ------ */
+.inline-filters-container {
+    position: relative;
+    min-width: 200px;
+}
+
+.current-filter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    
+    width: 100%;
+    padding: var(--spacing-xs) var(--spacing-xs);
+    background: var(--hover-bg, rgba(255, 255, 255, 0.05));
+    color: var(--primary-color, #ff8500);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    
+    transition: all var(--transition-smooth);
+}
+
+.current-filter-btn:hover {
+    background: var(--hover-bg-strong, rgba(255, 255, 255, 0.1));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 133, 0, 0.2);
+}
+
+.filter-arrow {
+    font-size: var(--font-size-xs);
+    transition: transform var(--transition-smooth);
+}
+
+.current-filter-btn[aria-expanded="true"] .filter-arrow {
+    transform: rotate(180deg);
+}
+
+.inline-filters-bar {
+    position: absolute;
+    top: calc(100% + var(--spacing-xs));
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    
+    min-width: 500px;
+    max-width: min(90vw, 800px);
+    
+    background: var(--panel-bg-solid, rgba(30, 30, 30, 0.98));
+    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm);
+    
+    transition: all var(--transition-smooth);
+    transform-origin: top;
+}
+
+.inline-filters-bar.collapsed {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px) scaleY(0.9);
+    pointer-events: none;
+}
+
+.filters-scroll-container {
+    display: flex;
+    gap: var(--spacing-sm);
+    overflow-x: auto;
+    overflow-y: hidden;
+    
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color, #ff8500) transparent;
+    
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+.filters-scroll-container::-webkit-scrollbar {
+    height: 4px;
+}
+
+.filters-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.filters-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--primary-color, #ff8500);
+    border-radius: 2px;
+}
+
+.filters-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    min-width: fit-content;
+}
+
+.inline-filter-btn {
+    padding: var(--spacing-xs) var(--spacing-md);
+    background: var(--card-bg, rgba(40, 40, 40, 0.8));
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.7));
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    
+    transition: all var(--transition-fast);
+}
+
+.inline-filter-btn:hover {
+    background: var(--hover-bg, rgba(255, 255, 255, 0.05));
+    border-color: var(--border-color, rgba(255, 255, 255, 0.2));
+    transform: translateY(-1px);
+}
+
+.inline-filter-btn.active {
+    background: var(--primary-color, #ff8500);
+    color: var(--bg-color, #000);
+    border-color: var(--primary-color, #ff8500);
+    font-weight: 600;
+}
+
+.inline-search-container {
+    display: flex;
+    align-items: center;
+}
+
+.inline-search-box {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: var(--text, white);
+    
+    font-size: var(--font-size-xs);
+    width: 150px;
+    
+    transition: all var(--transition-smooth);
+}
+
+.inline-search-box:focus {
+    outline: none;
+    border-color: var(--primary, #ff8500);
+    box-shadow: 0 0 0 2px rgba(255, 133, 0, 0.2);
+    width: 200px;
+}
+
+.filters-close-btn {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: var(--text-dim, rgba(255, 255, 255, 0.7));
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    
+    transition: all var(--transition-fast);
+}
+
+.filters-close-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* ------ FLEXIBLE CONTENT SYSTEM ------ */
+.projects-content {
+    /* Flexible scrollable area */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Allow flex shrinking */
+    overflow: visible; /* FIXED: Allow buttons to extend beyond container */
+}
+
+.main-content {
+    /* Content wrapper */
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: var(--spacing-sm);
+    background: hsla(0, 2%, 12%, 0.25);
+    gap: var(--spacing-sm); /* Reduced gap to save space for cards */
+    min-height: 0; /* Allow flex shrinking */
+}
+
+.content-header {
+    /* Compact header with collapsible functionality */
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex-shrink: 0; /* Fixed size */
+}
+
+.content-header-top {
+    /* Header with toggle button */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.content-title {
+    color: var(--primary, #ff8500);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+}
+
+.description-toggle {
+    /* Compact toggle button */
+    background: rgba(255, 133, 0, 0.1);
+    border: 1px solid rgba(255, 133, 0, 0.3);
+    border-radius: 6px;
+    color: var(--primary, #ff8500);
+    cursor: pointer;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    transition: all 0.2s ease;
+    min-height: 32px;
+    flex-shrink: 0;
+}
+
+.description-toggle:hover {
+    background: rgba(255, 133, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.toggle-icon {
+    /* Arrow icon animation */
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
+}
+
+.description-toggle[aria-expanded="false"] .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.content-description {
+    /* Collapsible description area */
+    color: var(--text-dim, rgba(255, 255, 255, 0.7));
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    opacity: 1;
+    max-height: 100px; /* Adjust based on content */
+}
+
+.content-description.collapsed {
+    /* Collapsed state */
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.content-description p {
+    /* Description paragraph styling */
+    margin: 0;
+    padding: 0;
+}
+
+/* ------ VIEWPORT-CONSTRAINED GRID CONTAINER ------ */
+.project-grid-container {
+    /* VIEWPORT-CONSTRAINED: Fit within panel bounds */
+    flex: 1;
+    width: 100%;
+    height: 100%; /* Use remaining panel height */
+    max-height: 100%; /* Enforce container constraint */
+    
+    /* SCROLLABLE: Allow scrolling within bounds */
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    /* ENHANCED SCROLLING: Smooth user experience */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color, #ff8500) rgba(255, 255, 255, 0.1);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    
+}
+
+/* Safari scrollbar fallback - show thin scrollbar */
+.project-grid-container::-webkit-scrollbar {
+    width: 8px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.project-grid-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.project-grid-container::-webkit-scrollbar-thumb {
+    background: var(--primary-color, #ff8500);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.project-grid-container::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color, #FF8C00);
+}
+
+/* ------ DYNAMIC RESPONSIVE GRID SYSTEM ------ */
+.project-grid {
+    /*  SCALING: Dynamic columns based on available space */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(clamp(280px, 25vw, 380px), 1fr));
+    gap: clamp(1rem, 2.5vw, 2rem);
+    
+    /* RESPONSIVE PADDING: Scales with viewport */
+    padding: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+    
+    /* Full width utilization */
+    width: 100%;
+    
+    /* Performance optimizations */
+    container-type: inline-size;
+    contain: layout;
+    
+    /* Smooth grid transitions */
+    transition: gap var(--transition-smooth);
+}
+
+/* DYNAMIC BREAKPOINT SYSTEM: Container-based responsive behavior */
+@container (max-width: 700px) {
+    .project-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        padding: 1rem;
+    }
+}
+
+@container (min-width: 700px) and (max-width: 1100px) {
+    .project-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+}
+
+@container (min-width: 1100px) and (max-width: 1500px) {
+    .project-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.75rem;
+    }
+}
+
+@container (min-width: 1500px) {
+    .project-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
+    }
+}
+
+/* ====================================================================
+   INNOVATIVE  ADAPTIVE CARDS - NEXT-GEN DESIGN
+   Dynamic layout with intelligent content organization
+   ==================================================================== */
+
+.project-card {
+    /*  ADAPTIVE DESIGN: Content-aware sizing */
+    position: relative;
+    width: 98%;
+    min-height: var(--spacing-xs); /* Optimized compact height */
+    
+    /* INNOVATIVE GLASS MORPHISM: Enhanced depth and clarity */
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 165, 0, 0.03) 30%,
+        rgba(255, 255, 255, 0.02) 100%);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    backdrop-filter: blur(12px) saturate(1.2);
+    border: 1px solid rgba(255, 165, 0, 0.2);
+    border-radius: 20px;
+    
+    /* ADVANCED LAYOUT:  content distribution */
+    display: grid;
+    grid-template-rows: auto 1fr auto; /* image / content / actions */
+    grid-template-areas: 
+        "image"
+        "content"  
+        "actions";
+    
+    /* PREMIUM VISUAL EFFECTS */
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(255, 165, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(255, 165, 0, 0.1);
+    
+    /* SMOOTH MICRO-INTERACTIONS */
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+    
+    /* PERFORMANCE OPTIMIZED */
+    transform: translateZ(0);
+    will-change: transform, box-shadow, border-color;
+    contain: layout style;
+    
+    /*  OVERFLOW: Allow strategic content extension */
+    overflow: visible;
+}
+
+/* HOVER STATE: Enhanced visual feedback WITHOUT size changes */
+.project-card:hover {
+    
+    /* ENHANCED GLOW: More prominent visual feedback */
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.18),
+        0 4px 16px rgba(255, 133, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 133, 0, 0.4);
+    
+    /* SUBTLE BACKGROUND ENHANCEMENT */
+    background: linear-gradient(145deg, 
+        rgba(255, 255, 255, 0.08) 0%, 
+        rgba(255, 255, 255, 0.04) 100%);
+}
+
+.project-card:focus-visible {
+    outline: 2px solid var(--primary-color, #ff8500);
+    outline-offset: 4px;
+    transform: translateY(-2px);
+}
+
+/* INTERACTIVE GAME SPECIAL STYLING */
+.project-card.interactive-game {
+    border-color: rgba(16, 185, 129, 0.2);
+    background: linear-gradient(145deg, 
+        rgba(16, 185, 129, 0.04) 0%, 
+        rgba(255, 255, 255, 0.02) 100%);
+}
+
+.project-card.interactive-game:hover {
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 
+        0 12px 40px rgba(16, 185, 129, 0.12),
+        0 4px 16px rgba(16, 185, 129, 0.08),
+        inset 0 1px 0 rgba(16, 185, 129, 0.08);
+    background: linear-gradient(145deg, 
+        rgba(16, 185, 129, 0.06) 0%, 
+        rgba(255, 255, 255, 0.04) 100%);
+}
+
+/* ====================================================================
+    IMAGE SHOWCASE - ENHANCED VISUAL PRESENTATION
+   ==================================================================== */
+
+.project-image {
+    /* GRID AREA: Image section in  card layout */
+    grid-area: image;
+    
+    /* OPTIMAL PROPORTIONS:  height for better content balance */
+    height: clamp(140px, 40%, 180px);
+    overflow: hidden;
+    position: relative;
+    border-radius: 20px 20px 0 0;
+    
+    /* ENHANCED BACKGROUND: Sophisticated gradient showcase */
+    background: linear-gradient(135deg, 
+        rgba(255, 165, 0, 0.1) 0%, 
+        rgba(255, 165, 0, 0.05) 50%,
+        rgba(255, 255, 255, 0.02) 100%);
+    
+    /* PROFESSIONAL DEPTH */
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.1);
+    
+    /* SMOOTH INTERACTIONS */
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.project-image::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, 
+        transparent 0%, 
+        transparent 60%, 
+        rgba(0, 0, 0, 0.1) 100%);
+    z-index: 2;
+    pointer-events: none;
+    transition: all 0.4s ease;
+}
+
+.project-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    
+    /* ENHANCED IMAGE QUALITY */
+    filter: brightness(1.05) contrast(1.1) saturate(1.1);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    transform: scale(1);
+}
+
+/* ENHANCED HOVER EFFECTS: Subtle but engaging */
+.project-card:hover .project-image::before {
+    background: linear-gradient(180deg, 
+        rgba(255, 165, 0, 0.05) 0%, 
+        transparent 60%, 
+        rgba(0, 0, 0, 0.15) 100%);
+}
+
+.project-card:hover .project-image img {
+    filter: brightness(1.1) contrast(1.15) saturate(1.2);
+}
+
+/* ====================================================================
+   INTELLIGENT CONTENT ORGANIZATION - GRID-BASED LAYOUT
+   ==================================================================== */
+
+.project-info {
+    /* GRID AREA: Content section in  card layout */
+    grid-area: content;
+    
+    /* INTELLIGENT LAYOUT: Self-organizing content */
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-between;
+    
+    /* PADDING: Optimized spacing for grid layout */
+    padding: var(--spacing-xs);
+    
+    /* CONTENT FLOW: Natural organization */
+    min-height: 0;
+    overflow: visible;
+    position: relative;
+    align-items: center;
+}
+
+/* HIDE DETAILED CONTENT: Only essentials visible */
+.project-info p:not([data-description]),
+.project-tags:not(.modal-project-tags),
+.project-hidden-data {
+    /* COMPLETELY HIDDEN: No space taken */
+    display: none !important;
+    opacity: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* VISIBLE CONTENT SECTION */
+.project-info-visible {
+    /* SECTION FOR VISIBLE CONTENT */
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.25rem, 1vw, 0.5rem);
+    flex: 1;
+}
+
+/* META DISPLAY: Compact and efficient */
+.project-meta {
+    /* MINIMAL META LAYOUT */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* CLEAN TITLE: Primary focus */
+.project-info h3 {
+    /* PROMINENT TITLE DISPLAY */
+    color: var(--primary-color, #ff8500);
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    
+    /* MULTI-LINE TITLE SUPPORT */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+/* ====================================================================
+     SYSTEM - INTEGRATED GRID DESIGN
+   ==================================================================== */
+
+.project-actions {
+    /* GRID AREA: Actions section in  card layout */
+    grid-area: actions;
+    
+    /*  POSITIONING: Natural grid flow - no gaps! */
+    position: relative;
+    width: 100%;
+    height: 100%; /* Auto height based on content */
+    
+    /* PREMIUM ACTION BAR: Matches card design perfectly */
+    background: linear-gradient(135deg, 
+        rgba(0, 0, 0, 0.85) 0%, 
+        rgba(255, 165, 0, 0.1) 50%,
+        rgba(0, 0, 0, 0.9) 100%);
+    -webkit-backdrop-filter: blur(15px) saturate(1.1);
+    backdrop-filter: blur(15px) saturate(1.1);
+    border-top: 1px solid rgba(255, 165, 0, 0.3);
+    border-radius: 0 0 6px 6px;
+    
+    /* PERFECT INTEGRATION: Seamless with card */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-xs);
+    
+    /* ENHANCED VISUAL DEPTH */
+    box-shadow: 
+        0 -2px 12px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 165, 0, 0.2);
+    
+    /* SMOOTH TRANSITIONS */
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    
+    /* GUARANTEED VISIBILITY */
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* ENHANCED HOVER EFFECT: Sophisticated interaction */
+.project-card:hover .project-actions {
+    background: linear-gradient(135deg, 
+        rgba(0, 0, 0, 0.9) 0%, 
+        rgba(255, 165, 0, 0.15) 50%,
+        rgba(0, 0, 0, 0.95) 100%);
+    border-top: 1px solid rgba(255, 165, 0, 0.5);
+    box-shadow: 
+        0 -4px 20px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 165, 0, 0.3),
+        0 0 20px rgba(255, 165, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+/* ====================================================================
+   PROJECT INFO MODAL - UNIFIED SYSTEM 
+   Using global modal classes for consistency
+   ==================================================================== */
+
+/* PROJECT INFO MODAL: Use unified modal system */
+#project-info-modal {
+    /* UNIFIED: Use global modal-overlay class */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-modal);
+    background: linear-gradient(135deg, 
+        rgba(0, 0, 0, 0.8) 0%, 
+        rgba(20, 20, 30, 0.9) 100%);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    backdrop-filter: var(--backdrop-blur);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--duration-normal) ease;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+}
+
+/* ACTIVE STATE: Use unified system */
+#project-info-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* MODAL HEADER: Simplified and reliable viewport constraints */
+#project-info-modal .panel-header {
+    /* Enhanced header for modal with simplified constraints */
+    background: var(--card-bg, rgba(35, 35, 35, 0.95));
+    border-bottom: 2px solid var(--primary-color, #ff8500);
+    border-radius: 0;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    z-index: 1000001;
+    
+    /* SIMPLIFIED: Single, reliable width constraint with generous margins */
+    width: calc(100vw - 4rem); /* Generous 2rem margin on each side */
+    max-width: 900px; /* Reasonable maximum width */
+    margin: 0 auto; /* Center the header */
+    box-sizing: border-box; /* Include borders/padding in width calculation */
+    
+    /* SIMPLE GRID: Clean layout without conflicts */
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    
+    /* OVERFLOW PROTECTION: Ensure content doesn't extend beyond bounds */
+    overflow: hidden;
+    min-width: 0; /* Allow grid items to shrink */
+}
+
+/* MODAL HEADER TITLE: Safe text handling */
+#project-info-modal .panel-header h2 {
+    /* CRITICAL: Prevent title from causing overflow */
+    color: var(--primary-color, #ff8500);
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin: 0;
+    text-shadow: 0 0 10px rgba(255, 133, 0, 0.3);
+    
+    /* TEXT OVERFLOW PROTECTION: Handle long titles safely */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0; /* Allow shrinking */
+    max-width: 100%; /* Stay within grid bounds */
+    
+    /* RESPONSIVE SIZING: Scale with viewport */
+    font-size: clamp(1rem, 3vw, 1.25rem);
+}
+
+#project-info-modal .header-controls .project-btn {
+    /* Close button styling - FIXED: Ensure stays within safe bounds */
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+    
+    /* VIEWPORT SAFETY: Prevent extending beyond bounds */
+    flex-shrink: 0; /* Don't compress the close button */
+    min-width: 40px; /* Maintain minimum touch target */
+    max-width: fill-available; /* Expansion */
+    box-sizing: border-box; /* Consistent box model */
+}
+
+#project-info-modal .header-controls .project-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* MODAL CONTENT: Responsive and scrollable */
+.project-info-content {
+    /* VIEWPORT-RESPONSIVE: Adapts to all screen sizes */
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    
+    /* SCROLLABLE: Clean content area */
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    
+    /* PROFESSIONAL SCROLLBAR */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color, #ff8500) rgba(255, 255, 255, 0.1);
+}
+
+/* WEBKIT SCROLLBAR: Clean design */
+.project-info-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.project-info-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.project-info-content::-webkit-scrollbar-thumb {
+    background: var(--primary-color, #ff8500);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.project-info-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color, #ff9500);
+}
+
+/* MODAL CONTENT LAYOUT - SIMPLIFIED RELIABLE VIEWPORT */
+.modal-project-details {
+    /* SIMPLIFIED: Single, reliable viewport constraint */
+    width: calc(100vw - 4rem); /* Generous 2rem margin on each side */
+    max-width: 900px; /* Reasonable maximum width */
+    margin: 0 auto; /* Center the content */
+    padding: clamp(1rem, 2vw, 1.5rem);
+    
+    /* FLEXIBLE GRID LAYOUT */
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 2vw, 1.5rem);
+    
+    /* SCROLLABLE CONTENT AREA: Allow proper content flow */
+    max-height: calc(100vh - 2rem); /* Safe height with proper margin */
+    min-height: 0;
+    
+    /* CONSISTENT BOX MODEL: Critical for width calculations */
+    box-sizing: border-box;
+    
+    /* CRITICAL: Allow scrolling - no overflow hidden! */
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    /* SMOOTH SCROLLING */
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color, #ff8500) rgba(255, 255, 255, 0.1);
+    
+    /* PROFESSIONAL STYLING: Match card design */
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 165, 0, 0.02) 50%,
+        rgba(255, 255, 255, 0.01) 100%);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    backdrop-filter: blur(8px) saturate(1.1);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 165, 0, 0.15);
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* CONSISTENT BOX MODEL: Apply to all modal child elements */
+.modal-project-details > *,
+.modal-project-image,
+.modal-project-info,
+.modal-project-meta,
+.modal-project-actions,
+.modal-action-btn {
+    /* CRITICAL: Consistent width calculations across all modal elements */
+    box-sizing: border-box;
+    
+    /* VIEWPORT SAFETY: Prevent any element from exceeding container bounds */
+    max-width: 100%;
+}
+
+/* WEBKIT SCROLLBAR: Clean modal scrollbar design */
+.modal-project-details::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-project-details::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.modal-project-details::-webkit-scrollbar-thumb {
+    background: var(--primary-color, #ff8500);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.modal-project-details::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color, #ff9500);
+}
+
+/* ====================================================================
+   ENHANCED MODAL CONTENT - MATCHING NEW DESIGN SYSTEM
+   ==================================================================== */
+
+/* MODAL PROJECT IMAGE - SIMPLIFIED SAFE CONSTRAINTS */
+.modal-project-image {
+    /* SIMPLIFIED IMAGE SHOWCASE */
+    width: 100%;
+    max-height: clamp(200px, 25vh, 250px); /* Slightly smaller for better fit */
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+    
+    /* PREMIUM GLASS MORPHISM: Match card design */
+    background: linear-gradient(135deg, 
+        rgba(255, 165, 0, 0.1) 0%, 
+        rgba(255, 165, 0, 0.05) 50%,
+        rgba(255, 255, 255, 0.02) 100%);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    backdrop-filter: blur(8px) saturate(1.2);
+    border: 1px solid rgba(255, 165, 0, 0.2);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.15),
+        0 2px 8px rgba(255, 165, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.modal-project-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(1.05) contrast(1.1) saturate(1.1);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.modal-project-image:hover img {
+    filter: brightness(1.1) contrast(1.15) saturate(1.2);
+    transform: scale(1.03);
+}
+
+/* MODAL PROJECT INFO */
+.modal-project-info {
+    /* ENHANCED CONTENT LAYOUT */
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(0.75rem, 2vw, 1.25rem);
+    padding: clamp(0.5rem, 1.5vw, 1rem);
+    
+    /* PREMIUM STYLING: Subtle content container */
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.02) 0%,
+        rgba(255, 165, 0, 0.01) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 165, 0, 0.1);
+}
+
+.modal-project-title {
+    /* ENHANCED TITLE: Premium typography */
+    color: var(--primary-color, #ff8500);
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+    text-align: center;
+    text-shadow: 
+        0 0 25px rgba(255, 133, 0, 0.5),
+        0 2px 10px rgba(0, 0, 0, 0.8);
+    
+    /* ENHANCED EFFECTS */
+    background: linear-gradient(135deg, #ff8500, #ffb366);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: brightness(1.2);
+}
+
+.modal-project-meta {
+    /* ENHANCED META PANEL */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    justify-items: center;
+    
+    /* PREMIUM GLASS STYLING */
+    padding: clamp(0.75rem, 2vw, 1.25rem);
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.12) 0%, 
+        rgba(255, 165, 0, 0.08) 50%,
+        rgba(255, 133, 0, 0.1) 100%);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    backdrop-filter: blur(12px) saturate(1.3);
+    border: 1px solid rgba(255, 133, 0, 0.3);
+    border-radius: 16px;
+    box-shadow: 
+        0 4px 20px rgba(255, 133, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.modal-project-type {
+    /* ENHANCED TYPE BADGE */
+    color: var(--primary-color, #ff8500);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: clamp(0.8rem, 2vw, 0.95rem);
+    padding: 0.6rem 1.2rem;
+    
+    /* PREMIUM STYLING */
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.25) 0%, 
+        rgba(255, 165, 0, 0.2) 100%);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 133, 0, 0.5);
+    border-radius: 12px;
+    box-shadow: 
+        0 2px 8px rgba(255, 133, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.modal-project-date {
+    /* ENHANCED DATE DISPLAY */
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    padding: 0.6rem 1.2rem;
+    
+    /* SUBTLE STYLING */
+    background: rgba(255, 255, 255, 0.05);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.modal-project-description {
+    /* ENHANCED DESCRIPTION: Premium typography with overflow protection */
+    color: rgba(255, 255, 255, 0.95);
+    font-size: clamp(1rem, 2.5vw, 1.15rem);
+    line-height: 1.7;
+    text-align: left;
+    margin: 0;
+    
+    /* PREMIUM READABILITY */
+    font-weight: 400;
+    letter-spacing: 0.4px;
+    
+    /* CRITICAL: Overflow protection for text content */
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    box-sizing: border-box;
+    
+    /* SUBTLE CONTENT CONTAINER */
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.modal-project-tags {
+    /* ENHANCED TAGS DISPLAY */
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(0.5rem, 1.5vw, 0.75rem);
+    justify-content: center;
+    padding: clamp(0.75rem, 2vw, 1rem);
+    
+    /* PREMIUM CONTAINER */
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 165, 0, 0.1);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+.modal-project-tags .tag {
+    /* PREMIUM TAG DESIGN: Match new system */
+    padding: clamp(0.5rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 1.25rem);
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    font-weight: 650;
+    
+    /* ENHANCED GLASS MORPHISM */
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.2) 0%, 
+        rgba(255, 165, 0, 0.15) 50%,
+        rgba(255, 133, 0, 0.18) 100%);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
+    border: 1px solid rgba(255, 133, 0, 0.4);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.95);
+    
+    /* PREMIUM EFFECTS */
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    box-shadow: 
+        0 4px 16px rgba(255, 133, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+}
+
+.modal-project-tags .tag:hover {
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.3) 0%, 
+        rgba(255, 165, 0, 0.25) 50%,
+        rgba(255, 133, 0, 0.28) 100%);
+    border-color: rgba(255, 133, 0, 0.6);
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 
+        0 8px 25px rgba(255, 133, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* MODAL ACTIONS */
+.modal-project-actions {
+    /* ENHANCED ACTIONS CONTAINER */
+    display: flex;
+    gap: var(--spacing-xs);
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: var(--spacing-xs);
+    
+    /* PREMIUM ACTIONS PANEL */
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 165, 0, 0.02) 100%);
+    border-radius: 16px;
+    border-top: 1px solid rgba(255, 165, 0, 0.2);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: 
+        0 -2px 12px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.modal-action-btn {
+    /* ENHANCED ACTION BUTTONS: Premium styling */
+    padding: var(--spacing-xs);
+    
+    /* PREMIUM GLASS MORPHISM */
+    background: linear-gradient(135deg, 
+        var(--primary-color, #ff8500) 0%, 
+        #ff9500 50%,
+        #ffb366 100%);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    backdrop-filter: blur(8px) saturate(1.2);
+    border: 1px solid rgba(255, 133, 0, 0.6);
+    border-radius: 16px;
+    color: rgba(255, 255, 255, 0.98);
+    
+    /* ENHANCED TYPOGRAPHY */
+    font-size: clamp(1rem, 2.5vw, 1.15rem);
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    
+    /* ADVANCED LAYOUT */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(0.5rem, 1vw, 0.75rem);
+    min-width: clamp(140px, 25vw, 180px);
+    
+    /* PREMIUM EFFECTS */
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 
+        0 6px 20px rgba(255, 133, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.modal-action-btn:hover {
+    background: linear-gradient(135deg, 
+        #ff9500 0%, 
+        #ffa500 50%,
+        #ffc266 100%);
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 
+        0 12px 35px rgba(255, 133, 0, 0.4),
+        0 4px 15px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 133, 0, 0.8);
+}
+
+.modal-action-btn.secondary {
+    /* ENHANCED SECONDARY BUTTON */
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.15) 0%, 
+        rgba(255, 165, 0, 0.1) 50%,
+        rgba(255, 133, 0, 0.12) 100%);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    backdrop-filter: blur(8px) saturate(1.1);
+    color: var(--primary-color, #ff8500);
+    border-color: rgba(255, 133, 0, 0.4);
+    
+    /* ENHANCED EFFECTS */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        0 4px 15px rgba(255, 133, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.modal-action-btn.secondary:hover {
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.25) 0%, 
+        rgba(255, 165, 0, 0.2) 50%,
+        rgba(255, 133, 0, 0.22) 100%);
+    border-color: rgba(255, 133, 0, 0.6);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 
+        0 8px 25px rgba(255, 133, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* BODY SCROLL PREVENTION */
+body:has(#project-info-modal.active) {
+    overflow: hidden;
+}
+
+body.project-modal-open {
+    overflow: hidden;
+}
+
+.project-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-xs);
+    margin-bottom: 0.25rem;
+}
+
+.project-type {
+    color: var(--primary-color, #ff8500);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 133, 0, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 133, 0, 0.2);
+}
+
+.project-date {
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.7));
+    font-weight: 500;
+    font-size: 0.7rem;
+}
+
+.project-info h3 {
+    color: var(--primary-color, #ff8500);
+    font-size: clamp(1.1rem, 3vw, 1.25rem);
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+    
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.project-info p {
+    color: var(--text-color-muted, rgba(255, 255, 255, 0.8));
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    margin: 0;
+    
+    font-weight: 400;
+    letter-spacing: 0.2px;
+    
+    /* Natural text flow */
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* ------ PROJECT TAGS ------ */
+.project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto; /* Push to available space */
+}
+
+.tag {
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.12) 0%, 
+        rgba(255, 133, 0, 0.08) 100%);
+    color: var(--primary-color, #ff8500);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 133, 0, 0.2);
+    
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tag:hover {
+    background: linear-gradient(135deg, 
+        rgba(255, 133, 0, 0.2) 0%, 
+        rgba(255, 133, 0, 0.15) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 133, 0, 0.15);
+    border-color: rgba(255, 133, 0, 0.4);
+}
+
+/* ------ REMOVED: This is now handled by the absolute positioned version above ------ */
+
+/* UNIFIED BUTTON SYSTEM: Use global classes */
+.project-btn {
+    /* UNIFIED: Extend global btn-base and btn-secondary */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--radius-md, 12px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    -webkit-user-select: none;
+    user-select: none;
+    box-sizing: border-box;
+    min-height: 44px; /* Touch-friendly target */
+    flex: 1;
+    
+    /* Secondary button styling as default */
+    background: rgba(255, 165, 0, 0.1);
+    color: var(--primary-color, #ff8500);
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+.project-btn:hover:not(:disabled) {
+    background: rgba(255, 165, 0, 0.2);
+    border-color: var(--primary-color, #ff8500);
+    transform: translateY(-1px);
+}
+
+.project-btn.primary {
+    /* UNIFIED: Use global btn-primary styling */
+    background: linear-gradient(135deg, var(--primary-color, #ff8500) 0%, var(--secondary-color, #FF8C00) 100%);
+    color: var(--bg-color, #000);
+    border: 1px solid var(--primary-color, #ff8500);
+    box-shadow: 
+        0 4px 15px rgba(255, 165, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.project-btn.primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--secondary-color, #FF8C00) 0%, var(--primary-color-light, #FFB84D) 100%);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 
+        0 8px 25px rgba(255, 165, 0, 0.4),
+        0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* ENHANCED GAME LAUNCH BUTTON: Special styling for interactive game buttons */
+.project-btn.game-launch-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: 1px solid #10b981;
+    box-shadow: 
+        0 4px 15px rgba(16, 185, 129, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    font-weight: 700;
+    position: relative;
+    overflow: hidden;
+}
+
+.project-btn.game-launch-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 
+        0 8px 25px rgba(16, 185, 129, 0.4),
+        0 4px 15px rgba(0, 0, 0, 0.2);
+    border-color: #059669;
+}
+
+.project-btn.game-launch-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.project-btn.game-launch-btn:hover::before {
+    left: 100%;
+}
+
+/* SECONDARY BUTTON STYLING: For View Details buttons */
+.project-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 500;
+}
+
+.project-btn.secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.project-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    pointer-events: none;
+}
+
+/* Specifically target game launch buttons */
+.project-btn[data-game] {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* ------ ENHANCED GAME MODAL SYSTEM - FIXED VIEWPORT CLIPPING ------ */
+
+/* DEFENSIVE: Prevent body scrolling when modal open (Roaster Issue 4) */
+body.game-modal-open,
+body:has(#game-container.active) {
+    overflow: hidden !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+}
+
+/* ==============================================
+   GAME MODAL OVERLAY - BODY-LEVEL POSITIONING
+   CRITICAL: NO TRANSFORM on this element - it would
+   create a containing block and break fixed positioning
+   ============================================== */
+.game-modal-overlay {
+    /* VIEWPORT ANCHOR: Fixed to viewport, not any parent */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999999;
+
+    /* CENTERING: Flexbox handles all alignment
+       - flex-direction: column = vertical main axis
+       - justify-content: flex-start = header at TOP (intentional)
+       - align-items: center = horizontal centering */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* justify-content defaults to flex-start - intentional for header at top */
+
+    /* VISUAL: Background and effects */
+    background: linear-gradient(135deg,
+        hsl(220, 20%, 10%) 0%,
+        hsl(220, 25%, 15%) 50%,
+        hsl(120, 30%, 8%) 100%
+    );
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+
+    /* HIDDEN STATE: NO TRANSFORM - opacity/visibility only
+       Transform would create containing block, breaking fixed positioning */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.5s cubic-bezier(0.25, 0.1, 0.25, 1),
+                visibility 0.5s step-end;
+
+    /* RESET: No inherited constraints */
+    padding: 0;
+    margin: 0;
+    border: none;
+    box-sizing: border-box;
+
+    /* OVERFLOW: Clips escaping content, prevents body scroll-through */
+    overflow: hidden;
+}
+
+.game-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.5s cubic-bezier(0.25, 0.1, 0.25, 1),
+                visibility 0s step-start;
+}
+
+/* ANIMATION: Applied to CHILDREN only, not positioning container */
+.game-modal-overlay.active > .panel-header,
+.game-modal-overlay.active > #game-positioning-layer {
+    animation: modalSlideIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Exit animation (when removing .active class) */
+.game-modal-overlay:not(.active) > .panel-header,
+.game-modal-overlay:not(.active) > #game-positioning-layer {
+    animation: modalSlideOut 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes modalSlideOut {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(-30px);
+    }
+}
+
+/* HEADER: Full width, fixed size */
+.game-modal-overlay > .panel-header {
+    flex: 0 0 auto;
+    width: 100%;
+    align-self: stretch;
+}
+
+/* DEFENSIVE: Simplified #game-container - most styling now in .game-modal-overlay */
+#game-container {
+    /* Inherits from .game-modal-overlay */
+    /* Only minimal overrides if needed */
+}
+
+/* ACTIVE STATE: Fully visible and interactive */
+#game-container.active {
+    display: flex;
+}
+
+/* FORCE VISIBILITY: Emergency override for game modal */
+#game-container[style*="display: flex"].active,
+#game-container[class*="active"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    display: flex !important;
+    z-index: 999999 !important;
+}
+
+/* BODY SCROLL LOCK: Prevent background scrolling when game is active */
+body:has(#game-container.active) {
+    overflow: hidden;
+}
+
+/* FALLBACK: For browsers that don't support :has() */
+body.game-modal-open {
+    overflow: hidden;
+}
+
+/* COMPREHENSIVE: Game modal header - ZERO restrictions */
+#game-container .panel-header {
+    background: var(--surface-light, rgba(40, 40, 40, 0.95));
+    border-bottom: 2px solid var(--primary, #ff8500);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0 !important;
+    z-index: 1000000;
+    
+    /* ABSOLUTE: Full width, no constraints */
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 100% !important;
+    box-sizing: border-box !important;
+    
+    /* Generous spacing */
+    padding: 1rem 2rem !important;
+    margin: 0 !important;
+    
+    /* FORCE flexbox display */
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 1rem !important;
+}
+
+/* FORCE title to NOT overflow */
+#game-container .panel-header h2 {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* COMPREHENSIVE: Remove ALL header-controls restrictions */
+#game-container .header-controls {
+    /* ZERO restrictions */
+    max-width: none !important;
+    min-width: auto !important;
+    width: auto !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    gap: 1rem !important;
+    
+    /* FORCE proper display */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    
+    /* NO restrictions */
+    overflow: visible !important;
+}
+
+/* COMPREHENSIVE: Proper close button - visible and clickable */
+#game-container .header-controls .project-btn {
+    /* Styling */
+    background: rgba(239, 68, 68, 0.2) !important;
+    border: 1px solid #ef4444 !important;
+    color: #ef4444 !important;
+    
+    /* CRITICAL: Proper sizing - NO restrictions */
+    max-width: none !important;
+    min-width: 150px !important;
+    width: auto !important;
+    height: auto !important;
+    
+    /* Generous padding */
+    padding: 0.75rem 2rem !important;
+    
+    /* Readable text */
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    
+    /* FORCE visibility */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    
+    /* Make sure it's clickable */
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+#game-container .header-controls .project-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* POSITIONING LAYER: Dedicated container for game content */
+#game-positioning-layer {
+    /* FLEXBOX CHILD: Must be in-flow for parent alignment to work
+       - Parent .game-modal-overlay uses flexbox with align-items: center
+       - position: fixed would break out of flex container
+       - position: relative keeps element in flow, parent centers it */
+    position: relative;
+
+    /* SIZE: Takes remaining space after header (no hardcoded height) */
+    flex: 1 1 auto;
+    width: fit-content;
+    max-width: calc(100vw - 40px); /* Safety margin on small screens */
+
+    /* SCROLL: Allow vertical scrolling when content exceeds available space */
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+
+    /* RESET: No styling or offsets
+       z-index removed - unnecessary within modal stacking context */
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    border: none;
+    pointer-events: auto;
+}
+
+/* Responsive: Constrain positioning layer on small screens to prevent overflow */
+@media (max-width: 768px) {
+    #game-positioning-layer {
+        max-width: calc(100vw - 40px);  /* 20px padding each side on mobile */
+    }
+}
+
+/* RESPONSIVE FIX: Scrollbar styling for positioning layer */
+#game-positioning-layer::-webkit-scrollbar {
+    width: 10px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+#game-positioning-layer::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+}
+
+#game-positioning-layer::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ff8500, #ffb366);
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#game-positioning-layer::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffb366, #ff8500);
+}
+
+/* WRAPPER-PATTERN: Game content outer wrapper - SCALED dimensions (no transform) */
+#game-content {
+    /* CRITICAL FIX: No positioning needed - parent is fit-content and centered */
+    /* Positioning layer now uses fit-content, so this can be static/relative */
+    position: relative;
+
+    /* WRAPPER: Dimensions set by JavaScript (scaled size) */
+    /* DO NOT set width/height here - JS controls this dynamically */
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+
+    /* Transparent background - games handle styling */
+    background: transparent;
+
+    /* CRITICAL: NO padding (wrapper is exact scaled size) */
+    padding: 0;
+    margin: 0;
+    border: none;
+
+    /* WRAPPER-FIT: NO scrolling (wrapper is already scaled to fit) */
+    overflow: hidden;
+
+    /* NO transitions (causes jank on resize) */
+    transition: none;
+
+    /* Game handles all interaction */
+    pointer-events: auto;
+}
+
+/* WRAPPER-PATTERN: Inner content - TARGET dimensions WITH transform */
+#game-content .game-wrapper-inner {
+    /* Inner content is ALWAYS target size (1280×720) */
+    /* JavaScript applies transform: scale() to shrink this down */
+    width: 1280px;
+    height: 720px;
+
+    /* Flex layout for game elements */
+    display: flex;
+    flex-direction: column;
+
+    /* Transform origin top-left (JavaScript sets this) */
+    transform-origin: top left;
+
+    /* CRITICAL: Clip content to prevent overflow beyond bounds */
+    overflow: hidden;
+
+    /* NO padding/margin (game elements have their own spacing) */
+    padding: 0;
+    margin: 0;
+}
+
+/* GAME ISOLATION: Ensure game styles take precedence */
+#game-content .game-screen {
+    /* Perfect game environment */
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+    
+    /* Reset any inherited styles */
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    
+    /* Let game handle background */
+    background: inherit;
+    
+    /* Full control to game */
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+}
+
+/* STARBUCKS GAME HEADER FIX: Ensure UI elements are visible and functional */
+#game-content .main-header,
+#game-content .player-stats,
+#game-content .player-info {
+    /* Ensure game UI is always visible and interactive */
+    position: relative !important;
+    z-index: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    
+    /* Reset any conflicting layout */
+    display: flex !important;
+    
+    /* Preserve game's own styling */
+    background: inherit !important;
+    color: inherit !important;
+    font-size: inherit !important;
+}
+
+/* BUTTON FIX: Ensure all game buttons work properly */
+#game-content button,
+#game-content .action-button,
+#game-content .project-btn,
+#game-content .start-button,
+#game-content .check-button {
+    /* Force interactivity */
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    
+    /* Reset conflicting styles */
+    position: relative !important;
+    z-index: auto !important;
+    
+    /* Maintain game styling */
+    background: inherit !important;
+    border: inherit !important;
+    color: inherit !important;
+    
+    /* Ensure proper event handling */
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+
+/* GAME UI STATS FIX: Level, stars, streak display */
+#game-content .level,
+#game-content .stars, 
+#game-content .streak,
+#game-content .badge-button {
+    /* Ensure stats are always visible */
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    
+    /* Proper positioning */
+    position: relative !important;
+    z-index: auto !important;
+    
+    /* Maintain game styling completely */
+    all: unset;
+    display: inline-flex !important;
+}
+
+/* ------ UTILITY STATES ------ */
+.loading-state,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-dim, rgba(255, 255, 255, 0.7));
+    min-height: 200px;
+}
+
+/* Hidden content utility class */
+.hidden-content {
+    display: none !important;
+    opacity: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 133, 0, 0.2);
+    border-top: 3px solid var(--primary, #ff8500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--spacing-md);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ------ RESPONSIVE DESIGN ------ */
+@media (max-width: 768px) {
+    .projects-section {
+        height: calc(100vh - 80px); /* Reduced height for mobile */
+        width: 100%;
+        padding: var(--spacing-xs);
+    }
+    
+    .panel-header {
+        /* MOBILE: Simpler layout to prevent clipping */
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: var(--spacing-sm);
+        text-align: left;
+        padding: var(--spacing-sm);
+        
+        /* MOBILE: Stricter viewport constraints */
+        max-width: 100vw;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    
+    .panel-header h2 {
+        /* MOBILE: More aggressive font scaling */
+        font-size: clamp(0.9rem, 4vw, 1.2rem);
+        
+        /* MOBILE: Ensure title never causes overflow */
+        max-width: 60vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .header-controls {
+        /* MOBILE: Tighter control constraints */
+        max-width: min(150px, 35vw);
+        gap: var(--spacing-xs);
+    }
+    
+    .header-controls .project-btn {
+        /* MOBILE: Smaller buttons to fit safely */
+        min-width: 35px;
+        max-width: 80px;
+        font-size: clamp(0.7rem, 2.5vw, 0.8rem);
+        padding: var(--spacing-xs);
+    }
+    
+    .inline-filters-container {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .inline-filters-bar {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: min(90vw, 400px);
+        max-width: 90vw;
+    }
+    
+    .inline-filters-bar.collapsed {
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    
+    .project-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+        padding: var(--spacing-xs);
+        padding-bottom: var(--spacing-lg);
+    }
+    
+    .main-content {
+        padding: var(--spacing-sm);
+    }
+    
+    .project-card {
+        /* Optimized mobile height - no gaps */
+        min-height: 340px;
+        max-height: fill-available;
+    }
+    
+    .modal-project-details {
+        padding: var(--spacing-sm);
+        max-width: calc(100vw - 2rem);
+    }
+}
+
+@media (max-width: 480px) {
+    .projects-section {
+        height: calc(100vh - 60px); /* Further reduced for small screens */
+        padding: var(--spacing-xs);
+    }
+    
+    .project-image {
+        height: 100px;
+    }
+    
+    .project-info {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-xs);
+        padding-bottom: var(--spacing-xs); /* Minimal padding for absolute buttons */
+    }
+    
+    .project-card {
+        /* Compact mobile cards */
+        min-height: 120px;
+        max-height: fill-available;
+    }
+    
+    .project-actions {
+        height: 60px; /* Smaller button area for mobile */
+        padding: var(--spacing-xs);
+    }
+    
+    .project-btn {
+        font-size: 0.8rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        min-height: 40px;
+    }
+    
+    .modal-project-details {
+        padding: var(--spacing-sm);
+        max-width: calc(100vw - 1rem);
+        gap: var(--spacing-sm);
+    }
+    
+    .modal-project-title {
+        font-size: clamp(1.4rem, 6vw, 1.8rem);
+    }
+    
+    #game-container .panel-header {
+        padding: var(--spacing-sm);
+    }
+}
+
+/* ------ PERFORMANCE OPTIMIZATIONS ------ */
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+    .project-card {
+        border-width: 2px;
+        border-color: var(--primary-color, #ff8500);
+    }
+    
+    .project-btn {
+        border-width: 2px;
+    }
+    
+    .tag {
+        border-width: 2px;
+    }
+}
+
+/* Dark theme enhancements */
+@media (prefers-color-scheme: dark) {
+    .projects-section {
+        --panel-bg: rgba(15, 15, 15, 0.98);
+        --card-bg: rgba(25, 25, 25, 0.9);
+        --border-color: rgba(255, 255, 255, 0.15);
+    }
+}
+
+/* Focus-visible support for better accessibility */
+.project-card:focus-visible,
+.project-btn:focus-visible,
+.inline-filter-btn:focus-visible,
+.current-filter-btn:focus-visible {
+    outline: 2px solid var(--primary-color, #ff8500);
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .projects-section {
+        background: white;
+        color: black;
+        box-shadow: none;
+    }
+    
+    .project-card {
+        break-inside: avoid;
+        box-shadow: 0 0 0 1px #ccc;
+    }
+    
+    #game-container {
+        display: none !important;
+    }
+}
+
+/* Performance optimization classes */
+.projects-section.gpu-accelerated * {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.projects-section.reduced-motion * {
+    transition-duration: 0.01s !important;
+    animation-duration: 0.01s !important;
+}

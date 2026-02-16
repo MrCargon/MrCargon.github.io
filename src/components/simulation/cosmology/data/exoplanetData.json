@@ -1,0 +1,186 @@
+{
+  "TRAPPIST-1": {
+    "star": {
+      "name": "TRAPPIST-1",
+      "type": "M8V (Ultra-cool red dwarf)",
+      "mass": 0.089,
+      "radius": 0.121,
+      "temperature": 2566,
+      "distance": 39.5,
+      "color": 16728064
+    },
+    "planets": [
+      {
+        "name": "TRAPPIST-1b",
+        "radius": 1.116,
+        "mass": 1.017,
+        "distance": 0.0115,
+        "period": 1.51,
+        "habitable": false,
+        "equilibriumTemp": 400
+      },
+      {
+        "name": "TRAPPIST-1c",
+        "radius": 1.097,
+        "mass": 1.156,
+        "distance": 0.0158,
+        "period": 2.42,
+        "habitable": false,
+        "equilibriumTemp": 342
+      },
+      {
+        "name": "TRAPPIST-1d",
+        "radius": 0.788,
+        "mass": 0.297,
+        "distance": 0.0223,
+        "period": 4.05,
+        "habitable": false,
+        "equilibriumTemp": 288
+      },
+      {
+        "name": "TRAPPIST-1e",
+        "radius": 0.920,
+        "mass": 0.772,
+        "distance": 0.0293,
+        "period": 6.10,
+        "habitable": true,
+        "equilibriumTemp": 251
+      },
+      {
+        "name": "TRAPPIST-1f",
+        "radius": 1.045,
+        "mass": 0.934,
+        "distance": 0.0385,
+        "period": 9.21,
+        "habitable": true,
+        "equilibriumTemp": 219
+      },
+      {
+        "name": "TRAPPIST-1g",
+        "radius": 1.129,
+        "mass": 1.148,
+        "distance": 0.0469,
+        "period": 12.35,
+        "habitable": true,
+        "equilibriumTemp": 199
+      },
+      {
+        "name": "TRAPPIST-1h",
+        "radius": 0.755,
+        "mass": 0.331,
+        "distance": 0.0619,
+        "period": 18.77,
+        "habitable": false,
+        "equilibriumTemp": 173
+      }
+    ],
+    "habitableZone": {
+      "inner": 0.024,
+      "outer": 0.049
+    },
+    "source": "Gillon et al. (2017), Nature 542, 456-460",
+    "dataVerified": "2025-12-31",
+    "archiveURL": "https://exoplanetarchive.ipac.caltech.edu/"
+  },
+  "Kepler-186": {
+    "star": {
+      "name": "Kepler-186",
+      "type": "M1V (Red dwarf)",
+      "mass": 0.544,
+      "radius": 0.523,
+      "temperature": 3755,
+      "distance": 500,
+      "color": 16737843
+    },
+    "planets": [
+      {
+        "name": "Kepler-186b",
+        "radius": 1.07,
+        "distance": 0.0343,
+        "period": 3.89,
+        "habitable": false
+      },
+      {
+        "name": "Kepler-186c",
+        "radius": 1.25,
+        "distance": 0.0451,
+        "period": 7.27,
+        "habitable": false
+      },
+      {
+        "name": "Kepler-186d",
+        "radius": 1.40,
+        "distance": 0.0781,
+        "period": 13.34,
+        "habitable": false
+      },
+      {
+        "name": "Kepler-186e",
+        "radius": 1.27,
+        "distance": 0.110,
+        "period": 22.41,
+        "habitable": false
+      },
+      {
+        "name": "Kepler-186f",
+        "radius": 1.11,
+        "mass": null,
+        "massEstimate": 1.4,
+        "distance": 0.432,
+        "period": 129.9,
+        "habitable": true,
+        "note": "First Earth-sized planet in habitable zone (2014)"
+      }
+    ],
+    "habitableZone": {
+      "inner": 0.22,
+      "outer": 0.44
+    },
+    "source": "Quintana et al. (2014), Science 344, 277-280",
+    "dataVerified": "2025-12-31"
+  },
+  "Proxima Centauri": {
+    "star": {
+      "name": "Proxima Centauri",
+      "type": "M5.5Ve (Red dwarf)",
+      "mass": 0.122,
+      "radius": 0.154,
+      "temperature": 3042,
+      "distance": 4.24,
+      "color": 16724736
+    },
+    "planets": [
+      {
+        "name": "Proxima Centauri b",
+        "mass": 1.07,
+        "radius": null,
+        "radiusEstimate": 1.08,
+        "distance": 0.0485,
+        "period": 11.19,
+        "habitable": true,
+        "note": "Closest known exoplanet to Earth",
+        "concerns": [
+          "Stellar flares from Proxima Centauri",
+          "Likely tidally locked",
+          "Uncertain atmospheric retention due to stellar wind"
+        ]
+      },
+      {
+        "name": "Proxima Centauri c",
+        "mass": 7.0,
+        "radius": null,
+        "distance": 1.49,
+        "period": 1928,
+        "habitable": false,
+        "note": "Discovered 2020, confirmation ongoing"
+      }
+    ],
+    "habitableZone": {
+      "inner": 0.04,
+      "outer": 0.08
+    },
+    "source": "Anglada-Escude et al. (2016), Nature 536, 437-440",
+    "dataVerified": "2025-12-31",
+    "archiveURL": "https://exoplanetarchive.ipac.caltech.edu/"
+  }
+}

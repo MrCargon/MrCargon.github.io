@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tic Tac Toe</title>
+    <link rel="stylesheet" href="./TicTacToe.css" id="game-css">
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background: linear-gradient(135deg, hsl(220, 15%, 12%) 0%, hsl(30, 70%, 8%) 100%);
+            touch-action: none;
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .loading-message {
+            color: white;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 1.25rem;
+        }
+        .standalone-exit-btn {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .standalone-exit-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <p class="loading-message">Loading Tic Tac Toe...</p>
+    </div>
+    <button id="standalone-exit" class="standalone-exit-btn" aria-label="Exit game">&times;</button>
+    <script nomodule>
+        document.getElementById('game-container').innerHTML =
+            '<p style="color: white; text-align: center;">This game requires a modern browser with ES6 module support.</p>';
+    </script>
+    <script type="module" src="./tictactoe-loader.js"></script>
+</body>
+</html>

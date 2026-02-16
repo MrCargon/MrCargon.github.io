@@ -1,0 +1,464 @@
+<!-- 
+PROJECTS PAGE
+-->
+<section class="main-section projects-section" id="projects" role="main" aria-labelledby="projects-title">
+    <div class="projects-panel">
+<!-- Enhanced Panel Header with Integrated Filters -->
+        <header class="panel-header">
+            <h2 id="projects-title">My Projects</h2>
+            
+            <!-- NEW: Inline Filter System -->
+            <div class="inline-filters-container">
+                <!-- Collapsed State: Shows current filter -->
+                <button class="current-filter-btn" 
+                        id="current-filter-btn"
+                        aria-expanded="false" 
+                        aria-controls="inline-filters-bar"
+                        aria-label="Expand filter options">
+                    <span class="current-filter-text">Featured</span>
+                    <span class="filter-arrow">▼</span>
+                </button>
+                
+                <!-- Expanded State: Horizontal scrollable filter bar -->
+                <div class="inline-filters-bar collapsed" 
+                     id="inline-filters-bar" 
+                     role="region" 
+                     aria-label="Project filters"
+                     aria-hidden="true">
+                    
+                    <!-- Filter buttons container -->
+                    <div class="filters-scroll-container">
+                        <div class="filters-row" role="group" aria-label="Filter categories">
+                            <button class="inline-filter-btn active" data-category="featured" aria-pressed="true">
+                                ⭐ Featured
+                            </button>
+                            <button class="inline-filter-btn" data-category="all" aria-pressed="false">
+                                📂 All Projects
+                            </button>
+                            <button class="inline-filter-btn" data-category="interactive" aria-pressed="false">
+                                🎮 Interactive
+                            </button>
+                            <button class="inline-filter-btn" data-category="web" aria-pressed="false">
+                                🌐 Web Dev
+                            </button>
+                            <button class="inline-filter-btn" data-category="3d" aria-pressed="false">
+                                🎲 3D/Graphics
+                            </button>
+                            <button class="inline-filter-btn" data-category="game" aria-pressed="false">
+                                🕹️ Games
+                            </button>
+                            <button class="inline-filter-btn" data-category="mobile" aria-pressed="false">
+                                📱 Mobile
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Search input -->
+                    <div class="inline-search-container">
+                        <input type="search" 
+                               class="inline-search-box" 
+                               placeholder="Search..." 
+                               aria-label="Search projects"
+                               id="inline-project-search">
+                    </div>
+                    
+                    <!-- Close button -->
+                    <button class="filters-close-btn" 
+                            aria-label="Close filters">
+                        ✕
+                    </button>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <span class="project-count" id="project-count" aria-live="polite">5 Projects</span>
+            </div>
+        </header>
+
+        <!-- Projects Content Area - Full Width Layout -->
+        <div class="projects-content">
+            <!-- Main Content Area - Now Full Width -->
+            <main class="main-content">
+                <!-- Content Header with Collapsible Filters -->
+                <div class="content-header">
+                    <div class="content-header-top">
+                        <h3 class="content-title">Featured Projects</h3>
+                        <button class="description-toggle" 
+                                id="description-toggle"
+                                aria-expanded="false" 
+                                aria-controls="content-description"
+                                title="Toggle description">
+                            <span class="toggle-icon">▼</span>
+                        </button>
+                    </div>
+                    <div class="content-description collapsed" 
+                         id="content-description" 
+                         role="region" 
+                         aria-labelledby="description-toggle">
+                        <p>Interactive applications, games, and web experiences showcasing diverse technologies and skills.</p>
+                    </div>
+                </div>
+
+
+            <!-- Enhanced Project Grid -->
+            <div class="project-grid-container">
+                <div class="project-grid" role="grid" aria-label="Projects grid">
+                        
+                        <!-- Interactive Game Project - Barista Game -->
+                        <article class="project-card interactive-game" 
+                                id="barista-game" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="interactive"
+                                data-featured="true"
+                                aria-labelledby="barista-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Starbucks Barista Game - Interactive coffee making simulator">
+                            </div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Interactive Game</span>
+                                    <span class="project-date">2025</span>
+                                </div>
+                                <h3 id="barista-title">Starbucks Adventure</h3>
+                                <div class="project-actions">
+                                    <button class="project-btn game-launch-btn" 
+                                            data-game="barista"
+                                            aria-describedby="barista-title"
+                                            title="Launch interactive Starbucks training game">
+                                        🎮 Play Game
+                                    </button>
+                                    <button class="project-btn secondary view-details-btn" 
+                                            data-project="barista-game"
+                                            aria-describedby="barista-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        An engaging educational game where you learn to make authentic Starbucks drinks through 
+                                        interactive challenges. Master recipes, earn badges, and become the ultimate barista!
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">JavaScript</span>
+                                        <span class="tag">Interactive</span>
+                                        <span class="tag">Educational</span>
+                                        <span class="tag">Game Design</span>
+                                        <span class="tag">UI/UX</span>
+                                        <span class="tag">Golden Rules</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Classic Snake Game -->
+                        <article class="project-card interactive-game"
+                                id="snake-game"
+                                tabindex="0"
+                                role="gridcell"
+                                data-category="game"
+                                aria-labelledby="snake-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400&h=200&fit=crop&crop=center"
+                                    alt="Classic Snake Game - Retro arcade gameplay">
+                            </div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Classic Game</span>
+                                    <span class="project-date">2026</span>
+                                </div>
+                                <h3 id="snake-title">Snake</h3>
+                                <div class="project-actions">
+                                    <button class="project-btn game-launch-btn"
+                                            data-game="snake"
+                                            aria-describedby="snake-title"
+                                            title="Launch classic Snake game">
+                                        🎮 Play Game
+                                    </button>
+                                    <button class="project-btn secondary view-details-btn"
+                                            data-project="snake-game"
+                                            aria-describedby="snake-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        Classic snake game with smooth controls. Use arrow keys or swipe to navigate.
+                                        Eat food to grow longer, avoid walls and yourself. Features high score persistence!
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">JavaScript</span>
+                                        <span class="tag">Game</span>
+                                        <span class="tag">Retro</span>
+                                        <span class="tag">Touch</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Tic Tac Toe -->
+                        <article class="project-card interactive-game"
+                                id="tictactoe-game"
+                                tabindex="0"
+                                role="gridcell"
+                                data-category="game"
+                                aria-labelledby="tictactoe-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1611996575749-79a3a250f948?w=400&h=200&fit=crop&crop=center"
+                                    alt="Tic Tac Toe - Classic strategy game">
+                            </div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Classic Game</span>
+                                    <span class="project-date">2026</span>
+                                </div>
+                                <h3 id="tictactoe-title">Tic Tac Toe</h3>
+                                <div class="project-actions">
+                                    <button class="project-btn game-launch-btn"
+                                            data-game="tictactoe"
+                                            aria-describedby="tictactoe-title"
+                                            title="Launch Tic Tac Toe game">
+                                        🎮 Play Game
+                                    </button>
+                                    <button class="project-btn secondary view-details-btn"
+                                            data-project="tictactoe-game"
+                                            aria-describedby="tictactoe-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        Play against a smart AI opponent. The AI uses strategic moves - try to beat it!
+                                        Track your wins and losses across sessions.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">JavaScript</span>
+                                        <span class="tag">Game</span>
+                                        <span class="tag">AI</span>
+                                        <span class="tag">Strategy</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Portfolio Website Project -->
+                        <article class="project-card" 
+                                id="portfolio-site" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="web"
+                                data-featured="true"
+                                aria-labelledby="portfolio-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Modern portfolio website with space theme">
+                            </div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Web Development</span>
+                                    <span class="project-date">2025</span>
+                                </div>
+                                <h3 id="portfolio-title">Interactive Portfolio</h3>
+                                <div class="project-actions">
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="portfolio-site"
+                                            aria-describedby="portfolio-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        A modern, responsive portfolio website featuring an interactive 3D solar system, 
+                                        smooth animations, and optimized performance. Built with vanilla JavaScript and Three.js.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">JavaScript</span>
+                                        <span class="tag">Three.js</span>
+                                        <span class="tag">CSS3</span>
+                                        <span class="tag">Responsive</span>
+                                        <span class="tag">Performance</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Solar System Project -->
+                        <article class="project-card" 
+                                id="solar-system" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="3d"
+                                data-featured="true"
+                                aria-labelledby="solar-title">
+                            <div class="project-image">
+                                <img src="src/assets/textures/sun/sun_map.jpg" 
+                                    alt="3D Solar System simulation with realistic planet textures" 
+                                    onerror="this.src='https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=200&fit=crop&crop=center'">
+                            </div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">3D Simulation</span>
+                                    <span class="project-date">2026</span>
+                                </div>
+                                <h3 id="solar-title">Solar System Simulator</h3>
+                                <div class="project-actions">
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="solar-system"
+                                            aria-describedby="solar-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        Immersive 3D solar system with accurate planetary orbits, realistic textures, 
+                                        and interactive controls. Features dynamic lighting and camera controls.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">Three.js</span>
+                                        <span class="tag">WebGL</span>
+                                        <span class="tag">3D Graphics</span>
+                                        <span class="tag">Physics</span>
+                                        <span class="tag">Astronomy</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Space Explorer Game -->
+                        <article class="project-card" 
+                                id="space-explorer" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="game"
+                                aria-labelledby="space-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Space exploration game with spacecraft and planets">
+                            </div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Game Development</span>
+                                    <span class="project-date">2026</span>
+                                </div>
+                                <h3 id="space-title">Space Explorer</h3>
+                                <div class="project-actions">
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="space-explorer"
+                                            aria-describedby="space-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        An adventure game where players navigate through space, discover planets, 
+                                        and collect resources. Built with Godot engine and custom physics.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">Godot</span>
+                                        <span class="tag">GDScript</span>
+                                        <span class="tag">Game Design</span>
+                                        <span class="tag">Physics</span>
+                                        <span class="tag">Procedural</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Data Visualization Project -->
+                        <article class="project-card" 
+                                id="data-viz" 
+                                tabindex="0" 
+                                role="gridcell"
+                                data-category="web"
+                                aria-labelledby="data-title">
+                            <div class="project-image">
+                                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop&crop=center" 
+                                    alt="Interactive data visualization dashboard with charts and graphs">
+                            </div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Data Visualization</span>
+                                    <span class="project-date">2026</span>
+                                </div>
+                                <h3 id="data-title">Interactive Dashboard</h3>
+                                <div class="project-actions">
+                                    <button class="project-btn primary view-details-btn" 
+                                            data-project="data-viz"
+                                            aria-describedby="data-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <!-- Hidden data for modal -->
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        Dynamic data visualization platform with real-time charts, filtering capabilities, 
+                                        and responsive design. Processes large datasets efficiently.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">D3.js</span>
+                                        <span class="tag">Chart.js</span>
+                                        <span class="tag">Data Analysis</span>
+                                        <span class="tag">Real-time</span>
+                                        <span class="tag">Responsive</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- Loading State (hidden by default) -->
+                    <div class="loading-state hidden-content" role="status" aria-live="polite">
+                        <div class="loading-spinner" aria-hidden="true"></div>
+                        <p>Loading projects...</p>
+                    </div>
+
+                    <!-- Empty State (hidden by default) -->
+                    <div class="empty-state hidden-content" role="status">
+                        <p>No projects found matching your criteria.</p>
+                        <button class="project-btn" data-action="clear-filters">Clear Filters</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Project Info Modal - Viewport Responsive -->
+    <div id="project-info-modal" class="projects-panel modal-panel" role="dialog" aria-modal="true" aria-labelledby="project-info-title">
+        <header class="panel-header">
+            <h2 id="project-info-title">Project Details</h2>
+            <div class="header-controls">
+                <button class="project-btn" data-action="close-project-info" aria-label="Close project details">
+                    <span>✕</span> Close
+                </button>
+            </div>
+        </header>
+        <div class="project-info-content" id="project-info-content">
+            <!-- Project info will be loaded here dynamically -->
+        </div>
+    </div>
+</section>
+
+<!-- Enhanced Game Container for Interactive Projects - MOVED OUTSIDE #projects for proper viewport positioning -->
+<div id="game-container" class="game-modal-overlay" role="region" aria-label="Interactive game">
+    <header class="panel-header">
+        <h2 id="game-title">Interactive Game</h2>
+        <div class="header-controls">
+            <button class="project-btn" data-action="close-game" aria-label="Close game">
+                <span>✕</span> Close
+            </button>
+        </div>
+    </header>
+    <div id="game-positioning-layer">
+        <div id="game-content">
+            <!-- Game will be loaded here dynamically by PageManager -->
+        </div>
+    </div>
+</div>
+
+<!-- ProjectFiltersManager Script -->
+<script src="src/components/pages/ProjectFiltersManager.js"></script>

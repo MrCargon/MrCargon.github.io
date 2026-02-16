@@ -1,0 +1,1735 @@
+/* ===============================================
+   STARBUCKS GAME - OPTIMIZED FIXED VIEWPORT DESIGN
+   =============================================== */
+
+/* RESPONSIVE FIX: Game Modal Base - Container-Relative Sizing */
+.game-screen {
+    /* RESPONSIVE FIX: Natural sizing to fit content */
+    width: 100%;
+    max-width: 1280px;
+    min-height: auto;
+
+    /* CRITICAL: Proper box model for container bounds */
+    box-sizing: border-box;
+
+    /* Modern gradient background */
+    background: linear-gradient(135deg,
+        hsl(220, 15%, 12%) 0%,
+        hsl(158, 70%, 8%) 100%);
+
+    /* Clean layout system */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+
+    /* Modern styling */
+    font-family: inherit;
+    color: white;
+    border-radius: 0;
+
+    /* RESPONSIVE FIX: Prevent horizontal overflow, allow vertical extension */
+    overflow-x: hidden;
+    overflow-y: visible;
+
+    /* Performance optimizations */
+    transform: translateZ(0);
+    will-change: contents;
+
+    /* Smooth transitions */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* FIXED: Game container integration */
+/* #game-content styles removed - now controlled by projectsPage.css to prevent conflicts */
+/* JavaScript (GameScaler) sets dimensions dynamically via inline styles */
+
+/* RESPONSIVE FIX: Enhanced Game Content - Container-relative units */
+.game-content {
+    /* RESPONSIVE FIX: Use container-relative units instead of viewport units */
+    padding: clamp(0.75rem, 1.5%, 1.25rem);
+
+    /* RESPONSIVE FIX: Let parent handle overflow */
+    overflow: visible;
+
+    /* RESPONSIVE FIX: Proper sizing to fit within scrollable parent */
+    width: 100%;
+    max-width: 100%;
+    min-height: min-content;
+
+    /* CRITICAL: Proper box model to account for padding */
+    box-sizing: border-box;
+
+    /* Performance optimizations */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ENHANCED: Cross-browser scrollbar styling */
+.game-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.game-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    margin: 2px;
+}
+
+.game-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--primary-color), var(--primary-color-light));
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all var(--duration-normal) ease;
+}
+
+.game-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--primary-color-light), var(--primary-color));
+    box-shadow: var(--shadow-glow);
+}
+
+.game-content::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Welcome Screen */
+.welcome-screen {
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.welcome-header {
+    margin-bottom: 2rem;
+}
+
+.game-title {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, #ff8500, #ffa500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    font-weight: 700;
+}
+
+.game-subtitle {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0;
+}
+
+/* Barista Avatar */
+.barista-avatar {
+    margin-bottom: 2rem;
+}
+
+.avatar-icon {
+    font-size: 4rem; /* Fallback for Safari < 13.1 */
+    font-size: clamp(3rem, 8vw, 4rem); /* 48-64px responsive */
+    display: block;
+    margin-bottom: 1rem;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+/* NEW - 8px fits within 12px safe zone (24px padding / 2) */
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); } /* REDUCED: 10px -> 8px */
+    60% { transform: translateY(-4px); } /* REDUCED: 5px -> 4px */
+}
+
+.barista-avatar h2 {
+    color: var(--primary-color, #ff8500);
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.barista-avatar p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.name-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 133, 0, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    /* EMOJI FIX: Ensure emojis display with natural colors */
+    font-variant-emoji: unicode;
+}
+
+.name-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.name-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #ff8500);
+    box-shadow: 0 0 0 3px rgba(255, 133, 0, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.name-input::selection {
+    background: rgba(255, 133, 0, 0.5);
+    color: white;
+}
+
+/* Buttons */
+.start-button {
+    background: linear-gradient(45deg, #ff8500, #e67300);
+    color: white;
+    border: none;
+    padding: 1rem 2rem; /* Fallback for Safari < 13.1 */
+    padding: clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2rem); /* 12-16px vertical, 24-32px horizontal */
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.start-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 133, 0, 0.3);
+}
+
+.start-button:disabled {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.start-button.enabled {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 133, 0, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 133, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 133, 0, 0); }
+}
+
+/* Welcome Features */
+.welcome-features {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.feature {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 133, 0, 0.2);
+    min-width: 120px;
+    transition: all 0.3s ease;
+}
+
+.feature:hover {
+    background: rgba(255, 133, 0, 0.1);
+    transform: translateY(-3px);
+}
+
+.feature-icon {
+    font-size: 2rem;
+}
+
+/* Main Screen */
+.main-screen .game-content {
+    padding: 1.5rem;
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 133, 0, 0.2);
+}
+
+.player-info h1 {
+    color: var(--primary-color, #ff8500);
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+}
+
+.player-stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.player-stats span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(255, 133, 0, 0.3);
+}
+
+.badge-button {
+    background: rgba(255, 133, 0, 0.2);
+    border: 1px solid var(--primary-color, #ff8500);
+    color: var(--primary-color, #ff8500);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.badge-button:hover {
+    background: var(--primary-color, #ff8500);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Tip Section */
+.tip-section {
+    margin-bottom: 2rem;
+}
+
+.barista-tip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 133, 0, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.barista-character {
+    flex-shrink: 0;
+}
+
+.barista-emoji {
+    font-size: 3rem; /* Fallback for Safari < 13.1 */
+    font-size: clamp(2.5rem, 6vw, 3rem); /* 40-48px responsive */
+    display: block;
+    animation: float 3s ease-in-out infinite;
+}
+
+/* NEW - 6px is safer for tip container which has less padding */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); } /* REDUCED: 10px -> 6px */
+}
+
+.tip-content h3 {
+    color: var(--primary-color, #ff8500);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.tip-content p {
+    margin: 0;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Streak Indicator */
+.streak-indicator {
+    background: linear-gradient(45deg, #ff6b35, #ff8500);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.streak-indicator::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shine 2s infinite;
+}
+
+@keyframes shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.streak-content {
+    position: relative;
+    z-index: 1;
+}
+
+.streak-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+}
+
+.streak-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Action Buttons */
+.main-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.action-button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 133, 0, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem; /* Fallback for Safari < 13.1 */
+    padding: clamp(1rem, 3vw, 1.5rem); /* 16-24px all sides */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.action-button:hover {
+    background: rgba(255, 133, 0, 0.1);
+    border-color: var(--primary-color, #ff8500);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 133, 0, 0.2);
+}
+
+.action-button.primary {
+    background: linear-gradient(45deg, #ff8500, #e67300);
+    border-color: transparent;
+    color: white;
+}
+
+.action-button.primary:hover {
+    background: linear-gradient(45deg, #e67300, #cc5a00);
+    transform: translateY(-3px) scale(1.02);
+}
+
+.button-icon {
+    font-size: 2rem;
+}
+
+.button-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.button-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin: 0;
+}
+
+/* Random Tip */
+.random-tip {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.random-tip h3 {
+    color: #ffc107;
+    margin-bottom: 0.5rem;
+}
+
+.random-tip p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Progress Info */
+.progress-info {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-text, .level-progress {
+    margin: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+}
+
+/* Categories Screen */
+.categories-screen .game-content {
+    padding: 2rem;
+}
+
+.screen-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 133, 0, 0.2);
+}
+
+.screen-header h2 {
+    color: var(--primary-color, #ff8500);
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+}
+
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* REDUCED: 250px -> 160px */
+    gap: 1rem; /* REDUCED: 1.5rem -> 1rem */
+    margin-bottom: 2rem;
+}
+
+.category-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 133, 0, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.category-card:hover {
+    background: rgba(255, 133, 0, 0.1);
+    border-color: var(--primary-color, #ff8500);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(255, 133, 0, 0.2);
+}
+
+.category-card.red { border-color: #ef4444; }
+.category-card.red:hover { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+.category-card.blue { border-color: #3b82f6; }
+.category-card.blue:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+
+.category-card.purple { border-color: #8b5cf6; }
+.category-card.purple:hover { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+
+.category-card.pink { border-color: #ec4899; }
+.category-card.pink:hover { border-color: #ec4899; background: rgba(236, 72, 153, 0.1); }
+
+.category-icon {
+    font-size: 3rem; /* Fallback for Safari < 13.1 */
+    font-size: clamp(2.5rem, 6vw, 3rem); /* 40-48px responsive */
+}
+
+.category-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.3rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal; /* CHANGED: Allow wrapping */
+    word-wrap: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* MAX 2 lines before ellipsis */
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+    max-height: 2.6em; /* 2 lines * 1.3 line-height - FALLBACK */
+}
+
+.category-info p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal; /* CHANGED: Allow wrapping */
+    word-wrap: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* MAX 2 lines */
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
+    max-height: 2.8em; /* FALLBACK */
+}
+
+.category-progress {
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Challenge Screen */
+.challenge-screen .game-content {
+    padding: 1rem 1.5rem; /* REDUCED: 1rem vertical, 1.5rem horizontal */
+}
+
+.challenge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 133, 0, 0.2);
+}
+
+.challenge-header h2 {
+    color: var(--primary-color, #ff8500);
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+.challenge-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.challenge-stats span {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(255, 133, 0, 0.3);
+}
+
+.challenge-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 133, 0, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem; /* REDUCED: from 2rem */
+    margin-bottom: 1.5rem; /* REDUCED: from 2rem */
+    transition: all 0.3s ease;
+}
+
+.challenge-card.correct {
+    border-color: #ff8500;
+    background: rgba(255, 133, 0, 0.1);
+    animation: successPulse 0.6s ease-out;
+}
+
+.challenge-card.wrong {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    animation: errorShake 0.6s ease-out;
+}
+
+/* NEW - Reduced scale to 1.01 (1% vs 2%) to minimize overflow */
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.01); } /* REDUCED: 1.02 -> 1.01 */
+    100% { transform: scale(1); }
+}
+
+/* NEW - 3px horizontal movement fits in reduced card padding */
+@keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); } /* REDUCED: 5px -> 3px */
+    75% { transform: translateX(3px); } /* REDUCED: 5px -> 3px */
+}
+
+.drink-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.drink-icon {
+    font-size: 3rem; /* Fallback for Safari < 13.1 */
+    font-size: clamp(2.5rem, 6vw, 3rem); /* 40-48px responsive */
+}
+
+.drink-info h3 {
+    margin: 0 0 0.25rem 0;
+    color: var(--primary-color, #ff8500);
+    font-size: 1.5rem;
+}
+
+.size-info {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    font-size: 1rem;
+}
+
+.drink-description {
+    margin-bottom: 1.5rem;
+}
+
+.drink-description p {
+    margin: 0 0 0.5rem 0;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+}
+
+.challenge-prompt {
+    color: var(--primary-color, #ff8500);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Recipe Inputs */
+.recipe-inputs {
+    margin-bottom: 2rem;
+}
+
+.inputs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* REDUCED: 200px -> 140px */
+    gap: 0.75rem; /* REDUCED: 1rem -> 0.75rem */
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color, #ff8500);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.label-icon {
+    font-size: 1.2rem;
+}
+
+.recipe-input {
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 133, 0, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.recipe-input:focus,
+.name-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #ff8500);
+    box-shadow: 0 0 0 3px rgba(255, 133, 0, 0.3);
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.02); /* Mobile: Slight scale for visibility */
+}
+
+.recipe-input,
+.name-input {
+    transition: all 0.2s ease;
+}
+
+.recipe-input:disabled {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Challenge Actions */
+.challenge-actions {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.check-button {
+    background: linear-gradient(45deg, #ff8500, #e67300);
+    color: white;
+    border: none;
+    padding: 1rem 2rem; /* Fallback for Safari < 13.1 */
+    padding: clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2rem); /* 12-16px vertical, 24-32px horizontal */
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.check-button:hover {
+    background: linear-gradient(45deg, #e67300, #cc5a00);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 133, 0, 0.3);
+}
+
+/* Challenge Result */
+.challenge-result {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 2px solid;
+    animation: slideIn 0.5s ease-out;
+}
+
+.challenge-result.correct {
+    border-color: #ff8500;
+    background: rgba(255, 133, 0, 0.1);
+}
+
+.challenge-result.incorrect {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* NEW - 12px fits within typical margins, still provides motion */
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); } /* REDUCED: 20px -> 12px */
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.result-icon {
+    font-size: 3rem;
+}
+
+.result-text h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.5rem;
+}
+
+.result-text p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.correct-recipe {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.correct-recipe h4 {
+    color: var(--primary-color, #ff8500);
+    margin: 0 0 0.5rem 0;
+}
+
+.correct-recipe ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.correct-recipe li {
+    margin-bottom: 0.25rem;
+}
+
+.fun-fact {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.fun-fact p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Navigation */
+.challenge-navigation, .screen-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.nav-button, .back-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 133, 0, 0.3);
+    color: white;
+    padding: 0.75rem 1.5rem; /* Fallback for Safari < 13.1 */
+    padding: clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 3vw, 1.5rem); /* 8-12px vertical, 16-24px horizontal */
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.nav-button:hover, .back-button:hover {
+    background: rgba(255, 133, 0, 0.2);
+    border-color: var(--primary-color, #ff8500);
+    transform: translateY(-2px);
+}
+
+/* Badges Screen */
+.badges-screen .game-content {
+    padding: 2rem;
+}
+
+.badges-summary {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.badges-summary p {
+    margin: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.badge-count {
+    color: var(--primary-color, #ff8500);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.badge-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.badge-card.earned {
+    border-color: var(--primary-color, #ff8500);
+    background: rgba(255, 133, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 133, 0, 0.2);
+}
+
+.badge-card.locked {
+    opacity: 0.4;
+    filter: grayscale(1);
+}
+
+.badge-card:hover.earned {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(255, 133, 0, 0.3);
+}
+
+.badge-icon {
+    font-size: 3rem; /* Fallback for Safari < 13.1 */
+    font-size: clamp(2.5rem, 6vw, 3rem); /* 40-48px responsive */
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.badge-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color, #ff8500);
+    font-size: 1.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-wrap: break-word;
+}
+
+.badge-info p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-wrap: break-word;
+}
+
+/* Toast Notifications */
+.game-toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.game-toast.info {
+    background: #3b82f6;
+    border: 1px solid #1d4ed8;
+}
+
+.game-toast.success {
+    background: #10b981;
+    border: 1px solid #047857;
+}
+
+.game-toast.error {
+    background: #ef4444;
+    border: 1px solid #dc2626;
+}
+
+/* Error Screen */
+.error-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.error-content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: #ef4444;
+}
+
+.error-content h2 {
+    color: #ef4444;
+    margin-bottom: 1rem;
+}
+
+.error-content p {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 1rem;
+}
+
+.error-button {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.error-button:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
+/* Recipe Book Screens */
+.recipes-screen {
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.recipes-screen .game-content {
+    padding: 1.5rem; /* REDUCED: from 2rem */
+}
+
+/* Sticky header for Recipe Book screen */
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(135deg,
+        hsl(220, 15%, 12%) 0%,
+        hsl(158, 70%, 8%) 100%);
+    padding: 1rem 0;
+    margin: -1.5rem -1.5rem 1rem -1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    border-bottom: 1px solid rgba(255, 133, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.sticky-header .header-content {
+    flex: 1;
+    min-width: 200px;
+}
+
+.sticky-header .header-content h2 {
+    margin: 0 0 0.25rem 0;
+}
+
+.sticky-header .header-content p {
+    margin: 0;
+}
+
+.header-back-button {
+    flex-shrink: 0;
+}
+
+.recipe-intro {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.recipe-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* REDUCED: 200px -> 140px */
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.recipe-category-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    color: inherit;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.recipe-category-card:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--primary-color, #10b981);
+    transform: translateY(-3px);
+}
+
+.recipe-category-card .category-icon {
+    font-size: 2rem;
+}
+
+.recipe-category-card .category-name {
+    font-weight: 600;
+    color: var(--primary-color, #10b981);
+}
+
+/* Drinks Grid */
+.drinks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* REDUCED: 250px -> 160px */
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.drink-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    color: inherit;
+    text-decoration: none;
+    position: relative;
+}
+
+.drink-card:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--primary-color, #10b981);
+    transform: translateY(-3px);
+}
+
+.drink-card.completed {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.drink-card.category-highlight {
+    animation: category-pulse 0.5s ease-out 3;
+    border-color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+@keyframes category-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.drink-card h3 {
+    margin: 0.5rem 0;
+    color: var(--primary-color, #10b981);
+    padding-right: 28px; /* 18px badge + 10px gap (mobile) - 2px buffer for safety */
+    word-wrap: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.drink-card p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-wrap: break-word;
+}
+
+.completed-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #10b981;
+    color: white;
+    width: 18px;      /* Mobile: Smaller */
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: bold;
+    transition: width 0.3s ease, height 0.3s ease, font-size 0.3s ease;
+}
+
+/* Recipe Detail */
+.recipe-detail-screen .game-content {
+    padding: 2rem;
+}
+
+.recipe-detail-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.recipe-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.drink-icon-large {
+    font-size: 4rem; /* Fallback for Safari < 13.1 */
+    font-size: clamp(3rem, 8vw, 4rem); /* 48-64px responsive */
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.drink-description {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.recipe-sizes h3, .fun-fact-section h3 {
+    color: var(--primary-color, #10b981);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+/* Recipe table wrapper for horizontal scroll on small screens */
+.recipe-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+    margin-bottom: 0.5rem; /* Reduced to accommodate scroll hint */
+}
+
+/* Scroll hint for mobile users */
+.scroll-hint {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-align: center;
+    margin-top: 0.5rem;
+    margin-bottom: 2rem;
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .scroll-hint {
+        display: block;
+    }
+}
+
+.recipe-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    overflow: hidden;
+    min-width: 320px; /* REDUCED: Fits phones >= 375px without forced scroll */
+}
+
+.recipe-table th,
+.recipe-table td {
+    padding: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+    word-break: break-word; /* CRITICAL: Long headers can wrap */
+    hyphens: auto;
+}
+
+.recipe-table th {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--primary-color, #10b981);
+    font-weight: 600;
+    font-size: 0.9rem;  /* Fallback for Safari < 13.1 */
+    font-size: clamp(0.7rem, 2vw, 0.9rem); /* Responsive with fallback */
+}
+
+/* RESPONSIVE: Compact table cells on small screens */
+@media (max-width: 480px) {
+    .recipe-table {
+        min-width: 280px;
+        font-size: 0.75rem;
+    }
+
+    .recipe-table th,
+    .recipe-table td {
+        padding: 0.4rem 0.25rem;
+        font-size: 0.7rem;
+    }
+
+    .recipe-table th {
+        font-size: 0.65rem;
+        letter-spacing: -0.3px;
+    }
+}
+
+.recipe-table tr:last-child td {
+    border-bottom: none;
+}
+
+.fun-fact-section {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.fun-fact-section h3 {
+    color: #ffc107;
+}
+
+.fun-fact-section p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+}
+
+.practice-button {
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.practice-button:hover {
+    background: linear-gradient(45deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Responsive Design - Mobile-First Grid Improvements */
+@media (min-width: 480px) {
+    .categories-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .drinks-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .badges-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .completed-badge {
+        width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
+    }
+
+    .drink-card h3 {
+        padding-right: 34px; /* 24px badge + 10px gap (desktop) - 2px buffer for safety */
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .game-content {
+        padding: 1rem;  /* Default: 16px */
+    }
+
+    .categories-screen .game-content,
+    .badges-screen .game-content,
+    .recipes-screen .game-content {
+        padding: 1rem;  /* Consistent 16px */
+    }
+
+    .challenge-screen .game-content {
+        padding: 0.5rem 0.75rem; /* TIGHTER: Vertical reduced more */
+    }
+
+    .recipe-detail-screen .game-content {
+        padding: 0.75rem; /* Unchanged */
+    }
+    
+    .welcome-features {
+        gap: 1rem;
+    }
+    
+    .feature {
+        min-width: 100px;
+        padding: 0.75rem;
+    }
+    
+    .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .player-stats {
+        justify-content: flex-start;
+    }
+    
+    .barista-tip {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .main-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .categories-grid {
+        grid-template-columns: repeat(2, 1fr);  /* NEW: 2 columns on mobile */
+    }
+
+    /* After existing .categories-grid rule */
+    .categories-screen .game-content {
+        padding: 0.75rem; /* TIGHTER: Match challenge screen */
+    }
+
+    .category-card {
+        padding: 1rem; /* REDUCED: from 1.5rem default */
+    }
+
+    .category-info h3 {
+        font-size: 1.1rem;
+        -webkit-line-clamp: 2;
+    }
+
+    .category-info p {
+        font-size: 0.8rem;
+        -webkit-line-clamp: 1; /* Single line on mobile */
+        max-height: 1.4em;
+    }
+
+    .challenge-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    /* NEW - 2 columns on tablets, single on tiny phones */
+    .inputs-grid {
+        grid-template-columns: repeat(2, 1fr); /* CHANGED: 2 columns on tablet */
+        max-width: 100%; /* FULL WIDTH */
+        margin: 0;
+        gap: 0.5rem; /* TIGHTER gap */
+    }
+
+    .recipe-input {
+        padding: 0.75rem; /* 12px vertical = ~40px total with line-height */
+        min-height: 44px; /* iOS touch target minimum */
+    }
+    
+    .result-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .challenge-navigation,
+    .screen-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .badges-grid {
+        grid-template-columns: repeat(2, 1fr);  /* NEW: 2 columns on mobile */
+    }
+
+    .recipe-table {
+        font-size: 0.8rem;
+    }
+    
+    .recipe-table th,
+    .recipe-table td {
+        padding: 0.5rem;
+    }
+
+    .recipe-categories {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns on tablet/mobile */
+    }
+
+    .drinks-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns on tablet/mobile */
+    }
+
+    .recipes-screen .game-content {
+        padding: 1rem; /* TIGHTER on mobile */
+    }
+}
+
+/* INTERMEDIATE: Phones 375-480px get 2 compact columns */
+@media (min-width: 375px) and (max-width: 480px) {
+    .inputs-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .input-group {
+        gap: 0.25rem;
+    }
+
+    .input-label {
+        font-size: 0.75rem;
+    }
+
+    .recipe-input {
+        padding: 0.625rem; /* 10px - with 1rem font = ~38px, add min-height */
+        font-size: 0.9rem;
+        min-height: 44px; /* CRITICAL: iOS touch target compliance */
+    }
+}
+
+/* TINY: Phones < 375px stay single column for usability */
+@media (max-width: 374px) {
+    .inputs-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .recipe-input {
+        min-height: 44px; /* Touch target maintained */
+    }
+}
+
+/* Desktop breakpoint - Wider grids and 2-column inputs */
+@media (min-width: 768px) {
+    .categories-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .drinks-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .badges-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .inputs-grid {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 600px;
+        margin: 0 auto;
+        gap: 1.5rem;
+    }
+
+    .categories-screen .game-content,
+    .badges-screen .game-content,
+    .recipes-screen .game-content,
+    .recipe-detail-screen .game-content {
+        padding: 2rem;  /* Spacious on desktop */
+    }
+
+    .challenge-screen .game-content {
+        padding: 1.5rem;  /* Slightly tighter to center inputs */
+    }
+}
+
+@media (max-width: 480px) {
+    .game-content {
+        padding: 0.75rem;  /* Small screens: 12px */
+    }
+
+    .challenge-screen .game-content {
+        padding: 0.25rem 0.5rem; /* EXTRA TIGHT: Maximize input space */
+    }
+
+    .challenge-card {
+        padding: 1rem; /* MOBILE: Compact card padding */
+        margin-bottom: 1rem;
+    }
+    
+    .game-title {
+        font-size: 1.5rem;
+    }
+    
+    .avatar-icon {
+        font-size: 3rem;
+    }
+    
+    .name-input {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .welcome-features {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .game-toast {
+        left: 0.5rem;
+        right: 0.5rem;
+        max-width: none;
+    }
+
+    .recipe-table th,
+    .recipe-table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.7rem;
+    }
+
+    .recipe-table {
+        min-width: 450px; /* Slightly narrower on very small screens */
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Focus States */
+.start-button:focus,
+.action-button:focus,
+.category-card:focus,
+.challenge-card:focus,
+.nav-button:focus,
+.back-button:focus,
+.recipe-input:focus,
+.check-button:focus,
+.practice-button:focus,
+.drink-card:focus,
+.recipe-category-card:focus {
+    outline: 2px solid var(--primary-color, #10b981);
+    outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .game-screen {
+        background: #000;
+        color: #fff;
+    }
+    
+    .challenge-card,
+    .action-button,
+    .category-card {
+        border-width: 2px;
+    }
+}
+
+/* ===============================================
+   GAME MODAL INTEGRATION FIXES - CONTAINER-RELATIVE
+   =============================================== */
+
+/* FIXED: Ensure game fits perfectly in modal container */
+.starbucks-game,
+.game-screen {
+    /* FIXED: Container-relative sizing (NOT viewport) */
+    width: 100% !important;
+    max-width: 100% !important;
+    
+    /* CRITICAL: Proper box model */
+    box-sizing: border-box !important;
+    
+    /* CRITICAL: Allow content to extend - parent handles scrolling */
+    overflow: visible !important;
+    position: relative;
+    
+    /* Remove contain that restricts overflow */
+    border-radius: 0;
+}
+
+
+/* MODAL COMPATIBILITY: Ensure proper backdrop integration */
+#game-container .game-screen {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    
+    /* FIXED: Ensure container bounds respected */
+    max-width: 100%;
+    max-height: 100%;
+    box-sizing: border-box;
+}
+
+/* FIXED: Responsive game sizing - container-relative */
+@media (max-width: 768px) {
+    .game-content {
+        /* FIXED: Use container-relative sizing */
+        max-width: 100%;
+        max-height: 100%;
+        padding: 0.75rem;
+        box-sizing: border-box;
+    }
+}
+
+/* PERFORMANCE: GPU acceleration for smooth modal transitions */
+.starbucks-game * {
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+}

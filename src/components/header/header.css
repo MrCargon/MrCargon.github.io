@@ -1,0 +1,577 @@
+/**
+ * Header
+ */
+
+.main-header {
+    /* CSS variables brought to the top for better organization */
+    --header-bg: rgba(20, 20, 20, 0.45);
+    --header-bg-scrolled: rgba(15, 15, 15, 0.68);
+    --header-border: rgba(255, 165, 0, 0.2);
+    --header-border-scrolled: rgba(255, 165, 0, 0.3);
+    --header-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    --header-shadow-scrolled: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --header-transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    
+    max-width: 900px;
+    width: 90%;
+    margin: 15px auto;
+    background-color: var(--header-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--header-border);
+    box-shadow: var(--header-shadow);
+    padding: var(--spacing-sm) var(--spacing-md);
+    position: sticky;
+    top: 15px;
+    z-index: 1000;
+    -webkit-backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px);
+    transition: var(--header-transition);
+}
+
+/* Scrolled state - kept the same */
+.main-header.scrolled {
+    background-color: var(--header-bg-scrolled);
+    border-color: var(--header-border-scrolled);
+    box-shadow: var(--header-shadow-scrolled);
+}
+
+/* Visibility states - optimized animation */
+.main-header.hidden {
+    display: none;
+}
+
+.main-header.visible {
+    display: block;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+/* Defined animation only once */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header content - kept the same */
+.header-content {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    flex-wrap: wrap;
+}
+
+/* Site branding/logo - kept the same */
+.site-branding {
+    display: flex;
+    align-items: center;
+    z-index: 1010;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.02em;
+}
+
+/* ------ Nav Container ------ */
+.nav-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+}
+
+/* ------ Mobile Menu Button ------ */
+.mobile-menu-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1010;
+    margin-left: auto;
+    color: var(--text-color);
+    position: relative;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    /* Enhanced touch target */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* Enhanced mobile button interactions */
+.mobile-menu-toggle:hover {
+    background-color: rgba(255, 165, 0, 0.1);
+    border-radius: 6px;
+}
+
+.mobile-menu-toggle:active {
+    transform: scale(0.95);
+    background-color: rgba(255, 165, 0, 0.15);
+}
+
+/* Hamburger icon - performance optimized with will-change */
+.hamburger-icon {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 18px;
+    position: relative;
+    margin: 0 auto;
+}
+
+.bar {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background-color: var(--text-color);
+    border-radius: 1px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    will-change: transform, opacity;
+}
+
+/* Active state for hamburger icon - kept the same */
+.mobile-menu-toggle[aria-expanded="true"] .bar-1 {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.mobile-menu-toggle[aria-expanded="true"] .bar-2 {
+    opacity: 0;
+}
+
+.mobile-menu-toggle[aria-expanded="true"] .bar-3 {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* ------ Navigation ------ */
+.main-nav {
+    display: block;
+    width: 100%;
+}
+
+.main-nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-xl);
+    margin: 0;
+    padding: 0;
+}
+
+.main-nav li {
+    position: relative;
+}
+
+.nav-link {
+    color: var(--text-color);
+    text-decoration: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius);
+    transition: color 0.2s ease, background-color 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-weight: 500;
+}
+
+/* ------ Link States ------ */
+
+/* Active State - kept the same */
+.nav-link.active {
+    color: var(--primary-color);
+    background: rgba(255, 165, 0, 0.1);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+/* Hover Effects - kept the same */
+.nav-link:not(.disabled):hover {
+    color: var(--primary-color);
+    background: rgba(255, 165, 0, 0.1);
+}
+
+/* Underline animation - optimized with will-change */
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--primary-color);
+    transition: width 0.3s ease, opacity 0.3s ease;
+    transform: translateX(-50%);
+    opacity: 0;
+    will-change: width, opacity;
+}
+
+.nav-link:not(.disabled):hover::after {
+    width: 80%;
+    opacity: 1;
+}
+
+/* ------ Disabled State ------ */
+.nav-link.disabled {
+    color: rgba(255, 255, 255, 0.4);
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-link.disabled:hover {
+    transform: none;
+}
+
+.nav-link.disabled::after {
+    display: none;
+}
+
+/* ------ Status Badge ------ */
+.status-badge {
+    font-size: 0.7em;
+    background: rgba(255, 165, 0, 0.2);
+    padding: 2px 6px;
+    border-radius: 12px;
+    color: var(--primary-color);
+    white-space: nowrap;
+}
+
+/* ------ Focus States ------ */
+.nav-link:focus-visible,
+.mobile-menu-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* ------ Responsive Styles ------ */
+
+/* Tablet and smaller desktop - kept the same */
+@media (max-width: 1024px) {
+    .header-content {
+        padding: 0 var(--spacing-sm);
+    }
+    
+    .main-nav ul {
+        gap: var(--spacing-md);
+    }
+
+    .nav-link {
+        padding: var(--spacing-md) var(--spacing-md);
+    }
+}
+
+/* Mobile Navigation - kept the same */
+@media (max-width: 835px) {
+    .main-header {
+        width: 95%;
+        padding: var(--spacing-sm);
+        top: 10px;
+    }
+    
+    .header-content {
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    /* Show mobile menu button */
+    .mobile-menu-toggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        order: 2;
+    }
+    
+    /* Navigation container for mobile - Enhanced with proper visibility */
+    .nav-container {
+        flex-basis: 100%;
+        order: 3;
+        width: 100%;
+        margin-top: 0;
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        visibility: hidden;
+        z-index: 999;
+        transition: max-height 0.3s ease, opacity 0.3s ease, visibility 0.3s ease, margin-top 0.3s ease;
+    }
+    
+    /* Show navigation when mobile menu is active - Fixed visibility */
+    .header-content.menu-active .nav-container,
+    .nav-container.nav-visible {
+        display: block !important;
+        max-height: 400px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        margin-top: 15px !important;
+        z-index: 1001 !important;
+    }
+    
+    /* Navigation styling for mobile */
+    .main-nav {
+        width: 100%;
+        background-color: var(--header-bg);
+        border-top: 1px solid var(--header-border);
+        padding-top: var(--spacing-md);
+        margin-top: 5px;
+    }
+    
+    .main-nav ul {
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+    
+    .nav-link {
+        padding: var(--spacing-sm) var(--spacing-lg);
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        /* Enhanced mobile touch targets */
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+    
+    .status-badge {
+        position: absolute;
+        right: var(--spacing-sm);
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    /* Adjust active state for better mobile visibility */
+    .nav-link.active {
+        border-bottom: none;
+        border-left: 3px solid var(--primary-color);
+        padding-left: calc(var(--spacing-lg) - 3px);
+    }
+    
+    /* Ensure hamburger button is very visible */
+    .bar {
+        height: 3px;
+        margin: 1px 0;
+        background-color: var(--primary-color);
+    }
+}
+
+/* Small phones - kept the same */
+@media (max-width: 480px) {
+    .main-header {
+        width: 100%;
+        border-radius: 0;
+        margin: 0;
+        top: 0;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+    }
+    
+    .logo {
+        font-size: 1.2rem;
+    }
+    
+    /* Make mobile menu even more prominent */
+    .mobile-menu-toggle {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* ------ Accessibility ------ */
+
+/* Reduced Motion - consolidated */
+@media (prefers-reduced-motion: reduce) {
+    .main-header,
+    .nav-link,
+    .nav-link::after,
+    .mobile-menu-toggle .bar,
+    .main-nav {
+        transition: none !important;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+}
+
+/* High Contrast Mode - kept the same */
+@media (prefers-contrast: high) {
+    .nav-link.disabled {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .status-badge {
+        background: var(--primary-color);
+        color: var(--bg-color);
+    }
+    
+    .nav-link.active {
+        border-bottom: 3px solid var(--primary-color);
+    }
+    
+    .bar {
+        background-color: white;
+        height: 3px;
+    }
+}
+
+/* Print styles - kept the same */
+@media print {
+    .main-header {
+        position: static;
+        box-shadow: none;
+        border: 1px solid #999;
+        max-width: 100%;
+    }
+    
+    .nav-link {
+        color: #000;
+    }
+    
+    .nav-link.active {
+        font-weight: bold;
+    }
+    
+    .mobile-menu-toggle {
+        display: none;
+    }
+}
+
+/* Ensure menu is always visible above a certain width and logo is hidden on desktop */
+@media (min-width: 836px) {
+    .logo {
+        display: none;
+    }
+    .nav-container {
+        display: flex !important;
+    }
+}
+
+@media (max-width: 835px) {
+    .logo {
+        display: block;
+    }
+}
+
+/* For older browsers that don't support backdrop-filter */
+@supports not (backdrop-filter: blur(8px)) {
+    .main-header {
+        background-color: rgba(15, 15, 15, 0.98);
+    }
+}
+
+/* ------ Golden Rules & Game Controls ------ */
+.golden-rules-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-left: var(--spacing-md);
+}
+
+.golden-rules-btn, .game-launch-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    color: var(--text-color);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 36px;
+}
+
+.golden-rules-btn:hover, .game-launch-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+}
+
+.golden-rules-btn:active, .game-launch-btn:active {
+    transform: translateY(0);
+}
+
+.rules-icon, .game-icon {
+    font-size: 1.1em;
+}
+
+.rules-text, .game-text {
+    font-weight: 500;
+}
+
+.rules-status {
+    background: var(--success-bg);
+    color: #10B981;
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.rules-status.active {
+    background: var(--primary-color);
+    color: var(--bg-color);
+}
+
+.rules-status.error {
+    background: var(--error-bg);
+    color: #EF4444;
+}
+
+/* Mobile adjustments for controls */
+@media (max-width: 835px) {
+    .golden-rules-controls {
+        order: 1;
+        margin-left: auto;
+        margin-right: var(--spacing-sm);
+        gap: var(--spacing-xs);
+    }
+    
+    .golden-rules-btn, .game-launch-btn {
+        padding: var(--spacing-xs);
+        min-width: 40px;
+        justify-content: center;
+    }
+    
+    .rules-text, .game-text {
+        display: none;
+    }
+    
+    .rules-status {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 0.6em;
+        min-width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .golden-rules-controls {
+        gap: 4px;
+    }
+    
+    .golden-rules-btn, .game-launch-btn {
+        min-width: 36px;
+        padding: 6px;
+    }
+}

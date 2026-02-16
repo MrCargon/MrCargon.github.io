@@ -1,0 +1,272 @@
+/* contactPage.css */
+
+/* VIEWPORT-FIRST: Main Section Container - Fixed Viewport Layout */
+.main-section.contact-section {
+    max-width: var(--content-width);
+    width: 92%;
+    margin: 0 auto;
+    padding: var(--spacing-md) 0;
+    overflow: hidden; /* VIEWPORT-FIRST: Page contained within bounds */
+    height: calc(100vh - 110px); /* FIXED: Exact height for viewport containment */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Section Title - Optimized for viewport */
+.section-title {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
+    position: relative;
+    display: inline-block;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
+}
+
+  
+  /* Contact Grid - Fixed Viewport Layout */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background-color: var(--panel-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-medium);
+    overflow: hidden;
+    flex: 1; /* Take remaining space in main section */
+    min-height: 0; /* Allow shrinking */
+  }
+
+/* Left column - Info panel */
+.contact-info {
+    background-color: var(--panel-bg);
+    padding: var(--spacing-xl);
+    position: relative;
+    border-right: 1px solid rgba(255, 165, 0, 0.1);
+}
+
+.contact-info h3 {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    font-size: 1.2rem;
+    font-weight: 600;
+    position: relative;
+    padding-bottom: var(--spacing-xs);
+    display: inline-block;
+}
+
+.contact-info h3::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary-color);
+}
+
+.contact-info p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-xl);
+    color: var(--text-color);
+}
+
+/* Social connection section */
+.social-connect {
+    margin-top: auto;
+}
+
+.social-connect h4 {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.social-links {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+/* Social link buttons - Matching screenshot */
+.social-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-color);
+    background: rgba(30, 30, 30, 0.6);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition);
+    border: 1px solid rgba(255, 165, 0, 0.1);
+}
+
+.social-link:hover,
+.social-link:focus {
+    transform: translateY(-2px);
+    background: var(--hover-bg);
+    border-color: var(--border-color);
+    color: var(--primary-color);
+}
+
+.social-link svg {
+    margin-right: var(--spacing-sm);
+}
+
+/* Right column - Form */
+.contact-form {
+    background-color: rgba(25, 25, 25, 0.45);
+    padding: var(--spacing-sm);
+}
+
+/* Form field groups */
+.form-group {
+    margin-bottom: var(--spacing-sm);
+}
+
+.form-group label {
+    display: block;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+}
+
+/* Form inputs */
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: rgba(40, 40, 40, 0.8);
+    border: 1px solid rgba(60, 60, 60, 0.8);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-color);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.2);
+    background: rgba(50, 50, 50, 0.8);
+}
+
+/* Submit button - Matching screenshot */
+.submit-button {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--primary-color);
+    color: #000;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.submit-button:hover,
+.submit-button:focus {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+}
+
+.submit-button:active {
+    transform: translateY(1px);
+}
+
+/* Form validation and feedback */
+.error-message {
+    color: #ff4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    min-height: 1.25rem;
+}
+
+.success-message {
+    color: #4CAF50;
+    padding: var(--spacing-sm);
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    text-align: center;
+    margin-top: var(--spacing-sm);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 968px) {
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .contact-info {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 165, 0, 0.1);
+    }
+}
+
+@media (max-width: 768px) {
+    .main-section.contact-section {
+        width: 95%;
+    }
+    
+    .contact-info,
+    .contact-form {
+        padding: var(--spacing-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .contact-info,
+    .contact-form {
+        padding: var(--spacing-sm);
+    }
+    
+    .social-links {
+        flex-direction: column;
+    }
+    
+    .social-link {
+        width: 100%;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .social-link,
+    .submit-button,
+    .form-group input,
+    .form-group textarea {
+        transition: none;
+    }
+    
+    .social-link:hover,
+    .submit-button:hover,
+    .submit-button:focus {
+        transform: none;
+    }
+}
+
+/* Focus states for accessibility */
+.social-link:focus-visible,
+.submit-button:focus-visible,
+.form-group input:focus-visible,
+.form-group textarea:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}

@@ -1,0 +1,1287 @@
+/* mainPage.css - Elegant Pop-up System */
+
+.main-section.hero-section {
+    max-width: var(--content-width, 900px);
+    width: 96%;
+    margin: 0 auto;
+    padding: var(--spacing-md, 1rem) 0;
+    overflow: hidden;
+    height: calc(100vh - 110px);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* VIEWPORT-FIRST: All pages contained within viewport bounds */
+.main-section:not(.hero-section) {
+    max-width: var(--content-width-wide, 1200px);
+    width: 96%;
+    margin: 0 auto;
+    padding: var(--spacing-md, 1rem) 0;
+    height: calc(100vh - 110px);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hero content - Contained within panel */
+.hero-content {
+    background-color: rgba(20, 20, 20, 0.95);
+    border-radius: var(--border-radius, 35px);
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+    box-shadow: var(--shadow-medium, 0 4px 8px rgba(0, 0, 0, 0.2));
+    overflow: hidden;
+    padding: var(--spacing-lg, 2rem);
+    width: 100%;
+    margin: 0 auto;
+}
+
+.hero-title {
+    font-size: var(--title-font-size, clamp(1.8rem, 4vw, 2.5rem));
+    color: var(--primary-color, #FFA500);
+    margin-bottom: var(--spacing-xs, 0.25rem);
+    line-height: 1.2;
+}
+
+.hero-subtitle {
+    font-size: var(--subtitle-font-size, clamp(1.2rem, 2vw, 1.8rem));
+    color: var(--text-color, #ffffff);
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* Space Exploration Container - Maximum space for 3D */
+.space-exploration-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md, 1rem);
+    flex: 1;
+    position: relative;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+/* Selection progress bar */
+.selection-progress {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    margin-top: -15px;
+    z-index: 5;
+}
+
+.progress-indicator {
+    height: 100%;
+    width: 11.11%; /* 1/9 planets */
+    background: var(--primary-color, #FFA500);
+    border-radius: 2px;
+    position: absolute;
+    left: 0;
+    transition: var(--transition, all 0.3s ease);
+}
+
+/* Planet Selector - Modified for better fit */
+.planet-selector-wrapper {
+    position: relative;  /* REQUIRED: anchor for time-panel-container absolute positioning */
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow: hidden;    /* Prevents content overflow on narrow viewports */
+    gap: var(--spacing-sm, 0.5rem);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background-color: rgba(20, 20, 20, 0.65);
+    border-radius: 30px;
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+    box-shadow: var(--shadow-light, 0 2px 4px rgba(0, 0, 0, 0.1));
+    z-index: 10;
+}
+
+/* Planet selector scrolling - Optimized with Safari compatibility */
+.planet-selector {
+    display: flex;
+    gap: var(--spacing-sm);
+    overflow-x: auto;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Hide scrollbar for clean look */
+    flex-grow: 1;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    transform: translateZ(0); /* Hardware acceleration */
+}
+
+/* Safari and webkit scrollbar compatibility - enhanced */
+.planet-selector::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for webkit browsers */
+    width: 0px;
+    height: 0px;
+    background: transparent;
+}
+
+.planet-selector::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.planet-selector::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+.planet-selector::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Planet Buttons - Standardized style */
+.planet-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    border: none;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.planet-btn:hover {
+    background: var(--hover-bg);
+    transform: translateY(-2px);
+}
+
+.planet-btn.active {
+    background: var(--primary-color);
+    color: var(--bg-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
+}
+
+.planet-icon {
+    font-size: 1.2em;
+}
+
+/* Scroll Indicators - Standardized */
+.scroll-indicator {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-color);
+    flex-shrink: 0;
+}
+
+.scroll-indicator:hover {
+    background: var(--primary-color);
+    color: var(--bg-color);
+}
+
+
+/* Action Buttons Row - Centered below planet bar */
+.action-buttons-row {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-sm, 0.5rem);
+    padding: var(--spacing-xs, 0.25rem) 0;
+    z-index: 10;  /* Same level as planet-selector-wrapper */
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid transparent;
+    border-radius: 16px;
+    color: var(--text-color, #fff);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.action-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.action-btn.active {
+    background: rgba(255, 165, 0, 0.2);
+    border-color: var(--primary-color, #ffa500);
+}
+
+.action-btn kbd {
+    background: var(--primary-color, #FFA500);
+    color: var(--bg-color, rgba(0, 0, 0, 0.90));
+    padding: 0.15rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: bold;
+    min-width: 16px;
+    text-align: center;
+}
+
+.action-btn span {
+    font-size: 0.75rem;
+    color: var(--text-color-muted, rgba(255, 255, 255, 0.8));
+}
+
+/* Planet Info Panel - Consistent card style */
+.planet-info-panel {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background: rgba(20, 20, 20, 0.6);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-md);
+    transition: var(--transition);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    max-width: 650px;
+    margin: 0 auto;
+    box-shadow: var(--shadow-medium);
+}
+
+
+.info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.planet-title {
+    color: var(--primary-color);
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin: 0;
+}
+
+.planet-description {
+    color: var(--text-color);
+    font-size: 1rem;
+    line-height: 1.6;
+    opacity: 0.9;
+    margin-bottom: var(--spacing-md);
+}
+
+/* Planet Stats - Standardized grid and cards */
+.planet-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-sm);
+}
+
+.planet-details {
+    overflow: hidden;
+    max-height: 500px; /* Arbitrary large value */
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.planet-details.collapsed {
+    max-height: 0;
+}
+
+.toggle-info-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.toggle-info-btn:hover {
+    background: var(--primary-color);
+    color: var(--bg-color);
+}
+
+.toggle-info-btn .icon {
+    transition: var(--transition);
+}
+
+.toggle-info-btn.collapsed .icon {
+    transform: rotate(180deg);
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.07);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition);
+    border: 1px solid transparent;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--border-color);
+}
+
+.stat-card label {
+    color: var(--secondary-color);
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.stat-value {
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+/* Camera Controls - Enhanced and more visible */
+.camera-controls {
+    position: fixed;
+    right: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    background: rgba(20, 20, 20, 0.85);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-color);
+    z-index: 100;
+    box-shadow: var(--shadow-medium);
+    min-width: 180px;
+}
+
+/* Camera Controls Header */
+.camera-controls::before {
+    content: "Camera Controls";
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--border-color);
+    display: block;
+}
+
+.control-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    color: var(--text-color);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--spacing-sm);
+    font-size: 0.9rem;
+    min-height: 36px;
+}
+
+.control-btn:hover {
+    background: var(--hover-bg);
+    color: var(--primary-color);
+    transform: translateX(2px);
+}
+
+.control-btn.active {
+    background: var(--primary-color);
+    color: var(--bg-color);
+}
+
+.control-btn .icon {
+    font-size: 1.1rem;
+    min-width: 16px;
+    text-align: center;
+}
+
+/* Control button labels */
+.control-btn::after {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+#reset-camera::after {
+    content: "Reset View";
+}
+
+#toggle-rotation::after {
+    content: "Planet Rotation";
+}
+
+#toggle-orbit-mode::after {
+    content: "Auto Orbit";
+}
+
+#toggle-follow-rotation::after {
+    content: "Follow Planet";
+}
+
+#toggle-orbit::after {
+    content: "Orbit Lines";
+}
+
+/* Tooltip enhancement for better UX */
+.control-btn {
+    position: relative;
+}
+
+.tooltip-text {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--text-color);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+    margin-right: var(--spacing-sm);
+    z-index: 1000;
+}
+
+.control-btn:hover .tooltip-text {
+    opacity: 1;
+}
+
+/* Games Section - New interactive games showcase */
+.games-section {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg) 0;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background: rgba(20, 20, 20, 0.6);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-medium);
+}
+
+.games-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+}
+
+.games-title {
+    color: var(--primary-color);
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    text-align: center;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
+}
+
+.games-subtitle {
+    color: var(--text-color);
+    font-size: 1.1rem;
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+    opacity: 0.9;
+    line-height: 1.5;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+.game-card {
+    /* UNIFIED: Use global glass-card system */
+    padding: var(--spacing-lg);
+    position: relative;
+    overflow: visible;
+}
+
+.game-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.15),
+        0 8px 32px rgba(255, 165, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 165, 0, 0.4);
+    background: linear-gradient(145deg, 
+        rgba(255, 255, 255, 0.12) 0%, 
+        rgba(255, 255, 255, 0.06) 100%);
+}
+
+.game-card.starbucks-game {
+    border-color: rgba(120, 180, 120, 0.3);
+    background: linear-gradient(145deg, 
+        rgba(120, 180, 120, 0.05) 0%, 
+        rgba(255, 255, 255, 0.04) 100%);
+}
+
+.game-card.starbucks-game:hover {
+    border-color: rgb(120, 180, 120);
+    box-shadow: 
+        0 20px 40px rgba(120, 180, 120, 0.15),
+        0 8px 32px rgba(120, 180, 120, 0.1),
+        inset 0 1px 0 rgba(120, 180, 120, 0.1);
+    background: linear-gradient(145deg, 
+        rgba(120, 180, 120, 0.08) 0%, 
+        rgba(255, 255, 255, 0.06) 100%);
+}
+
+.game-icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+    display: block;
+    text-align: center;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.game-info h3 {
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.3;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.game-info p {
+    color: var(--text-color);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.9;
+}
+
+.game-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.feature-tag {
+    background: linear-gradient(135deg, 
+        rgba(255, 165, 0, 0.12) 0%, 
+        rgba(255, 165, 0, 0.08) 100%);
+    color: var(--primary-color);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 165, 0, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.feature-tag:hover {
+    background: linear-gradient(135deg, 
+        rgba(255, 165, 0, 0.2) 0%, 
+        rgba(255, 165, 0, 0.15) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 165, 0, 0.15);
+    border-color: rgba(255, 165, 0, 0.4);
+}
+
+.play-game-btn {
+    /* UNIFIED: Extend global btn-primary system */
+    width: 100%;
+    font-size: 1.1rem;
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+
+.btn-icon {
+    font-size: 1.2rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.btn-text {
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design - Consistent with About page */
+@media (max-width: 968px) {
+    .planet-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .camera-controls {
+        position: relative;
+        right: auto;
+        top: auto;
+        transform: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: var(--spacing-md);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        background: rgba(20, 20, 20, 0.7);
+        min-width: auto;
+        width: 100%;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .camera-controls::before {
+        width: 100%;
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .control-btn {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .control-btn::after {
+        display: none; /* Hide labels on mobile to save space */
+    }
+}
+
+@media (max-width: 768px) {
+    .main-section.hero-section {
+        width: 95%;
+        margin: var(--spacing-sm) auto;
+    }
+
+    .hero-header {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .planet-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .camera-controls {
+        padding: var(--spacing-sm);
+    }
+
+    .control-btn {
+        min-width: 100px;
+        padding: var(--spacing-xs);
+        font-size: 0.8rem;
+    }
+
+    .action-btn span {
+        display: none;
+    }
+
+    .scroll-indicator {
+        display: none;  /* Touch swipe works, arrows not needed */
+    }
+}
+
+@media (max-width: 580px) {
+    .planet-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .planet-selector-wrapper {
+        border-radius: 20px;
+    }
+
+    .planet-btn {
+        padding: var(--spacing-xs) var(--spacing-xs);
+        font-size: 0.85rem;
+    }
+
+    .planet-icon {
+        font-size: 1em;
+    }
+
+    .planet-info-panel {
+        padding: var(--spacing-sm);
+    }
+
+    .camera-controls {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+
+    .control-btn {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .action-btn {
+        padding: 0.2rem 0.4rem;
+    }
+
+    .action-btn kbd {
+        font-size: 0.6rem;
+        padding: 0.1rem 0.25rem;
+    }
+}
+
+/* For very small screens */
+@media (max-width: 400px) {
+    .planet-name {
+        display: none; /* Show only icons on very small screens */
+    }
+    
+    .planet-btn {
+        width: 32px;
+        justify-content: center;
+    }
+}
+
+/* Accessibility and Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+    .planet-selector {
+        scroll-behavior: auto;
+    }
+
+    .planet-btn,
+    .control-btn,
+    .stat-card,
+    .planet-details,
+    .tooltip-text {
+        transition: none;
+    }
+    
+    .planet-btn:hover,
+    .control-btn:hover,
+    .stat-card:hover {
+        transform: none;
+    }
+}
+
+/* ========================================
+   SIDE POPUP SYSTEM - Main Page Specific
+   ======================================== */
+
+/* Side Popup Base Styles */
+.side-popup {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 350px;
+    max-height: 80vh;
+    z-index: var(--z-popover, 1000);
+    transition: all var(--transition, 0.3s ease);
+}
+
+.side-popup.left-popup {
+    left: -320px; /* Hidden by default */
+}
+
+.side-popup.right-popup {
+    right: -320px; /* Hidden by default */
+}
+
+.side-popup.active.left-popup {
+    left: var(--spacing-md, 1rem);
+}
+
+.side-popup.active.right-popup {
+    right: var(--spacing-md, 1rem);
+}
+
+/* Popup Tab (Collapsed State) */
+.popup-tab {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 120px;
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.08) 0%,
+        rgba(255, 165, 0, 0.03) 30%,
+        rgba(255, 255, 255, 0.02) 100%);
+    -webkit-backdrop-filter: var(--blur-md, blur(8px));
+    backdrop-filter: var(--blur-md, blur(8px));
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+    cursor: pointer;
+    transition: var(--transition, all 0.3s ease);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs, 0.25rem);
+    -webkit-user-select: none;
+    user-select: none;
+    box-shadow: var(--shadow-md, 0 4px 8px rgba(0, 0, 0, 0.2));
+    user-select: none;
+    box-shadow: var(--shadow-md, 0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.left-popup .popup-tab {
+    right: -30px;
+    border-radius: 0 var(--radius-md, 12px) var(--radius-md, 12px) 0;
+}
+
+.right-popup .popup-tab {
+    left: -30px;
+    border-radius: var(--radius-md, 12px) 0 0 var(--radius-md, 12px);
+}
+
+.popup-tab:hover {
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.12) 0%, 
+        rgba(255, 165, 0, 0.08) 30%, 
+        rgba(255, 255, 255, 0.06) 100%);
+    border-color: var(--border-hover, rgba(255, 165, 0, 0.3));
+    transform: translateY(-50%) scale(1.05);
+}
+
+.popup-tab .tab-icon {
+    font-size: 1.5rem;
+    color: var(--primary-color, #FFA500);
+    margin-bottom: var(--spacing-xs, 0.25rem);
+}
+
+.popup-tab .tab-text {
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-color, #ffffff);
+    opacity: 0.9;
+}
+
+.popup-tab .tab-arrow {
+    font-size: 0.8rem;
+    color: var(--primary-color, #FFA500);
+    opacity: 0.7;
+    transition: var(--transition, all 0.3s ease);
+}
+
+.left-popup .popup-tab .tab-arrow {
+    transform: rotate(0deg);
+}
+
+.right-popup .popup-tab .tab-arrow {
+    transform: rotate(180deg);
+}
+
+.side-popup.active .popup-tab .tab-arrow {
+    opacity: 1;
+}
+
+.side-popup.active.left-popup .popup-tab .tab-arrow {
+    transform: rotate(180deg);
+}
+
+.side-popup.active.right-popup .popup-tab .tab-arrow {
+    transform: rotate(0deg);
+}
+
+/* Popup Content (Expanded State) */
+.popup-content {
+    background: var(--panel-bg-solid, rgba(20, 20, 20, 0.95));
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+    border-radius: var(--radius-lg, 16px);
+    -webkit-backdrop-filter: var(--backdrop-blur, blur(10px) saturate(1.4));
+    backdrop-filter: var(--backdrop-blur, blur(10px) saturate(1.4));
+    box-shadow: var(--shadow-xl, 0 16px 32px rgba(0, 0, 0, 0.4));
+    display: none;
+    flex-direction: column;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.side-popup.active .popup-content {
+    display: flex;
+}
+
+.popup-header {
+    padding: var(--spacing-md, 1rem) var(--spacing-lg, 2rem);
+    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, 
+        rgba(255, 165, 0, 0.05) 0%, 
+        transparent 100%);
+}
+
+.popup-content h2,
+.popup-content h3 {
+    color: var(--primary-color, #FFA500);
+    margin: 0;
+    font-size: var(--font-size-xl, 1.25rem);
+    font-weight: 700;
+}
+
+.close-popup-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-color, #ffffff);
+    transition: var(--transition, all 0.3s ease);
+    font-size: 1rem;
+}
+
+.close-popup-btn:hover {
+    background: rgba(239, 68, 68, 0.8);
+    color: white;
+    transform: scale(1.1);
+}
+
+.popup-content .popup-body {
+    padding: var(--spacing-md, 1rem) var(--spacing-lg, 2rem);
+    overflow-y: auto;
+    flex: 1;
+}
+
+
+/* Time Panel - Below action buttons */
+.time-panel-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    z-index: 15;  /* See Z-Index Stack in spec header */
+}
+
+.time-panel-container.collapsed {
+    display: none;
+}
+
+/* Control Groups in Camera Controls */
+.control-group {
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.group-label {
+    color: var(--secondary-color, #FF8C00);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm, 0.5rem);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs, 0.25rem);
+}
+
+.control-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+    border-radius: var(--radius-sm, 8px);
+    padding: var(--spacing-sm, 0.5rem);
+    color: var(--text-color, #ffffff);
+    cursor: pointer;
+    transition: var(--transition, all 0.3s ease);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--spacing-sm, 0.5rem);
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.control-btn:hover {
+    background: var(--hover-bg, rgba(255, 165, 0, 0.1));
+    border-color: var(--border-hover, rgba(255, 165, 0, 0.3));
+    transform: translateX(2px);
+}
+
+.control-btn.active {
+    background: var(--primary-color, #FFA500);
+    color: var(--bg-color, rgba(0, 0, 0, 0.90));
+    border-color: var(--primary-color, #FFA500);
+}
+
+.control-btn .icon {
+    font-size: 1rem;
+    min-width: 16px;
+    text-align: center;
+}
+
+.btn-label {
+    font-weight: 500;
+}
+
+/* Responsive Design for Popups */
+@media (max-width: 768px) {
+    .side-popup {
+        width: min(320px, 90vw);
+        max-height: 70vh;
+    }
+
+    .side-popup.left-popup {
+        left: -280px;
+    }
+
+    .side-popup.right-popup {
+        right: -280px;
+    }
+
+    .side-popup.active.left-popup,
+    .side-popup.active.right-popup {
+        left: var(--spacing-sm, 0.5rem);
+        right: var(--spacing-sm, 0.5rem);
+        width: calc(100vw - 1rem);
+        transform: translateY(-50%);
+    }
+
+    .time-panel-container {
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .popup-header {
+        padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    }
+
+    .popup-content .popup-body {
+        padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    }
+
+    .time-panel-container {
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+}
+
+/* ========================================
+   UNIFIED: Use global modal and side-popup systems from index.css
+   ======================================== */
+
+/* Add fallback values for remaining CSS variables */
+.planet-btn {
+    gap: var(--spacing-xs, 0.25rem);
+    color: var(--text-color, #ffffff);
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    transition: var(--transition, all 0.3s ease);
+}
+
+.planet-btn:hover {
+    background: var(--hover-bg, rgba(255, 165, 0, 0.1));
+}
+
+.planet-btn.active {
+    background: var(--primary-color, #FFA500);
+    color: var(--bg-color, rgba(0, 0, 0, 0.90));
+    box-shadow: var(--shadow-light, 0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.scroll-indicator {
+    transition: var(--transition, all 0.3s ease);
+    color: var(--text-color, #ffffff);
+}
+
+.scroll-indicator:hover {
+    background: var(--primary-color, #FFA500);
+    color: var(--bg-color, rgba(0, 0, 0, 0.90));
+}
+
+.planet-info-panel {
+    border-radius: var(--border-radius-sm, 8px);
+    padding: var(--spacing-md, 1rem);
+    transition: var(--transition, all 0.3s ease);
+    box-shadow: var(--shadow-medium, 0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.info-header {
+    margin-bottom: var(--spacing-sm, 0.5rem);
+}
+
+.planet-title {
+    color: var(--primary-color, #FFA500);
+}
+
+.planet-description {
+    color: var(--text-color, #ffffff);
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.planet-stats {
+    gap: var(--spacing-sm, 0.5rem);
+}
+
+.toggle-info-btn {
+    color: var(--text-color, #ffffff);
+    transition: var(--transition, all 0.3s ease);
+}
+
+.toggle-info-btn:hover {
+    background: var(--primary-color, #FFA500);
+    color: var(--bg-color, rgba(0, 0, 0, 0.90));
+}
+
+.stat-card {
+    padding: var(--spacing-sm, 0.5rem);
+    border-radius: var(--border-radius-sm, 8px);
+    transition: var(--transition, all 0.3s ease);
+}
+
+.stat-card:hover {
+    border-color: var(--border-color, rgba(255, 165, 0, 0.2));
+}
+
+.stat-card label {
+    color: var(--secondary-color, #FF8C00);
+    margin-bottom: var(--spacing-xs, 0.25rem);
+}
+
+.stat-value {
+    color: var(--text-color, #ffffff);
+}
+
+.camera-controls {
+    right: var(--spacing-md, 1rem);
+    gap: var(--spacing-sm, 0.5rem);
+    padding: var(--spacing-md, 1rem);
+    border-radius: var(--border-radius-sm, 8px);
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+    box-shadow: var(--shadow-medium, 0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.camera-controls::before {
+    color: var(--primary-color, #FFA500);
+    margin-bottom: var(--spacing-sm, 0.5rem);
+    padding-bottom: var(--spacing-xs, 0.25rem);
+    border-bottom: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+}
+
+.control-btn {
+    padding: var(--spacing-sm, 0.5rem);
+    border-radius: var(--border-radius-sm, 8px);
+    color: var(--text-color, #ffffff);
+    transition: var(--transition, all 0.3s ease);
+    gap: var(--spacing-sm, 0.5rem);
+}
+
+.control-btn:hover {
+    background: var(--hover-bg, rgba(255, 165, 0, 0.1));
+    color: var(--primary-color, #FFA500);
+}
+
+.control-btn.active {
+    background: var(--primary-color, #FFA500);
+    color: var(--bg-color, rgba(0, 0, 0, 0.90));
+}
+
+.tooltip-text {
+    color: var(--text-color, #ffffff);
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    border-radius: var(--border-radius-sm, 8px);
+    transition: var(--transition, all 0.3s ease);
+    margin-right: var(--spacing-sm, 0.5rem);
+}
+
+.games-section {
+    margin-top: var(--spacing-xl, 3rem);
+    padding: var(--spacing-lg, 2rem) 0;
+    border-radius: var(--border-radius, 35px);
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.2));
+    box-shadow: var(--shadow-medium, 0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.games-container {
+    padding: 0 var(--spacing-md, 1rem);
+}
+
+.games-title {
+    color: var(--primary-color, #FFA500);
+    margin-bottom: var(--spacing-sm, 0.5rem);
+}
+
+.games-subtitle {
+    color: var(--text-color, #ffffff);
+    margin-bottom: var(--spacing-xl, 3rem);
+}
+
+.games-grid {
+    gap: var(--spacing-lg, 2rem);
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.game-card {
+    padding: var(--spacing-lg, 2rem);
+}
+
+.game-icon {
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.game-info h3 {
+    color: var(--primary-color, #FFA500);
+    margin-bottom: var(--spacing-sm, 0.5rem);
+}
+
+.game-info p {
+    color: var(--text-color, #ffffff);
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.game-features {
+    gap: var(--spacing-sm, 0.5rem);
+    margin-bottom: var(--spacing-lg, 2rem);
+}
+
+.feature-tag {
+    color: var(--primary-color, #FFA500);
+}
+
+.play-game-btn {
+    padding: var(--spacing-md, 1rem) var(--spacing-lg, 2rem);
+}
+
+
+/* Focus States - Consistent */
+.planet-btn:focus-visible,
+.control-btn:focus-visible,
+.scroll-indicator:focus-visible,
+.toggle-info-btn:focus-visible,
+.popup-tab:focus-visible,
+.close-popup-btn:focus-visible {
+    outline: 2px solid var(--primary-color, #FFA500);
+    outline-offset: 2px;
+}
+
+/* Smooth scroll behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Ensure pop-ups don't interfere with page content */
+.space-exploration-container {
+    position: relative;
+    z-index: 1;
+}

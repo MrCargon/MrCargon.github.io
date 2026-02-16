@@ -1,0 +1,375 @@
+{
+  "scaleLevels": [
+    {
+      "level": 1,
+      "name": "Solar System",
+      "scaleUnits": 350,
+      "realDistance": "~50 AU",
+      "cameraDistance": 400,
+      "cameraFarPlane": 2000,
+      "transitionDuration": 1500,
+      "description": "Our solar system with planets and Kuiper Belt",
+      "keyObjects": [
+        {
+          "name": "Sun",
+          "distance": 0,
+          "size": 10,
+          "color": 0xfdb813
+        },
+        {
+          "name": "Mercury",
+          "distance": 39,
+          "size": 2,
+          "color": 0x8c7853
+        },
+        {
+          "name": "Venus",
+          "distance": 72,
+          "size": 3.8,
+          "color": 0xffc649
+        },
+        {
+          "name": "Earth",
+          "distance": 100,
+          "size": 4,
+          "color": 0x2233ff
+        },
+        {
+          "name": "Mars",
+          "distance": 152,
+          "size": 2.1,
+          "color": 0xdc143c
+        },
+        {
+          "name": "Jupiter",
+          "distance": 260,
+          "size": 8,
+          "color": 0xdaa520
+        },
+        {
+          "name": "Saturn",
+          "distance": 380,
+          "size": 7,
+          "color": 0xfad5a5
+        },
+        {
+          "name": "Uranus",
+          "distance": 480,
+          "size": 5,
+          "color": 0x4fd0e0
+        },
+        {
+          "name": "Neptune",
+          "distance": 560,
+          "size": 5,
+          "color": 0x4169e1
+        }
+      ],
+      "labels": [
+        {
+          "text": "Inner Planets",
+          "position": [100, 50, 0]
+        },
+        {
+          "text": "Outer Planets",
+          "position": [400, 80, 0]
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "name": "Oort Cloud",
+      "scaleUnits": 2500,
+      "realDistance": "~100,000 AU",
+      "cameraDistance": 3000,
+      "cameraFarPlane": 10000,
+      "transitionDuration": 2000,
+      "description": "Boundary of the solar system's gravitational influence",
+      "keyObjects": [
+        {
+          "name": "Solar System",
+          "distance": 0,
+          "size": 20,
+          "color": 0xfdb813,
+          "isCenter": true
+        },
+        {
+          "name": "Oort Cloud Inner Edge",
+          "distance": 1000,
+          "size": 5,
+          "color": 0x888888,
+          "isRing": true,
+          "ringInner": 1000,
+          "ringOuter": 1200
+        },
+        {
+          "name": "Oort Cloud Outer Edge",
+          "distance": 2500,
+          "size": 5,
+          "color": 0x666666,
+          "isRing": true,
+          "ringInner": 2400,
+          "ringOuter": 2500
+        }
+      ],
+      "labels": [
+        {
+          "text": "Oort Cloud Boundary",
+          "position": [2500, 300, 0]
+        },
+        {
+          "text": "100,000 AU from Sun",
+          "position": [2500, 250, 0]
+        }
+      ]
+    },
+    {
+      "level": 3,
+      "name": "Interstellar",
+      "scaleUnits": 5000,
+      "realDistance": "~10 light-years",
+      "cameraDistance": 6000,
+      "cameraFarPlane": 20000,
+      "transitionDuration": 2000,
+      "description": "Nearest stars to our Sun",
+      "keyObjects": [
+        {
+          "name": "Sun",
+          "distance": 0,
+          "size": 30,
+          "color": 0xfdb813,
+          "isCenter": true
+        },
+        {
+          "name": "Alpha Centauri A",
+          "distance": 2700,
+          "size": 28,
+          "color": 0xffdd44
+        },
+        {
+          "name": "Alpha Centauri B",
+          "distance": 2750,
+          "size": 24,
+          "color": 0xffaa44
+        },
+        {
+          "name": "Proxima Centauri",
+          "distance": 2680,
+          "size": 16,
+          "color": 0xff6633
+        },
+        {
+          "name": "Barnard's Star",
+          "distance": 3800,
+          "size": 18,
+          "color": 0xff5522
+        },
+        {
+          "name": "Sirius A",
+          "distance": 5200,
+          "size": 32,
+          "color": 0xaaddff
+        }
+      ],
+      "labels": [
+        {
+          "text": "Alpha Centauri System",
+          "position": [2700, 400, 0]
+        },
+        {
+          "text": "4.24 light-years",
+          "position": [2700, 350, 0]
+        }
+      ]
+    },
+    {
+      "level": 4,
+      "name": "Local Bubble",
+      "scaleUnits": 15000,
+      "realDistance": "~300 light-years",
+      "cameraDistance": 18000,
+      "cameraFarPlane": 50000,
+      "transitionDuration": 2000,
+      "description": "Local stellar neighborhood",
+      "keyObjects": [
+        {
+          "name": "Sun",
+          "distance": 0,
+          "size": 50,
+          "color": 0xfdb813,
+          "isCenter": true
+        }
+      ],
+      "particleField": {
+        "count": 500,
+        "maxDistance": 15000,
+        "minDistance": 500,
+        "size": 3,
+        "color": 0xffffff,
+        "opacity": 0.8
+      },
+      "labels": [
+        {
+          "text": "Local Stellar Neighborhood",
+          "position": [8000, 1000, 0]
+        },
+        {
+          "text": "~300 light-years radius",
+          "position": [8000, 900, 0]
+        }
+      ]
+    },
+    {
+      "level": 5,
+      "name": "Milky Way",
+      "scaleUnits": 50000,
+      "realDistance": "~100,000 light-years",
+      "cameraDistance": 60000,
+      "cameraFarPlane": 150000,
+      "transitionDuration": 2500,
+      "description": "Our galaxy with spiral structure",
+      "keyObjects": [
+        {
+          "name": "Galactic Core",
+          "distance": 0,
+          "size": 200,
+          "color": 0xffeeaa,
+          "isCenter": true,
+          "glow": true
+        }
+      ],
+      "spiralArms": {
+        "armCount": 4,
+        "armWidth": 3000,
+        "innerRadius": 5000,
+        "outerRadius": 50000,
+        "twist": 1.2,
+        "particlesPerArm": 200,
+        "particleSize": 5,
+        "color": 0xccddff,
+        "opacity": 0.6
+      },
+      "particleField": {
+        "count": 1000,
+        "maxDistance": 50000,
+        "minDistance": 5000,
+        "size": 4,
+        "color": 0xffffff,
+        "opacity": 0.5
+      },
+      "labels": [
+        {
+          "text": "Milky Way Galaxy",
+          "position": [25000, 5000, 0]
+        },
+        {
+          "text": "~100,000 light-years diameter",
+          "position": [25000, 4500, 0]
+        },
+        {
+          "text": "Sun's position",
+          "position": [26000, 0, 0]
+        }
+      ]
+    },
+    {
+      "level": 6,
+      "name": "Local Group",
+      "scaleUnits": 100000,
+      "realDistance": "~10 million light-years",
+      "cameraDistance": 120000,
+      "cameraFarPlane": 300000,
+      "transitionDuration": 2500,
+      "description": "Milky Way and nearby galaxies",
+      "keyObjects": [
+        {
+          "name": "Milky Way",
+          "distance": 0,
+          "size": 500,
+          "color": 0xccddff,
+          "isCenter": true,
+          "isGalaxy": true,
+          "glow": true
+        },
+        {
+          "name": "Andromeda (M31)",
+          "distance": 25000,
+          "size": 600,
+          "color": 0xaaccff,
+          "isGalaxy": true,
+          "glow": true
+        },
+        {
+          "name": "Triangulum (M33)",
+          "distance": 30000,
+          "size": 300,
+          "color": 0xbbddff,
+          "isGalaxy": true,
+          "glow": true
+        },
+        {
+          "name": "Large Magellanic Cloud",
+          "distance": 18000,
+          "size": 200,
+          "color": 0xddddff,
+          "isGalaxy": true
+        },
+        {
+          "name": "Small Magellanic Cloud",
+          "distance": 20000,
+          "size": 150,
+          "color": 0xddddff,
+          "isGalaxy": true
+        }
+      ],
+      "labels": [
+        {
+          "text": "Local Group",
+          "position": [50000, 8000, 0]
+        },
+        {
+          "text": "~10 million light-years",
+          "position": [50000, 7500, 0]
+        },
+        {
+          "text": "Andromeda Galaxy",
+          "position": [25000, 3000, 0]
+        }
+      ]
+    }
+  ],
+  "performanceTiers": {
+    "HIGH": {
+      "maxVisibleObjects": 1000,
+      "lodLevels": 3,
+      "particleQuality": 1.0,
+      "labelCount": "all"
+    },
+    "MEDIUM": {
+      "maxVisibleObjects": 500,
+      "lodLevels": 2,
+      "particleQuality": 0.6,
+      "labelCount": "important"
+    },
+    "LOW": {
+      "maxVisibleObjects": 200,
+      "lodLevels": 1,
+      "particleQuality": 0.3,
+      "labelCount": "minimal"
+    }
+  },
+  "citations": [
+    {
+      "source": "Eames, C. & Eames, R. (1977). Powers of Ten. IBM.",
+      "url": "https://www.eamesoffice.com/the-work/powers-of-ten/"
+    },
+    {
+      "source": "ESA Gaia Mission",
+      "url": "https://www.cosmos.esa.int/web/gaia"
+    },
+    {
+      "source": "NASA/JPL Eyes",
+      "url": "https://eyes.nasa.gov/"
+    }
+  ]
+}

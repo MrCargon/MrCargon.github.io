@@ -1,0 +1,190 @@
+/* CRITICAL: CSS Isolation - Reset all inherited styles */
+.tictactoe-game {
+    all: initial;
+
+    display: block;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, hsl(220, 15%, 12%) 0%, hsl(30, 70%, 8%) 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: white;
+    text-align: center;
+    box-sizing: border-box;
+
+    /* CRITICAL: Prevent transform inheritance from portfolio cards */
+    transform: none !important;
+    transition: none !important;
+}
+
+.tictactoe-game * {
+    box-sizing: border-box;
+    transform: none !important;
+}
+
+/* Header */
+.tictactoe-header {
+    margin-bottom: 1rem;
+}
+
+.tictactoe-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #FFA500;
+    margin: 0 0 0.5rem 0;
+}
+
+.tictactoe-turn {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+}
+
+/* Score display */
+.tictactoe-scores {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.score-item {
+    text-align: center;
+}
+
+.score-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.score-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #FFA500;
+    display: block;
+}
+
+/* Board */
+.tictactoe-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 1.5rem auto;
+    max-width: 300px;
+}
+
+/* Cells - 44px minimum for touch per WCAG 2.5.5 */
+.tictactoe-cell {
+    aspect-ratio: 1;
+    min-width: 44px;
+    min-height: 44px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 165, 0, 0.3);
+    border-radius: 8px;
+    font-size: 2.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.tictactoe-cell:hover:not(.occupied) {
+    background: rgba(255, 165, 0, 0.1);
+    border-color: rgba(255, 165, 0, 0.5);
+}
+
+.tictactoe-cell.occupied {
+    cursor: not-allowed;
+}
+
+.tictactoe-cell.x {
+    color: #FFA500;
+}
+
+.tictactoe-cell.o {
+    color: #4FC3F7;
+}
+
+.tictactoe-cell.winning {
+    background: rgba(255, 165, 0, 0.2);
+    animation: winPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes winPulse {
+    from {
+        background: rgba(255, 165, 0, 0.2);
+        transform: scale(1) !important; /* Override isolation */
+    }
+    to {
+        background: rgba(255, 165, 0, 0.4);
+        transform: scale(1.05) !important;
+    }
+}
+
+/* Thinking indicator */
+.tictactoe-thinking {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 0.5rem;
+    min-height: 1.5rem;
+}
+
+/* Buttons */
+.tictactoe-button {
+    background: #FFA500;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.tictactoe-button:hover {
+    background: #FF8C00;
+}
+
+.tictactoe-button:active {
+    background: #E67E00;
+}
+
+/* Welcome screen */
+.tictactoe-welcome {
+    padding: 1rem 0;
+}
+
+.tictactoe-welcome p {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 1.5rem 0;
+    line-height: 1.5;
+}
+
+/* Game over screen */
+.tictactoe-gameover {
+    padding: 1rem 0;
+}
+
+.tictactoe-result {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #FFA500;
+    margin: 0 0 1rem 0;
+}
+
+.tictactoe-gameover p {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 1.5rem 0;
+}

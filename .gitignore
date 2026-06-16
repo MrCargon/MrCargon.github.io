@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# AI agent local config (never commit per vault rule V2)
+.claude/
+.claude/settings.local.json
+
+# Environment / secrets
+.env
+.env.*
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build output
+dist/
+build/
+
+# Internal docs — keep out of the public repo
+ObsidianDocs/

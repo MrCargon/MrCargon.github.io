@@ -45,6 +45,9 @@ class SpaceEnvironment {
         // Camera transition settings
         this.cameraTransitioning = false;
         this.transitionDuration = 1.5; // seconds
+        // FIX C: monotonic per-focus generation token (see focusOnPlanet).
+        this._focusGen = 0;
+        this._transitionRaf = null;
         
         // Auto-orbit settings for when camera is orbiting a planet
         this.autoOrbitSpeed = 0.0005; // Speed of automatic orbiting around planet
@@ -61,6 +64,63 @@ class SpaceEnvironment {
         // Camera state preservation for page transitions
         this.preservedCameraState = null;
         this.shouldPreserveCameraPosition = true; // Enable camera preservation by default
+
+        // ── Explore Earth mode ──────────────────────────────────────────────
+        // Free-look mode: focusing Earth flies in then FREEZES the globe and hands
+        // control to the user (drag to rotate, zoom in close). See enter/exit below.
+        this.exploreMode = false;
+        // Restored on exit so other planets/auto-orbit behave exactly as before.
+        this._preExploreOrbiting = this.orbitingPlanet;
+        this._exploreMinDistance = 0;   // set on enter from Earth radius
+        this._exploreMaxDistance = 0;
+        this.bordersUrl = 'src/assets/geo/country_borders.json';
+        // Per-frame scratch (Rule: no per-frame allocation in the animate loop).
+        this._scratchEarthPos = new THREE.Vector3();
+        this._scratchCamPos = new THREE.Vector3();
+        this._raycaster = new THREE.Raycaster();
+        this._ndc = new THREE.Vector2();
+        this._onExploreClick = (e) => this._handleExploreClick(e);
+        this._onExploreMove = (e) => this._handleExploreHover(e);
+        // Bound Escape handler so it can be added/removed without leaking.
+        this._onExploreKeydown = (e) => {
+            if (e.key === 'Escape' && this.exploreMode) {
+                this.exitExploreMode();
+            }
+        };
+
+        // A1: live reduced-motion flag. When true, the animate loop freezes all
+        // solar-system motion (orbits/spins/asteroids/galaxy) while still
+        // rendering and handling interaction. Kept live via matchMedia 'change'.
+        this.reducedMotion = this.prefersReducedMotion();
+        this._reducedMotionMq = (window.matchMedia)
+            ? window.matchMedia('(prefers-reduced-motion: reduce)')
+            : null;
+        this._onReducedMotionChange = (e) => { this.reducedMotion = !!e.matches; };
+        if (this._reducedMotionMq) {
+            if (this._reducedMotionMq.addEventListener) {
+                this._reducedMotionMq.addEventListener('change', this._onReducedMotionChange);
+            } else if (this._reducedMotionMq.addListener) {
+                this._reducedMotionMq.addListener(this._onReducedMotionChange); // legacy
+            }
+        }
+
+        // P3: pause the RAF loop when the tab is hidden; resume when visible.
+        this._onVisibilityChange = () => {
+            if (document.hidden) {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+            } else if (this.initialized && !this.fallbackMode && this.animationId === null) {
+                // Drain the delta accumulated while hidden so the simulation
+                // doesn't snap forward by the full hidden duration on resume.
+                if (this.clock && this.clock.getDelta) {
+                    this.clock.getDelta();
+                }
+                this.animate();
+            }
+        };
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
     }
     
     async init() {
@@ -231,12 +291,16 @@ class SpaceEnvironment {
             powerPreference: "high-performance"
         });
         this.renderer.setSize(this.width, this.height);
+        // P1: clamp the device pixel ratio so HiDPI screens don't render at 2x-3x
+        // resolution for a decorative background (big perf win, negligible quality
+        // loss). Re-applied in handleResize.
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         this.renderer.setClearColor(0x000011); // Deep space color
-        
-        // Enable shadows for realistic lighting
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.shadowMap.autoUpdate = true;
+
+        // P2: shadows disabled. The sun is a PointLight, so shadows would cost 6
+        // cube-map passes per frame — wasted work for a background scene that
+        // never shows cast shadows. Keep them off here and on the sun light.
+        this.renderer.shadowMap.enabled = false;
         
         // Enhanced tone mapping for realistic space lighting
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -250,6 +314,9 @@ class SpaceEnvironment {
         
         // Add renderer to container
         this.container.appendChild(this.renderer.domElement);
+        // A2: the canvas is decorative (it visually duplicates the HTML content),
+        // so hide it from the accessibility tree.
+        this.renderer.domElement.setAttribute('aria-hidden', 'true');
 
         // Debug renderer settings
         console.log('Renderer lighting config', {
@@ -326,16 +393,10 @@ class SpaceEnvironment {
         // 1. PRIMARY SUN LIGHT - The main star illumination
         this.sunLight = new THREE.PointLight(0xFFFFE0, 0.8, 0, 2); // Warm sunlight color, more realistic intensity
         this.sunLight.position.set(0, 0, 0); // At Sun's position
-        this.sunLight.castShadow = true;
-        
-        // Configure sun shadow properties for realistic shadows
-        this.sunLight.shadow.mapSize.width = 2048;
-        this.sunLight.shadow.mapSize.height = 2048;
-        this.sunLight.shadow.camera.near = 0.1;
-        this.sunLight.shadow.camera.far = 300;
-        this.sunLight.shadow.radius = 4;
-        this.sunLight.shadow.blurSamples = 8;
-        
+        // P2: no shadow casting — PointLight shadows are 6 passes/frame and are
+        // not visible in this background use. Shadow config removed accordingly.
+        this.sunLight.castShadow = false;
+
         // Add sun light to scene
         this.scene.add(this.sunLight);
         console.log('☀️ Primary sun light configured');
@@ -518,8 +579,11 @@ class SpaceEnvironment {
         
         this.camera.aspect = this.width / this.height;
         this.camera.updateProjectionMatrix();
-        
+
         this.renderer.setSize(this.width, this.height);
+        // P1: re-clamp pixel ratio on resize (DPR can change when a window moves
+        // between monitors with different scaling).
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     }
     
     connectUIControls() {
@@ -592,6 +656,11 @@ class SpaceEnvironment {
     resetCamera() {
         // Reset camera to default position
         if (this.camera) {
+            // Exit explore mode first so the globe unfreezes and explore visuals
+            // / panel are torn down before we fly back out. No stuck state.
+            if (this.exploreMode) {
+                this.exitExploreMode(true);
+            }
             this.cameraTransitioning = true;
             this.isAutoOrbiting = false;
             
@@ -615,9 +684,516 @@ class SpaceEnvironment {
         }
     }
     
+    /**
+     * Resolve the Earth planet object (with mesh + radius). Rule 5: 2 asserts.
+     * @returns {Object|null}
+     */
+    getEarthObject() {
+        console.assert(this.solarSystem, 'getEarthObject: solarSystem required');
+        if (!this.solarSystem || !this.solarSystem.getPlanetByName) return null;
+        const earth = this.solarSystem.getPlanetByName('Earth');
+        console.assert(earth === null || typeof earth === 'object', 'getEarthObject: bad result');
+        return (earth && earth.getMesh) ? earth : null;
+    }
+
+    /**
+     * Enter free-look Explore mode on Earth: freeze the globe, hand control to the
+     * user, lock controls.target to Earth, set close zoom bounds, build/show the
+     * graticule + borders, and show the location panel. Rule 4: <=60 lines.
+     * @returns {boolean}
+     */
+    enterExploreMode() {
+        const earth = this.getEarthObject();
+        console.assert(earth, 'enterExploreMode: Earth object required');
+        console.assert(this.controls, 'enterExploreMode: controls required');
+        if (!earth || !this.controls) return false;
+
+        const radius = (earth.data && earth.data.radius) || 2;
+        this.exploreMode = true;
+        this._preExploreOrbiting = this.orbitingPlanet;
+        this.orbitingPlanet = false;
+        this.isAutoOrbiting = false;
+
+        // Freeze the globe so the marker holds still for inspection.
+        if (typeof earth.setFrozen === 'function') earth.setFrozen(true);
+
+        // Hand control to the user, pivoting around Earth's (now static) centre.
+        const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
+        this._exploreMinDistance = radius * 1.08;
+        this._exploreMaxDistance = radius * 12;
+        this.controls.enabled = true;
+        this.controls.minDistance = this._exploreMinDistance;
+        this.controls.maxDistance = this._exploreMaxDistance;
+        // Dolly to a close initial framing (~3x radius) so the grid/borders/marker
+        // are immediately legible — the cinematic ends too far out otherwise. The
+        // user can still freely zoom in/out from here. Reuses scratch (no alloc).
+        const camDir = this._scratchCamPos.copy(this.camera.position).sub(earthPos).normalize();
+        if (camDir.lengthSq() < 1e-6) camDir.set(0, 0, 1);
+        this.camera.position.copy(earthPos).addScaledVector(camDir, radius * 3.0);
+        this.controls.target.copy(earthPos);
+        this.controls.enablePan = false; // two-finger/right-drag pan would drift off the globe
+        this.controls.update();
+        if (this.renderer && this.renderer.domElement) this.renderer.domElement.style.cursor = 'grab';
+
+        // CRITICAL FIX: the WebGL canvas sits at z-index -5 BEHIND #content, so the
+        // page content intercepts every mouse/touch event and OrbitControls never
+        // receives them — the globe can't be rotated/zoomed. Make the content layer
+        // transparent to pointer events during explore so they fall through to the
+        // canvas; the explore panel sets its own pointer-events:auto so its buttons
+        // still work. Restored on exit.
+        // THE core fix: the canvas container lives at z-index -5 (behind BODY), so a
+        // negative-z element never receives pointer events (they hit BODY first) and
+        // OrbitControls can't see the drag. Raise the canvas ABOVE the page during
+        // explore (below the explore panel z=40) so it gets mouse/touch/wheel events.
+        if (this.container) { this._prevContainerZ = this.container.style.zIndex; this.container.style.zIndex = '30'; }
+        const content = document.getElementById('content');
+        if (content) { this._prevContentPE = content.style.pointerEvents; content.style.pointerEvents = 'none'; }
+        // Hide the solar-system side panels (meaningless over a single frozen globe).
+        document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = 'none'; });
+        const hints = document.getElementById('keyboard-hints'); if (hints) hints.style.display = 'none';
+
+        // Build (lazy, once) + show explore overlays. On re-entry the overlays are
+        // already built, so show them directly; only the first time do we await the
+        // borders fetch (otherwise the _bordersRequested short-circuit returns a
+        // still-null borders and they silently never reappear).
+        if (typeof earth.buildGraticule === 'function') {
+            const g = earth.buildGraticule();
+            if (g) g.visible = true;
+        }
+        if (earth.borders) {
+            earth.borders.visible = true;
+        } else if (typeof earth.buildBorders === 'function') {
+            earth.buildBorders(this.bordersUrl).then((b) => {
+                if (b && this.exploreMode) b.visible = true;
+                this._syncExploreToggleButtons();
+            });
+        }
+
+        // Live keyless data layers (ISS, earthquakes, places) — built + shown on enter.
+        if (typeof earth.buildPois === 'function') {
+            const p = earth.buildPois(); if (p) p.visible = true;
+        }
+        if (typeof earth.buildQuakes === 'function') {
+            earth.buildQuakes().then((q) => {
+                if (q && this.exploreMode) q.visible = true;
+                this._syncExploreToggleButtons();
+            });
+        }
+        if (typeof earth.startISS === 'function') {
+            earth.startISS();
+            earth.setLayerVisible('iss', true);
+        }
+        // Click a marker → detail card; hover the surface → country highlight + name.
+        if (typeof earth.buildCountryHover === 'function') earth.buildCountryHover();
+        // Attach to window (not the canvas) so events fire regardless of canvas
+        // z-index / pointer-events; the handlers compute coords from the canvas rect.
+        window.addEventListener('click', this._onExploreClick);
+        window.addEventListener('mousemove', this._onExploreMove);
+
+        this.setupExplorePanel();
+        this._syncExploreToggleButtons();
+        this.announceExplore('Explore Earth mode. Drag to rotate, scroll to zoom. Click markers for details.');
+        console.log('Entered Explore Earth mode');
+        return true;
+    }
+
+    /**
+     * Exit Explore mode: unfreeze Earth, hide explore visuals + panel, restore
+     * orbit defaults and zoom bounds. If skipFlyBack is false, also flies the
+     * camera back out (Escape path); resetCamera passes true and flies itself.
+     * Rule 4: <=60 lines.
+     * @param {boolean} [skipFlyBack=false]
+     * @returns {boolean}
+     */
+    exitExploreMode(skipFlyBack = false) {
+        if (!this.exploreMode) return false;
+        console.assert(this.controls, 'exitExploreMode: controls required');
+        this.exploreMode = false;
+
+        const earth = this.getEarthObject();
+        if (earth) {
+            if (typeof earth.setFrozen === 'function') earth.setFrozen(false);
+            // Hide overlays + restore clouds that the fly-through may have faded.
+            if (earth.graticule) earth.graticule.visible = false;
+            if (earth.borders) earth.borders.visible = false;
+            if (earth.cloudsMesh) {
+                earth.cloudsMesh.visible = true;
+                if (earth.cloudsMesh.material) earth.cloudsMesh.material.opacity = 0.8;
+            }
+            // Stop ISS polling + hide all live data layers.
+            if (typeof earth.stopISS === 'function') earth.stopISS();
+            ['iss', 'quakes', 'pois'].forEach((k) => {
+                if (typeof earth.setLayerVisible === 'function') earth.setLayerVisible(k, false);
+            });
+        }
+
+        // Restore default orbit behaviour + global zoom bounds.
+        this.orbitingPlanet = this._preExploreOrbiting;
+        if (this.controls) {
+            this.controls.enabled = true;
+            this.controls.minDistance = 2;
+            this.controls.maxDistance = 300;
+            this.controls.enablePan = true;
+        }
+        if (this.renderer && this.renderer.domElement) {
+            this.renderer.domElement.style.cursor = '';
+        }
+        window.removeEventListener('click', this._onExploreClick);
+        window.removeEventListener('mousemove', this._onExploreMove);
+        // Restore content pointer-events + the hidden solar-system panels.
+        if (this.container) this.container.style.zIndex = (this._prevContainerZ != null ? this._prevContainerZ : '-5');
+        const content = document.getElementById('content');
+        if (content) content.style.pointerEvents = (this._prevContentPE || '');
+        document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = ''; });
+        const hints = document.getElementById('keyboard-hints'); if (hints) hints.style.display = '';
+        if (this._detailEl) this._detailEl.hidden = true;
+        if (earth && typeof earth.highlightCountry === 'function') earth.highlightCountry(null);
+        if (this._tooltipEl) this._tooltipEl.hidden = true;
+
+        this.teardownExplorePanel();
+        this.announceExplore('Exited Explore Earth mode.');
+        console.log('Exited Explore Earth mode');
+
+        if (!skipFlyBack) {
+            // Escape path: fly back to the default solar-system framing.
+            this.resetCamera();
+        }
+        return true;
+    }
+
+    /**
+     * Smoothly rotate earth.mesh so the SF marker faces the camera (centred).
+     * THE key UX fix for "I can't spot the dot". Instant under reduced-motion.
+     * Rule 4: <=60 lines | Rule 5: asserts.
+     * @returns {boolean}
+     */
+    centerOnSanFrancisco() {
+        const earth = this.getEarthObject();
+        console.assert(earth, 'centerOnSanFrancisco: Earth required');
+        if (!earth || !earth.marker || !this.camera) return false;
+
+        const mesh = earth.getMesh();
+        // Direction from Earth centre toward the camera, in Earth's local frame.
+        const earthPos = mesh.getWorldPosition(this._scratchEarthPos);
+        const toCam = this._scratchCamPos.copy(this.camera.position).sub(earthPos).normalize();
+        // SF marker direction in local space (marker is parented to mesh).
+        const markerLocal = earth.marker.position.clone().normalize();
+        // We rotate the mesh about Y so the marker's longitude faces the camera.
+        const camYaw = Math.atan2(toCam.x, toCam.z);
+        const markerYaw = Math.atan2(markerLocal.x, markerLocal.z);
+        const targetY = mesh.rotation.y + (camYaw - markerYaw);
+
+        if (this.prefersReducedMotion()) {
+            mesh.rotation.y = targetY;
+            console.log('Centered on San Francisco (instant)');
+            return true;
+        }
+        this._animateMeshYaw(mesh, mesh.rotation.y, targetY, 0.8);
+        console.log('Centering on San Francisco');
+        return true;
+    }
+
+    /**
+     * Eased rotate-in-Y helper for centerOnSanFrancisco. Rule 4: <=60 lines.
+     * @param {THREE.Object3D} mesh
+     * @param {number} fromY
+     * @param {number} toY
+     * @param {number} duration - seconds
+     */
+    _animateMeshYaw(mesh, fromY, toY, duration) {
+        console.assert(mesh && mesh.rotation, '_animateMeshYaw: mesh required');
+        console.assert(duration > 0, '_animateMeshYaw: positive duration required');
+        // Cancel any prior yaw animation so rapid "Center on SF" clicks don't spawn
+        // competing rAF loops fighting over mesh.rotation.y.
+        if (this._yawRaf) { cancelAnimationFrame(this._yawRaf); this._yawRaf = null; }
+        const start = this.clock.getElapsedTime();
+        const tick = () => {
+            if (!this.exploreMode) { mesh.rotation.y = toY; this._yawRaf = null; return; }
+            const t = Math.min((this.clock.getElapsedTime() - start) / duration, 1);
+            mesh.rotation.y = fromY + (toY - fromY) * this.easeInOutCubic(t);
+            this._yawRaf = (t < 1) ? requestAnimationFrame(tick) : null;
+        };
+        tick();
+    }
+
+    /**
+     * Cloud fly-through: as the camera nears Earth, fade clouds out so the camera
+     * never sits inside an opaque shell; restore on zoom-out. Called per-frame
+     * only while exploreMode. Reuses scratch vectors (no per-frame alloc).
+     * Rule 4: <=60 lines.
+     * @returns {boolean}
+     */
+    updateExploreClouds() {
+        const earth = this.getEarthObject();
+        if (!earth || !earth.cloudsMesh || !earth.cloudsMesh.material) return false;
+        const radius = (earth.data && earth.data.radius) || 2;
+
+        const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
+        const dist = this.camera.position.distanceTo(earthPos);
+        // Live zoom readout — cached element, no per-frame DOM query/alloc.
+        if (this._distEl) this._distEl.textContent = (dist / radius).toFixed(2) + '× Earth radius';
+        const fadeStart = radius * 2.5;   // begin fading here
+        const hideBelow = radius * 1.3;   // fully hidden below here
+
+        const clouds = earth.cloudsMesh;
+        if (dist <= hideBelow) {
+            clouds.visible = false;
+            return true;
+        }
+        clouds.visible = true;
+        // Lerp opacity 0 (close) → 0.8 (at/above fadeStart).
+        const span = Math.max(fadeStart - hideBelow, 1e-3);
+        const k = Math.max(0, Math.min(1, (dist - hideBelow) / span));
+        clouds.material.opacity = 0.8 * k;
+        return true;
+    }
+
+    /**
+     * Visually-hidden aria-live announcement for explore mode enter/exit.
+     * Reuses the same live region id PageManager uses. Rule 5: 2 asserts.
+     * @param {string} message
+     * @returns {boolean}
+     */
+    announceExplore(message) {
+        console.assert(typeof message === 'string', 'announceExplore: string required');
+        if (typeof document === 'undefined') return false;
+        let region = document.getElementById('planet-live-region');
+        console.assert(region === null || region.nodeType === 1, 'announceExplore: bad region');
+        if (!region) {
+            region = document.createElement('div');
+            region.id = 'planet-live-region';
+            region.setAttribute('aria-live', 'polite');
+            region.setAttribute('aria-atomic', 'true');
+            region.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+            document.body.appendChild(region);
+        }
+        region.textContent = message;
+        return true;
+    }
+
+    /**
+     * Show + wire the explore location panel (SF info, distance readout, Center-
+     * on-SF, Borders/Grid toggles). Idempotent: wires handlers once. Rule 4: <=60.
+     * @returns {boolean}
+     */
+    setupExplorePanel() {
+        if (typeof document === 'undefined') return false;
+        const panel = document.getElementById('explore-panel');
+        console.assert(panel === null || panel.nodeType === 1, 'setupExplorePanel: bad panel');
+        if (!panel) return false;
+        panel.hidden = false;
+        panel.style.display = 'flex';   // [hidden] alone is overridden by inline display; toggle explicitly
+        this._distEl = document.getElementById('explore-distance'); // cache (no per-frame query)
+        document.addEventListener('keydown', this._onExploreKeydown);
+
+        this._detailEl = document.getElementById('explore-detail');
+        this._tooltipEl = document.getElementById('country-tooltip');
+
+        // The canvas is raised to z-index 30 in explore; the panel's z-40 is trapped
+        // inside #content's stacking context (painted below the canvas → unclickable).
+        // Reparent the explore UI to <body> so it's in the root stacking context and
+        // sits above the canvas. Idempotent.
+        [panel, this._detailEl, this._tooltipEl].forEach((el) => {
+            if (el && el.parentElement !== document.body) document.body.appendChild(el);
+        });
+
+        if (!panel.dataset.wired) {
+            const center = document.getElementById('explore-center-sf');
+            const borders = document.getElementById('explore-toggle-borders');
+            const grid = document.getElementById('explore-toggle-grid');
+            const iss = document.getElementById('explore-toggle-iss');
+            const quakes = document.getElementById('explore-toggle-quakes');
+            const places = document.getElementById('explore-toggle-places');
+            if (center) center.addEventListener('click', () => this.centerOnSanFrancisco());
+            if (borders) borders.addEventListener('click', () => this._toggleExploreLayer('borders', borders));
+            if (grid) grid.addEventListener('click', () => this._toggleExploreLayer('graticule', grid));
+            if (iss) iss.addEventListener('click', () => this._toggleDataLayer('iss', iss));
+            if (quakes) quakes.addEventListener('click', () => this._toggleDataLayer('quakes', quakes));
+            if (places) places.addEventListener('click', () => this._toggleDataLayer('pois', places));
+            const exit = document.getElementById('explore-exit');
+            if (exit) exit.addEventListener('click', () => this.exitExploreMode());
+            panel.dataset.wired = '1';
+        }
+        return true;
+    }
+
+    /**
+     * Toggle a lazily-built explore overlay (borders|graticule) + sync its button
+     * aria-pressed/active state. Rule 5: 2 asserts, checks the object exists.
+     * @param {string} layer - 'borders' | 'graticule'
+     * @param {HTMLElement} btn
+     * @returns {boolean}
+     */
+    _toggleExploreLayer(layer, btn) {
+        console.assert(layer === 'borders' || layer === 'graticule', '_toggleExploreLayer: bad layer');
+        const earth = this.getEarthObject();
+        console.assert(earth, '_toggleExploreLayer: Earth required');
+        if (!earth || !earth[layer]) return false;
+        const obj = earth[layer];
+        obj.visible = !obj.visible;
+        if (btn) {
+            btn.classList.toggle('active', obj.visible);
+            btn.setAttribute('aria-pressed', obj.visible ? 'true' : 'false');
+        }
+        return true;
+    }
+
+    // Toggle a live data layer (iss|quakes|pois) by visibility. Rule 5: 2 asserts.
+    _toggleDataLayer(name, btn) {
+        console.assert(typeof name === 'string', '_toggleDataLayer: name required');
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_toggleDataLayer: bad earth');
+        if (!earth || !earth.layers || !earth.layers[name]) return false;
+        const obj = earth.layers[name];
+        obj.visible = !obj.visible;
+        if (btn) {
+            btn.classList.toggle('active', obj.visible);
+            btn.setAttribute('aria-pressed', obj.visible ? 'true' : 'false');
+        }
+        return true;
+    }
+
+    // Raycast a click against the live markers → show a detail card. Rule 4: <=60.
+    _handleExploreClick(event) {
+        if (!this.exploreMode || !this.camera || !this._detailEl) return;
+        const earth = this.getEarthObject();
+        if (!earth || !earth.pickables || !earth.pickables.length) return;
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this._ndc.set(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this._raycaster.setFromCamera(this._ndc, this.camera);
+        const pick = earth.pickables.filter((m) => m.visible && (!m.parent || m.parent.visible));
+        const hits = this._raycaster.intersectObjects(pick, false);
+        if (hits.length) {
+            const u = hits[0].object.userData || {};
+            this._detailEl.innerHTML = '<strong>' + (u.name || 'Marker') + '</strong>'
+                + (u.info ? '<br>' + u.info : '');
+            this._detailEl.hidden = false;
+        } else {
+            this._detailEl.hidden = true;
+        }
+    }
+
+    // Hover the globe → highlight the country under the cursor + show its name.
+    // Raycasts the surface, converts the hit to lat/lng, point-in-polygon lookup.
+    // Rule 4: <=60 lines. Only rebuilds the highlight when the country changes.
+    _handleExploreHover(event) {
+        if (!this.exploreMode || !this.camera) return;
+        const earth = this.getEarthObject();
+        if (!earth || !earth.mesh || typeof earth.countryAt !== 'function') return;
+        // Lazy-cache the tooltip element (robust against panel-setup timing).
+        if (!this._tooltipEl && typeof document !== 'undefined') {
+            this._tooltipEl = document.getElementById('country-tooltip');
+        }
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this._ndc.set(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this.camera.updateMatrixWorld();
+        earth.mesh.updateMatrixWorld();
+        this._raycaster.setFromCamera(this._ndc, this.camera);
+        const hits = this._raycaster.intersectObject(earth.mesh, false);
+        if (!hits.length) {
+            earth.highlightCountry(null);
+            if (this._tooltipEl) this._tooltipEl.hidden = true;
+            return;
+        }
+        const local = earth.mesh.worldToLocal(hits[0].point.clone());
+        const ll = GlobeMath.vector3ToLatLng(local, earth.data.radius);
+        const name = earth.countryAt(ll.lat, ll.lng);
+        earth.highlightCountry(name);
+        if (this._tooltipEl) {
+            if (name) {
+                this._tooltipEl.textContent = name;
+                this._tooltipEl.style.left = (event.clientX + 14) + 'px';
+                this._tooltipEl.style.top = (event.clientY + 14) + 'px';
+                this._tooltipEl.hidden = false;
+            } else {
+                this._tooltipEl.hidden = true;
+            }
+        }
+    }
+
+    /**
+     * Sync the Borders/Grid toggle buttons' pressed state to the overlays' actual
+     * visibility (overlays are shown on enter, so the buttons must reflect that or
+     * the first click inverts the state). Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _syncExploreToggleButtons() {
+        if (typeof document === 'undefined') return false;
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_syncExploreToggleButtons: bad earth');
+        if (!earth) return false;
+        const set = (id, vis) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.classList.toggle('active', !!vis);
+            btn.setAttribute('aria-pressed', vis ? 'true' : 'false');
+        };
+        console.assert(typeof set === 'function', '_syncExploreToggleButtons: helper present');
+        set('explore-toggle-grid', earth.graticule && earth.graticule.visible);
+        set('explore-toggle-borders', earth.borders && earth.borders.visible);
+        const L = earth.layers || {};
+        set('explore-toggle-iss', L.iss && L.iss.visible);
+        set('explore-toggle-quakes', L.quakes && L.quakes.visible);
+        set('explore-toggle-places', L.pois && L.pois.visible);
+        return true;
+    }
+
+    /**
+     * Hide the explore panel + remove the Escape listener. Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    teardownExplorePanel() {
+        if (typeof document === 'undefined') return false;
+        document.removeEventListener('keydown', this._onExploreKeydown);
+        const panel = document.getElementById('explore-panel');
+        console.assert(panel === null || panel.nodeType === 1, 'teardownExplorePanel: bad panel');
+        if (panel) { panel.hidden = true; panel.style.display = 'none'; }
+        this._distEl = null;
+        this._detailEl = null;
+        this._tooltipEl = null;
+        return true;
+    }
+
     focusOnPlanet(planetName) {
         if (!this.solarSystem) return;
-        
+
+        // FIX C: per-focus generation token. Incremented at the start of every
+        // focus call. cinematicEmergence captures this value and bails out of its
+        // chained onComplete callbacks if a newer focus has superseded it. This
+        // catches the race where the user clicks a second planet during the ~1s
+        // gap BETWEEN the two chained transitions (phase-1 onComplete fired,
+        // phase-2 not yet started, no _transitionRaf pending) — the reentrancy
+        // guard below can't catch that window, but the generation check can.
+        const myGen = ++this._focusGen;
+
+        // FIX 2: reentrancy guard. If a transition is already in flight, cancel it
+        // so the latest click wins (cancel-and-restart, the saner UX than ignoring
+        // the new click). smoothCameraTransition also cancels the RAF when it
+        // starts, but we clear the handle here too in case we're mid-cinematic
+        // phase (between the two chained transitions) where no RAF is pending.
+        if (this.cameraTransitioning) {
+            if (this._transitionRaf) {
+                cancelAnimationFrame(this._transitionRaf);
+                this._transitionRaf = null;
+            }
+            this.cameraTransitioning = false;
+        }
+
+        // If we're leaving Earth-explore for a new focus, tear explore down first
+        // so the globe unfreezes, zoom bounds + orbit defaults restore, and the
+        // explore overlays/panel/Escape-listener are removed. skipFlyBack=true: the
+        // new focus below flies the camera itself. (Without this, switching planets
+        // mid-explore leaves Earth frozen with the wrong orbit pivot + zoom bounds.)
+        if (this.exploreMode) {
+            this.exitExploreMode(true);
+        }
+
         // Update planet info in the UI
         this.updatePlanetInfo(planetName);
         
@@ -629,15 +1205,21 @@ class SpaceEnvironment {
         if (this.solarSystem && typeof this.solarSystem.focusOnPlanet === 'function') {
             const cameraInfo = this.getPlanetCameraInfo(planetName);
             if (cameraInfo && this.camera) {
-                // Use smooth transition
+                // Use smooth transition (cinematic emergence for Earth).
                 this.cameraTransitioning = true;
-                this.smoothCameraTransition(
-                    cameraInfo.position, 
-                    cameraInfo.lookAt,
-                    () => {
+                const useCinematic = planetName === 'Earth';
+                const onArrive = () => {
                         this.cameraTransitioning = false;
                         this.insideOrbitZone = true;
-                        
+
+                        // Earth → free-look Explore mode instead of auto-orbit.
+                        // The whole point: stop the spin, let the user drag/zoom.
+                        if (planetName === 'Earth') {
+                            this.enterExploreMode();
+                            console.log('Camera focused on Earth (explore mode)');
+                            return;
+                        }
+
                         // Start auto-orbiting if enabled
                         if (this.orbitingPlanet) {
                             this.isAutoOrbiting = true;
@@ -657,12 +1239,17 @@ class SpaceEnvironment {
                         }
                         
                         console.log(`Camera focused on ${planetName}`);
-                    }
-                );
+                };
+
+                if (useCinematic) {
+                    this.cinematicEmergence(cameraInfo.position, cameraInfo.lookAt, onArrive, myGen);
+                } else {
+                    this.smoothCameraTransition(cameraInfo.position, cameraInfo.lookAt, onArrive);
+                }
             }
         }
     }
-    
+
     /**
      * Get camera position information for a specific planet
      * @param {string} planetName - Name of the planet
@@ -720,20 +1307,31 @@ class SpaceEnvironment {
      * @param {THREE.Vector3} targetPosition - Target camera position
      * @param {THREE.Vector3} targetLookAt - Target look at point
      * @param {Function} onComplete - Callback when animation completes
+     * @param {number} duration - Transition length in seconds (defaults to this.transitionDuration)
      */
-    smoothCameraTransition(targetPosition, targetLookAt, onComplete = null) {
+    smoothCameraTransition(targetPosition, targetLookAt, onComplete = null, duration) {
+        // FIX D: resolve the default inside the body so the param doesn't read
+        // `this` at call time (fragile if ever called unbound).
+        if (duration == null) duration = this.transitionDuration;
+        // FIX 3: Cancel any in-flight transition RAF before starting a new one so
+        // two transitions never fight over camera.position.
+        if (this._transitionRaf) {
+            cancelAnimationFrame(this._transitionRaf);
+            this._transitionRaf = null;
+        }
+
         // Store current camera state
         const startPosition = this.camera.position.clone();
         const startTarget = this.controls ? this.controls.target.clone() : new THREE.Vector3(0, 0, 0);
-        
+
         // Animation variables
         const startTime = this.clock.getElapsedTime();
-        
+
         // Create animation function
         const animate = () => {
             const currentTime = this.clock.getElapsedTime();
             const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / this.transitionDuration, 1);
+            const progress = Math.min(elapsed / duration, 1);
             
             // Easing function (cubic ease in/out)
             const ease = this.easeInOutCubic(progress);
@@ -756,13 +1354,15 @@ class SpaceEnvironment {
             
             // Continue animation until complete
             if (progress < 1) {
-                requestAnimationFrame(animate);
+                // FIX 3: store the handle so this loop can be cancelled.
+                this._transitionRaf = requestAnimationFrame(animate);
             } else {
                 // Animation complete
+                this._transitionRaf = null;
                 if (onComplete) onComplete();
             }
         };
-        
+
         // Start animation
         animate();
     }
@@ -774,6 +1374,72 @@ class SpaceEnvironment {
      */
     easeInOutCubic(t) {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    /**
+     * Whether the user prefers reduced motion.
+     * Rule 5: 2 assertions, return value used by callers.
+     * @returns {boolean}
+     */
+    prefersReducedMotion() {
+        console.assert(typeof window !== 'undefined', 'prefersReducedMotion: window required');
+        const mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+        console.assert(mq === undefined || typeof mq === 'object', 'prefersReducedMotion: bad mq');
+        return !!(mq && mq.matches);
+    }
+
+    /**
+     * Cinematic "emergence" fly-in: start far/wide, accelerate, settle into the
+     * orbit framing. Extends the existing transition (eased, multi-phase) and
+     * keeps cameraTransitioning gating + OrbitControls handoff intact.
+     * Honors prefers-reduced-motion with an instant snap.
+     * Rule 4: <=60 lines | Rule 5: assertions | Rule 6: graceful fallback.
+     * @param {THREE.Vector3} targetPosition - Final camera position
+     * @param {THREE.Vector3} targetLookAt - Final look-at point
+     * @param {Function} onComplete - Called once when motion finishes
+     * @param {number} gen - Focus generation token captured by the caller. Each
+     *   chained phase bails if this._focusGen has moved on (a newer focus won).
+     */
+    cinematicEmergence(targetPosition, targetLookAt, onComplete = null, gen = this._focusGen) {
+        console.assert(targetPosition && targetPosition.isVector3, 'cinematicEmergence: bad position');
+        console.assert(targetLookAt && targetLookAt.isVector3, 'cinematicEmergence: bad lookAt');
+        if (!this.camera) {
+            if (onComplete) onComplete();
+            return false;
+        }
+
+        // Reduced-motion: short, near-instant settle (no long fly-in).
+        if (this.prefersReducedMotion()) {
+            this.camera.position.copy(targetPosition);
+            if (this.controls) {
+                this.controls.target.copy(targetLookAt);
+                this.controls.update();
+            } else {
+                this.camera.lookAt(targetLookAt);
+            }
+            if (onComplete) onComplete();
+            return true;
+        }
+
+        // Phase 1: pull back to a wide framing, then fly in (phase 2).
+        // FIX 1: pass phase durations as the per-call `duration` arg instead of
+        // mutating this.transitionDuration (which left shared state wrong on interrupt).
+        const wideOffset = targetPosition.clone().sub(targetLookAt).multiplyScalar(3.0);
+        const widePos = targetLookAt.clone().add(wideOffset);
+        this.smoothCameraTransition(widePos, targetLookAt, () => {
+            // FIX C: if a newer focus started during the gap before phase 2,
+            // abandon this stale chain. Do NOT touch cameraTransitioning here —
+            // the newer focus call now owns that flag and its own transition.
+            if (this._focusGen !== gen) return;
+            this.smoothCameraTransition(targetPosition, targetLookAt, () => {
+                // FIX C: same staleness check at the final arrival. onComplete
+                // (onArrive) clears cameraTransitioning, so skipping it for a stale
+                // chain prevents clobbering the newer selection's framing/flag.
+                if (this._focusGen !== gen) return;
+                if (onComplete) onComplete();
+            }, 2.2); // accelerate-and-settle fly-in
+        }, 1.0); // brief wide-pull
+        return true;
     }
     
     /**
@@ -855,10 +1521,19 @@ class SpaceEnvironment {
         // Update solar system - KEEP ORIGINAL SPEED (no * 1000)
         if (this.solarSystem) {
             const deltaTime = this.clock.getDelta(); // Keep original deltaTime for realistic speed
-            this.solarSystem.update(deltaTime);
-            
+            // A1: under reduced-motion, freeze orbits/spins/asteroids/galaxy by
+            // skipping the simulation tick. Render + camera + interaction below
+            // still run, so the scene is fully usable, just static.
+            if (!this.reducedMotion) {
+                this.solarSystem.update(deltaTime);
+            }
+
             // Update camera behavior based on selected planet
-            if (this.selectedPlanet && !this.cameraTransitioning) {
+            if (this.exploreMode) {
+                // Explore: free user controls + cloud fly-through; the auto-orbit
+                // tracking is intentionally suppressed so the globe stays still.
+                this.updateExploreClouds();
+            } else if (this.selectedPlanet && !this.cameraTransitioning) {
                 this.updateCameraPlanetTracking();
             }
             
@@ -902,10 +1577,20 @@ class SpaceEnvironment {
         // Get the planet mesh and its current position
         const mesh = planetObj.getMesh();
         const planetPosition = mesh.position.clone();
-        
+
+        // Explore mode: user owns the camera. Never auto-orbit / re-trigger here.
+        // Keep controls.target locked to Earth's (frozen, static) position so
+        // drag-rotation pivots around the globe centre.
+        if (this.exploreMode) {
+            if (this.controls) {
+                this.controls.target.copy(planetPosition);
+            }
+            return;
+        }
+
         // Check if we're in the planet's orbit zone
         this.checkOrbitZone();
-        
+
         // Handle auto-orbiting around the planet
         if (this.isAutoOrbiting && this.insideOrbitZone) {
             // Update orbit angle
@@ -1135,10 +1820,18 @@ class SpaceEnvironment {
      * Purpose: Rule 6 graceful handling of missing controls
      */
     disableInteractiveControls() {
+        // Leaving the interactive (main) view: fully tear down Explore mode first.
+        // Otherwise it leaks the Escape keydown listener on document and keeps
+        // running updateExploreClouds() every frame against a panel that PageManager
+        // wipes via innerHTML on navigation, and Earth is left frozen.
+        if (this.exploreMode) {
+            this.exitExploreMode(true);
+        }
+
         if (this.controls) {
             this.controls.enabled = false;
         }
-        
+
         // Clear any active selections
         this.selectedPlanet = null;
         this.isAutoOrbiting = false;
@@ -1410,9 +2103,40 @@ class SpaceEnvironment {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
         }
-        
+
+        // FIX 3: cancel any in-flight camera transition RAF so it doesn't leak.
+        if (this._transitionRaf) {
+            cancelAnimationFrame(this._transitionRaf);
+            this._transitionRaf = null;
+        }
+
+        // Tear down Explore mode if active so the Escape keydown listener on
+        // document doesn't leak onto a disposed instance.
+        if (this.exploreMode) {
+            this.exitExploreMode(true);
+        } else {
+            this.teardownExplorePanel();
+        }
+        if (this._yawRaf) {
+            cancelAnimationFrame(this._yawRaf);
+            this._yawRaf = null;
+        }
+
         // Clean up event listeners
         window.removeEventListener('resize', this.handleResize.bind(this));
+
+        // P3 / A1: remove the visibility + reduced-motion listeners so they
+        // don't leak or fire against a disposed instance.
+        if (this._onVisibilityChange) {
+            document.removeEventListener('visibilitychange', this._onVisibilityChange);
+        }
+        if (this._reducedMotionMq && this._onReducedMotionChange) {
+            if (this._reducedMotionMq.removeEventListener) {
+                this._reducedMotionMq.removeEventListener('change', this._onReducedMotionChange);
+            } else if (this._reducedMotionMq.removeListener) {
+                this._reducedMotionMq.removeListener(this._onReducedMotionChange);
+            }
+        }
         
         // Clean up solar system resources
         if (this.solarSystem) {

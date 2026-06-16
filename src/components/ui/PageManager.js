@@ -706,6 +706,16 @@ class PageManager {
      * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 3: Bounded cleanup
      */
     async cleanupCurrentPage() {
+        // Universal navigation guard: if we leave any page while Earth Explore mode
+        // is active, tear it down first. The explore panel/tooltip/detail are
+        // reparented to <body> (to sit above the raised canvas), so without this they
+        // would orphan in <body> and "leak" onto every other page. This runs before
+        // every page transition, so it's the one place guaranteed to catch all exits.
+        if (window.spaceEnvironment && window.spaceEnvironment.exploreMode
+            && typeof window.spaceEnvironment.exitExploreMode === 'function') {
+            window.spaceEnvironment.exitExploreMode(true);
+        }
+
  // Rule 5: Validate cleanup prerequisites
         if (!this.currentPage) {
             return true; // Nothing to cleanup
@@ -1110,15 +1120,27 @@ class PageManager {
  // Bind click events to each planet button
             planetButtons.forEach(button => {
                 const planetName = button.getAttribute('data-planet');
-                
+
                 if (planetName) {
+                    // A3: ensure each button advertises a selectable state.
+                    if (!button.hasAttribute('aria-selected')) {
+                        button.setAttribute('aria-selected', 'false');
+                    }
                     button.addEventListener('click', () => {
                         console.log(`Planet button clicked: ${planetName}`);
-                        
+
  // Update active button state
-                        planetButtons.forEach(btn => btn.classList.remove('active'));
+                        planetButtons.forEach(btn => {
+                            btn.classList.remove('active');
+                            // A3: keep aria-selected in sync with the visual active state.
+                            btn.setAttribute('aria-selected', 'false');
+                        });
                         button.classList.add('active');
-                        
+                        button.setAttribute('aria-selected', 'true');
+
+                        // A3: announce the focused planet to assistive tech.
+                        this.announcePlanet(planetName);
+
  // Focus on the selected planet in 3D environment
                         if (window.spaceEnvironment.focusOnPlanet) {
                             window.spaceEnvironment.focusOnPlanet(planetName);
@@ -1129,11 +1151,42 @@ class PageManager {
             
             console.log(`Connected ${planetButtons.length} planet navigation buttons`);
             return true;
-            
+
         } catch (error) {
             console.error('Planet navigation setup error:', error);
             return false;
         }
+    }
+
+    /**
+     * Announce the currently focused planet to assistive technology.
+     * A3: lazily creates a visually-hidden aria-live="polite" region (once) and
+     * updates its text so screen readers say e.g. "Now viewing: Mars".
+     * @param {string} planetName - Name of the focused planet
+     * @returns {boolean} - Whether the announcement was made
+     */
+    announcePlanet(planetName) {
+        if (!planetName || typeof document === 'undefined') {
+            return false;
+        }
+
+        let region = document.getElementById('planet-live-region');
+        if (!region) {
+            region = document.createElement('div');
+            region.id = 'planet-live-region';
+            region.setAttribute('aria-live', 'polite');
+            region.setAttribute('aria-atomic', 'true');
+            // Visually hidden but available to screen readers.
+            region.style.cssText = [
+                'position:absolute', 'width:1px', 'height:1px',
+                'margin:-1px', 'padding:0', 'border:0',
+                'overflow:hidden', 'clip:rect(0 0 0 0)', 'white-space:nowrap'
+            ].join(';');
+            document.body.appendChild(region);
+        }
+
+        region.textContent = `Now viewing: ${planetName}`;
+        return true;
     }
 
     /**
@@ -1478,7 +1531,15 @@ class PageManager {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
             }
-            
+
+            // In Explore mode, suppress the solar-system shortcuts: I/C open
+            // irrelevant popups over a frozen globe and R (resetCamera) would
+            // silently eject the user. Escape still exits (SpaceEnvironment owns it).
+            if (window.spaceEnvironment && window.spaceEnvironment.exploreMode
+                && e.key.toLowerCase() !== 'escape') {
+                return;
+            }
+
             switch (e.key.toLowerCase()) {
                 case 'i':
                     e.preventDefault();

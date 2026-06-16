@@ -644,9 +644,18 @@ class ComponentLoader {
         // Add skip links if not present
         if (!document.querySelector('.skip-link')) {
             const skipLink = document.createElement('a');
-            skipLink.href = '#main-content';
+            // A4: target the real <main> landmark (#page-container). The previous
+            // #main-content target did not exist, so the skip link went nowhere.
+            skipLink.href = '#page-container';
             skipLink.className = 'skip-link';
             skipLink.textContent = 'Skip to main content';
+
+            // A4: make the landmark focusable so focus actually lands on it when
+            // the skip link is activated (a <main> is not focusable by default).
+            const mainLandmark = document.getElementById('page-container');
+            if (mainLandmark && !mainLandmark.hasAttribute('tabindex')) {
+                mainLandmark.setAttribute('tabindex', '-1');
+            }
             skipLink.style.cssText = `
                 position: absolute;
                 top: -40px;

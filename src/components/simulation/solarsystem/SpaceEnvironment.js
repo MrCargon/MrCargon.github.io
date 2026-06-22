@@ -78,6 +78,59 @@ class SpaceEnvironment {
         this.preservedCameraState = null;
         this.shouldPreserveCameraPosition = true; // Enable camera preservation by default
 
+        // ── Explore Earth mode ──────────────────────────────────────────────
+        // Free-look mode: focusing Earth flies in then FREEZES the globe and hands
+        // control to the user (drag to rotate, zoom in close). See enter/exit below.
+        this.exploreMode = false;
+        // Restored on exit so other planets/auto-orbit behave exactly as before.
+        this._preExploreOrbiting = this.orbitingPlanet;
+        this._exploreMinDistance = 0;   // set on enter from Earth radius
+        this._exploreMaxDistance = 0;
+        this.bordersUrl = 'src/assets/geo/country_borders.json';
+        // localStorage key for persisting which explore layers were toggled on.
+        this._exploreLayersKey = 'mrcargon.explore.layers';
+        // Zoom level-of-detail auto-reveal (states/cities/districts). Default ON.
+        this._lodEnabled = true;
+        // Per-frame scratch (Rule: no per-frame allocation in the animate loop).
+        this._scratchEarthPos = new THREE.Vector3();
+        this._scratchCamPos = new THREE.Vector3();
+        this._scratchSurf = new THREE.Vector3();      // surface look-at point (orbit pivot)
+        this._scratchTarget = new THREE.Vector3();     // blended orbit target
+        this._exploreRaycaster = new THREE.Raycaster();
+        this._ndc = new THREE.Vector2();
+        this._onExploreClick = (e) => this._handleExploreClick(e);
+        this._onExploreMove = (e) => this._handleExploreHover(e);
+        this._onExploreDblClick = (e) => this._handleExploreDblClick(e);
+        // Bound Escape handler so it can be added/removed without leaking.
+        this._onExploreKeydown = (e) => {
+            if (e.key === 'Escape' && this.exploreMode) {
+                this.exitExploreMode();
+            }
+        };
+
+        // A1: live reduced-motion flag. When true, the simulation starts PAUSED
+        // (no autonomous orbital motion) but stays fully interactive — the Time
+        // panel play/scrub still works. Kept live via matchMedia 'change'.
+        this.reducedMotion = this.prefersReducedMotion();
+        this._reducedMotionMq = (window.matchMedia)
+            ? window.matchMedia('(prefers-reduced-motion: reduce)')
+            : null;
+        this._onReducedMotionChange = (e) => { this.reducedMotion = !!e.matches; };
+        if (this._reducedMotionMq) {
+            if (this._reducedMotionMq.addEventListener) {
+                this._reducedMotionMq.addEventListener('change', this._onReducedMotionChange);
+            } else if (this._reducedMotionMq.addListener) {
+                this._reducedMotionMq.addListener(this._onReducedMotionChange); // legacy
+            }
+        }
+
+        // Reduced-motion: start the clock paused so planets don't auto-orbit on
+        // load. animate() still runs solarSystem.update every frame (explore +
+        // time scrubbing stay live); the user can press play to opt into motion.
+        if (this.reducedMotion && this.timeManager) {
+            this.timeManager.pause();
+        }
+
         // Cosmology features (Phase 5)
         this.cosmologyFeatures = {
             gravitationalWaves: null,
@@ -826,6 +879,11 @@ class SpaceEnvironment {
     resetCamera() {
         // Reset camera to default position
         if (this.camera) {
+            // Exit explore mode first so the globe unfreezes and explore visuals
+            // / panel are torn down before we fly back out. No stuck state.
+            if (this.exploreMode) {
+                this.exitExploreMode(true);
+            }
             this.cameraTransitioning = true;
             this.isAutoOrbiting = false;
             
@@ -848,17 +906,1034 @@ class SpaceEnvironment {
             );
         }
     }
-    
+
+    /**
+     * Whether the user prefers reduced motion.
+     * Rule 5: 2 assertions, return value used by callers.
+     * @returns {boolean}
+     */
+    prefersReducedMotion() {
+        console.assert(typeof window !== 'undefined', 'prefersReducedMotion: window required');
+        const mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+        console.assert(mq === undefined || typeof mq === 'object', 'prefersReducedMotion: bad mq');
+        return !!(mq && mq.matches);
+    }
+
+    /**
+     * Resolve the Earth planet object (with mesh + radius). Rule 5: 2 asserts.
+     * @returns {Object|null}
+     */
+    getEarthObject() {
+        console.assert(this.solarSystem, 'getEarthObject: solarSystem required');
+        if (!this.solarSystem || !this.solarSystem.getPlanetByName) return null;
+        const earth = this.solarSystem.getPlanetByName('Earth');
+        console.assert(earth === null || typeof earth === 'object', 'getEarthObject: bad result');
+        return (earth && earth.getMesh) ? earth : null;
+    }
+
+    /**
+     * Read persisted explore layer toggle state from localStorage.
+     * Rule 5: 2 asserts | Rule 6: graceful fallback on parse/storage failure.
+     * @returns {Object} map of layer name → boolean (empty object on failure)
+     */
+    _readExploreLayerState() {
+        console.assert(typeof this._exploreLayersKey === 'string', '_readExploreLayerState: key required');
+        if (typeof localStorage === 'undefined') return {};
+        try {
+            const raw = localStorage.getItem(this._exploreLayersKey);
+            console.assert(raw === null || typeof raw === 'string', '_readExploreLayerState: bad raw');
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return (parsed && typeof parsed === 'object') ? parsed : {};
+        } catch (e) {
+            console.warn('Explore: could not read layer state', e);
+            return {};
+        }
+    }
+
+    /**
+     * Persist current explore layer visibility to localStorage. Reads each layer's
+     * live visibility off the Earth object. Rule 5: 2 asserts | Rule 6: try/catch.
+     * @returns {boolean}
+     */
+    _writeExploreLayerState() {
+        console.assert(typeof this._exploreLayersKey === 'string', '_writeExploreLayerState: key required');
+        if (typeof localStorage === 'undefined') return false;
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_writeExploreLayerState: bad earth');
+        if (!earth) return false;
+        const L = earth.layers || {};
+        const state = {
+            borders: !!(earth.borders && earth.borders.visible),
+            graticule: !!(earth.graticule && earth.graticule.visible),
+            iss: !!(L.iss && L.iss.visible),
+            quakes: !!(L.quakes && L.quakes.visible),
+            pois: !!(L.pois && L.pois.visible),
+            lod: !!this._lodEnabled
+        };
+        try {
+            localStorage.setItem(this._exploreLayersKey, JSON.stringify(state));
+            return true;
+        } catch (e) {
+            console.warn('Explore: could not persist layer state', e);
+            return false;
+        }
+    }
+
+    /**
+     * Enter free-look Explore mode on Earth: freeze the globe, hand control to the
+     * user, lock controls.target to Earth, set close zoom bounds, build/show the
+     * graticule + borders, and show the location panel. Rule 4: <=60 lines.
+     * @returns {boolean}
+     */
+    enterExploreMode() {
+        const earth = this.getEarthObject();
+        console.assert(earth, 'enterExploreMode: Earth object required');
+        console.assert(this.controls, 'enterExploreMode: controls required');
+        if (!earth || !this.controls) return false;
+
+        const radius = (earth.data && earth.data.radius) || 2;
+        this.exploreMode = true;
+        this._preExploreOrbiting = this.orbitingPlanet;
+        this.orbitingPlanet = false;
+        this.isAutoOrbiting = false;
+
+        // Freeze the globe so the marker holds still for inspection.
+        if (typeof earth.setFrozen === 'function') earth.setFrozen(true);
+
+        // Hand control to the user, pivoting around Earth's (now static) centre.
+        const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
+        this._exploreMinDistance = radius * 1.005;   // hug the surface — see streets/satellite up close
+        this._exploreMaxDistance = radius * 12;
+        this.controls.enabled = true;
+        this.controls.minDistance = this._exploreMinDistance;
+        this.controls.maxDistance = this._exploreMaxDistance;
+        // Dolly to a close initial framing (~3x radius). Reuses scratch (no alloc).
+        const camDir = this._scratchCamPos.copy(this.camera.position).sub(earthPos).normalize();
+        if (camDir.lengthSq() < 1e-6) camDir.set(0, 0, 1);
+        this.camera.position.copy(earthPos).addScaledVector(camDir, radius * 3.0);
+        this.controls.target.copy(earthPos);
+        this.controls.enablePan = false; // pan would drift off the globe
+        // Inertial damping for smooth, consistent drag/zoom (the animate loop already
+        // calls controls.update() every frame, which damping requires). Restored on exit.
+        this._preExploreDamping = this.controls.enableDamping;
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.09;
+        this.controls.update();
+        if (this.renderer && this.renderer.domElement) this.renderer.domElement.style.cursor = 'grab';
+
+        // THE core fix: the canvas container lives at z-index -5 (behind BODY), so a
+        // negative-z element never receives pointer events (they hit BODY first) and
+        // OrbitControls can't see the drag. Raise the canvas ABOVE the page during
+        // explore so it gets mouse/touch/wheel events. #content is made transparent
+        // to pointer events so they fall through. Both restored on exit.
+        if (this.container) { this._prevContainerZ = this.container.style.zIndex; this.container.style.zIndex = '30'; }
+        const content = document.getElementById('content');
+        if (content) { this._prevContentPE = content.style.pointerEvents; content.style.pointerEvents = 'none'; }
+        // Hide the solar-system side panels (meaningless over a single frozen globe).
+        document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = 'none'; });
+        const hints = document.getElementById('keyboard-hints'); if (hints) hints.style.display = 'none';
+
+        this._restoreExploreLayers(earth);
+        // Click a marker → detail card; hover the surface → cascade region highlight +
+        // name (country→state→county→district→zip, finest loaded tier for the zoom).
+        if (typeof earth.buildRegionTiers === 'function') earth.buildRegionTiers();
+        if (typeof earth.buildCountryHover === 'function') earth.buildCountryHover();
+        // Cascade the five atmospheric shells in (Troposphere→Exosphere, staggered).
+        if (earth.atmosphereLayers && typeof earth.atmosphereLayers.cascadeIn === 'function') {
+            earth.atmosphereLayers.cascadeIn();
+        }
+        // Attach to window so events fire regardless of canvas z-index/pointer-events.
+        window.addEventListener('click', this._onExploreClick);
+        window.addEventListener('mousemove', this._onExploreMove);
+        window.addEventListener('dblclick', this._onExploreDblClick);   // double-click → re-center
+
+        this.setupExplorePanel();
+        this._syncExploreToggleButtons();
+        this.announceExplore('Explore Earth mode. Drag to rotate, scroll to zoom. Click markers for details.');
+        this._updateExploreButton();   // hides the opt-in button while exploring
+        console.log('Entered Explore Earth mode');
+        return true;
+    }
+
+    /**
+     * Build + show the explore data layers, honouring persisted toggle state from
+     * localStorage (default: all on for first-time discovery). Lazy-builds each
+     * layer then sets visibility. Rule 4: <=60 lines | Rule 5: 2 asserts.
+     * @param {Object} earth
+     * @returns {boolean}
+     */
+    _restoreExploreLayers(earth) {
+        console.assert(earth && typeof earth === 'object', '_restoreExploreLayers: earth required');
+        const saved = this._readExploreLayerState();
+        console.assert(saved && typeof saved === 'object', '_restoreExploreLayers: bad saved');
+        // Default visible when no key has ever been written, else honour saved bool.
+        const want = (k) => (saved[k] === undefined ? true : !!saved[k]);
+
+        if (typeof earth.buildGraticule === 'function') {
+            const g = earth.buildGraticule();
+            if (g) g.visible = want('graticule');
+        }
+        if (earth.borders) {
+            earth.borders.visible = want('borders');
+        } else if (typeof earth.buildBorders === 'function') {
+            earth.buildBorders(this.bordersUrl).then((b) => {
+                if (b && this.exploreMode) b.visible = want('borders');
+                this._syncExploreToggleButtons();
+            });
+        }
+        if (typeof earth.buildPois === 'function') {
+            const p = earth.buildPois(); if (p) p.visible = want('pois');
+            if (typeof earth.setLayerVisible === 'function') earth.setLayerVisible('pois', want('pois'));
+        }
+        if (typeof earth.buildQuakes === 'function') {
+            earth.buildQuakes().then((q) => {
+                if (q && this.exploreMode && typeof earth.setLayerVisible === 'function') {
+                    earth.setLayerVisible('quakes', want('quakes'));
+                }
+                this._syncExploreToggleButtons();
+            });
+        }
+        if (want('iss') && typeof earth.startISS === 'function') {
+            earth.startISS();
+            earth.setLayerVisible('iss', true);
+        }
+        // Zoom level-of-detail auto-reveal: default ON; if persisted off, suppress.
+        this._lodEnabled = want('lod');
+        this._applyLodState(earth, this._lodEnabled);
+        return true;
+    }
+
+    /**
+     * Apply the LOD auto-reveal state to the Earth's geoLOD engine. When enabled,
+     * resume zoom-driven auto reveal; when disabled, stop auto + hide all tiers.
+     * No-ops if geoLOD is absent (script not loaded / Earth not ready). Rule 5: 2 asserts.
+     * @param {Object} earth
+     * @param {boolean} enabled
+     * @returns {boolean}
+     */
+    _applyLodState(earth, enabled) {
+        console.assert(earth === null || typeof earth === 'object', '_applyLodState: bad earth');
+        console.assert(typeof enabled === 'boolean', '_applyLodState: enabled must be boolean');
+        const lod = earth && earth.geoLOD;
+        // "Detail" governs BOTH the LOD geography AND the street basemap so the one
+        // toggle is coherent (off = no states/cities/districts AND no streets).
+        if (earth && earth.streetTiles && typeof earth.streetTiles.setVisible === 'function') {
+            earth.streetTiles.setVisible(enabled);
+        }
+        if (earth && earth.satelliteTiles && typeof earth.satelliteTiles.setVisible === 'function') {
+            earth.satelliteTiles.setVisible(enabled);
+        }
+        if (!lod) return !!(earth && earth.streetTiles);
+        if (typeof lod.setAuto === 'function') lod.setAuto(enabled);
+        if (!enabled && typeof lod.setTierVisible === 'function') {
+            ['states', 'cities', 'districts'].forEach((t) => lod.setTierVisible(t, false));
+        }
+        return true;
+    }
+
+    /**
+     * Show the opt-in "Explore Earth" button only when Earth is the focused planet
+     * and we are not already exploring; wire its click once. This replaces the old
+     * auto-enter-on-Earth-select behaviour. Rule 5: 2 asserts.
+     * @returns {boolean} whether the button is shown
+     */
+    _updateExploreButton() {
+        console.assert(typeof document !== 'undefined', '_updateExploreButton: document required');
+        const btn = document.getElementById('explore-enter-btn');
+        console.assert(btn === null || typeof btn === 'object', '_updateExploreButton: bad btn');
+        if (!btn) return false;
+        if (!btn.dataset.wired) {
+            btn.dataset.wired = '1';
+            btn.addEventListener('click', () => this.enterExploreMode());
+            // The button lives in #content, and #footer-container (position:relative,
+            // z-index:200) paints over it → unclickable. Reparent to <body> (root
+            // stacking context), lift ABOVE the footer's z-index, and raise it up the
+            // screen so it also clears the ~70px footer visually.
+            if (btn.parentElement !== document.body) document.body.appendChild(btn);
+            btn.style.zIndex = '300';
+            btn.style.bottom = '96px';
+        }
+        const show = (this.selectedPlanet === 'Earth') && !this.exploreMode;
+        btn.hidden = !show;
+        btn.style.display = show ? 'block' : 'none';
+        return show;
+    }
+
+    /**
+     * Exit Explore mode: unfreeze Earth, hide explore visuals + panel, restore
+     * orbit defaults and zoom bounds. If skipFlyBack is false, also flies the
+     * camera back out (Escape path); resetCamera passes true and flies itself.
+     * Rule 4: <=60 lines.
+     * @param {boolean} [skipFlyBack=false]
+     * @returns {boolean}
+     */
+    exitExploreMode(skipFlyBack = false) {
+        if (!this.exploreMode) return false;
+        console.assert(this.controls, 'exitExploreMode: controls required');
+        // Persist toggle state BEFORE we flip everything off, so the user's choices
+        // survive to the next entry.
+        this._writeExploreLayerState();
+        this.exploreMode = false;
+
+        const earth = this.getEarthObject();
+        if (earth) {
+            if (typeof earth.setFrozen === 'function') earth.setFrozen(false);
+            // Hide overlays + restore clouds that the fly-through may have faded.
+            if (earth.graticule) earth.graticule.visible = false;
+            if (earth.borders) earth.borders.visible = false;
+            if (earth.cloudsMesh) {
+                earth.cloudsMesh.visible = true;
+                if (earth.cloudsMesh.material) earth.cloudsMesh.material.opacity = 0.8;
+            }
+            // Stop ISS polling + hide all live data layers.
+            if (typeof earth.stopISS === 'function') earth.stopISS();
+            ['iss', 'quakes', 'pois'].forEach((k) => {
+                if (typeof earth.setLayerVisible === 'function') earth.setLayerVisible(k, false);
+            });
+            // Hide zoom-LOD geography + street tiles. These only update inside the
+            // explore branch, so without an explicit hide they'd linger visible and
+            // ride along on the globe once it resumes orbiting in solar-system view.
+            if (earth.geoLOD && typeof earth.geoLOD.hideAll === 'function') earth.geoLOD.hideAll();
+            if (earth.streetTiles && typeof earth.streetTiles.hide === 'function') earth.streetTiles.hide();
+            if (earth.atmosphereLayers && typeof earth.atmosphereLayers.cascadeOut === 'function') {
+                earth.atmosphereLayers.cascadeOut();   // retract the shells (outer→inner)
+            }
+            if (earth.satelliteTiles && typeof earth.satelliteTiles.hide === 'function') earth.satelliteTiles.hide();
+            // Reset the SF marker scale (updateExploreLOD shrinks it when zoomed in
+            // and only runs in explore — otherwise it stays shrunk in solar view).
+            if (earth.marker) earth.marker.userData.distanceScale = 1;
+            // Restore full base-globe brightness (explore dims it at close zoom).
+            const bm2 = earth.mesh && earth.mesh.material && earth.mesh.material.uniforms;
+            if (bm2 && bm2.uSurfaceDim) bm2.uSurfaceDim.value = 1.0;
+        }
+
+        // Restore default orbit behaviour + global zoom bounds.
+        this.orbitingPlanet = this._preExploreOrbiting;
+        if (this.controls) {
+            this.controls.enabled = true;
+            this.controls.minDistance = 2;
+            this.controls.maxDistance = 300;
+            this.controls.enablePan = true;
+            this.controls.rotateSpeed = 1.0;
+            this.controls.zoomSpeed = 1.0;
+            this.controls.enableDamping = (this._preExploreDamping === true);
+        }
+        // Restore the default camera clip planes (explore shrinks them for close zoom).
+        if (this.camera && (this.camera.near !== 0.1 || this.camera.far !== 4000)) {
+            this.camera.near = 0.1; this.camera.far = 4000; this.camera.updateProjectionMatrix();
+        }
+        if (this.renderer && this.renderer.domElement) {
+            this.renderer.domElement.style.cursor = '';
+        }
+        window.removeEventListener('click', this._onExploreClick);
+        window.removeEventListener('mousemove', this._onExploreMove);
+        window.removeEventListener('dblclick', this._onExploreDblClick);
+        // Restore canvas z-index + content pointer-events + the hidden side panels.
+        if (this.container) this.container.style.zIndex = (this._prevContainerZ != null ? this._prevContainerZ : '-5');
+        const content = document.getElementById('content');
+        if (content) content.style.pointerEvents = (this._prevContentPE || '');
+        document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = ''; });
+        const hints = document.getElementById('keyboard-hints'); if (hints) hints.style.display = '';
+        if (this._detailEl) this._detailEl.hidden = true;
+        if (earth && typeof earth.highlightRegion === 'function') earth.highlightRegion(null, null);
+        if (earth && typeof earth.highlightCountry === 'function') earth.highlightCountry(null);
+        if (this._tooltipEl) this._tooltipEl.hidden = true;
+
+        this.teardownExplorePanel();
+        this.announceExplore('Exited Explore Earth mode.');
+        console.log('Exited Explore Earth mode');
+
+        if (!skipFlyBack) {
+            // Escape path: fly back to the default solar-system framing.
+            this.resetCamera();
+        }
+        this._updateExploreButton();   // re-show the opt-in button if still on Earth
+        return true;
+    }
+
+    /**
+     * Move the CAMERA onto the ray from Earth's centre through the SF marker's
+     * WORLD position (accounts for latitude AND current rotation), keeping
+     * controls.target on Earth centre — so SF ends up centred at ANY latitude.
+     * Rule 4: <=60 lines | Rule 5: asserts.
+     * @returns {boolean}
+     */
+    centerOnSanFrancisco() {
+        const earth = this.getEarthObject();
+        console.assert(earth, 'centerOnSanFrancisco: Earth required');
+        if (!earth || !earth.marker || !this.camera) return false;
+        if (!this.controls) return false;
+
+        const mesh = earth.getMesh();
+        const earthPos = mesh.getWorldPosition(this._scratchEarthPos);
+        const markerWorld = earth.marker.getWorldPosition(this._scratchCamPos);
+        const dir = markerWorld.clone().sub(earthPos).normalize();
+        if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
+        const dist = this.camera.position.distanceTo(earthPos);
+        const destPos = earthPos.clone().addScaledVector(dir, dist);
+
+        if (this.prefersReducedMotion()) {
+            this.camera.position.copy(destPos);
+            this.controls.target.copy(earthPos);
+            this.controls.update();
+            console.log('Centered on San Francisco (instant)');
+            return true;
+        }
+        return this.centerOnLatLng(earth.markerCoords.lat, earth.markerCoords.lng);
+    }
+
+    /**
+     * Re-orient the globe so a chosen (lat,lng) faces the camera, keeping the
+     * centre-orbit pivot (you then spin the globe around it). Used by "Center on SF"
+     * and by clicking any place / region / zip. Holds the current zoom distance.
+     * Rule 4: <=60 lines | Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    centerOnLatLng(lat, lng) {
+        console.assert(Number.isFinite(lat) && Number.isFinite(lng), 'centerOnLatLng: coords required');
+        console.assert(typeof GlobeMath !== 'undefined', 'centerOnLatLng: GlobeMath required');
+        const earth = this.getEarthObject();
+        if (!earth || !this.camera || !this.controls || typeof GlobeMath === 'undefined') return false;
+        const mesh = earth.getMesh();
+        const earthPos = mesh.getWorldPosition(this._scratchEarthPos);
+        // World position of the surface point at (lat,lng) on the (rotated) globe.
+        const local = GlobeMath.latLngToVector3(lat, lng, earth.data.radius);
+        const surfWorld = mesh.localToWorld(this._scratchSurf.copy(local));
+        const dir = this._scratchTarget.copy(surfWorld).sub(earthPos).normalize();
+        if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
+        const dist = this.camera.position.distanceTo(earthPos);
+        const destPos = earthPos.clone().addScaledVector(dir, dist);
+        if (this.prefersReducedMotion()) {
+            this.camera.position.copy(destPos); this.controls.target.copy(earthPos); this.controls.update();
+            return true;
+        }
+        this.smoothCameraTransition(destPos, earthPos, null);
+        return true;
+    }
+
+    /**
+     * Cloud fly-through: as the camera nears Earth, fade clouds out so the camera
+     * never sits inside an opaque shell; restore on zoom-out. Called per-frame
+     * only while exploreMode. Reuses scratch vectors (no per-frame alloc).
+     * Rule 4: <=60 lines.
+     * @returns {boolean}
+     */
+    updateExploreClouds() {
+        const earth = this.getEarthObject();
+        if (!earth || !earth.cloudsMesh || !earth.cloudsMesh.material) return false;
+        const radius = (earth.data && earth.data.radius) || 2;
+
+        const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
+        const dist = this.camera.position.distanceTo(earthPos);
+        // Live zoom readout — cached element, no per-frame DOM query/alloc.
+        if (this._distEl) this._distEl.textContent = (dist / radius).toFixed(2) + '× Earth radius';
+        const fadeStart = radius * 2.5;   // begin fading here
+        const hideBelow = radius * 1.3;   // fully hidden below here
+
+        const clouds = earth.cloudsMesh;
+        if (dist <= hideBelow) {
+            clouds.visible = false;
+            return true;
+        }
+        clouds.visible = true;
+        // Lerp opacity 0 (close) → 0.8 (at/above fadeStart).
+        const span = Math.max(fadeStart - hideBelow, 1e-3);
+        const k = Math.max(0, Math.min(1, (dist - hideBelow) / span));
+        clouds.material.opacity = 0.8 * k;
+        return true;
+    }
+
+    /**
+     * Drive the zoom level-of-detail geography (states → cities → districts) from
+     * the camera distance while exploring. GeoLOD lazily builds + cross-fades each
+     * tier; safe no-op if absent. Called per-frame only while exploreMode.
+     * Rule 4: <=60 lines.
+     * @returns {boolean}
+     */
+    updateExploreLOD() {
+        const earth = this.getEarthObject();
+        if (!earth) return false;
+        console.assert(this.camera, 'updateExploreLOD: camera required');
+        const radius = (earth.data && earth.data.radius) || 2;
+        console.assert(radius > 0, 'updateExploreLOD: radius must be positive');
+        const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
+        const dist = this.camera.position.distanceTo(earthPos);
+        const rr = dist / radius;
+        // Dynamic near/far clip so the camera can get RIGHT up to the surface. The
+        // default near=0.1 clips everything within 0.1 units, so at ~1.005R (surface
+        // ~0.01 units away) the whole near surface — and its satellite tiles — was
+        // clipped, leaving only the far limb/sky. Scale near to the altitude and pull
+        // far in (nothing distant matters up close), which also sharpens depth
+        // precision so the hugging overlays don't z-fight. Restored on exit.
+        const surfDist = Math.max(dist - radius, 0.0008);
+        const near = Math.max(0.0008, surfDist * 0.5);
+        const far = dist + radius * 6;
+        if (this.camera.near !== near || this.camera.far !== far) {
+            this.camera.near = near; this.camera.far = far; this.camera.updateProjectionMatrix();
+        }
+        // Dim the base globe as the camera approaches (1.0 above 2R → ~0.22 at surface)
+        // so where the satellite tiles have not loaded/reached, the low-res base reads
+        // as a neutral dark surface instead of a blurry "old picture" on the sides.
+        const bm = earth.mesh && earth.mesh.material && earth.mesh.material.uniforms;
+        if (bm && bm.uSurfaceDim) {
+            bm.uSurfaceDim.value = Math.max(0.22, Math.min(1.0, (rr - 1.05) / (2.0 - 1.05)));
+        }
+        // CENTRE-ORBIT (the comfortable, familiar model): a drag SPINS THE GLOBE around
+        // its centre — like Google Earth's globe view — rather than tilting the camera
+        // around a fixed surface point (the surface-pivot version felt wrong). Fine
+        // close-up control comes from scaling rotate speed with ALTITUDE (rr-1): tiny
+        // near the surface, normal far. "Center on <place/zip>" re-orients which point
+        // faces you; you then spin the globe around it. Pivot gently held at centre.
+        if (this.controls) {
+            if (!this.cameraTransitioning) this.controls.target.lerp(earthPos, 0.2);
+            const alt = Math.max(rr - 1, 0.001);
+            this.controls.rotateSpeed = Math.max(0.02, Math.min(1.0, alt * 0.6));
+            this.controls.zoomSpeed = Math.max(0.4, Math.min(1.0, 0.4 + alt * 0.3));
+            this.controls.minDistance = radius * 1.005;
+            this.controls.maxDistance = radius * 15;
+        }
+        // Interplanetary hand-off: zooming all the way back out leaves explore and
+        // flies to the solar-system view, but KEEPS Earth selected with the Explore
+        // button showing so the user can dive back in. Fires once (idempotent exit).
+        if (rr > 9 && this.exploreMode) {
+            this.exitExploreMode();              // skipFlyBack=false → resetCamera flies out
+            this.selectedPlanet = 'Earth';       // keep Earth selected for easy re-entry
+            this.updatePlanetInfo('Earth');
+            this._updateExploreButton();         // show the "Explore Earth" button again
+            return true;
+        }
+        // Location pins (SF marker + POI pins) are orientation aids for the far/mid
+        // view; they balloon and cover the map up close, so fade them out as the
+        // camera approaches (full >1.7R → gone by ~1.2R). Also keep the SF marker at
+        // ~constant screen size while it's visible.
+        const pinFade = Math.max(0, Math.min(1, (rr - 1.2) / (1.7 - 1.2)));
+        if (earth.marker) {
+            earth.marker.userData.distanceScale = Math.max(0.3, Math.min(1.8, rr / 3));
+            if (earth.marker.material) earth.marker.material.opacity = pinFade;
+            if (earth.markerHalo && earth.markerHalo.material) earth.markerHalo.material.opacity = 0.55 * pinFade;
+            earth.marker.visible = pinFade > 0.02;
+        }
+        // All live-marker layers (ISS, quakes, POIs) are fixed-world-size spheres
+        // that balloon up close (a big M5 quake dot or a POI pin covers the map at
+        // street zoom). Fade them by the same pinFade; the toggle still owns .visible.
+        if (earth.layers) {
+            ['iss', 'quakes', 'pois'].forEach((k) => {
+                const layer = earth.layers[k];
+                if (!layer || !layer.traverse) return;
+                layer.traverse((o) => { if (o.isMesh && o.material) o.material.opacity = 0.95 * pinFade; });
+            });
+        }
+        // Country borders recede as the camera approaches the surface so they don't
+        // compete with the satellite imagery + street lines at close zoom (full at
+        // ~2R, faint by ~1.2R). Only when the borders layer is actually shown.
+        if (earth.borders && earth.borders.visible && earth.borders.material) {
+            const k = Math.max(0, Math.min(1, (rr - 1.2) / (2.0 - 1.2)));
+            earth.borders.material.opacity = 0.15 + 0.55 * k;
+        }
+        if (earth.geoLOD) earth.geoLOD.update(dist / radius);
+        // Atmosphere shells fade out as the camera zooms close (far/mid-view feature),
+        // and their named labels track the limb.
+        if (earth.atmosphereLayers && typeof earth.atmosphereLayers.update === 'function') {
+            earth.atmosphereLayers.update(rr);
+            if (this.renderer && this.renderer.domElement && typeof earth.atmosphereLayers.updateLabels === 'function') {
+                earth.atmosphereLayers.updateLabels(this.camera, this.renderer.domElement.getBoundingClientRect());
+            }
+        }
+        if (earth.streetTiles || earth.satelliteTiles) this._updateStreets(earth, radius, dist);
+        return true;
+    }
+
+    /**
+     * Drive the high-zoom street-tile engine: find the camera's look-at point on
+     * the globe (ray through screen centre), convert to lat/lng in the mesh's local
+     * frame (cancels globe rotation), and feed it + the camera distance to the
+     * engine. Only meaningful when zoomed close. Rule 4: <=60 | Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _updateStreets(earth, radius, dist) {
+        console.assert(earth && (earth.streetTiles || earth.satelliteTiles), '_updateStreets: a tile layer required');
+        console.assert(typeof GlobeMath !== 'undefined', '_updateStreets: GlobeMath required');
+        const mesh = earth.getMesh();
+        this._exploreRaycaster.setFromCamera(this._ndc.set(0, 0), this.camera);
+        const hits = this._exploreRaycaster.intersectObject(mesh, false);
+        // A4: streets are only meaningful when the look-at actually hits the globe.
+        // The old camera-position fallback fetched sub-camera tiles the user wasn't
+        // looking at, so on a ray miss we simply skip this frame.
+        if (hits.length === 0) return false;
+        const local = mesh.worldToLocal(this._scratchCamPos.copy(hits[0].point));
+        const ll = GlobeMath.vector3ToLatLng(local, radius);
+        if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) {
+            if (earth.streetTiles) earth.streetTiles.update(ll.lat, ll.lng, dist / radius);
+            // Reuse the SAME ll + dist (no re-raycast) to drive the satellite layer,
+            // and dim it on the night hemisphere (unlit imagery would otherwise glow).
+            if (earth.satelliteTiles) {
+                if (typeof earth.satelliteTiles.setSunLight === 'function') {
+                    earth.satelliteTiles.setSunLight(this._lookAtLit(earth, mesh, hits[0].point));
+                }
+                earth.satelliteTiles.update(ll.lat, ll.lng, dist / radius);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Sun-lit factor in [0.65, 1] at a world-space surface point: the outward normal
+     * dotted with Earth's current sun direction (earth._sunDir, refreshed each frame
+     * by Earth.update). Floor 0.65 so the night side stays clearly readable, not murky.
+     * Rule 5: 2 asserts.
+     * @returns {number}
+     */
+    _lookAtLit(earth, mesh, worldPoint) {
+        console.assert(worldPoint && worldPoint.isVector3, '_lookAtLit: world point required');
+        console.assert(earth && mesh, '_lookAtLit: earth + mesh required');
+        const nrm = this._scratchCamPos.copy(worldPoint)
+            .sub(mesh.getWorldPosition(this._scratchEarthPos)).normalize();
+        const sun = earth._sunDir;
+        if (!sun || !sun.isVector3) return 1;
+        // Floor 0.65: the satellite is the layer the user zoomed in to SEE, so keep it
+        // clearly readable on the night side rather than murky, while still dimming it
+        // somewhat so it doesn't glow brighter than the lit hemisphere at far zoom.
+        return Math.max(0.65, Math.min(1, nrm.dot(sun)));
+    }
+
+    /**
+     * Visually-hidden aria-live announcement for explore mode enter/exit.
+     * Reuses the same live region id PageManager uses. Rule 5: 2 asserts.
+     * @param {string} message
+     * @returns {boolean}
+     */
+    announceExplore(message) {
+        console.assert(typeof message === 'string', 'announceExplore: string required');
+        if (typeof document === 'undefined') return false;
+        let region = document.getElementById('planet-live-region');
+        console.assert(region === null || region.nodeType === 1, 'announceExplore: bad region');
+        if (!region) {
+            region = document.createElement('div');
+            region.id = 'planet-live-region';
+            region.setAttribute('aria-live', 'polite');
+            region.setAttribute('aria-atomic', 'true');
+            region.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+            document.body.appendChild(region);
+        }
+        region.textContent = message;
+        return true;
+    }
+
+    /**
+     * Show + wire the explore location panel (SF info, distance readout, Center-
+     * on-SF, Borders/Grid/ISS/Quakes/Places toggles). Idempotent. Rule 4: <=60.
+     * @returns {boolean}
+     */
+    /**
+     * Make the explore panel draggable by its background (buttons still click).
+     * Switches from the centered transform to explicit left/top on first grab and
+     * clamps to the viewport. Wired once per panel. Rule 4: <=60 | Rule 5: 2 asserts.
+     * @param {HTMLElement} panel
+     * @returns {boolean}
+     */
+    _makePanelDraggable(panel) {
+        console.assert(panel && panel.style, '_makePanelDraggable: panel required');
+        console.assert(typeof window !== 'undefined', '_makePanelDraggable: window required');
+        if (!panel) return false;
+        // B1: dragging on touch must not fight native scroll.
+        panel.style.touchAction = 'none';
+        panel.style.cursor = 'move';
+        // B2: only the pointerdown wiring lives behind the dataset guard (it dies with
+        // the element). The window move/up + resize listeners are (re)attached by
+        // _attachPanelWindowListeners on enter and removed on teardown — so re-running
+        // after a teardown re-attaches them correctly. Drag state lives on the instance
+        // so the window-bound move/up handlers can see it.
+        this._panelDragState = this._panelDragState || { on: false, sx: 0, sy: 0, ox: 0, oy: 0 };
+        if (!panel.dataset.draggable) {
+            panel.dataset.draggable = '1';
+            const st = this._panelDragState;
+            this._panelDragDown = (e) => {
+                if (e.target && e.target.closest && e.target.closest('button')) return; // buttons work
+                const r = panel.getBoundingClientRect();
+                panel.style.transform = 'none';
+                panel.style.bottom = 'auto';
+                panel.style.left = r.left + 'px';
+                panel.style.top = r.top + 'px';
+                st.on = true; st.sx = e.clientX; st.sy = e.clientY; st.ox = r.left; st.oy = r.top;
+                panel.style.cursor = 'grabbing';
+                e.preventDefault();
+            };
+            panel.addEventListener('pointerdown', this._panelDragDown);
+        }
+        this._attachPanelWindowListeners(panel);
+        return true;
+    }
+
+    /**
+     * Attach the window-level drag (move/up) + resize re-clamp listeners for the
+     * explore panel. Idempotent: removes any prior set first so it never double-binds
+     * or leaks. Stored on the instance so teardown/dispose can remove them.
+     * B2 (move/up leak) + B3 (resize re-clamp). Rule 4: <=60 | Rule 5: 2 asserts.
+     * @param {HTMLElement} panel
+     * @returns {boolean}
+     */
+    _attachPanelWindowListeners(panel) {
+        console.assert(panel && panel.style, '_attachPanelWindowListeners: panel required');
+        console.assert(typeof window !== 'undefined', '_attachPanelWindowListeners: window required');
+        this._detachPanelWindowListeners();
+        const st = this._panelDragState || (this._panelDragState = { on: false, sx: 0, sy: 0, ox: 0, oy: 0 });
+        this._panelDragMove = (e) => {
+            if (!st.on) return;
+            const r = panel.getBoundingClientRect();
+            const nx = Math.max(0, Math.min(window.innerWidth - r.width, st.ox + e.clientX - st.sx));
+            const ny = Math.max(0, Math.min(window.innerHeight - r.height, st.oy + e.clientY - st.sy));
+            panel.style.left = nx + 'px';
+            panel.style.top = ny + 'px';
+        };
+        this._panelDragUp = () => { st.on = false; panel.style.cursor = 'move'; };
+        // B3: re-clamp the panel into the viewport after a resize/orientation change.
+        this._panelResize = () => {
+            if (panel.style.left === '' || panel.style.left === 'auto') return; // not yet dragged
+            const r = panel.getBoundingClientRect();
+            const nx = Math.max(0, Math.min(window.innerWidth - r.width, r.left));
+            const ny = Math.max(0, Math.min(window.innerHeight - r.height, r.top));
+            panel.style.left = nx + 'px';
+            panel.style.top = ny + 'px';
+        };
+        window.addEventListener('pointermove', this._panelDragMove);
+        window.addEventListener('pointerup', this._panelDragUp);
+        window.addEventListener('resize', this._panelResize);
+        return true;
+    }
+
+    /**
+     * Remove the window-level explore-panel listeners (move/up/resize) if present.
+     * Safe to call when none are attached. Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _detachPanelWindowListeners() {
+        console.assert(typeof window !== 'undefined', '_detachPanelWindowListeners: window required');
+        console.assert(typeof window.removeEventListener === 'function', '_detachPanelWindowListeners: removeEventListener required');
+        if (this._panelDragMove) { window.removeEventListener('pointermove', this._panelDragMove); this._panelDragMove = null; }
+        if (this._panelDragUp) { window.removeEventListener('pointerup', this._panelDragUp); this._panelDragUp = null; }
+        if (this._panelResize) { window.removeEventListener('resize', this._panelResize); this._panelResize = null; }
+        return true;
+    }
+
+    setupExplorePanel() {
+        if (typeof document === 'undefined') return false;
+        const panel = document.getElementById('explore-panel');
+        console.assert(panel === null || panel.nodeType === 1, 'setupExplorePanel: bad panel');
+        if (!panel) return false;
+        panel.hidden = false;
+        panel.style.display = 'flex';   // [hidden] alone overridden by inline display; toggle explicitly
+        this._distEl = document.getElementById('explore-distance'); // cache (no per-frame query)
+        document.addEventListener('keydown', this._onExploreKeydown);
+
+        this._detailEl = document.getElementById('explore-detail');
+        this._tooltipEl = document.getElementById('country-tooltip');
+
+        // The canvas is raised to z-index 30 in explore; the panel's z is trapped
+        // inside #content's stacking context (painted below the canvas → unclickable).
+        // Reparent the explore UI to <body> so it's in the root stacking context and
+        // sits above the canvas. Idempotent.
+        [panel, this._detailEl, this._tooltipEl].forEach((el) => {
+            if (el && el.parentElement !== document.body) document.body.appendChild(el);
+        });
+        // #footer-container is position:relative z-index:200 in the root stacking
+        // context; once reparented to <body> the panel/detail must out-rank it or
+        // they paint under the footer. (Tooltip is pointer-events:none, lift too.)
+        if (panel) panel.style.zIndex = '210';
+        if (this._detailEl) this._detailEl.style.zIndex = '211';
+        if (this._tooltipEl) this._tooltipEl.style.zIndex = '212';
+        this._makePanelDraggable(panel);   // movable by its background; buttons still click
+
+        if (!panel.dataset.wired) {
+            const center = document.getElementById('explore-center-sf');
+            const borders = document.getElementById('explore-toggle-borders');
+            const grid = document.getElementById('explore-toggle-grid');
+            const iss = document.getElementById('explore-toggle-iss');
+            const quakes = document.getElementById('explore-toggle-quakes');
+            const places = document.getElementById('explore-toggle-places');
+            const lod = document.getElementById('explore-toggle-lod');
+            if (center) center.addEventListener('click', () => this.centerOnSanFrancisco());
+            if (borders) borders.addEventListener('click', () => this._toggleExploreLayer('borders', borders));
+            if (grid) grid.addEventListener('click', () => this._toggleExploreLayer('graticule', grid));
+            if (iss) iss.addEventListener('click', () => this._toggleDataLayer('iss', iss));
+            if (quakes) quakes.addEventListener('click', () => this._toggleDataLayer('quakes', quakes));
+            if (places) places.addEventListener('click', () => this._toggleDataLayer('pois', places));
+            if (lod) lod.addEventListener('click', () => this._toggleLodLayer(lod));
+            const mode = document.getElementById('explore-mode');
+            if (mode) mode.addEventListener('click', () => this._cycleMapMode(mode));
+            const exit = document.getElementById('explore-exit');
+            if (exit) exit.addEventListener('click', () => this.exitExploreMode());
+            panel.dataset.wired = '1';
+        }
+        return true;
+    }
+
+    /**
+     * Toggle a lazily-built explore overlay (borders|graticule) + sync its button
+     * aria-pressed/active state + persist. Rule 5: 2 asserts.
+     * @param {string} layer - 'borders' | 'graticule'
+     * @param {HTMLElement} btn
+     * @returns {boolean}
+     */
+    _toggleExploreLayer(layer, btn) {
+        console.assert(layer === 'borders' || layer === 'graticule', '_toggleExploreLayer: bad layer');
+        const earth = this.getEarthObject();
+        console.assert(earth, '_toggleExploreLayer: Earth required');
+        if (!earth || !earth[layer]) return false;
+        const obj = earth[layer];
+        obj.visible = !obj.visible;
+        if (btn) {
+            btn.classList.toggle('active', obj.visible);
+            btn.setAttribute('aria-pressed', obj.visible ? 'true' : 'false');
+        }
+        this._writeExploreLayerState();
+        return true;
+    }
+
+    /**
+     * Toggle a live data layer (iss|quakes|pois) by visibility + persist.
+     * Rule 5: 2 asserts.
+     * @param {string} name
+     * @param {HTMLElement} btn
+     * @returns {boolean}
+     */
+    _toggleDataLayer(name, btn) {
+        console.assert(typeof name === 'string', '_toggleDataLayer: name required');
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_toggleDataLayer: bad earth');
+        if (!earth || !earth.layers || !earth.layers[name]) return false;
+        const obj = earth.layers[name];
+        obj.visible = !obj.visible;
+        if (btn) {
+            btn.classList.toggle('active', obj.visible);
+            btn.setAttribute('aria-pressed', obj.visible ? 'true' : 'false');
+        }
+        this._writeExploreLayerState();
+        return true;
+    }
+
+    /**
+     * Toggle zoom level-of-detail auto-reveal (states/cities/districts). When turned
+     * off, stops auto-reveal and hides all tiers; when on, resumes auto-reveal.
+     * No-ops if geoLOD is absent. Rule 5: 2 asserts.
+     * @param {HTMLElement} btn
+     * @returns {boolean}
+     */
+    _toggleLodLayer(btn) {
+        console.assert(btn === null || btn.nodeType === 1, '_toggleLodLayer: bad btn');
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_toggleLodLayer: bad earth');
+        this._lodEnabled = !this._lodEnabled;
+        this._applyLodState(earth, this._lodEnabled);
+        if (btn) {
+            btn.classList.toggle('active', this._lodEnabled);
+            btn.setAttribute('aria-pressed', this._lodEnabled ? 'true' : 'false');
+        }
+        this._writeExploreLayerState();
+        return true;
+    }
+
+    /**
+     * Cycle the basemap mode (satellite → dark → street → topo → light) and relabel
+     * the button. The new map re-fetches from the chosen Esri service. Rule 5: 2 asserts.
+     * @param {HTMLElement} btn
+     * @returns {boolean}
+     */
+    _cycleMapMode(btn) {
+        console.assert(btn === null || btn.nodeType === 1, '_cycleMapMode: bad btn');
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_cycleMapMode: bad earth');
+        if (!earth || !earth.satelliteTiles || typeof earth.satelliteTiles.nextMode !== 'function') return false;
+        const mode = earth.satelliteTiles.nextMode();
+        if (btn) btn.textContent = '🗺️ ' + mode.charAt(0).toUpperCase() + mode.slice(1);
+        return true;
+    }
+
+    /**
+     * Raycast a click against the live markers → show a detail card. Rule 4: <=60.
+     * @param {MouseEvent} event
+     */
+    _handleExploreClick(event) {
+        if (!this.exploreMode || !this.camera || !this._detailEl) return;
+        const earth = this.getEarthObject();
+        if (!earth || !earth.pickables || !earth.pickables.length) return;
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this._ndc.set(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
+        const pick = earth.pickables.filter((m) => m.visible && (!m.parent || m.parent.visible));
+        const hits = this._exploreRaycaster.intersectObjects(pick, false);
+        if (hits.length) {
+            const u = hits[0].object.userData || {};
+            // textContent (not innerHTML): marker info can come from live feeds
+            // (e.g. USGS quake "place" strings), so never inject feed text as HTML.
+            this._detailEl.textContent = '';
+            const strong = document.createElement('strong');
+            strong.textContent = u.name || 'Marker';
+            this._detailEl.appendChild(strong);
+            if (u.info) {
+                this._detailEl.appendChild(document.createElement('br'));
+                this._detailEl.appendChild(document.createTextNode(u.info));
+            }
+            this._detailEl.hidden = false;
+        } else {
+            this._detailEl.hidden = true;
+        }
+    }
+
+    /**
+     * Double-click a point on the globe (or a hovered region / zip) to RE-CENTER the
+     * view there — the globe rotates so that point faces you, then you spin around it
+     * (centre-orbit). The "set other surface points" interaction. Rule 4: <=60 lines.
+     * @param {MouseEvent} event
+     */
+    _handleExploreDblClick(event) {
+        if (!this.exploreMode || !this.camera) return;
+        const earth = this.getEarthObject();
+        if (!earth || !earth.getMesh || typeof GlobeMath === 'undefined') return;
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this._ndc.set(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
+        const mesh = earth.getMesh();
+        const hits = this._exploreRaycaster.intersectObject(mesh, false);
+        if (!hits.length) return;
+        const local = mesh.worldToLocal(this._scratchCamPos.copy(hits[0].point));
+        const ll = GlobeMath.vector3ToLatLng(local, earth.data.radius);
+        if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) {
+            this.centerOnLatLng(ll.lat, ll.lng);
+        }
+    }
+
+    /**
+     * Hover the globe → highlight the country under the cursor + show its name.
+     * Raycasts the surface, converts the hit to lat/lng, point-in-polygon lookup.
+     * Rule 4: <=60 lines.
+     * @param {MouseEvent} event
+     */
+    _handleExploreHover(event) {
+        if (!this.exploreMode || !this.camera) return;
+        const earth = this.getEarthObject();
+        if (!earth || !earth.mesh || typeof earth.countryAt !== 'function') return;
+        // Lazy-cache the tooltip element (robust against panel-setup timing).
+        if (!this._tooltipEl && typeof document !== 'undefined') {
+            this._tooltipEl = document.getElementById('country-tooltip');
+        }
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this._ndc.set(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this.camera.updateMatrixWorld();
+        earth.mesh.updateMatrixWorld();
+        this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
+        const hits = this._exploreRaycaster.intersectObject(earth.mesh, false);
+        if (!hits.length) {
+            if (typeof earth.highlightRegion === 'function') earth.highlightRegion(null, null);
+            earth.highlightCountry(null);
+            if (this._tooltipEl) this._tooltipEl.hidden = true;
+            return;
+        }
+        const local = earth.mesh.worldToLocal(hits[0].point.clone());
+        const ll = GlobeMath.vector3ToLatLng(local, earth.data.radius);
+        // CASCADE: pick the finest loaded tier for the current zoom (country→state→
+        // county→district→zip); if it has no region under the cursor, fall back to
+        // country so there's always a name. Name + tier label in the tooltip.
+        const rr = this.camera.position.distanceTo(
+            earth.getMesh().getWorldPosition(this._scratchEarthPos)) / (earth.data.radius || 2);
+        let tier = (typeof earth.cascadeTierForDistance === 'function')
+            ? earth.cascadeTierForDistance(rr) : 'country';
+        let name = (typeof earth.regionAt === 'function') ? earth.regionAt(tier, ll.lat, ll.lng) : null;
+        if (!name && tier !== 'country' && typeof earth.regionAt === 'function') {
+            tier = 'country'; name = earth.regionAt('country', ll.lat, ll.lng);
+        }
+        if (typeof earth.highlightRegion === 'function') earth.highlightRegion(name ? tier : null, name);
+        if (this._tooltipEl) {
+            if (name) {
+                const label = (tier === 'country') ? '' : '  ·  ' + tier;
+                this._tooltipEl.textContent = name + label;
+                this._tooltipEl.style.left = (event.clientX + 14) + 'px';
+                this._tooltipEl.style.top = (event.clientY + 14) + 'px';
+                this._tooltipEl.hidden = false;
+            } else {
+                this._tooltipEl.hidden = true;
+            }
+        }
+    }
+
+    /**
+     * Sync the toggle buttons' pressed state to the overlays' actual visibility
+     * (overlays are shown on enter, so the buttons must reflect that or the first
+     * click inverts the state). Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _syncExploreToggleButtons() {
+        if (typeof document === 'undefined') return false;
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_syncExploreToggleButtons: bad earth');
+        if (!earth) return false;
+        const set = (id, vis) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.classList.toggle('active', !!vis);
+            btn.setAttribute('aria-pressed', vis ? 'true' : 'false');
+        };
+        console.assert(typeof set === 'function', '_syncExploreToggleButtons: helper present');
+        set('explore-toggle-grid', earth.graticule && earth.graticule.visible);
+        set('explore-toggle-borders', earth.borders && earth.borders.visible);
+        const L = earth.layers || {};
+        set('explore-toggle-iss', L.iss && L.iss.visible);
+        set('explore-toggle-quakes', L.quakes && L.quakes.visible);
+        set('explore-toggle-places', L.pois && L.pois.visible);
+        set('explore-toggle-lod', this._lodEnabled);
+        return true;
+    }
+
+    /**
+     * Hide the explore panel + remove the Escape listener. Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    teardownExplorePanel() {
+        if (typeof document === 'undefined') return false;
+        document.removeEventListener('keydown', this._onExploreKeydown);
+        // B2/B3: drop the window-level drag/resize listeners so they don't leak onto a
+        // disposed instance. The pointerdown stays on the panel (dies with the element);
+        // a later setup re-attaches the window listeners via _makePanelDraggable.
+        this._detachPanelWindowListeners();
+        const panel = document.getElementById('explore-panel');
+        console.assert(panel === null || panel.nodeType === 1, 'teardownExplorePanel: bad panel');
+        if (panel) { panel.hidden = true; panel.style.display = 'none'; }
+        this._distEl = null;
+        this._detailEl = null;
+        this._tooltipEl = null;
+        return true;
+    }
+
     focusOnPlanet(planetName) {
         if (!this.solarSystem) return;
-        
+
+        // If we're leaving Earth-explore for a new focus, tear explore down first
+        // so the globe unfreezes, zoom bounds + orbit defaults restore, and the
+        // explore overlays/panel/Escape-listener are removed. skipFlyBack=true: the
+        // new focus below flies the camera itself. (Without this, switching planets
+        // mid-explore leaves Earth frozen with the wrong orbit pivot + zoom bounds.)
+        if (this.exploreMode) {
+            this.exitExploreMode(true);
+        }
+
         // Update planet info in the UI
         this.updatePlanetInfo(planetName);
-        
+
         // Store the selected planet
         this.selectedPlanet = planetName;
         console.log(`Focusing on planet: ${planetName}`);
-        
+        // Show/hide the opt-in "Explore Earth" button for the new selection.
+        this._updateExploreButton();
+
         // Focus camera on the selected planet
         if (this.solarSystem && typeof this.solarSystem.focusOnPlanet === 'function') {
             const cameraInfo = this.getPlanetCameraInfo(planetName);
@@ -866,12 +1941,16 @@ class SpaceEnvironment {
                 // Use smooth transition
                 this.cameraTransitioning = true;
                 this.smoothCameraTransition(
-                    cameraInfo.position, 
+                    cameraInfo.position,
                     cameraInfo.lookAt,
                     () => {
                         this.cameraTransitioning = false;
                         this.insideOrbitZone = true;
-                        
+
+                        // Earth: do NOT auto-enter explore. Earth now orbits like any
+                        // other planet; the opt-in "Explore Earth" button (managed by
+                        // _updateExploreButton) lets the user choose to enter free-look.
+
                         // Start auto-orbiting if enabled
                         if (this.orbitingPlanet) {
                             this.isAutoOrbiting = true;
@@ -1110,10 +2189,20 @@ class SpaceEnvironment {
                 j2000Days = this.timeManager.getJ2000Days();
             }
 
+            // Always advance the simulation so the Time panel (play/scrub) and
+            // explore-mode Earth refresh stay live. Reduced-motion is honored by
+            // starting the clock paused (see constructor) — TimeScaleManager.update
+            // early-returns while paused, so there is no autonomous motion until
+            // the user presses play.
             this.solarSystem.update(deltaTime, j2000Days);
-            
+
             // Update camera behavior based on selected planet
-            if (this.selectedPlanet && !this.cameraTransitioning) {
+            if (this.exploreMode) {
+                // Explore: free user controls + cloud fly-through; the auto-orbit
+                // tracking is intentionally suppressed so the globe stays still.
+                this.updateExploreClouds();
+                this.updateExploreLOD();
+            } else if (this.selectedPlanet && !this.cameraTransitioning) {
                 this.updateCameraPlanetTracking();
             }
             
@@ -1174,7 +2263,17 @@ class SpaceEnvironment {
         // Get the planet mesh and its current position
         const mesh = planetObj.getMesh();
         const planetPosition = mesh.position.clone();
-        
+
+        // Explore mode: user owns the camera. Never auto-orbit / re-trigger here.
+        // Keep controls.target locked to Earth's (frozen, static) position so
+        // drag-rotation pivots around the globe centre.
+        if (this.exploreMode) {
+            if (this.controls) {
+                this.controls.target.copy(planetPosition);
+            }
+            return;
+        }
+
         // Check if we're in the planet's orbit zone
         this.checkOrbitZone();
         
@@ -1406,15 +2505,31 @@ class SpaceEnvironment {
      * Purpose: Rule 6 graceful handling of missing controls
      */
     disableInteractiveControls() {
+        // Leaving the interactive (main) view: fully tear down Explore mode first.
+        // Otherwise it leaks the Escape keydown listener on document and keeps
+        // running updateExploreClouds() every frame against a panel that PageManager
+        // wipes via innerHTML on navigation, and Earth is left frozen.
+        if (this.exploreMode) {
+            this.exitExploreMode(true);
+        }
+        // Belt-and-suspenders: the atmosphere DOM labels live in <body> (outside the
+        // #content that PageManager wipes), so if explore was already torn down by
+        // another path they could linger on the next page. Force them hidden here
+        // (cascadeOut is idempotent: targets→0 + labels opacity 0).
+        const earth = (typeof this.getEarthObject === 'function') ? this.getEarthObject() : null;
+        if (earth && earth.atmosphereLayers && typeof earth.atmosphereLayers.cascadeOut === 'function') {
+            earth.atmosphereLayers.cascadeOut();
+        }
+
         if (this.controls) {
             this.controls.enabled = false;
         }
-        
+
         // Clear any active selections
         this.selectedPlanet = null;
         this.isAutoOrbiting = false;
         this.insideOrbitZone = false;
-        
+
         console.log('🔒 Interactive controls disabled for background mode');
         return true;
     }
@@ -2060,9 +3175,31 @@ class SpaceEnvironment {
             cancelAnimationFrame(this.animationId);
         }
         
+        // Tear down Explore mode if active so the Escape keydown listener on
+        // document + the window click/move handlers don't leak onto a disposed
+        // instance, and Earth is never left frozen.
+        if (this.exploreMode) {
+            this.exitExploreMode(true);
+        } else {
+            this.teardownExplorePanel();
+        }
+        // B2/B3: belt-and-suspenders — ensure the panel window listeners are gone even
+        // if neither branch above ran a teardown.
+        this._detachPanelWindowListeners();
+
+        // Remove the reduced-motion change listener so it doesn't fire against a
+        // disposed instance.
+        if (this._reducedMotionMq && this._onReducedMotionChange) {
+            if (this._reducedMotionMq.removeEventListener) {
+                this._reducedMotionMq.removeEventListener('change', this._onReducedMotionChange);
+            } else if (this._reducedMotionMq.removeListener) {
+                this._reducedMotionMq.removeListener(this._onReducedMotionChange);
+            }
+        }
+
         // Clean up event listeners (FIX #4: using bound reference)
         window.removeEventListener('resize', this.boundHandleResize);
-        
+
         // Clean up solar system resources
         if (this.solarSystem) {
             // Assuming SolarSystem has a dispose method

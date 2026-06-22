@@ -59,8 +59,39 @@ class LoadingScreen {
             this.progressBar.setAttribute('aria-valuemax', '100');
             this.progressBar.setAttribute('aria-valuenow', '0');
         }
+
+        this._startBootLog();
     }
-    
+
+    /**
+     * Cosmic boot-log: types themed status lines (keeps the last few visible).
+     * Personalized to the portfolio's solar-system theme. Reduced-motion: instant.
+     */
+    _startBootLog() {
+        const log = document.getElementById('boot-log');
+        if (!log) return;
+        const lines = [
+            'Booting MRCARGO engine',
+            'Initializing WebGL renderer',
+            'Loading solar system assets',
+            'Calibrating planetary orbits',
+            'Streaming Earth day / night maps',
+            'Mounting interactive controls',
+            'Systems online'
+        ];
+        let i = 0;
+        const add = () => {
+            if (!this.loadingScreen || this.loadingScreen.style.display === 'none') return;
+            if (i >= lines.length) return;
+            const li = document.createElement('li');
+            li.textContent = lines[i++];
+            log.appendChild(li);
+            while (log.children.length > 4) log.removeChild(log.firstChild);
+            if (i < lines.length) this._bootTimer = setTimeout(add, this.animated ? 430 : 0);
+        };
+        add();
+    }
+
     /**
      * Show the loading screen
      */
@@ -87,7 +118,9 @@ class LoadingScreen {
      */
     hide() {
         if (!this.loadingScreen) return;
-        
+
+        if (this._bootTimer) { clearTimeout(this._bootTimer); this._bootTimer = null; }
+
         // Update ARIA attributes
         this.loadingScreen.setAttribute('aria-busy', 'false');
         

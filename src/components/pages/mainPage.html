@@ -41,10 +41,12 @@
                         role="tab" 
                         aria-selected="false"
                         aria-controls="planet-info-popup"
-                        id="tab-Earth" 
-                        data-planet="Earth">
+                        id="tab-Earth"
+                        data-planet="Earth"
+                        title="Click Earth to explore — drag, zoom, and see where I'm based">
                     <span class="planet-icon" aria-hidden="true">🌍</span>
                     <span class="planet-name">Earth</span>
+                    <span class="explore-badge" aria-hidden="true" style="margin-left:5px; font-size:9px; font-weight:700; letter-spacing:0.4px; color:#06121f; background:#66e8ff; border-radius:6px; padding:1px 5px; vertical-align:middle;">EXPLORE</span>
                 </button>
                 <button class="planet-btn" 
                         role="tab" 
@@ -263,6 +265,50 @@
                 </div>
             </div>
         </div>
+
+        <!-- Explore Earth panel — shown only in Explore mode (wired by SpaceEnvironment.setupExplorePanel) -->
+        <div class="explore-panel" id="explore-panel" hidden
+             role="region" aria-label="Explore Earth controls"
+             style="position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:40; pointer-events:auto; display:none; gap:10px; align-items:center; padding:10px 14px; background:rgba(8,12,24,0.85); border:1px solid rgba(90,150,220,0.45); border-radius:10px; color:#dce8ff; font:13px/1.4 system-ui,-apple-system,sans-serif; backdrop-filter:blur(4px); box-shadow:0 6px 24px rgba(0,0,0,0.45);">
+            <div style="display:flex; flex-direction:column; line-height:1.25; margin-right:4px;">
+                <strong style="color:#66e8ff;">📍 Based in San Francisco</strong>
+                <span style="opacity:0.85;">Open to work · 37.77, -122.42</span>
+                <span id="explore-distance" style="opacity:0.6; font-size:11px;">—</span>
+                <span aria-hidden="true" style="opacity:0.5; font-size:10px;">drag · scroll · click a marker · Esc to exit</span>
+                <span aria-hidden="true" style="opacity:0.4; font-size:9px;">Live data: USGS · wheretheiss.at · Natural Earth · DataSF · OpenStreetMap · OpenFreeMap</span>
+            </div>
+            <button type="button" id="explore-center-sf" aria-label="Center the globe on San Francisco"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(40,90,160,0.65); color:#fff;">🎯 Center on SF</button>
+            <button type="button" id="explore-toggle-borders" aria-pressed="false" aria-label="Toggle country borders"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🗺️ Borders</button>
+            <button type="button" id="explore-toggle-grid" aria-pressed="false" aria-label="Toggle latitude and longitude grid"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🌐 Grid</button>
+            <button type="button" id="explore-toggle-iss" aria-pressed="false" aria-label="Toggle the live International Space Station marker"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🛰️ ISS</button>
+            <button type="button" id="explore-toggle-quakes" aria-pressed="false" aria-label="Toggle live earthquakes"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🌋 Quakes</button>
+            <button type="button" id="explore-toggle-places" aria-pressed="false" aria-label="Toggle places of interest"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">📍 Places</button>
+            <button type="button" id="explore-toggle-lod" aria-pressed="true" aria-label="Toggle zoom detail layers — states, cities, districts"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🔎 Detail</button>
+            <button type="button" id="explore-mode" aria-label="Switch the map basemap (satellite, dark, street, topo, light)"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🗺️ Satellite</button>
+            <button type="button" id="explore-exit" aria-label="Exit Explore Earth mode"
+                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(200,120,120,0.5); background:rgba(120,40,40,0.55); color:#fff;">✕ Exit</button>
+        </div>
+
+        <!-- Country hover tooltip — follows the cursor, shows the hovered country -->
+        <div id="country-tooltip" hidden aria-hidden="true"
+             style="position:fixed; z-index:42; pointer-events:none; padding:3px 8px; background:rgba(8,12,24,0.92); border:1px solid rgba(255,230,128,0.6); border-radius:6px; color:#ffe680; font:12px/1.3 system-ui,-apple-system,sans-serif; white-space:nowrap;"></div>
+
+        <!-- Marker detail card — shown when a live marker is clicked (raycast) -->
+        <div id="explore-detail" hidden role="status" aria-live="polite"
+             style="position:fixed; left:50%; bottom:96px; transform:translateX(-50%); z-index:41; max-width:280px; padding:8px 12px; background:rgba(8,12,24,0.92); border:1px solid rgba(120,200,255,0.55); border-radius:8px; color:#dce8ff; font:13px/1.4 system-ui,-apple-system,sans-serif; text-align:center; box-shadow:0 6px 24px rgba(0,0,0,0.45);"></div>
+
+        <!-- Opt-in Explore Earth button — shown by SpaceEnvironment only while Earth
+             is the focused planet and not already exploring (replaces auto-enter) -->
+        <button type="button" id="explore-enter-btn" hidden aria-label="Enter Earth explore mode"
+                style="position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:35; display:none; cursor:pointer; padding:10px 18px; border-radius:10px; border:1px solid rgba(120,180,255,0.6); background:rgba(40,90,160,0.82); color:#fff; font:14px system-ui,-apple-system,sans-serif; box-shadow:0 6px 24px rgba(0,0,0,0.45); backdrop-filter:blur(4px);">🌍 Explore Earth</button>
 
     </div>
 

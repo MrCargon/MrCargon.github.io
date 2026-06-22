@@ -5,6 +5,8 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes) used by Explore mode. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com; font-src 'self'; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com; base-uri 'self'">
         <meta name="description" content="MrCargo - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
         <title>MrCargo - Portfolio</title>
 
@@ -49,13 +51,24 @@
     </head>
 
     <body>
-        <!-- Loading Screen -->
-        <div id="loading-screen" aria-live="polite">
-            <div class="bubble-container" aria-hidden="true">
-                <div class="bubble"></div>
+        <!-- Loading Screen — cosmic boot sequence (personalized; Osiris-inspired) -->
+        <div id="loading-screen" aria-live="polite" role="status" aria-label="Loading portfolio">
+            <div class="boot-grid" aria-hidden="true"></div>
+            <div class="boot-core" aria-hidden="true">
+                <span class="boot-ring boot-ring-1"></span>
+                <span class="boot-ring boot-ring-2"></span>
+                <span class="boot-ring boot-ring-3"></span>
+                <span class="boot-orb"></span>
             </div>
-            <div id="loading-text">Loading components...</div>
-            <div id="loading-progress" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Loading progress"></div>
+            <div class="boot-brand">
+                <h1 class="boot-name">MRCARGO</h1>
+                <p class="boot-tagline">Creative Developer · 3D Designer</p>
+            </div>
+            <ul id="boot-log" class="boot-log" aria-hidden="true"></ul>
+            <div id="loading-text" class="boot-status">Initializing systems…</div>
+            <div class="boot-bar">
+                <div id="loading-progress" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Loading progress"></div>
+            </div>
         </div>
     
         <!-- Main Content -->
@@ -79,7 +92,14 @@
     <!-- 🛠️ Utility Classes (load before 3D components) -->
     <script src="src/utils/MemoryManager.js"></script>
     <script src="src/utils/ResourceLoader.js"></script>
-    
+    <script src="src/utils/GlobeMath.js"></script>
+    <script src="src/utils/SafeFetch.js"></script>
+    <script src="src/utils/GeoLOD.js"></script>
+    <script src="src/assets/vendor/mvt-decoder.js"></script>
+    <script src="src/utils/StreetTiles.js"></script>
+    <script src="src/utils/SatelliteTiles.js"></script>
+    <script src="src/utils/AtmosphereLayers.js"></script>
+
     <!-- 🌌 THREE.js Library - Using CDN with proper OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>

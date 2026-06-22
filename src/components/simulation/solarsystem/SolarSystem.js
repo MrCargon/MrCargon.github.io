@@ -130,6 +130,7 @@ class SolarSystem {
                     texturePath: "src/assets/textures/planets/earth/earth_day.jpg",
                     nightLightsPath: "src/assets/textures/planets/earth/earth_night.jpg",
                     normalMapPath: "src/assets/textures/planets/earth/earth_normal.jpg",
+                    bumpMapPath: "src/assets/textures/planets/earth/earth_bump.jpg", // day-side relief for the custom Earth shader (derivative-bump path)
                     cloudsPath: "src/assets/textures/planets/earth/earth_clouds.jpg",
                     specularMapPath: "src/assets/textures/planets/earth/earth_specular.jpg",
                     description: "Our home planet, the only known celestial body to harbor life.",

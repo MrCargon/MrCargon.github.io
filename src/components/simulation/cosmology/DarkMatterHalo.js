@@ -325,7 +325,10 @@ class DarkMatterHalo {
 
         // Pulse animation (breathing effect)
         const pulsePhase = Math.sin(this.time * this.options.pulseSpeed);
-        const pulseFactor = 1.0 + (pulsePhase * this.options).pulseAmplitude;
+        // Bugfix (audit): the paren was misplaced — `(pulsePhase * this.options)`
+        // multiplied a number by an object → NaN, then `.pulseAmplitude` off NaN →
+        // undefined → pulseFactor NaN → material.opacity/size set to NaN every update.
+        const pulseFactor = 1.0 + (pulsePhase * this.options.pulseAmplitude);
 
         // Update material opacity for pulse
         this.material.opacity = this.options.opacity * pulseFactor;
@@ -375,6 +378,9 @@ class DarkMatterHalo {
         if (this.particleSystem) {
             this.particleSystem.visible = visible;
         }
+        // Also gate updates so a hidden halo doesn't keep running its pulse math
+        // (audit MINOR): mirrors the other cosmology modules' setVisible behaviour.
+        this.enabled = visible;
     }
 
     /**

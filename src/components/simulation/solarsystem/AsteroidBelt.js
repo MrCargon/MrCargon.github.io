@@ -74,9 +74,11 @@ class AsteroidBelt {
                 // Calculate how many "days" passed and convert to scaled delta
                 // 1 day in simulation = 86400 seconds worth of movement
                 const daysDelta = j2000Days - this.lastJ2000Days;
-                // Scale factor: convert days to seconds (NOT milliseconds)
-                // 86400 seconds per day (matches KuiperBelt.js implementation)
-                scaledDelta = daysDelta * 86400; // Convert days to seconds
+                // Realism fix: the previous *86400 made asteroids orbit ~20,000× too
+                // fast (≈13 full revolutions per simulated day). orbitSpeed/rotationSpeed
+                // below are already per-day rates (~0.001–0.004 rad/day ≈ multi-year
+                // periods), so advance by elapsed days directly.
+                scaledDelta = daysDelta;
             }
             this.lastJ2000Days = j2000Days;
         }

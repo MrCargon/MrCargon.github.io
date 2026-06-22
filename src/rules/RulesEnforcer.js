@@ -122,24 +122,13 @@ class RulesEnforcer {
      * Rule 4: Function length limits | Rule 2: Selective monitoring
      */
     setupFunctionMonitoring() {
-        if (!this.isMonitoringActive) return;
-        
-        const enforcer = this;
-        const originalFunction = window.Function;
-        
-        // Lightweight function wrapper with threshold checking
-        window.Function = function(...args) {
-            const func = originalFunction.apply(this, args);
-            
-            // Only monitor if performance manager says to (threshold-based)
-            if (enforcer.performanceManager.shouldMonitor(func)) {
-                enforcer.registerFunction(func);
-            }
-            
-            return func;
-        };
-        
-        console.log('⚡ Lightweight function monitoring active');
+        // DISABLED (audit CRITICAL): this previously reassigned the global
+        // `window.Function` constructor to a wrapper, a process-wide side-effect on a
+        // built-in that can break third-party code and corrupt `fn.constructor ===
+        // Function` identity checks, and was never restored on shutdown. Runtime
+        // line-counting of dynamically-created functions can't be done reliably
+        // anyway, so this is now a no-op. Static analysis still covers Rule 4.
+        return;
     }
     
     /**

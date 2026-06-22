@@ -760,6 +760,16 @@ class PageManager {
      * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 3: Bounded cleanup
      */
     async cleanupCurrentPage() {
+        // Universal navigation guard: if we leave any page while Earth Explore mode
+        // is active, tear it down first. The explore panel/tooltip/detail are
+        // reparented to <body> (to sit above the raised canvas), so without this they
+        // would orphan in <body> and "leak" onto every other page. This runs before
+        // every page transition, so it's the one place guaranteed to catch all exits.
+        if (window.spaceEnvironment && window.spaceEnvironment.exploreMode
+            && typeof window.spaceEnvironment.exitExploreMode === 'function') {
+            window.spaceEnvironment.exitExploreMode(true);
+        }
+
  // Rule 5: Validate cleanup prerequisites
         if (!this.currentPage) {
             return true; // Nothing to cleanup
@@ -1186,10 +1196,15 @@ class PageManager {
             const planetName = button.getAttribute('data-planet');
             if (!planetName) return;
 
-            // Update active button state
+            // Update active button state + ARIA selection (audit a11y: screen readers
+            // were stuck announcing the Sun as the only aria-selected tab).
             const allBtns = document.querySelectorAll('[data-planet]');
-            allBtns.forEach(btn => btn.classList.remove('active'));
+            allBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('role') === 'tab') btn.setAttribute('aria-selected', 'false');
+            });
             button.classList.add('active');
+            if (button.getAttribute('role') === 'tab') button.setAttribute('aria-selected', 'true');
 
             // Update selection progress indicator
             const progressEl = document.querySelector('.progress-indicator');

@@ -161,21 +161,11 @@ class ScopeAnalyzer {
         if (window.Assert) {
             window.Assert.assertType(this.functionScopes, 'object', 'Function scopes map required');
         }
-        
-        // Monitor function creation to analyze scope usage
-        const originalFunction = Function;
-        const analyzer = this;
-        
-        window.Function = function(...args) {
-            const func = originalFunction.apply(this, args);
-            
-            // Analyze function for scope violations
-            analyzer.analyzeFunctionScope(func, args);
-            
-            return func;
-        };
-        
-        console.log('🔍 Function scope monitoring active');
+        // DISABLED (audit CRITICAL): reassigning the global `window.Function`
+        // constructor is a process-wide side-effect on a built-in that can break
+        // third-party code and corrupt identity checks, and was never restored.
+        // Made a no-op; static analysis still covers scope rules.
+        return;
     }
     
     /**

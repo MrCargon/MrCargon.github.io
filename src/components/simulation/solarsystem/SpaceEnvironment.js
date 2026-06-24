@@ -91,6 +91,15 @@ class SpaceEnvironment {
         this._exploreLayersKey = 'mrcargon.explore.layers';
         // Zoom level-of-detail auto-reveal (states/cities/districts). Default ON.
         this._lodEnabled = true;
+        // Individual Detail sub-toggles (under the master). Default all on; persisted
+        // inside the layer state. satellite/streets use setVisible; states/cities/
+        // districts drive geoLOD tier visibility.
+        this._detailLayers = { satellite: true, streets: true, states: true, cities: true, districts: true };
+        // Pin editor state: which pin id is being edited + whether a globe click
+        // should relocate it (Move mode).
+        this._editingPinId = null;
+        this._pinMoveMode = false;
+        this._pinEditorDraft = null;
         // Per-frame scratch (Rule: no per-frame allocation in the animate loop).
         this._scratchEarthPos = new THREE.Vector3();
         this._scratchCamPos = new THREE.Vector3();
@@ -969,7 +978,8 @@ class SpaceEnvironment {
             iss: !!(L.iss && L.iss.visible),
             quakes: !!(L.quakes && L.quakes.visible),
             pois: !!(L.pois && L.pois.visible),
-            lod: !!this._lodEnabled
+            lod: !!this._lodEnabled,
+            detail: Object.assign({}, this._detailLayers)   // sub-layer flags
         };
         try {
             localStorage.setItem(this._exploreLayersKey, JSON.stringify(state));
@@ -1003,7 +1013,7 @@ class SpaceEnvironment {
 
         // Hand control to the user, pivoting around Earth's (now static) centre.
         const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
-        this._exploreMinDistance = radius * 1.005;   // hug the surface — see streets/satellite up close
+        this._exploreMinDistance = radius * 1.0013;  // hug the surface — see streets/satellite up close
         this._exploreMaxDistance = radius * 12;
         this.controls.enabled = true;
         this.controls.minDistance = this._exploreMinDistance;
@@ -1019,6 +1029,20 @@ class SpaceEnvironment {
         this._preExploreDamping = this.controls.enableDamping;
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.09;
+        // Set rotateSpeed from the CURRENT distance the instant a drag starts. Without
+        // this, the per-frame rotateSpeed (set in updateExploreLOD) can be one frame
+        // stale right after a wheel-zoom, so the FIRST drag at close zoom used the old
+        // (far, fast) speed and flung the view off the city. The 'start' event fires on
+        // pointer-down, before any rotation is applied.
+        this._onExploreControlStart = () => {
+            const e = this.getEarthObject();
+            if (!e || !this.controls) return;
+            const rad = (e.data && e.data.radius) || 2;
+            const ep = e.getMesh().getWorldPosition(this._scratchEarthPos);
+            const a = Math.max(this.camera.position.distanceTo(ep) / rad - 1, 0.001);
+            this.controls.rotateSpeed = Math.max(0.0008, Math.min(1.0, a * 0.55));
+        };
+        this.controls.addEventListener('start', this._onExploreControlStart);
         this.controls.update();
         if (this.renderer && this.renderer.domElement) this.renderer.domElement.style.cursor = 'grab';
 
@@ -1042,6 +1066,11 @@ class SpaceEnvironment {
         // Cascade the five atmospheric shells in (Troposphere→Exosphere, staggered).
         if (earth.atmosphereLayers && typeof earth.atmosphereLayers.cascadeIn === 'function') {
             earth.atmosphereLayers.cascadeIn();
+        }
+        // Build the living troposphere objects (balloons/jets); update() fades them in
+        // by the viewing band. Lazy-built once, hidden until the band is entered.
+        if (earth.troposphereObjects && typeof earth.troposphereObjects.build === 'function') {
+            earth.troposphereObjects.build();
         }
         // Attach to window so events fire regardless of canvas z-index/pointer-events.
         window.addEventListener('click', this._onExploreClick);
@@ -1101,6 +1130,12 @@ class SpaceEnvironment {
         // Zoom level-of-detail auto-reveal: default ON; if persisted off, suppress.
         this._lodEnabled = want('lod');
         this._applyLodState(earth, this._lodEnabled);
+        // Restore the individual Detail sub-flags (default all on) + apply.
+        const savedDetail = (saved && saved.detail && typeof saved.detail === 'object') ? saved.detail : {};
+        Object.keys(this._detailLayers).forEach((k) => {
+            this._detailLayers[k] = (k in savedDetail) ? !!savedDetail[k] : true;
+        });
+        this._applyDetailLayers(earth);
         return true;
     }
 
@@ -1199,6 +1234,17 @@ class SpaceEnvironment {
             if (earth.atmosphereLayers && typeof earth.atmosphereLayers.cascadeOut === 'function') {
                 earth.atmosphereLayers.cascadeOut();   // retract the shells (outer→inner)
             }
+            // Hide the living troposphere objects — their update() (which owns their
+            // band-driven visibility) stops on exit, so without this they'd freeze
+            // visible and ride the globe back into solar-system view.
+            if (earth.troposphereObjects && typeof earth.troposphereObjects.setVisible === 'function') {
+                earth.troposphereObjects.setVisible(false);
+            }
+            // Hide saved pins + close any open pin editor on exit.
+            if (earth.explorePins && typeof earth.explorePins.setVisible === 'function') {
+                earth.explorePins.setVisible(false);
+            }
+            if (typeof this._closePinEditor === 'function') this._closePinEditor();
             if (earth.satelliteTiles && typeof earth.satelliteTiles.hide === 'function') earth.satelliteTiles.hide();
             // Reset the SF marker scale (updateExploreLOD shrinks it when zoomed in
             // and only runs in explore — otherwise it stays shrunk in solar view).
@@ -1218,10 +1264,14 @@ class SpaceEnvironment {
             this.controls.rotateSpeed = 1.0;
             this.controls.zoomSpeed = 1.0;
             this.controls.enableDamping = (this._preExploreDamping === true);
+            if (this._onExploreControlStart) {
+                this.controls.removeEventListener('start', this._onExploreControlStart);
+                this._onExploreControlStart = null;
+            }
         }
-        // Restore the default camera clip planes (explore shrinks them for close zoom).
-        if (this.camera && (this.camera.near !== 0.1 || this.camera.far !== 4000)) {
-            this.camera.near = 0.1; this.camera.far = 4000; this.camera.updateProjectionMatrix();
+        // Restore the default camera clip planes + FOV (explore shrinks them for close zoom).
+        if (this.camera && (this.camera.near !== 0.1 || this.camera.far !== 4000 || this.camera.fov !== 60)) {
+            this.camera.near = 0.1; this.camera.far = 4000; this.camera.fov = 60; this.camera.updateProjectionMatrix();
         }
         if (this.renderer && this.renderer.domElement) {
             this.renderer.domElement.style.cursor = '';
@@ -1367,10 +1417,17 @@ class SpaceEnvironment {
         // far in (nothing distant matters up close), which also sharpens depth
         // precision so the hugging overlays don't z-fight. Restored on exit.
         const surfDist = Math.max(dist - radius, 0.0008);
-        const near = Math.max(0.0008, surfDist * 0.5);
+        const near = Math.max(0.0006, surfDist * 0.3);   // 0.3 (not 0.5) so close streets aren't clipped
         const far = dist + radius * 6;
-        if (this.camera.near !== near || this.camera.far !== far) {
-            this.camera.near = near; this.camera.far = far; this.camera.updateProjectionMatrix();
+        // Narrow the FOV as the camera approaches the surface (60° far → ~26° at street
+        // level). Wide-FOV perspective up close projects the tangent tile-patch with a
+        // strong vertical bias (the map slid to the bottom of the screen); a telephoto,
+        // near-orthographic FOV flattens the view so the map sits CENTRED on the look-at
+        // and reads like a top-down map. Restored to 60° on exit.
+        const fov = Math.max(26, Math.min(60, 26 + 34 * Math.max(0, Math.min(1, (rr - 1.0) / (1.6 - 1.0)))));
+        if (this.camera.near !== near || this.camera.far !== far || this.camera.fov !== fov) {
+            this.camera.near = near; this.camera.far = far; this.camera.fov = fov;
+            this.camera.updateProjectionMatrix();
         }
         // Dim the base globe as the camera approaches (1.0 above 2R → ~0.22 at surface)
         // so where the satellite tiles have not loaded/reached, the low-res base reads
@@ -1388,9 +1445,18 @@ class SpaceEnvironment {
         if (this.controls) {
             if (!this.cameraTransitioning) this.controls.target.lerp(earthPos, 0.2);
             const alt = Math.max(rr - 1, 0.001);
-            this.controls.rotateSpeed = Math.max(0.02, Math.min(1.0, alt * 0.6));
-            this.controls.zoomSpeed = Math.max(0.4, Math.min(1.0, 0.4 + alt * 0.3));
-            this.controls.minDistance = radius * 1.005;
+            // rotateSpeed ∝ altitude so a drag moves the SURFACE by a near-constant
+            // amount on screen at any zoom. The old 0.02 floor kicked in below ~1.033R
+            // and left close-up rotation ~7× too fast (a tiny drag flung past the city).
+            // A much lower floor keeps fine control all the way to the surface.
+            this.controls.rotateSpeed = Math.max(0.0008, Math.min(1.0, alt * 0.55));
+            // zoomSpeed PROPORTIONAL to altitude (low floor) so the dolly DECELERATES
+            // smoothly approaching the surface. The old 0.4 floor made each wheel tick
+            // eat a huge fraction of the tiny remaining altitude → a big jump in the last
+            // 1.02→1.0013 stretch with "nothing in between". Now there are many fine
+            // steps near the surface and normal speed far out.
+            this.controls.zoomSpeed = Math.max(0.07, Math.min(1.0, alt * 1.1));
+            this.controls.minDistance = radius * 1.0013;
             this.controls.maxDistance = radius * 15;
         }
         // Interplanetary hand-off: zooming all the way back out leaves explore and
@@ -1440,7 +1506,17 @@ class SpaceEnvironment {
                 earth.atmosphereLayers.updateLabels(this.camera, this.renderer.domElement.getBoundingClientRect());
             }
         }
+        // Living troposphere objects (balloons/jets) fade in by their viewing band and
+        // animate (bob/fly). dt defaults to ~1 frame inside update() (no dt plumbed here).
+        if (earth.troposphereObjects && typeof earth.troposphereObjects.update === 'function') {
+            earth.troposphereObjects.update(rr);
+        }
+        // Distance-scale the user pin markers so they hold ~constant screen size.
+        if (earth.explorePins && typeof earth.explorePins.update === 'function') {
+            earth.explorePins.update(rr);
+        }
         if (earth.streetTiles || earth.satelliteTiles) this._updateStreets(earth, radius, dist);
+        this._syncZoomSlider(rr);   // reflect wheel/drag zoom onto the panel slider
         return true;
     }
 
@@ -1455,7 +1531,14 @@ class SpaceEnvironment {
         console.assert(earth && (earth.streetTiles || earth.satelliteTiles), '_updateStreets: a tile layer required');
         console.assert(typeof GlobeMath !== 'undefined', '_updateStreets: GlobeMath required');
         const mesh = earth.getMesh();
-        this._exploreRaycaster.setFromCamera(this._ndc.set(0, 0), this.camera);
+        // Bias the tile look-at slightly UP-screen: a symmetric tile square covers less
+        // ground toward the pole (Mercator) + the close-up projection biases the patch
+        // downward, so without this the TOP edge of the screen showed gray base. The
+        // 121-tile patch is ~3x the view, so shifting the centre up still covers the
+        // bottom. Only when actually zoomed close (where the gap appears).
+        const _rr = dist / radius;
+        const yBias = 0.22 * Math.max(0, Math.min(1, (1.3 - _rr) / (1.3 - 1.0)));
+        this._exploreRaycaster.setFromCamera(this._ndc.set(0, yBias), this.camera);
         const hits = this._exploreRaycaster.intersectObject(mesh, false);
         // A4: streets are only meaningful when the look-at actually hits the globe.
         // The old camera-position fallback fetched sub-camera tiles the user wasn't
@@ -1538,7 +1621,6 @@ class SpaceEnvironment {
         if (!panel) return false;
         // B1: dragging on touch must not fight native scroll.
         panel.style.touchAction = 'none';
-        panel.style.cursor = 'move';
         // B2: only the pointerdown wiring lives behind the dataset guard (it dies with
         // the element). The window move/up + resize listeners are (re)attached by
         // _attachPanelWindowListeners on enter and removed on teardown — so re-running
@@ -1549,14 +1631,24 @@ class SpaceEnvironment {
             panel.dataset.draggable = '1';
             const st = this._panelDragState;
             this._panelDragDown = (e) => {
-                if (e.target && e.target.closest && e.target.closest('button')) return; // buttons work
+                // Only drag by the header bar — so the close button, list items, the
+                // pin editor's text inputs / textarea / radius slider, swatches and
+                // every toggle keep working normally (the old "drag by background"
+                // stole pointer-down from those controls).
+                if (!e.target || !e.target.closest) return;
+                if (!e.target.closest('.ep-header') || e.target.closest('button')) return;
                 const r = panel.getBoundingClientRect();
+                // Switch from the docked top/bottom/right anchoring to a free-floating
+                // left/top box, preserving the current size (else bottom:auto collapses
+                // the side panel's height).
                 panel.style.transform = 'none';
                 panel.style.bottom = 'auto';
+                panel.style.right = 'auto';
+                panel.style.height = r.height + 'px';
                 panel.style.left = r.left + 'px';
                 panel.style.top = r.top + 'px';
                 st.on = true; st.sx = e.clientX; st.sy = e.clientY; st.ox = r.left; st.oy = r.top;
-                panel.style.cursor = 'grabbing';
+                if (this.renderer && this.renderer.domElement) { /* no-op: cursor set on header via CSS */ }
                 e.preventDefault();
             };
             panel.addEventListener('pointerdown', this._panelDragDown);
@@ -1663,8 +1755,564 @@ class SpaceEnvironment {
             if (mode) mode.addEventListener('click', () => this._cycleMapMode(mode));
             const exit = document.getElementById('explore-exit');
             if (exit) exit.addEventListener('click', () => this.exitExploreMode());
+            this._wireExploreSections(panel);     // collapsible section headers
+            this._wireDetailSubToggles();         // satellite/streets/states/cities/districts
+            this._wirePinControls();              // add / editor / list delegation
+            this._wireZoomSlider();               // panel zoom slider (camera distance)
+            this._wireStyleEditor();              // per-layer colour/opacity customiser
             panel.dataset.wired = '1';
         }
+        // Render the saved pin list + sync sub-toggle buttons each time the panel opens.
+        const earth = this.getEarthObject();
+        if (earth && earth.explorePins) earth.explorePins.setVisible(true);
+        this._renderPinList();
+        this._syncDetailSubToggles();
+        this._applyAllStyles(earth);   // apply persisted per-layer colour/opacity
+        this._syncStyleUI();
+        return true;
+    }
+
+    // Wire each section header to collapse/expand its body (aria + data-collapsed).
+    // Rule 5: 2 asserts.
+    _wireExploreSections(panel) {
+        console.assert(panel && panel.querySelectorAll, '_wireExploreSections: panel required');
+        console.assert(typeof document !== 'undefined', '_wireExploreSections: document required');
+        const heads = panel.querySelectorAll('.ep-sec-head');
+        for (let i = 0; i < heads.length && i < 8; i++) {     // Rule 2: bounded
+            const head = heads[i];
+            head.addEventListener('click', () => {
+                const sec = head.closest('.ep-section');
+                if (!sec) return;
+                const collapsed = sec.getAttribute('data-collapsed') === 'true';
+                sec.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                head.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+            });
+        }
+        return true;
+    }
+
+    // Wire the five Detail sub-toggles (satellite/streets/states/cities/districts).
+    // Rule 4: <=60 lines.
+    _wireDetailSubToggles() {
+        console.assert(typeof document !== 'undefined', '_wireDetailSubToggles: document required');
+        console.assert(this._detailLayers, '_wireDetailSubToggles: state required');
+        const map = { satellite: 'ep-toggle-satellite', streets: 'ep-toggle-streets',
+            states: 'ep-toggle-states', cities: 'ep-toggle-cities', districts: 'ep-toggle-districts' };
+        Object.keys(map).forEach((key) => {
+            const btn = document.getElementById(map[key]);
+            if (btn) btn.addEventListener('click', () => this._toggleDetailSub(key, btn));
+        });
+        return true;
+    }
+
+    // Toggle one Detail sub-layer + apply + persist + sync the button. Rule 5: 2 asserts.
+    _toggleDetailSub(name, btn) {
+        console.assert(typeof name === 'string', '_toggleDetailSub: name required');
+        console.assert(this._detailLayers, '_toggleDetailSub: state required');
+        if (!(name in this._detailLayers)) return false;
+        this._detailLayers[name] = !this._detailLayers[name];
+        this._applyDetailLayers(this.getEarthObject());
+        if (btn) btn.setAttribute('aria-pressed', this._detailLayers[name] ? 'true' : 'false');
+        this._writeExploreLayerState();
+        return true;
+    }
+
+    // Apply the five Detail sub-flags to their engines, gated by the master (_lodEnabled).
+    // satellite/streets via setVisible; states/cities/districts via geoLOD (auto-reveal
+    // when ALL geo tiers on + master on, else manual per-tier). Rule 4: <=60 lines.
+    _applyDetailLayers(earth) {
+        console.assert(earth === null || typeof earth === 'object', '_applyDetailLayers: bad earth');
+        console.assert(this._detailLayers, '_applyDetailLayers: state required');
+        if (!earth) return false;
+        const d = this._detailLayers, on = this._lodEnabled;
+        if (earth.satelliteTiles && typeof earth.satelliteTiles.setVisible === 'function') {
+            earth.satelliteTiles.setVisible(on && d.satellite);
+        }
+        if (earth.streetTiles && typeof earth.streetTiles.setVisible === 'function') {
+            earth.streetTiles.setVisible(on && d.streets);
+        }
+        const lod = earth.geoLOD;
+        if (lod && typeof lod.setTierVisible === 'function') {
+            const allTiers = d.states && d.cities && d.districts;
+            if (typeof lod.setAuto === 'function') lod.setAuto(on && allTiers);
+            if (!(on && allTiers)) {
+                lod.setTierVisible('states', on && d.states);
+                lod.setTierVisible('cities', on && d.cities);
+                lod.setTierVisible('districts', on && d.districts);
+            }
+        }
+        return true;
+    }
+
+    // Zoom slider: 0 = far, 1000 = street level. Maps to camera distance on a LOG scale
+    // so each step feels even. Wired once. Rule 5: 2 asserts.
+    _wireZoomSlider() {
+        console.assert(typeof document !== 'undefined', '_wireZoomSlider: document required');
+        console.assert(typeof this._applyZoomFromSlider === 'function', '_wireZoomSlider: applier required');
+        const s = document.getElementById('ep-zoom');
+        if (!s) return false;
+        this._zoomSliderEl = s;
+        this._zoomSliderDragging = false;
+        s.addEventListener('input', () => this._applyZoomFromSlider(Number(s.value)));
+        s.addEventListener('pointerdown', () => { this._zoomSliderDragging = true; });
+        s.addEventListener('pointerup', () => { this._zoomSliderDragging = false; });
+        window.addEventListener('pointerup', () => { this._zoomSliderDragging = false; });
+        return true;
+    }
+
+    // Min/max camera distance (in radii) the slider spans. minR = explore close limit.
+    _zoomRange() {
+        const radius = (this.getEarthObject() && this.getEarthObject().data && this.getEarthObject().data.radius) || 2;
+        const minR = (this._exploreMinDistance ? this._exploreMinDistance / radius : 1.0013);
+        return { minR: minR, maxR: 6.0 };
+    }
+
+    // Slider value (0..1000) → camera distance, dollying along the camera→target line.
+    // Rule 4: <=60 lines | Rule 5: 2 asserts.
+    _applyZoomFromSlider(v) {
+        console.assert(Number.isFinite(v), '_applyZoomFromSlider: value required');
+        console.assert(this.controls, '_applyZoomFromSlider: controls required');
+        const earth = this.getEarthObject();
+        if (!earth || !this.controls || !this.camera) return false;
+        const radius = (earth.data && earth.data.radius) || 2;
+        const rng = this._zoomRange();
+        const f = Math.max(0, Math.min(1, v / 1000));
+        const rr = rng.maxR * Math.pow(rng.minR / rng.maxR, f);   // log interpolation
+        const tgt = this.controls.target;
+        const dir = this._scratchCamPos.copy(this.camera.position).sub(tgt);
+        if (dir.lengthSq() < 1e-9) dir.set(0, 0, 1);
+        dir.normalize();
+        this.camera.position.copy(tgt).addScaledVector(dir, radius * rr);
+        this.controls.update();
+        return true;
+    }
+
+    // Reflect the current camera distance back onto the slider (skips while the user is
+    // dragging it, so wheel-zoom moves the thumb but a drag isn't fought). Rule 5: 2 asserts.
+    _syncZoomSlider(rr) {
+        console.assert(Number.isFinite(rr), '_syncZoomSlider: rr required');
+        console.assert(this !== undefined, '_syncZoomSlider: instance');
+        const s = this._zoomSliderEl;
+        if (!s || this._zoomSliderDragging) return false;
+        const rng = this._zoomRange();
+        const clamped = Math.max(rng.minR, Math.min(rng.maxR, rr));
+        const v = String(Math.round(Math.max(0, Math.min(1000,
+            1000 * Math.log(clamped / rng.maxR) / Math.log(rng.minR / rng.maxR)))));
+        if (s.value !== v) s.value = v;   // only write on change (avoid per-frame reflow)
+        return true;
+    }
+
+    // ---- Style editor (per-layer colour + opacity) -------------------------
+
+    // Defaults per detail layer (hex colour + 0..1 opacity). Rule 5: 2 asserts.
+    _styleDefaults() {
+        console.assert(typeof this === 'object', '_styleDefaults: instance');
+        console.assert(true, '_styleDefaults: ok');
+        return {
+            streets:   { color: 0x9fd8ff, opacity: 0.65, width: 2 },
+            states:    { color: 0x6fb0e0, opacity: 1.0 },
+            cities:    { color: 0xffd24a, opacity: 1.0 },
+            districts: { color: 0x8fe3ff, opacity: 1.0 }
+        };
+    }
+
+    // Read persisted styles merged over the defaults. Rule 6: graceful fallback.
+    _readStyleState() {
+        console.assert(typeof this._styleKey === 'string', '_readStyleState: key');
+        console.assert(typeof document !== 'undefined', '_readStyleState: document');
+        const out = this._styleDefaults();
+        try {
+            const raw = (typeof localStorage !== 'undefined') ? localStorage.getItem(this._styleKey) : null;
+            const saved = raw ? JSON.parse(raw) : null;
+            if (saved && typeof saved === 'object') {
+                Object.keys(out).forEach((k) => {
+                    if (saved[k]) {
+                        if (Number.isFinite(saved[k].color)) out[k].color = saved[k].color;
+                        if (Number.isFinite(saved[k].opacity)) out[k].opacity = saved[k].opacity;
+                        if (Number.isFinite(saved[k].width)) out[k].width = saved[k].width;
+                    }
+                });
+            }
+        } catch (e) { /* keep defaults */ }
+        return out;
+    }
+
+    _writeStyleState() {
+        console.assert(this._style, '_writeStyleState: style state');
+        console.assert(typeof this._styleKey === 'string', '_writeStyleState: key');
+        try { if (typeof localStorage !== 'undefined') localStorage.setItem(this._styleKey, JSON.stringify(this._style)); }
+        catch (e) { /* quota/disabled — non-fatal */ }
+        return true;
+    }
+
+    // Wire the Style section once: palette swatches, layer selector, opacity slider.
+    // Rule 4: <=60 lines.
+    _wireStyleEditor() {
+        console.assert(typeof document !== 'undefined', '_wireStyleEditor: document');
+        console.assert(typeof this._applyLayerStyle === 'function', '_wireStyleEditor: applier');
+        this._styleKey = 'mrcargon.explore.style';
+        this._style = this._readStyleState();
+        this._styleLayer = 'streets';
+        this._stylePalette = [0x9fd8ff, 0xffffff, 0xff5a4a, 0xffc24a, 0x6ad36a, 0xc08bff, 0xff6ad3, 0x8fe3ff, 0x66e8ff];
+        this._buildStyleSwatches();
+        const layers = document.getElementById('ep-style-layers');
+        if (layers) layers.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-layer]'); if (b) this._selectStyleLayer(b.dataset.layer);
+        });
+        const op = document.getElementById('ep-style-opacity');
+        if (op) op.addEventListener('input', () => {
+            const v = document.getElementById('ep-style-op-val'); if (v) v.textContent = op.value;
+            this._applyLayerStyle(this._styleLayer, { opacity: Number(op.value) / 100 });
+        });
+        const wd = document.getElementById('ep-style-width');
+        if (wd) wd.addEventListener('input', () => {
+            const v = document.getElementById('ep-style-w-val'); if (v) v.textContent = wd.value;
+            this._applyLayerStyle(this._styleLayer, { width: Number(wd.value) });
+        });
+        return true;
+    }
+
+    // Build the colour swatch buttons once. Rule 5: 2 asserts.
+    _buildStyleSwatches() {
+        console.assert(Array.isArray(this._stylePalette), '_buildStyleSwatches: palette');
+        const wrap = document.getElementById('ep-style-swatches');
+        if (!wrap || wrap.dataset.built) return false;
+        this._stylePalette.forEach((c) => {
+            const hex = '#' + ('000000' + c.toString(16)).slice(-6);
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'ep-swatch'; b.style.background = hex;
+            b.dataset.color = String(c); b.setAttribute('aria-label', 'Colour ' + hex);
+            b.addEventListener('click', () => this._applyLayerStyle(this._styleLayer, { color: c }));
+            wrap.appendChild(b);
+        });
+        wrap.dataset.built = '1';
+        return true;
+    }
+
+    // Select which layer the Style controls edit + reflect its current values. Rule 4.
+    _selectStyleLayer(layer) {
+        console.assert(typeof layer === 'string', '_selectStyleLayer: layer');
+        console.assert(this._style, '_selectStyleLayer: style state');
+        if (!this._style[layer]) return false;
+        this._styleLayer = layer;
+        const layers = document.getElementById('ep-style-layers');
+        if (layers) layers.querySelectorAll('[data-layer]').forEach((b) => {
+            b.setAttribute('aria-pressed', b.dataset.layer === layer ? 'true' : 'false');
+        });
+        // Thickness only applies to the (fat-line) streets layer; hide it for the others.
+        const wRow = document.getElementById('ep-style-width-row');
+        if (wRow) wRow.hidden = (layer !== 'streets');
+        this._syncStyleUI();
+        return true;
+    }
+
+    // Reflect the current layer's colour/opacity onto the swatches + slider. Rule 5.
+    _syncStyleUI() {
+        console.assert(typeof document !== 'undefined', '_syncStyleUI: document');
+        if (!this._style || !this._styleLayer) return false;
+        const st = this._style[this._styleLayer]; if (!st) return false;
+        const wrap = document.getElementById('ep-style-swatches');
+        if (wrap) wrap.querySelectorAll('.ep-swatch').forEach((b) => {
+            b.setAttribute('aria-pressed', Number(b.dataset.color) === st.color ? 'true' : 'false');
+        });
+        const op = document.getElementById('ep-style-opacity');
+        const v = document.getElementById('ep-style-op-val');
+        if (op) op.value = String(Math.round(st.opacity * 100));
+        if (v) v.textContent = String(Math.round(st.opacity * 100));
+        const wd = document.getElementById('ep-style-width');
+        const wv = document.getElementById('ep-style-w-val');
+        if (wd && Number.isFinite(st.width)) wd.value = String(st.width);
+        if (wv) wv.textContent = Number.isFinite(st.width) ? String(st.width) : '—';
+        const wRow = document.getElementById('ep-style-width-row');
+        if (wRow) wRow.hidden = (this._styleLayer !== 'streets');
+        return true;
+    }
+
+    // Apply a colour/opacity change to a layer's engine + persist + sync UI. Rule 4.
+    _applyLayerStyle(layer, partial) {
+        console.assert(typeof layer === 'string', '_applyLayerStyle: layer');
+        console.assert(partial && typeof partial === 'object', '_applyLayerStyle: partial');
+        if (!this._style || !this._style[layer]) return false;
+        if (Number.isFinite(partial.color)) this._style[layer].color = partial.color;
+        if (Number.isFinite(partial.opacity)) this._style[layer].opacity = partial.opacity;
+        if (Number.isFinite(partial.width)) this._style[layer].width = partial.width;
+        const earth = this.getEarthObject();
+        if (earth) this._applyOneStyle(earth, layer);
+        this._writeStyleState();
+        this._syncStyleUI();
+        return true;
+    }
+
+    // Push one layer's stored style to its engine (streets vs geoLOD tier). Rule 5.
+    _applyOneStyle(earth, layer) {
+        console.assert(earth && typeof earth === 'object', '_applyOneStyle: earth');
+        console.assert(this._style && this._style[layer], '_applyOneStyle: style');
+        const st = this._style[layer];
+        if (layer === 'streets') {
+            if (earth.streetTiles && typeof earth.streetTiles.setStyle === 'function') {
+                earth.streetTiles.setStyle({ color: st.color, opacity: st.opacity, width: st.width });
+            }
+        } else if (earth.geoLOD && typeof earth.geoLOD.setTierStyle === 'function') {
+            earth.geoLOD.setTierStyle(layer, { color: st.color, opacity: st.opacity });
+        }
+        return true;
+    }
+
+    // Apply ALL stored styles to their engines (on panel open / re-entry). Rule 5.
+    _applyAllStyles(earth) {
+        console.assert(earth === null || typeof earth === 'object', '_applyAllStyles: earth');
+        if (!earth || !this._style) return false;
+        Object.keys(this._style).forEach((k) => this._applyOneStyle(earth, k));
+        return true;
+    }
+
+    // Sync the five sub-toggle buttons' aria-pressed to the flags. Rule 5: 2 asserts.
+    _syncDetailSubToggles() {
+        console.assert(this._detailLayers, '_syncDetailSubToggles: state required');
+        console.assert(typeof document !== 'undefined', '_syncDetailSubToggles: document required');
+        const map = { satellite: 'ep-toggle-satellite', streets: 'ep-toggle-streets',
+            states: 'ep-toggle-states', cities: 'ep-toggle-cities', districts: 'ep-toggle-districts' };
+        Object.keys(map).forEach((k) => {
+            const btn = document.getElementById(map[k]);
+            if (btn) btn.setAttribute('aria-pressed', this._detailLayers[k] ? 'true' : 'false');
+        });
+        return true;
+    }
+
+    // ---- Pins UI -----------------------------------------------------------
+
+    // Wire the one-time pin controls: add button + list/editor event delegation.
+    // Rule 4: <=60 lines.
+    _wirePinControls() {
+        console.assert(typeof document !== 'undefined', '_wirePinControls: document required');
+        console.assert(typeof this._renderPinList === 'function', '_wirePinControls: render required');
+        const add = document.getElementById('ep-add-pin');
+        if (add) add.addEventListener('click', () => this._createPinAtCentre());
+        const list = document.getElementById('ep-pin-list');
+        if (list) list.addEventListener('click', (e) => {
+            const li = e.target.closest('.ep-pin'); if (!li) return;
+            const id = li.dataset.pinId;
+            if (e.target.closest('.ep-edit')) { this._openPinEditor(id); }
+            else if (e.target.closest('.ep-del')) { this._deletePin(id); }
+            else { this._selectPin(id, true); }
+        });
+        const ed = document.getElementById('ep-editor');
+        if (ed) {
+            const save = document.getElementById('ep-ed-save');
+            const del = document.getElementById('ep-ed-delete');
+            const move = document.getElementById('ep-ed-move');
+            const dot = document.getElementById('ep-ed-type-dot');
+            const area = document.getElementById('ep-ed-type-area');
+            const radius = document.getElementById('ep-ed-radius');
+            if (save) save.addEventListener('click', () => this._savePinEditor());
+            if (del) del.addEventListener('click', () => { if (this._editingPinId) this._deletePin(this._editingPinId); });
+            if (move) move.addEventListener('click', () => this._armPinMove(move));
+            if (dot) dot.addEventListener('click', () => this._setEditorType('dot'));
+            if (area) area.addEventListener('click', () => this._setEditorType('area'));
+            if (radius) radius.addEventListener('input', () => {
+                const v = document.getElementById('ep-ed-radius-val'); if (v) v.textContent = radius.value;
+            });
+            this._buildPinSwatches();
+        }
+        return true;
+    }
+
+    // Render the saved pin list into the panel. Rule 4: <=60 lines.
+    _renderPinList() {
+        console.assert(typeof document !== 'undefined', '_renderPinList: document required');
+        const list = document.getElementById('ep-pin-list');
+        const empty = document.getElementById('ep-pin-empty');
+        const count = document.getElementById('ep-pin-count');
+        const earth = this.getEarthObject();
+        const pins = (earth && earth.explorePins) ? earth.explorePins.list() : [];
+        if (count) count.textContent = pins.length ? String(pins.length) : '';
+        if (empty) empty.hidden = pins.length > 0;
+        if (!list) return false;
+        list.textContent = '';
+        const max = Math.min(pins.length, 200);              // Rule 2: bounded
+        for (let i = 0; i < max; i++) {
+            const p = pins[i];
+            const li = document.createElement('li');
+            li.className = 'ep-pin'; li.dataset.pinId = p.id; li.tabIndex = 0;
+            const dot = document.createElement('span');
+            dot.className = 'ep-dot' + (p.type === 'area' ? ' ep-area' : '');
+            dot.style.background = p.color;
+            const nm = document.createElement('span'); nm.className = 'ep-nm'; nm.textContent = p.name;
+            const edit = document.createElement('button');
+            edit.type = 'button'; edit.className = 'ep-iconbtn ep-edit'; edit.title = 'Edit'; edit.textContent = '✎';
+            const del = document.createElement('button');
+            del.type = 'button'; del.className = 'ep-iconbtn ep-del'; del.title = 'Delete'; del.textContent = '🗑';
+            li.appendChild(dot); li.appendChild(nm); li.appendChild(edit); li.appendChild(del);
+            list.appendChild(li);
+        }
+        return true;
+    }
+
+    // Build the colour swatches in the editor once. Rule 5: 2 asserts.
+    _buildPinSwatches() {
+        console.assert(typeof document !== 'undefined', '_buildPinSwatches: document required');
+        const wrap = document.getElementById('ep-ed-swatches');
+        console.assert(wrap === null || wrap.nodeType === 1, '_buildPinSwatches: bad wrap');
+        if (!wrap || wrap.dataset.built) return false;
+        const colors = ['#66e8ff', '#ff5a4a', '#ffc24a', '#6ad36a', '#c08bff', '#ff6ad3', '#ffffff'];
+        colors.forEach((c) => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'ep-swatch'; b.style.background = c;
+            b.dataset.color = c; b.setAttribute('aria-pressed', 'false');
+            b.setAttribute('aria-label', 'Colour ' + c);
+            b.addEventListener('click', () => this._setEditorColor(c));
+            wrap.appendChild(b);
+        });
+        wrap.dataset.built = '1';
+        return true;
+    }
+
+    // Create a pin at the current view-centre point on the globe + open the editor.
+    // Rule 5: 2 asserts.
+    _createPinAtCentre() {
+        console.assert(this.camera, '_createPinAtCentre: camera required');
+        const earth = this.getEarthObject();
+        if (!earth || !earth.explorePins) return false;
+        const ll = this._centreLatLng(earth);
+        const lat = ll ? ll.lat : (earth.markerCoords ? earth.markerCoords.lat : 37.77);
+        const lng = ll ? ll.lng : (earth.markerCoords ? earth.markerCoords.lng : -122.42);
+        const pin = earth.explorePins.addPin(lat, lng, { name: 'New pin' });
+        this._renderPinList();
+        if (pin) this._openPinEditor(pin.id);
+        return true;
+    }
+
+    // Raycast the screen centre onto the globe → {lat,lng} in the mesh's local frame
+    // (cancels globe rotation). Returns null if the ray misses. Rule 4: <=60 lines.
+    _centreLatLng(earth) {
+        console.assert(earth && earth.getMesh, '_centreLatLng: earth required');
+        console.assert(this._exploreRaycaster, '_centreLatLng: raycaster required');
+        const mesh = earth.getMesh ? earth.getMesh() : earth.mesh;
+        if (!mesh || typeof GlobeMath === 'undefined') return null;
+        this._ndc.set(0, 0);
+        this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
+        const hits = this._exploreRaycaster.intersectObject(mesh, false);
+        if (!hits.length) return null;
+        const local = mesh.worldToLocal(hits[0].point.clone());
+        return GlobeMath.vector3ToLatLng(local, (earth.data && earth.data.radius) || 2);
+    }
+
+    // Open the inline editor for a pin, populating the form. Rule 4: <=60 lines.
+    _openPinEditor(id) {
+        console.assert(typeof id === 'string', '_openPinEditor: id required');
+        const earth = this.getEarthObject();
+        const pin = (earth && earth.explorePins) ? earth.explorePins.getPin(id) : null;
+        const ed = document.getElementById('ep-editor');
+        if (!pin || !ed) return false;
+        this._editingPinId = id;
+        this._pinEditorDraft = { type: pin.type, color: pin.color, radiusKm: pin.radiusKm };
+        const name = document.getElementById('ep-ed-name');
+        const note = document.getElementById('ep-ed-note');
+        const coords = document.getElementById('ep-ed-coords');
+        const radius = document.getElementById('ep-ed-radius');
+        const rval = document.getElementById('ep-ed-radius-val');
+        if (name) name.value = pin.name;
+        if (note) note.value = pin.note;
+        if (coords) coords.textContent = pin.lat.toFixed(3) + ', ' + pin.lng.toFixed(3);
+        if (radius) radius.value = String(pin.radiusKm);
+        if (rval) rval.textContent = String(pin.radiusKm);
+        this._setEditorType(pin.type);
+        this._setEditorColor(pin.color);
+        ed.hidden = false;
+        if (name) name.focus();
+        this._selectPin(id, true);
+        return true;
+    }
+
+    // Reflect the chosen pin type in the editor (show radius only for 'area'). Rule 5.
+    _setEditorType(type) {
+        console.assert(type === 'dot' || type === 'area', '_setEditorType: bad type');
+        console.assert(this._pinEditorDraft, '_setEditorType: draft required');
+        this._pinEditorDraft.type = type;
+        const dot = document.getElementById('ep-ed-type-dot');
+        const area = document.getElementById('ep-ed-type-area');
+        const row = document.getElementById('ep-ed-radius-row');
+        if (dot) dot.setAttribute('aria-pressed', type === 'dot' ? 'true' : 'false');
+        if (area) area.setAttribute('aria-pressed', type === 'area' ? 'true' : 'false');
+        if (row) row.hidden = (type !== 'area');
+        return true;
+    }
+
+    // Reflect the chosen colour in the editor swatches. Rule 5: 2 asserts.
+    _setEditorColor(color) {
+        console.assert(typeof color === 'string', '_setEditorColor: colour required');
+        console.assert(this._pinEditorDraft, '_setEditorColor: draft required');
+        this._pinEditorDraft.color = color;
+        const wrap = document.getElementById('ep-ed-swatches');
+        if (wrap) wrap.querySelectorAll('.ep-swatch').forEach((b) => {
+            b.setAttribute('aria-pressed', b.dataset.color === color ? 'true' : 'false');
+        });
+        return true;
+    }
+
+    // Save the editor form back to the pin + re-render. Rule 4: <=60 lines.
+    _savePinEditor() {
+        console.assert(this._editingPinId, '_savePinEditor: editing id required');
+        const earth = this.getEarthObject();
+        if (!earth || !earth.explorePins || !this._editingPinId) return false;
+        const name = document.getElementById('ep-ed-name');
+        const note = document.getElementById('ep-ed-note');
+        const radius = document.getElementById('ep-ed-radius');
+        const draft = this._pinEditorDraft || {};
+        earth.explorePins.updatePin(this._editingPinId, {
+            name: name ? name.value : 'Pin',
+            note: note ? note.value : '',
+            type: draft.type || 'dot',
+            color: draft.color || '#66e8ff',
+            radiusKm: radius ? Number(radius.value) : 50
+        });
+        this._closePinEditor();
+        this._renderPinList();
+        return true;
+    }
+
+    // Close the editor + clear edit state. Rule 5: 2 asserts.
+    _closePinEditor() {
+        console.assert(typeof document !== 'undefined', '_closePinEditor: document required');
+        console.assert(this !== undefined, '_closePinEditor: instance');
+        const ed = document.getElementById('ep-editor');
+        if (ed) ed.hidden = true;
+        this._editingPinId = null;
+        this._pinMoveMode = false;
+        this._pinEditorDraft = null;
+        return true;
+    }
+
+    // Delete a pin + re-render + close editor if it was open on it. Rule 5: 2 asserts.
+    _deletePin(id) {
+        console.assert(typeof id === 'string', '_deletePin: id required');
+        const earth = this.getEarthObject();
+        if (!earth || !earth.explorePins) return false;
+        earth.explorePins.removePin(id);
+        if (this._editingPinId === id) this._closePinEditor();
+        this._renderPinList();
+        return true;
+    }
+
+    // Arm "Move" mode: the next globe click relocates the editing pin. Rule 5: 2 asserts.
+    _armPinMove(btn) {
+        console.assert(this._editingPinId, '_armPinMove: editing id required');
+        console.assert(btn === null || btn.nodeType === 1, '_armPinMove: bad btn');
+        this._pinMoveMode = !this._pinMoveMode;
+        if (btn) btn.setAttribute('aria-pressed', this._pinMoveMode ? 'true' : 'false');
+        if (this.renderer && this.renderer.domElement) {
+            this.renderer.domElement.style.cursor = this._pinMoveMode ? 'crosshair' : 'grab';
+        }
+        return true;
+    }
+
+    // Centre the globe on a pin (and optionally flag it). Rule 5: 2 asserts.
+    _selectPin(id, centre) {
+        console.assert(typeof id === 'string', '_selectPin: id required');
+        const earth = this.getEarthObject();
+        const pin = (earth && earth.explorePins) ? earth.explorePins.getPin(id) : null;
+        if (!pin) return false;
+        if (centre && typeof this.centerOnLatLng === 'function') this.centerOnLatLng(pin.lat, pin.lng);
         return true;
     }
 
@@ -1724,7 +2372,13 @@ class SpaceEnvironment {
         const earth = this.getEarthObject();
         console.assert(earth === null || typeof earth === 'object', '_toggleLodLayer: bad earth');
         this._lodEnabled = !this._lodEnabled;
+        // Turning the master back ON re-enables every sub-layer (a clean "all on").
+        if (this._lodEnabled) {
+            Object.keys(this._detailLayers).forEach((k) => { this._detailLayers[k] = true; });
+        }
         this._applyLodState(earth, this._lodEnabled);
+        this._applyDetailLayers(earth);          // sub-flags refine on top of the master
+        this._syncDetailSubToggles();
         if (btn) {
             btn.classList.toggle('active', this._lodEnabled);
             btn.setAttribute('aria-pressed', this._lodEnabled ? 'true' : 'false');
@@ -1745,7 +2399,7 @@ class SpaceEnvironment {
         console.assert(earth === null || typeof earth === 'object', '_cycleMapMode: bad earth');
         if (!earth || !earth.satelliteTiles || typeof earth.satelliteTiles.nextMode !== 'function') return false;
         const mode = earth.satelliteTiles.nextMode();
-        if (btn) btn.textContent = '🗺️ ' + mode.charAt(0).toUpperCase() + mode.slice(1);
+        if (btn) btn.textContent = '🗺️ Basemap: ' + mode.charAt(0).toUpperCase() + mode.slice(1);
         return true;
     }
 
@@ -1784,6 +2438,36 @@ class SpaceEnvironment {
     }
 
     /**
+     * Pick a lat/lng by intersecting the current camera ray with the OVERLAY SHELL
+     * (rMult × globe radius), not the base sphere. The map/streets/districts render a
+     * few hundred metres ABOVE the base surface, so a base-sphere pick is parallax-
+     * shifted from what the user sees (hovering one district selected another). Picking
+     * at the shell the overlays live on makes the pick match the visual. Analytic ray↔
+     * sphere (caller must have called raycaster.setFromCamera). Rule 4: <=60 lines.
+     * @returns {{lat:number,lng:number}|null}
+     */
+    _pickGlobeLatLng(earth, rMult) {
+        console.assert(earth && (earth.getMesh || earth.mesh), '_pickGlobeLatLng: earth required');
+        console.assert(this._exploreRaycaster, '_pickGlobeLatLng: raycaster required');
+        const mesh = earth.getMesh ? earth.getMesh() : earth.mesh;
+        if (!mesh || typeof GlobeMath === 'undefined') return null;
+        const ray = this._exploreRaycaster.ray;
+        const C = mesh.getWorldPosition(this._scratchEarthPos);
+        const R = ((earth.data && earth.data.radius) || 2) * (rMult || 1.0007);
+        // |O + tD - C|^2 = R^2, D normalised → a = 1.
+        const L = this._scratchCamPos.copy(ray.origin).sub(C);
+        const b = 2 * L.dot(ray.direction);
+        const cc = L.dot(L) - R * R;
+        const disc = b * b - 4 * cc;
+        if (disc < 0) return null;
+        const t = (-b - Math.sqrt(disc)) / 2;        // near intersection
+        if (t < 0) return null;
+        const hit = this._scratchSurf.copy(ray.direction).multiplyScalar(t).add(ray.origin);
+        const local = mesh.worldToLocal(hit);
+        return GlobeMath.vector3ToLatLng(local, (earth.data && earth.data.radius) || 2);
+    }
+
+    /**
      * Double-click a point on the globe (or a hovered region / zip) to RE-CENTER the
      * view there — the globe rotates so that point faces you, then you spin around it
      * (centre-orbit). The "set other surface points" interaction. Rule 4: <=60 lines.
@@ -1804,8 +2488,22 @@ class SpaceEnvironment {
         if (!hits.length) return;
         const local = mesh.worldToLocal(this._scratchCamPos.copy(hits[0].point));
         const ll = GlobeMath.vector3ToLatLng(local, earth.data.radius);
-        if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) {
+        if (!ll || !Number.isFinite(ll.lat) || !Number.isFinite(ll.lng)) return;
+        // Move mode (armed from the editor): relocate the editing pin to this point.
+        if (this._pinMoveMode && this._editingPinId && earth.explorePins) {
+            earth.explorePins.updatePin(this._editingPinId, { lat: ll.lat, lng: ll.lng });
+            const coords = document.getElementById('ep-ed-coords');
+            if (coords) coords.textContent = ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3);
+            this._armPinMove(document.getElementById('ep-ed-move'));   // disarm
             this.centerOnLatLng(ll.lat, ll.lng);
+            return;
+        }
+        // Otherwise drop a NEW pin here, centre on it, and open its editor.
+        if (earth.explorePins) {
+            const pin = earth.explorePins.addPin(ll.lat, ll.lng, { name: 'New pin' });
+            this.centerOnLatLng(ll.lat, ll.lng);
+            this._renderPinList();
+            if (pin) this._openPinEditor(pin.id);
         }
     }
 
@@ -1831,15 +2529,16 @@ class SpaceEnvironment {
         this.camera.updateMatrixWorld();
         earth.mesh.updateMatrixWorld();
         this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
-        const hits = this._exploreRaycaster.intersectObject(earth.mesh, false);
-        if (!hits.length) {
+        // Pick at the OVERLAY shell (where districts/streets render), not the base
+        // sphere — otherwise parallax selects a neighbouring region (the reported
+        // "hover one district, select another"). 1.0007 ≈ the tight overlay band.
+        const ll = this._pickGlobeLatLng(earth, 1.00063);
+        if (!ll) {
             if (typeof earth.highlightRegion === 'function') earth.highlightRegion(null, null);
             earth.highlightCountry(null);
             if (this._tooltipEl) this._tooltipEl.hidden = true;
             return;
         }
-        const local = earth.mesh.worldToLocal(hits[0].point.clone());
-        const ll = GlobeMath.vector3ToLatLng(local, earth.data.radius);
         // CASCADE: pick the finest loaded tier for the current zoom (country→state→
         // county→district→zip); if it has no region under the cursor, fall back to
         // country so there's always a name. Name + tier label in the tooltip.

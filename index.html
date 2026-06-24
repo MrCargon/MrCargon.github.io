@@ -99,10 +99,16 @@
     <script src="src/utils/StreetTiles.js"></script>
     <script src="src/utils/SatelliteTiles.js"></script>
     <script src="src/utils/AtmosphereLayers.js"></script>
+    <script src="src/utils/TroposphereObjects.js"></script>
+    <script src="src/utils/ExplorePins.js"></script>
 
     <!-- 🌌 THREE.js Library - Using CDN with proper OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
+    <!-- Fat lines (Line2/LineMaterial) — real pixel-width lines for stylable street thickness -->
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/lines/LineSegmentsGeometry.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/lines/LineMaterial.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/lines/LineSegments2.js" crossorigin="anonymous"></script>
     <script>
       window.addEventListener('load', function() {
         if (typeof THREE !== 'undefined') {

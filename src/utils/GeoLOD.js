@@ -35,13 +35,17 @@ class GeoLOD {
         // edge where a COARSER tier hands off to finer detail (streets/satellite/
         // districts) so close-up isn't a 6-layer pile-up. fadeOutBelow=0 means the
         // tier stays to the surface (districts, the finest vector for SF).
+        // rOffsets hug the satellite map (1.0006) — COPLANAR like the streets ("in the
+        // map", not floating). Tiny increments keep the draw order (finer on top) while
+        // the gaps (<30m) are imperceptible; the satellite's polygonOffset lets these
+        // lines win the depth test without z-fighting.
         const defs = [
             { name: 'states', url: 'src/assets/geo/admin1-50m.json', kind: 'lines',
-                color: 0x6fb0e0, rOffset: 1.0022, showBelow: 2.4, hideAbove: 2.7, fadeOutBelow: 1.45 },
+                color: 0x6fb0e0, rOffset: 1.00060, showBelow: 2.4, hideAbove: 2.7, fadeOutBelow: 1.45 },
             { name: 'cities', url: 'src/assets/geo/populated-places.json', kind: 'points',
-                color: 0xffd24a, rOffset: 1.0026, showBelow: 1.7, hideAbove: 1.95, fadeOutBelow: 1.2 },
+                color: 0xffd24a, rOffset: 1.00062, showBelow: 1.7, hideAbove: 1.95, fadeOutBelow: 1.2 },
             { name: 'districts', url: 'src/assets/geo/districts-sf.json', kind: 'lines-or-points',
-                color: 0x8fe3ff, rOffset: 1.003, showBelow: 1.3, hideAbove: 1.5, fadeOutBelow: 0 }
+                color: 0x8fe3ff, rOffset: 1.00064, showBelow: 1.3, hideAbove: 1.5, fadeOutBelow: 0 }
         ];
         for (let i = 0; i < defs.length; i++) {
             const d = defs[i];
@@ -96,7 +100,8 @@ class GeoLOD {
             const ease = this.reducedMotion ? 1 : 0.12;
             tier.opacity += (tier.targetOpacity - tier.opacity) * ease;
             if (tier.opacity < 0.001) tier.opacity = 0;
-            if (tier.material) tier.material.opacity = tier.opacity;
+            // Render opacity = zoom cross-fade × the user's style opacity (default 1).
+            if (tier.material) tier.material.opacity = tier.opacity * (tier.styleOpacity || 1);
             if (tier.group) tier.group.visible = tier.opacity > 0.01;
         }
     }
@@ -135,6 +140,22 @@ class GeoLOD {
         if (visible && this._ok && !tier.built && !tier.requested && !tier.failed) {
             this._buildTier(tier);
         }
+        return true;
+    }
+
+    // User STYLE: set a tier's colour (hex int) and/or opacity scale. Colour applies
+    // immediately to the built material; opacity scales the zoom cross-fade (see
+    // update()). Stored on the tier so a (re)build keeps it. Rule 4: <=60 lines.
+    setTierStyle(name, opts) {
+        console.assert(typeof name === 'string', 'GeoLOD.setTierStyle: name required');
+        console.assert(opts && typeof opts === 'object', 'GeoLOD.setTierStyle: opts required');
+        const tier = this.tiers.get(name);
+        if (!tier) return false;
+        if (Number.isFinite(opts.color)) {
+            tier.color = opts.color;
+            if (tier.material && tier.material.color) tier.material.color.setHex(opts.color);
+        }
+        if (Number.isFinite(opts.opacity)) tier.styleOpacity = Math.max(0, Math.min(1, opts.opacity));
         return true;
     }
 

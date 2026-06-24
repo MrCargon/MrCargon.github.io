@@ -94,6 +94,10 @@ class Earth extends Planet {
         this.satelliteTiles = null;
         // Five named atmospheric shells (Troposphere→Exosphere) w/ cascade animation.
         this.atmosphereLayers = null;
+        // Living objects inside the Troposphere shell (hot-air/weather balloons, jets).
+        this.troposphereObjects = null;
+        // User-managed saved map pins (dot/area), persisted to localStorage.
+        this.explorePins = null;
     }
 
     // NASA Rule 5: pure helper, 2 asserts.
@@ -164,6 +168,14 @@ class Earth extends Planet {
             // Keyless Esri satellite imagery patches (lazy; safe no-op if absent).
             this.satelliteTiles = (typeof SatelliteTiles !== 'undefined' && this.mesh)
                 ? new SatelliteTiles(this.mesh, this.data.radius)
+                : null;
+            // Living troposphere objects (balloons/jets; lazy, safe no-op if absent).
+            this.troposphereObjects = (typeof TroposphereObjects !== 'undefined' && this.mesh)
+                ? new TroposphereObjects(this.mesh, this.data.radius)
+                : null;
+            // User-managed saved pins (loads persisted pins; safe no-op if absent).
+            this.explorePins = (typeof ExplorePins !== 'undefined' && this.mesh)
+                ? new ExplorePins(this.mesh, this.data.radius)
                 : null;
             return true;
         } catch (err) {
@@ -399,7 +411,7 @@ class Earth extends Planet {
         if (this.graticule) return this.graticule;
         if (!this.mesh || typeof GlobeMath === 'undefined') return null;
 
-        const r = this.data.radius * 1.0014;  // hugs surface so the camera can zoom in close
+        const r = this.data.radius * 1.00060; // graticule — coplanar with the satellite map (in the map, not floating)
         const step = 15;          // degrees between grid lines
         const sample = 5;         // degrees between sampled points along a line
         const verts = [];
@@ -466,7 +478,7 @@ class Earth extends Planet {
             return null;
         }
 
-        const r = this.data.radius * 1.0018;  // above the graticule; hugs surface for close zoom
+        const r = this.data.radius * 1.00061; // borders — coplanar with the satellite map (in the map, not floating)
         const verts = [];
         for (let i = 0; i < data.rings.length; i++) {
             const ring = data.rings[i];
@@ -707,7 +719,7 @@ class Earth extends Planet {
         const group = new THREE.Group();
         for (let i = 0; i < places.length; i++) {
             const p = places[i];
-            const m = this._makeMarker(p.lat, p.lng, 1.02, 0xffd24a, this.data.radius * 0.02,
+            const m = this._makeMarker(p.lat, p.lng, 1.0009, 0xffd24a, this.data.radius * 0.02,
                 { type: 'place', name: p.name, info: p.info });
             group.add(m);
             this.pickables.push(m);
@@ -737,7 +749,7 @@ class Earth extends Planet {
             const lng = f.geometry.coordinates[0], lat = f.geometry.coordinates[1];
             const mag = (f.properties && f.properties.mag) || 2.5;
             const size = this.data.radius * (0.006 + mag * 0.004);
-            const m = this._makeMarker(lat, lng, 1.01, 0xff5a3c, size,
+            const m = this._makeMarker(lat, lng, 1.0009, 0xff5a3c, size,
                 { type: 'quake', name: 'M' + mag.toFixed(1) + ' earthquake',
                     info: (f.properties && f.properties.place) || '' });
             group.add(m);
@@ -846,7 +858,7 @@ class Earth extends Planet {
         if (!name || !this.countryShapes) return null;
         const country = this.countryShapes.find((c) => c.name === name);
         if (!country) return null;
-        const r = this.data.radius * 1.0019;  // just above the borders layer (1.0018)
+        const r = this.data.radius * 1.00063; // country highlight — coplanar with the satellite map (in the map)
         const verts = [];
         for (let k = 0; k < country.rings.length; k++) {
             const ring = country.rings[k];
@@ -1012,6 +1024,8 @@ class Earth extends Planet {
         if (this.streetTiles) { this.streetTiles.dispose(); this.streetTiles = null; }
         if (this.satelliteTiles) { this.satelliteTiles.dispose(); this.satelliteTiles = null; }
         if (this.atmosphereLayers) { this.atmosphereLayers.dispose(); this.atmosphereLayers = null; }
+        if (this.troposphereObjects) { this.troposphereObjects.dispose(); this.troposphereObjects = null; }
+        if (this.explorePins) { this.explorePins.dispose(); this.explorePins = null; }
         // clouds.map and moon.map/bumpMap are ResourceLoader-cached — skip
         // disposing those textures (pass false) so a recreated Earth keeps valid
         // textures. Geometry + material are still disposed.
@@ -1058,11 +1072,11 @@ class Earth extends Planet {
 // district/zip files may not exist yet — they auto-enable once added (buildRegionTiers
 // skips missing files). Classic-script static (defined after the class, not a field).
 Earth.REGION_TIER_DEFS = [
-    { key: 'country',  url: 'src/assets/geo/country_shapes.json',     color: 0xffe680, rOffset: 1.0019, showTo: Infinity },
-    { key: 'state',    url: 'src/assets/geo/states-named.json',       color: 0x9fe0ff, rOffset: 1.0023, showTo: 2.4 },
-    { key: 'county',   url: 'src/assets/geo/counties-us-named.json',  color: 0xb6ffd0, rOffset: 1.0027, showTo: 1.7 },
-    { key: 'district', url: 'src/assets/geo/districts-sf-named.json', color: 0xffc6f0, rOffset: 1.0033, showTo: 1.35 },
-    { key: 'zip',      url: 'src/assets/geo/zip-sf-named.json',       color: 0xffd2a6, rOffset: 1.0036, showTo: 1.22 }
+    { key: 'country',  url: 'src/assets/geo/country_shapes.json',     color: 0xffe680, rOffset: 1.00061, showTo: Infinity },
+    { key: 'state',    url: 'src/assets/geo/states-named.json',       color: 0x9fe0ff, rOffset: 1.00062, showTo: 2.4 },
+    { key: 'county',   url: 'src/assets/geo/counties-us-named.json',  color: 0xb6ffd0, rOffset: 1.00063, showTo: 1.7 },
+    { key: 'district', url: 'src/assets/geo/districts-sf-named.json', color: 0xffc6f0, rOffset: 1.00065, showTo: 1.35 },
+    { key: 'zip',      url: 'src/assets/geo/zip-sf-named.json',       color: 0xffd2a6, rOffset: 1.00066, showTo: 1.22 }
 ];
 
 // Make globally available (matches the rest of the codebase).

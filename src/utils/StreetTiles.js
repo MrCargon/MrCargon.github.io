@@ -28,7 +28,7 @@ class StreetTiles {
         this.earthMesh = earthMesh;
         this.radius = radius;
         // Just above the districts layer (1.015) so streets sit on top, not z-fight.
-        this.rOffset = Number.isFinite(opts.rOffset) ? opts.rOffset : 1.0032;
+        this.rOffset = Number.isFinite(opts.rOffset) ? opts.rOffset : 1.0006;   // COPLANAR with the satellite map (roads IN the map; satellite has polygonOffset)
         // Activate only when the camera is closer than this (in Earth radii).
         this.activateBelow = Number.isFinite(opts.activateBelow) ? opts.activateBelow : 1.3;
         this.minZoom = 12;
@@ -36,8 +36,10 @@ class StreetTiles {
         // dataMaxZoom and there is no real overzoom, so maxZoom matches reality.
         this.maxZoom = 14;
         this.dataMaxZoom = 14;       // tiles only exist to z14 → clamp fetch
-        this.maxVisibleTiles = Number.isFinite(opts.maxVisibleTiles) ? opts.maxVisibleTiles : 12;
-        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 40;
+        // 12 tiles only covered the centre (streets stopped before the screen edges).
+        // 49 (7x7) z14 tiles span the whole view + corners to match the satellite fill.
+        this.maxVisibleTiles = Number.isFinite(opts.maxVisibleTiles) ? opts.maxVisibleTiles : 49;
+        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 90;
         this.subdivideUnits = 512;   // insert a midpoint when a segment spans > this many tile units
 
         // OpenFreeMap discovery: fetch the TileJSON once → live {z}/{x}/{y}.pbf
@@ -59,6 +61,12 @@ class StreetTiles {
         this._building = new Set();      // in-flight keys (avoid double-fetch)
         this.failed = 0;
         this.visible = true;
+        // User-stylable appearance (color, opacity, pixel width), applied to all line
+        // tiles via a shared fat-line material. setStyle() updates them; host persists.
+        this.styleColor = Number.isFinite(opts.styleColor) ? opts.styleColor : 0x9fd8ff;
+        this.styleOpacity = Number.isFinite(opts.styleOpacity) ? opts.styleOpacity : 0.65;
+        this.styleWidth = Number.isFinite(opts.styleWidth) ? opts.styleWidth : 2;   // px (fat lines)
+        this._sharedMat = null;   // shared LineMaterial (lazy)
 
         // Line layers we care about (OpenMapTiles schema).
         this.lineLayers = opts.lineLayers || ['transportation', 'waterway'];
@@ -140,7 +148,7 @@ class StreetTiles {
         var n = Math.pow(2, fetchZ);
         var c = StreetTiles.lngLatToTile(centerLng, centerLat, fetchZ);
         var cx = Math.floor(c.x), cy = Math.floor(c.y);
-        var keys = this._buildCoveringKeys(cx, cy, n, fetchZ);
+        var keys = this._buildCoveringKeys(cx, cy, n, fetchZ, c.x, c.y);
         var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
         // Hide ALL tiles, then show only the current covering set, so stale tiles
         // from other zoom levels don't linger and overlap. _touchOrBuild re-shows.
@@ -156,12 +164,14 @@ class StreetTiles {
     // from centre (max(|dx|,|dy|)), keep the NEAREST maxVisibleTiles so the kept set
     // stays centred on the look-at (the old column-major break clipped east tiles).
     // No per-frame allocation: reuses _scratchCands + _scratchKeys. Rule 4: <=60.
-    _buildCoveringKeys(cx, cy, n, fetchZ) {
+    _buildCoveringKeys(cx, cy, n, fetchZ, fx, fy) {
         console.assert(Number.isFinite(cx) && Number.isFinite(cy), '_buildCoveringKeys: center required');
         console.assert(Number.isFinite(n) && n > 0, '_buildCoveringKeys: tile count required');
         var cands = this._scratchCands;     // pooled {key,d} objects (reused across frames)
         var count = 0;
-        var ring = (this.maxVisibleTiles > 9) ? 2 : 1;        // 3x3..5x5, Rule 2 bounded
+        var hasFrac = Number.isFinite(fx) && Number.isFinite(fy);
+        var ax = hasFrac ? fx : (cx + 0.5), ay = hasFrac ? fy : (cy + 0.5);
+        var ring = (this.maxVisibleTiles > 25) ? 4 : ((this.maxVisibleTiles > 9) ? 2 : 1);  // up to 9x9, Rule 2 bounded
         for (var dx = -ring; dx <= ring; dx++) {
             for (var dy = -ring; dy <= ring; dy++) {
                 var ty = cy + dy;
@@ -169,7 +179,9 @@ class StreetTiles {
                 var tx = ((cx + dx) % n + n) % n;
                 var slot = cands[count] || (cands[count] = { key: '', d: 0 });
                 slot.key = fetchZ + '/' + tx + '/' + ty;
-                slot.d = Math.max(Math.abs(dx), Math.abs(dy));
+                // Chebyshev from TILE CENTRE to the fractional look-at → kept set centred
+                // on where the camera points (was floor-biased toward the lower-left).
+                slot.d = Math.max(Math.abs((cx + dx + 0.5) - ax), Math.abs((cy + dy + 0.5) - ay));
                 count++;
             }
         }
@@ -292,15 +304,27 @@ class StreetTiles {
             this._appendLayer(layer, z, x, y, verts);
         }
         if (!verts.length) return null;
-        var geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-        var material = new THREE.LineBasicMaterial({
-            color: 0x9fd8ff, transparent: true, opacity: 0.0, depthWrite: false, depthTest: true
-        });
-        var mesh = new THREE.LineSegments(geometry, material);
-        mesh.userData.fadeTarget = 0.85;          // cross-fade in (animated below)
-        mesh.userData.fade = 0.0;
-        this._startFade(mesh);
+        var mesh;
+        if (this._fatOK()) {
+            // Fat lines: real PIXEL-width streets via a SHARED LineMaterial (colour/
+            // opacity/linewidth + viewport resolution all live on the one material).
+            var fatGeo = new THREE.LineSegmentsGeometry();
+            fatGeo.setPositions(verts);
+            mesh = new THREE.LineSegments2(fatGeo, this._ensureLineMat());
+            mesh.userData.ownGeo = fatGeo;   // dispose per-tile; material is shared
+        } else {
+            // Graceful fallback (1px) if the fat-line classes didn't load.
+            var geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+            var material = new THREE.LineBasicMaterial({
+                color: this.styleColor, transparent: true, opacity: this.styleOpacity, depthWrite: false, depthTest: true
+            });
+            mesh = new THREE.LineSegments(geometry, material);
+            mesh.userData.ownMat = material;
+        }
+        // Start hidden: update()/_touchOrBuild shows it next frame. Prevents a build
+        // that resolves AFTER hide() (explore exit) from lingering visible on the globe.
+        mesh.visible = false;
         return mesh;
     }
 
@@ -395,10 +419,12 @@ class StreetTiles {
         console.assert(mesh === null || typeof mesh === 'object', '_disposeMesh: bad arg');
         console.assert(this.earthMesh, '_disposeMesh: earthMesh required');
         if (!mesh) return false;
-        if (mesh.geometry && mesh.geometry.dispose) mesh.geometry.dispose();
-        if (mesh.material && mesh.material.dispose) mesh.material.dispose();
-        // A3: null the material AFTER disposing so any pending _startFade rAF step
-        // hits its `if (!mesh.material) return;` guard and stops touching a freed material.
+        if (mesh.userData && mesh.userData.ownGeo && mesh.userData.ownGeo.dispose) mesh.userData.ownGeo.dispose();
+        else if (mesh.geometry && mesh.geometry.dispose) mesh.geometry.dispose();
+        // Only dispose a PER-TILE material (fallback path). The fat-line material is
+        // SHARED across all tiles — disposing it per-tile would blank the whole layer;
+        // it's freed in dispose().
+        if (mesh.userData && mesh.userData.ownMat && mesh.userData.ownMat.dispose) mesh.userData.ownMat.dispose();
         mesh.material = null;
         if (mesh.parent) mesh.parent.remove(mesh);
         return true;
@@ -413,6 +439,55 @@ class StreetTiles {
         this.visible = !!vis;
         this._showTiles(this.visible);
         return this.visible;
+    }
+
+    // Are the fat-line classes available? (graceful fallback to 1px if not.) Rule 5.
+    _fatOK() {
+        console.assert(typeof THREE !== 'undefined', '_fatOK: THREE required');
+        console.assert(this !== undefined, '_fatOK: instance');
+        return !!(THREE.LineSegments2 && THREE.LineSegmentsGeometry && THREE.LineMaterial);
+    }
+
+    // Lazily create the ONE shared fat-line material (colour/opacity/px-width + the
+    // viewport resolution fat lines need). Kept in sync with resize. Rule 4: <=60.
+    _ensureLineMat() {
+        console.assert(typeof THREE !== 'undefined', '_ensureLineMat: THREE required');
+        console.assert(this._fatOK(), '_ensureLineMat: fat lines required');
+        if (this._sharedMat) return this._sharedMat;
+        var w = (typeof window !== 'undefined') ? window.innerWidth : 1280;
+        var h = (typeof window !== 'undefined') ? window.innerHeight : 800;
+        this._sharedMat = new THREE.LineMaterial({
+            color: this.styleColor, linewidth: this.styleWidth, transparent: true,
+            opacity: this.styleOpacity, depthTest: true, depthWrite: false, dashed: false
+        });
+        this._sharedMat.resolution.set(w, h);
+        var self = this;
+        this._onResize = function () { if (self._sharedMat && typeof window !== 'undefined') self._sharedMat.resolution.set(window.innerWidth, window.innerHeight); };
+        if (typeof window !== 'undefined') window.addEventListener('resize', this._onResize);
+        return this._sharedMat;
+    }
+
+    // User STYLE: set the street colour (hex int), opacity (0..1) and/or line WIDTH
+    // (pixels, fat-lines only). With fat lines one SHARED material covers all tiles;
+    // the fallback updates each per-tile material. Rule 4: <=60 lines.
+    setStyle(opts) {
+        console.assert(opts && typeof opts === 'object', 'setStyle: opts required');
+        console.assert(this.tiles instanceof Map, 'setStyle: tiles map required');
+        if (Number.isFinite(opts.color)) this.styleColor = opts.color;
+        if (Number.isFinite(opts.opacity)) this.styleOpacity = Math.max(0, Math.min(1, opts.opacity));
+        if (Number.isFinite(opts.width)) this.styleWidth = Math.max(0.5, Math.min(12, opts.width));
+        if (this._sharedMat) {
+            if (this._sharedMat.color) this._sharedMat.color.setHex(this.styleColor);
+            this._sharedMat.opacity = this.styleOpacity;
+            if ('linewidth' in this._sharedMat) this._sharedMat.linewidth = this.styleWidth;
+            this._sharedMat.needsUpdate = true;
+        }
+        var col = this.styleColor, op = this.styleOpacity;
+        this.tiles.forEach(function (rec) {           // fallback per-tile materials
+            var m = rec.mesh && rec.mesh.userData && rec.mesh.userData.ownMat;
+            if (m) { if (m.color) m.color.setHex(col); m.opacity = op; }
+        });
+        return true;
     }
 
     // Per-frame mesh show/hide WITHOUT touching the user-visible toggle. Rule 5: 2 asserts.
@@ -457,6 +532,10 @@ class StreetTiles {
         this.tiles.clear();
         this._building.clear();
         this._scratchKeys.length = 0;
+        // Free the shared fat-line material + its resize listener.
+        if (this._sharedMat && this._sharedMat.dispose) this._sharedMat.dispose();
+        this._sharedMat = null;
+        if (this._onResize && typeof window !== 'undefined') window.removeEventListener('resize', this._onResize);
         return true;
     }
 }

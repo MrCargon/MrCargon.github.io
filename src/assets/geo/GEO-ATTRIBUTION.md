@@ -74,6 +74,14 @@ wherever the street basemap is rendered. The rest are courtesy credits.
 - **Processing:** simplified with mapshaper (`-simplify 60% keep-shapes`), coordinates rounded to 2 decimals, converted from GeoJSON LineString/MultiLineString to flat rings.
 - **Shape:** `{ "rings": [ [ [lng, lat], ... ], ... ] }`
 
+### `states-named.json` — Named state / province polygons (cascade hover)
+
+- **Source:** Natural Earth Admin-1 (global provinces, public domain) for non-US regions; the **50 US states + DC + Puerto Rico** were replaced with higher-fidelity US Census cartographic-boundary polygons (public domain) so coastal cities (NYC, Miami) resolve correctly.
+- **US polygons mirror:** https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json (US Census-derived, public domain)
+- **License:** Public Domain (Natural Earth + US Census)
+- **Processing:** US features converted to flat `{name, rings}`, coordinates rounded to 4 decimals; foreign regions sharing a US state name (Montana/Bulgaria, Maryland/Liberia, Florida/Uruguay) preserved.
+- **Shape:** `{ "features": [ { "name": "California", "rings": [ [ [lng, lat], ... ] ] } ] }`
+
 ### `populated-places.json` — Cities & towns (top 2000 by population)
 
 - **Source:** Natural Earth — Populated Places, 1:10m scale (uses the `POP_MAX` field for population)

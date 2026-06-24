@@ -34,19 +34,19 @@ class SatelliteTiles {
         this.radius = radius;
         // Just above the base globe surface (1.0), BELOW borders (1.006) and streets
         // (1.016): satellite is the new crisp SURFACE; vectors still float above it.
-        this.rOffset = Number.isFinite(opts.rOffset) ? opts.rOffset : 1.001;
+        this.rOffset = Number.isFinite(opts.rOffset) ? opts.rOffset : 1.0006;
         // Appear as soon as the camera zooms toward Earth (radii), so the whole
         // surface sharpens progressively, not only at street level.
         this.activateBelow = Number.isFinite(opts.activateBelow) ? opts.activateBelow : 2.8;
         this.minZoom = 3;            // Esri imagery starts shallow
         this.maxZoom = 17;           // upper clamp; zoomForDistance picks z to FILL the view
-        // 12 tiles covered only a tiny patch (blurry base showing around it). Keep the
-        // FULL 9x9 ring (81): the render zone must be LARGER than the visible view, or
-        // the old blurry base globe shows around the satellite patch at close zoom
-        // ("rendered map is a small cube, old picture on the sides"). lruCap bounds the
-        // texture cache. zoomForDistance also picks slightly bigger tiles for coverage.
-        this.maxVisibleTiles = Number.isFinite(opts.maxVisibleTiles) ? opts.maxVisibleTiles : 81;
-        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 112;
+        // The covering patch is a lat/lng-aligned SQUARE that renders TILTED on screen
+        // (north isn't screen-up), so an 81 (9x9) patch left the screen CORNERS uncovered
+        // (gray base showing top-right). A 13x13 (169) patch is large enough that even
+        // tilted it covers the whole screen rectangle + its corners, at any FOV. lruCap
+        // bounds the texture cache above the visible budget.
+        this.maxVisibleTiles = Number.isFinite(opts.maxVisibleTiles) ? opts.maxVisibleTiles : 121;
+        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 170;
         this.patchSegments = Number.isFinite(opts.patchSegments) ? opts.patchSegments : 12;
 
         // Keyless Esri basemap modes (all {z}/{y}/{x}, CORS-enabled). Switchable.
@@ -125,10 +125,11 @@ class SatelliteTiles {
         console.assert(Number.isFinite(distInRadii), 'zoomForDistance: distance required');
         console.assert(distInRadii > 0, 'zoomForDistance: positive distance');
         var alt = Math.max(distInRadii - 1, 1e-4);             // altitude in Earth radii
-        // footprintFrac = (2·tan(fov/2)/2π)·alt ≈ 0.184·alt (fov≈60°). coverAcross≈4.5:
-        // fewer tiles span the view → bigger tiles → the 9x9 ring extends well BEYOND
-        // the visible edges, so the old base globe never shows on the sides.
-        var twoPowZ = 4.5 / (0.184 * alt);
+        // footprintFrac = (2·tan(fov/2)/2π)·alt ≈ 0.184·alt (fov≈60°). coverAcross=9
+        // matches the 9x9 ring so the tiles SPAN the view at the HIGHEST zoom that
+        // still fills it — one z-level finer than the old 4.5 (so close-up urban areas
+        // show crisp streets instead of a stretched coarse-zoom white blob).
+        var twoPowZ = 9.0 / (0.184 * alt);
         var z = Math.round(Math.log(twoPowZ) / Math.LN2);
         return Math.max(this.minZoom, Math.min(this.maxZoom, z));
     }
@@ -154,14 +155,27 @@ class SatelliteTiles {
         var n = Math.pow(2, fetchZ);
         var c = SatelliteTiles.lngLatToTile(centerLng, centerLat, fetchZ);
         var cx = Math.floor(c.x), cy = Math.floor(c.y);
-        var keys = this._buildCoveringKeys(cx, cy, n, fetchZ);
+        // Scale the kept tile count with zoom: the big corner-covering budget is only
+        // needed UP CLOSE (narrow FOV + tilted patch). At mid/far zoom the wide FOV
+        // shows a smaller patch so far fewer tiles cover the view — loading the full
+        // budget there just wastes network/draw-calls/texture memory.
+        var t = Math.max(0, Math.min(1, (1.4 - cameraDistInRadii) / (1.4 - 1.0)));
+        this._effMax = Math.round(49 + (this.maxVisibleTiles - 49) * t);
+        var keys = this._buildCoveringKeys(cx, cy, n, fetchZ, c.x, c.y);
         var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
-        // Hide ALL tiles, then show only the current covering set. Without this,
-        // stale tiles from OTHER zoom levels stay visible and overlap → a patchwork
-        // of mismatched-brightness/zoom tiles. _touchOrBuild re-shows the kept set.
-        this._showTiles(false);
+        // Show the covering set (built tiles become visible + get t=now; missing ones
+        // dispatch a build). allReady = the whole covering set is built THIS frame.
+        var allReady = true;
         for (var i = 0; i < keys.length; i++) {
-            this._touchOrBuild(keys[i], now);
+            if (!this._touchOrBuild(keys[i], now)) allReady = false;
+        }
+        // Only hide the non-covering (stale-zoom) tiles ONCE the new covering set is
+        // fully loaded. While it's still loading (e.g. just crossed a zoom level), keep
+        // the previous tiles as a fallback so the user never sees a white/blank flash —
+        // standard map-app behaviour (coarse imagery holds until the finer set lands).
+        // Tiles touched this frame have rec.t === now; everything else is stale.
+        if (allReady) {
+            this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = (rec.t === now); });
         }
         this._evict();
         return true;
@@ -170,14 +184,19 @@ class SatelliteTiles {
     // Enumerate the bounded ring of covering tiles, sort by Chebyshev distance from
     // centre (max(|dx|,|dy|)), keep the NEAREST maxVisibleTiles so the kept set
     // stays centred on the look-at. No per-frame allocation (pooled). Rule 4: <=60.
-    _buildCoveringKeys(cx, cy, n, fetchZ) {
+    _buildCoveringKeys(cx, cy, n, fetchZ, fx, fy) {
         console.assert(Number.isFinite(cx) && Number.isFinite(cy), '_buildCoveringKeys: center required');
         console.assert(Number.isFinite(n) && n > 0, '_buildCoveringKeys: tile count required');
         var cands = this._scratchCands;
         var count = 0;
-        // 3x3 / 5x5 / 7x7 / 9x9 by budget (Rule 2 bounded ≤81). Bigger ring → the
-        // satellite extends beyond the view edges instead of a small central patch.
-        var ring = (this.maxVisibleTiles > 49) ? 4 : ((this.maxVisibleTiles > 25) ? 3 : ((this.maxVisibleTiles > 9) ? 2 : 1));
+        // Use a LARGER candidate ring than the kept budget, then keep the N tiles
+        // NEAREST the fractional look-at (fx,fy). The old code centred a symmetric ring
+        // on Math.floor(c), biasing coverage toward the lower-left of the actual look-at
+        // (the rendered map was cut off at the top-right). A bigger ring + look-at-centred
+        // keep makes the covering set symmetric around where the camera points.
+        var hasFrac = Number.isFinite(fx) && Number.isFinite(fy);
+        var ax = hasFrac ? fx : (cx + 0.5), ay = hasFrac ? fy : (cy + 0.5);
+        var ring = (this.maxVisibleTiles > 100) ? 6 : ((this.maxVisibleTiles > 49) ? 5 : ((this.maxVisibleTiles > 25) ? 4 : 3));
         for (var dx = -ring; dx <= ring; dx++) {
             for (var dy = -ring; dy <= ring; dy++) {
                 var ty = cy + dy;
@@ -185,13 +204,18 @@ class SatelliteTiles {
                 var tx = ((cx + dx) % n + n) % n;
                 var slot = cands[count] || (cands[count] = { key: '', d: 0 });
                 slot.key = fetchZ + '/' + tx + '/' + ty;
-                slot.d = Math.max(Math.abs(dx), Math.abs(dy));
+                // Chebyshev distance from the TILE CENTRE to the fractional look-at, so
+                // the kept (nearest) set stays centred on where the camera points.
+                slot.d = Math.max(Math.abs((cx + dx + 0.5) - ax), Math.abs((cy + dy + 0.5) - ay));
                 count++;
             }
         }
         this._sortCandsPrefix(count);
         var keys = this._scratchKeys; keys.length = 0;
-        var max = Math.min(count, this.maxVisibleTiles);          // Rule 2 bounded
+        // Keep the zoom-scaled budget (_effMax, set in update()) of the NEAREST tiles;
+        // ring generated more candidates so the kept set is centred on the look-at.
+        var budget = Number.isFinite(this._effMax) ? this._effMax : this.maxVisibleTiles;
+        var max = Math.min(count, budget);                        // Rule 2 bounded
         for (var i = 0; i < max; i++) keys.push(cands[i].key);
         return keys;
     }
@@ -280,13 +304,24 @@ class SatelliteTiles {
                 if (self._disposed) { if (texture) texture.dispose(); geometry.dispose(); resolve(null); return; }
                 self._configureTexture(texture);
                 var material = new THREE.MeshBasicMaterial({
-                    map: texture, transparent: true, opacity: 0.0, depthWrite: false, depthTest: true
+                    map: texture, transparent: true, opacity: 0.0, depthWrite: false, depthTest: true,
+                    // Push the imagery slightly BACK in the depth buffer so the vector
+                    // overlays (streets/borders/regions) can sit at the SAME radius
+                    // (coplanar — "roads IN the map", not floating above it) and still
+                    // win the depth test without z-fighting. Only bites once the patch
+                    // turns opaque (depthWrite flips true after fade-in).
+                    polygonOffset: true, polygonOffsetFactor: 1.2, polygonOffsetUnits: 1.2
                 });
                 // MeshBasicMaterial is unlit (full-bright). Tint by the current sun
                 // factor so patches on the night hemisphere don't glow over the dark
                 // globe (the base Earth uses a day/night shader). New tiles match.
                 if (material.color) material.color.setScalar(self._lightFactor);
                 var mesh = new THREE.Mesh(geometry, material);
+                // Start hidden: update()/_touchOrBuild shows it next frame IF the layer
+                // is active and this tile is still covering. Without this, a build that
+                // resolves AFTER hide() (explore exit) would add a visible=true patch
+                // that lingers on the globe in solar-system view (no update() to hide it).
+                mesh.visible = false;
                 mesh.renderOrder = -1;                 // draw before the vector overlays
                 mesh.userData.fadeTarget = 1.0;
                 mesh.userData.fade = 0.0;

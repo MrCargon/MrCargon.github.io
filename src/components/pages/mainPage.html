@@ -266,36 +266,128 @@
             </div>
         </div>
 
-        <!-- Explore Earth panel — shown only in Explore mode (wired by SpaceEnvironment.setupExplorePanel) -->
-        <div class="explore-panel" id="explore-panel" hidden
-             role="region" aria-label="Explore Earth controls"
-             style="position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:40; pointer-events:auto; display:none; gap:10px; align-items:center; padding:10px 14px; background:rgba(8,12,24,0.85); border:1px solid rgba(90,150,220,0.45); border-radius:10px; color:#dce8ff; font:13px/1.4 system-ui,-apple-system,sans-serif; backdrop-filter:blur(4px); box-shadow:0 6px 24px rgba(0,0,0,0.45);">
-            <div style="display:flex; flex-direction:column; line-height:1.25; margin-right:4px;">
-                <strong style="color:#66e8ff;">📍 Based in San Francisco</strong>
-                <span style="opacity:0.85;">Open to work · 37.77, -122.42</span>
-                <span id="explore-distance" style="opacity:0.6; font-size:11px;">—</span>
-                <span aria-hidden="true" style="opacity:0.5; font-size:10px;">drag · scroll · click a marker · Esc to exit</span>
-                <span aria-hidden="true" style="opacity:0.4; font-size:9px;">Live data: USGS · wheretheiss.at · Natural Earth · DataSF · OpenStreetMap · OpenFreeMap</span>
+        <!-- Explore Earth panel — docked side panel (wired by SpaceEnvironment.setupExplorePanel) -->
+        <aside class="explore-panel" id="explore-panel" hidden role="region" aria-label="Explore Earth controls">
+            <div class="ep-header" id="ep-drag-handle">
+                <strong>🌍 Explore Earth</strong>
+                <button type="button" class="ep-close" id="explore-exit" aria-label="Exit Explore Earth mode">✕</button>
             </div>
-            <button type="button" id="explore-center-sf" aria-label="Center the globe on San Francisco"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(40,90,160,0.65); color:#fff;">🎯 Center on SF</button>
-            <button type="button" id="explore-toggle-borders" aria-pressed="false" aria-label="Toggle country borders"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🗺️ Borders</button>
-            <button type="button" id="explore-toggle-grid" aria-pressed="false" aria-label="Toggle latitude and longitude grid"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🌐 Grid</button>
-            <button type="button" id="explore-toggle-iss" aria-pressed="false" aria-label="Toggle the live International Space Station marker"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🛰️ ISS</button>
-            <button type="button" id="explore-toggle-quakes" aria-pressed="false" aria-label="Toggle live earthquakes"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🌋 Quakes</button>
-            <button type="button" id="explore-toggle-places" aria-pressed="false" aria-label="Toggle places of interest"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">📍 Places</button>
-            <button type="button" id="explore-toggle-lod" aria-pressed="true" aria-label="Toggle zoom detail layers — states, cities, districts"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🔎 Detail</button>
-            <button type="button" id="explore-mode" aria-label="Switch the map basemap (satellite, dark, street, topo, light)"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(120,180,255,0.5); background:rgba(30,50,90,0.65); color:#fff;">🗺️ Satellite</button>
-            <button type="button" id="explore-exit" aria-label="Exit Explore Earth mode"
-                    style="cursor:pointer; padding:8px 12px; border-radius:8px; border:1px solid rgba(200,120,120,0.5); background:rgba(120,40,40,0.55); color:#fff;">✕ Exit</button>
-        </div>
+            <div class="ep-info">
+                📍 Based in San Francisco · Open to work
+                <span id="explore-distance" style="display:block; opacity:0.6; font-size:10px;">—</span>
+                <span aria-hidden="true" style="display:block; opacity:0.45; font-size:9px;">drag · scroll · dbl-click globe to drop a pin · Esc exits</span>
+            </div>
+            <div class="ep-zoom" role="group" aria-label="Camera zoom">
+                <span aria-hidden="true" title="Zoom out">🛰️</span>
+                <input type="range" id="ep-zoom" min="0" max="1000" value="0" step="1"
+                       aria-label="Camera zoom — left is far, right is street level">
+                <span aria-hidden="true" title="Zoom in (street level)">📍</span>
+            </div>
+            <div class="ep-body">
+
+                <!-- PINS -->
+                <section class="ep-section" data-section="pins">
+                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-pins-body">
+                        <span><span class="ep-caret">▾</span> Pins</span><span class="ep-count" id="ep-pin-count"></span>
+                    </button>
+                    <div class="ep-sec-body" id="ep-pins-body">
+                        <button type="button" class="ep-btn ep-btn--accent" id="ep-add-pin">＋ Add pin (centre)</button>
+                        <ul class="ep-pin-list" id="ep-pin-list"></ul>
+                        <div class="ep-empty" id="ep-pin-empty" hidden>No pins yet — double-click the globe or press ＋.</div>
+                        <!-- inline pin editor (shown when adding/editing) -->
+                        <div class="ep-editor" id="ep-editor" hidden role="group" aria-label="Edit pin">
+                            <label for="ep-ed-name">Name</label>
+                            <input type="text" id="ep-ed-name" maxlength="60" placeholder="Pin name">
+                            <label for="ep-ed-note">Note</label>
+                            <textarea id="ep-ed-note" maxlength="240" placeholder="Optional note"></textarea>
+                            <label>Type</label>
+                            <div class="ep-row">
+                                <button type="button" class="ep-switch" id="ep-ed-type-dot" aria-pressed="true">• Dot</button>
+                                <button type="button" class="ep-switch" id="ep-ed-type-area" aria-pressed="false">▢ Area</button>
+                            </div>
+                            <div id="ep-ed-radius-row" hidden>
+                                <label for="ep-ed-radius">Area radius — <span id="ep-ed-radius-val">50</span> km</label>
+                                <input type="range" id="ep-ed-radius" min="1" max="500" value="50" style="width:100%;">
+                            </div>
+                            <label>Colour</label>
+                            <div class="ep-swatches" id="ep-ed-swatches"></div>
+                            <div class="ep-coords" id="ep-ed-coords">—</div>
+                            <div class="ep-row">
+                                <button type="button" class="ep-btn ep-btn--accent" id="ep-ed-save">Save</button>
+                                <button type="button" class="ep-btn" id="ep-ed-move" title="Then click the globe to relocate">Move</button>
+                                <button type="button" class="ep-btn ep-btn--danger" id="ep-ed-delete">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- LAYERS -->
+                <section class="ep-section" data-section="layers">
+                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-layers-body">
+                        <span><span class="ep-caret">▾</span> Layers</span>
+                    </button>
+                    <div class="ep-sec-body" id="ep-layers-body">
+                        <button type="button" class="ep-btn ep-btn--accent" id="explore-center-sf" aria-label="Center the globe on San Francisco">🎯 Center on SF</button>
+                        <div class="ep-row">
+                            <button type="button" class="ep-switch" id="explore-toggle-borders" aria-pressed="false" aria-label="Toggle country borders">🗺️ Borders</button>
+                            <button type="button" class="ep-switch" id="explore-toggle-grid" aria-pressed="false" aria-label="Toggle latitude and longitude grid">🌐 Grid</button>
+                        </div>
+                        <div class="ep-row">
+                            <button type="button" class="ep-switch" id="explore-toggle-iss" aria-pressed="false" aria-label="Toggle the live ISS marker">🛰️ ISS</button>
+                            <button type="button" class="ep-switch" id="explore-toggle-quakes" aria-pressed="false" aria-label="Toggle live earthquakes">🌋 Quakes</button>
+                        </div>
+                        <button type="button" class="ep-switch" id="explore-toggle-places" aria-pressed="false" aria-label="Toggle places of interest">📍 Places</button>
+                    </div>
+                </section>
+
+                <!-- DETAIL -->
+                <section class="ep-section" data-section="detail">
+                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-detail-body">
+                        <span><span class="ep-caret">▾</span> Detail</span>
+                    </button>
+                    <div class="ep-sec-body" id="ep-detail-body">
+                        <button type="button" class="ep-switch" id="explore-toggle-lod" aria-pressed="true" aria-label="Toggle all detail layers">🔎 Detail (all)</button>
+                        <div class="ep-sub">
+                            <div class="ep-row">
+                                <button type="button" class="ep-switch" id="ep-toggle-satellite" aria-pressed="true">Satellite</button>
+                                <button type="button" class="ep-switch" id="ep-toggle-streets" aria-pressed="true">Streets</button>
+                            </div>
+                            <div class="ep-row">
+                                <button type="button" class="ep-switch" id="ep-toggle-states" aria-pressed="true">States</button>
+                                <button type="button" class="ep-switch" id="ep-toggle-cities" aria-pressed="true">Cities</button>
+                            </div>
+                            <button type="button" class="ep-switch" id="ep-toggle-districts" aria-pressed="true">Districts</button>
+                            <button type="button" class="ep-btn" id="explore-mode" aria-label="Switch the map basemap style">🗺️ Basemap: Satellite</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- STYLE — customise each detail layer's colour + opacity -->
+                <section class="ep-section" data-section="style" data-collapsed="true">
+                    <button type="button" class="ep-sec-head" aria-expanded="false" aria-controls="ep-style-body">
+                        <span><span class="ep-caret">▾</span> Style</span>
+                    </button>
+                    <div class="ep-sec-body" id="ep-style-body">
+                        <label>Layer</label>
+                        <div class="ep-row" id="ep-style-layers">
+                            <button type="button" class="ep-switch" data-layer="streets" aria-pressed="true">Streets</button>
+                            <button type="button" class="ep-switch" data-layer="states" aria-pressed="false">States</button>
+                            <button type="button" class="ep-switch" data-layer="cities" aria-pressed="false">Cities</button>
+                            <button type="button" class="ep-switch" data-layer="districts" aria-pressed="false">Districts</button>
+                        </div>
+                        <label>Colour</label>
+                        <div class="ep-swatches" id="ep-style-swatches"></div>
+                        <label for="ep-style-opacity">Opacity — <span id="ep-style-op-val">65</span>%</label>
+                        <input type="range" id="ep-style-opacity" min="0" max="100" value="65" style="width:100%;">
+                        <div id="ep-style-width-row">
+                            <label for="ep-style-width">Thickness — <span id="ep-style-w-val">2</span> px</label>
+                            <input type="range" id="ep-style-width" min="1" max="10" step="0.5" value="2" style="width:100%;">
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </aside>
 
         <!-- Country hover tooltip — follows the cursor, shows the hovered country -->
         <div id="country-tooltip" hidden aria-hidden="true"

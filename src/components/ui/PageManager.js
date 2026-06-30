@@ -156,11 +156,12 @@ class PageManager {
         
  // Rule 3: Pre-allocated game asset definitions
         this.gameAssets = {
+            // Barista Trainer is a MULTI-REPO SPOKE: github.com/MrCargon/game-barista →
+            // its own GitHub Pages URL, embedded via <iframe> (see launchExternalGame).
             'barista': {
-                script: 'src/components/games/starbucks-game-loader.js',
-                isModule: true,
-                css: 'src/components/games/StarbucksGame.css',
-                className: 'StarbucksGame'
+                external: true,
+                url: 'https://mrcargon.github.io/game-barista/',
+                download: 'https://github.com/MrCargon/game-barista/releases/latest'
             },
             // Snake is a MULTI-REPO SPOKE: source lives at github.com/MrCargon/game-snake and
             // deploys to its own GitHub Pages URL. The hub embeds the deployed build via <iframe>

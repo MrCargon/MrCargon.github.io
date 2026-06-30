@@ -139,12 +139,13 @@ class Presence {
         this._self = null;
     }
 
-    // Pick the best free no-signup adapter available. Rule 5: 2 asserts.
+    // Pick the default free no-signup adapter. Rule 5: 2 asserts.
     static defaultAdapter() {
         console.assert(typeof window !== 'undefined', 'defaultAdapter: window');
-        console.assert(true, 'defaultAdapter: noop');
-        // Cross-tab if supported (real sync), else demo-only. Both $0, no signup.
-        if (typeof BroadcastChannel !== 'undefined') return new BroadcastChannelAdapter();
+        console.assert(typeof DemoAdapter === 'function', 'defaultAdapter: DemoAdapter required');
+        // Demo by default: a seeded world roster gives the globe immediate visible life
+        // (BroadcastChannel cross-tab mode shows nothing until a 2nd tab/share). Swap to
+        // BroadcastChannelAdapter or a FirebaseAdapter via the `adapter` option for real sync.
         return new DemoAdapter();
     }
 

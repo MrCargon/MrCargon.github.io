@@ -162,11 +162,13 @@ class PageManager {
                 css: 'src/components/games/StarbucksGame.css',
                 className: 'StarbucksGame'
             },
+            // Snake is a MULTI-REPO SPOKE: source lives at github.com/MrCargon/game-snake and
+            // deploys to its own GitHub Pages URL. The hub embeds the deployed build via <iframe>
+            // rather than bundling source. (barista/tictactoe stay in-repo for now.)
             'snake': {
-                script: 'src/components/games/classic-games/snake/snake-loader.js',
-                isModule: true,
-                css: 'src/components/games/classic-games/snake/SnakeGame.css',
-                className: 'SnakeGame'
+                external: true,
+                url: 'https://mrcargon.github.io/game-snake/',
+                download: 'https://github.com/MrCargon/game-snake/releases/latest'
             },
             'tictactoe': {
                 script: 'src/components/games/classic-games/tic-tac-toe/tictactoe-loader.js',
@@ -2379,7 +2381,20 @@ class PageManager {
             console.error(`Game type '${gameType}' not configured`);
             return false;
         }
-        
+
+        // Multi-repo spoke: external games load their deployed build in an iframe
+        // (see gameAssets[].external) instead of bundling local source into the hub.
+        if (this.gameAssets[gameType].external) {
+            const launched = this.launchExternalGame(gameType);
+            if (button) {
+                setTimeout(() => {
+                    button.textContent = button.dataset.originalText || '🎮 Play Game';
+                    button.disabled = false;
+                }, 800);
+            }
+            return launched;
+        }
+
         try {
             // Launching game
             
@@ -2415,6 +2430,44 @@ class PageManager {
                     button.disabled = false;
                 }, 1000);
             }
+        }
+    }
+
+    /**
+     * Launch an external multi-repo spoke game inside the hub modal via <iframe>.
+     * Purpose: embed a deployed game build (own repo → GitHub Pages) with new-tab + download
+     *          affordances. No local source is loaded — this is the multi-repo play path.
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 6: Error recovery
+     */
+    launchExternalGame(gameType) {
+        const assets = this.gameAssets[gameType];
+        // Rule 5: validate inputs
+        if (!assets || typeof assets.url !== 'string' || assets.url.length === 0) {
+            console.error('External game URL missing for', gameType);
+            return false;
+        }
+        const gameContainer = document.getElementById('game-container');
+        const gameContent = document.getElementById('game-content');
+        if (!gameContainer || !gameContent) {
+            console.error('Game container elements not found');
+            return false;
+        }
+        try {
+            const dl = assets.download || assets.url;
+            gameContent.innerHTML = `
+                <div class="external-game-frame" style="display:flex;flex-direction:column;width:100%;height:100%;background:#14181f;">
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end;padding:.4rem .6rem;background:rgba(0,0,0,.35);flex:0 0 auto;">
+                        <a href="${assets.url}" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:none;font-size:.85rem;padding:.3rem .7rem;border-radius:6px;background:rgba(255,255,255,.12);">&#8599; New tab</a>
+                        <a href="${dl}" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:none;font-size:.85rem;padding:.3rem .7rem;border-radius:6px;background:rgba(255,165,0,.9);">&#8595; Download</a>
+                    </div>
+                    <iframe src="${assets.url}" title="${gameType} game" loading="eager" allow="fullscreen; gamepad; accelerometer" style="flex:1 1 auto;width:100%;border:0;display:block;background:#14181f;"></iframe>
+                </div>`;
+            this.activeGame = gameType;
+            this.showGameModal(gameContainer);
+            return true;
+        } catch (error) {
+            console.error(`External game launch failed for ${gameType}:`, error);
+            return false;
         }
     }
 

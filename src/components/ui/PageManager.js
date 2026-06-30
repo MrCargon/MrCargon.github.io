@@ -171,11 +171,12 @@ class PageManager {
                 url: 'https://mrcargon.github.io/game-snake/',
                 download: 'https://github.com/MrCargon/game-snake/releases/latest'
             },
+            // Tic-Tac-Toe is a MULTI-REPO SPOKE: github.com/MrCargon/game-tictactoe →
+            // its own GitHub Pages URL, embedded via <iframe> (see launchExternalGame).
             'tictactoe': {
-                script: 'src/components/games/classic-games/tic-tac-toe/tictactoe-loader.js',
-                isModule: true,
-                css: 'src/components/games/classic-games/tic-tac-toe/TicTacToe.css',
-                className: 'TicTacToe'
+                external: true,
+                url: 'https://mrcargon.github.io/game-tictactoe/',
+                download: 'https://github.com/MrCargon/game-tictactoe/releases/latest'
             }
         };
         

@@ -177,6 +177,11 @@ class Earth extends Planet {
             this.explorePins = (typeof ExplorePins !== 'undefined' && this.mesh)
                 ? new ExplorePins(this.mesh, this.data.radius)
                 : null;
+            // Live presence markers (ephemeral; online visitors). Renderer only — the
+            // Presence controller + opt-in UI live in SpaceEnvironment. Hidden until enabled.
+            this.presencePins = (typeof PresencePins !== 'undefined' && this.mesh)
+                ? new PresencePins(this.mesh, this.data.radius)
+                : null;
             return true;
         } catch (err) {
             console.error('Earth.init: failed to initialize:', err);
@@ -1026,6 +1031,7 @@ class Earth extends Planet {
         if (this.atmosphereLayers) { this.atmosphereLayers.dispose(); this.atmosphereLayers = null; }
         if (this.troposphereObjects) { this.troposphereObjects.dispose(); this.troposphereObjects = null; }
         if (this.explorePins) { this.explorePins.dispose(); this.explorePins = null; }
+        if (this.presencePins) { this.presencePins.dispose(); this.presencePins = null; }
         // clouds.map and moon.map/bumpMap are ResourceLoader-cached — skip
         // disposing those textures (pass false) so a recreated Earth keeps valid
         // textures. Geometry + material are still disposed.

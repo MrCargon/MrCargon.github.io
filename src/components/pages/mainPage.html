@@ -321,6 +321,18 @@
                     </div>
                 </section>
 
+                <!-- LIVE PRESENCE (opt-in, coarse, ephemeral) -->
+                <section class="ep-section" data-section="presence">
+                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-presence-body">
+                        <span><span class="ep-caret">▾</span> Live</span><span class="ep-count" id="explore-presence-count"></span>
+                    </button>
+                    <div class="ep-sec-body" id="ep-presence-body">
+                        <button type="button" class="ep-btn" id="explore-toggle-presence" aria-pressed="false">👥 Show online visitors</button>
+                        <button type="button" class="ep-btn" id="explore-share-location" aria-pressed="false">📍 Share my location</button>
+                        <div class="ep-empty" style="opacity:0.5;">Opt-in · coarse (~11 km) · ephemeral · nothing stored.</div>
+                    </div>
+                </section>
+
                 <!-- LAYERS -->
                 <section class="ep-section" data-section="layers">
                     <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-layers-body">

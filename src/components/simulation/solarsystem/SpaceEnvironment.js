@@ -1244,6 +1244,15 @@ class SpaceEnvironment {
             if (earth.explorePins && typeof earth.explorePins.setVisible === 'function') {
                 earth.explorePins.setVisible(false);
             }
+            // Tear down live presence on exit (stops heartbeat / cross-tab channel) and
+            // reset its toggle buttons so re-entering Explore starts clean.
+            if (this._presence) {
+                this._presence.setEnabled(false);
+                ['explore-toggle-presence', 'explore-share-location'].forEach((id) => {
+                    const b = document.getElementById(id);
+                    if (b) { b.setAttribute('aria-pressed', 'false'); b.classList.remove('active'); }
+                });
+            }
             if (typeof this._closePinEditor === 'function') this._closePinEditor();
             if (earth.satelliteTiles && typeof earth.satelliteTiles.hide === 'function') earth.satelliteTiles.hide();
             // Reset the SF marker scale (updateExploreLOD shrinks it when zoomed in
@@ -1515,6 +1524,10 @@ class SpaceEnvironment {
         if (earth.explorePins && typeof earth.explorePins.update === 'function') {
             earth.explorePins.update(rr);
         }
+        // Live presence markers: distance-scale + time-driven pulse (ephemeral roster).
+        if (earth.presencePins && typeof earth.presencePins.update === 'function') {
+            earth.presencePins.update(rr, (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000);
+        }
         if (earth.streetTiles || earth.satelliteTiles) this._updateStreets(earth, radius, dist);
         this._syncZoomSlider(rr);   // reflect wheel/drag zoom onto the panel slider
         return true;
@@ -1751,6 +1764,10 @@ class SpaceEnvironment {
             if (quakes) quakes.addEventListener('click', () => this._toggleDataLayer('quakes', quakes));
             if (places) places.addEventListener('click', () => this._toggleDataLayer('pois', places));
             if (lod) lod.addEventListener('click', () => this._toggleLodLayer(lod));
+            const presenceToggle = document.getElementById('explore-toggle-presence');
+            const shareLoc = document.getElementById('explore-share-location');
+            if (presenceToggle) presenceToggle.addEventListener('click', () => this._togglePresence(presenceToggle));
+            if (shareLoc) shareLoc.addEventListener('click', () => this._toggleShareLocation(shareLoc));
             const mode = document.getElementById('explore-mode');
             if (mode) mode.addEventListener('click', () => this._cycleMapMode(mode));
             const exit = document.getElementById('explore-exit');
@@ -1769,6 +1786,59 @@ class SpaceEnvironment {
         this._syncDetailSubToggles();
         this._applyAllStyles(earth);   // apply persisted per-layer colour/opacity
         this._syncStyleUI();
+        return true;
+    }
+
+    // Lazily build the Presence controller bound to the Earth's presence renderer.
+    // Returns null if presence scripts / Earth aren't ready. Rule 5: 2 asserts.
+    _getPresence() {
+        console.assert(typeof window !== 'undefined', '_getPresence: window required');
+        console.assert(typeof this.getEarthObject === 'function', '_getPresence: earth getter required');
+        if (this._presence) return this._presence;
+        const earth = this.getEarthObject();
+        if (!earth || !earth.presencePins || typeof Presence === 'undefined') return null;
+        const self = this;
+        this._presence = new Presence(earth.presencePins, {
+            onCount: (n) => self._updatePresenceCount(n)
+        });
+        return this._presence;
+    }
+
+    // Toggle the live-presence layer (receive + render online visitors). Rule 5: 2 asserts.
+    _togglePresence(btn) {
+        console.assert(btn && btn.setAttribute, '_togglePresence: btn required');
+        console.assert(typeof this.getEarthObject === 'function', '_togglePresence: earth getter');
+        const p = this._getPresence();
+        if (!p) return false;
+        const on = !p.isEnabled();
+        p.setEnabled(on);
+        btn.setAttribute('aria-pressed', String(on));
+        btn.classList.toggle('active', on);
+        return on;
+    }
+
+    // Opt-in to SHARING your coarse (~11 km) location. Rule 5: 2 asserts.
+    _toggleShareLocation(btn) {
+        console.assert(btn && btn.setAttribute, '_toggleShareLocation: btn required');
+        console.assert(typeof this.getEarthObject === 'function', '_toggleShareLocation: earth getter');
+        const p = this._getPresence();
+        if (!p) return false;
+        const on = !p.isSharing();
+        p.setSharing(on);
+        btn.setAttribute('aria-pressed', String(on));
+        btn.classList.toggle('active', on);
+        // Sharing implies the layer is enabled; reflect that on the toggle button.
+        const pBtn = document.getElementById('explore-toggle-presence');
+        if (on && pBtn) { pBtn.setAttribute('aria-pressed', 'true'); pBtn.classList.add('active'); }
+        return on;
+    }
+
+    // Reflect the online count in the panel header. Rule 5: 2 asserts.
+    _updatePresenceCount(n) {
+        console.assert(Number.isFinite(n), '_updatePresenceCount: number required');
+        console.assert(typeof document !== 'undefined', '_updatePresenceCount: document required');
+        const el = document.getElementById('explore-presence-count');
+        if (el) el.textContent = (n > 0) ? (n + ' online') : '';
         return true;
     }
 

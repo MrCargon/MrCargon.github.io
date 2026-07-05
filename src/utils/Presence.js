@@ -116,6 +116,86 @@ class BroadcastChannelAdapter {
     }
 }
 
+// Real cross-internet presence via Firebase Realtime Database (Spark plan: free-forever,
+// no credit card). Talks to the DB over its plain REST API (GET/PUT/DELETE `.json`) — no
+// SDK, no bundler, no extra <script>. Each client writes its own coarse record with a
+// timestamp and refreshes it on the controller's heartbeat; peers are pruned client-side
+// once their timestamp goes stale (covers hard closes where DELETE never fires).
+class FirebaseAdapter {
+    constructor(opts) {
+        var o = opts || {};
+        // strip trailing slashes so URL joins are clean
+        this.databaseURL = String(o.databaseURL || '').replace(/\/+$/, '');
+        this.path = o.path || 'presence';
+        this.staleMs = Number.isFinite(o.staleMs) ? o.staleMs : 75000;   // ~2.5x default heartbeat
+        this.pollMs = Number.isFinite(o.pollMs) ? o.pollMs : 6000;
+        this.onRoster = null;
+        this._self = null;
+        this._lastId = null;      // last id we wrote, so disconnect can remove it
+        this._poll = null;
+    }
+    _url(id) {
+        return this.databaseURL + '/' + this.path + (id != null ? '/' + encodeURIComponent(id) : '') + '.json';
+    }
+    connect(handlers) {
+        console.assert(handlers && typeof handlers.onRoster === 'function', 'FirebaseAdapter: onRoster required');
+        console.assert(this.databaseURL, 'FirebaseAdapter: databaseURL required');
+        this.onRoster = handlers.onRoster;
+        var self = this;
+        this._tick();
+        this._poll = setInterval(function () { self._tick(); }, this.pollMs);
+        return true;
+    }
+    publish(record) {
+        console.assert(this.onRoster, 'FirebaseAdapter: connect first');
+        console.assert(record === null || typeof record === 'object', 'FirebaseAdapter: record');
+        this._self = record;
+        if (record && record.id != null) {
+            this._lastId = String(record.id);
+            var body = JSON.stringify({ id: record.id, lat: record.lat, lng: record.lng, name: record.name, ts: Date.now() });
+            fetch(this._url(record.id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: body })
+                .catch(function (e) { console.warn('[Presence/FB] publish failed:', e && e.message); });
+        } else if (this._lastId) {
+            this._remove(this._lastId);
+            this._lastId = null;
+        }
+        return true;
+    }
+    _remove(id) {
+        fetch(this._url(id), { method: 'DELETE' }).catch(function () {});
+    }
+    _tick() {
+        var self = this;
+        fetch(this._url(null), { method: 'GET' })
+            .then(function (r) { return (r && r.ok) ? r.json() : null; })
+            .then(function (obj) { self._emit(obj); })
+            .catch(function (e) { console.warn('[Presence/FB] poll failed:', e && e.message); });
+    }
+    _emit(obj) {
+        if (!this.onRoster) return;
+        var now = Date.now(), self = this, list = [];
+        var selfId = this._self ? String(this._self.id) : null;
+        if (obj && typeof obj === 'object') {
+            Object.keys(obj).forEach(function (k) {
+                var rec = obj[k];
+                if (!rec || rec.id == null) return;
+                if (selfId !== null && String(rec.id) === selfId) return;              // self added below
+                if (typeof rec.ts === 'number' && (now - rec.ts) > self.staleMs) return; // prune stale
+                list.push({ id: rec.id, lat: rec.lat, lng: rec.lng, name: rec.name });
+            });
+        }
+        if (this._self) list.push(Object.assign({ self: true }, this._self));
+        this.onRoster(list);
+    }
+    disconnect() {
+        if (this._lastId) { this._remove(this._lastId); this._lastId = null; }
+        if (this._poll) { clearInterval(this._poll); this._poll = null; }
+        this.onRoster = null;
+        this._self = null;
+        return true;
+    }
+}
+
 // ---- Controller ------------------------------------------------------------
 
 class Presence {
@@ -143,9 +223,15 @@ class Presence {
     static defaultAdapter() {
         console.assert(typeof window !== 'undefined', 'defaultAdapter: window');
         console.assert(typeof DemoAdapter === 'function', 'defaultAdapter: DemoAdapter required');
-        // Demo by default: a seeded world roster gives the globe immediate visible life
-        // (BroadcastChannel cross-tab mode shows nothing until a 2nd tab/share). Swap to
-        // BroadcastChannelAdapter or a FirebaseAdapter via the `adapter` option for real sync.
+        // If a Firebase Realtime DB is configured (window.MRCARGON_FIREBASE.databaseURL),
+        // use it for REAL cross-internet presence. Falls back to Demo on any init error so
+        // the layer never breaks the page.
+        var cfg = (typeof window !== 'undefined') ? window.MRCARGON_FIREBASE : null;
+        if (cfg && typeof cfg.databaseURL === 'string' && cfg.databaseURL.trim() && typeof FirebaseAdapter === 'function') {
+            try { return new FirebaseAdapter(cfg); }
+            catch (e) { console.warn('[Presence] Firebase init failed, using Demo:', e && e.message); }
+        }
+        // Otherwise: a seeded world roster gives the globe immediate visible life, $0, no signup.
         return new DemoAdapter();
     }
 
@@ -225,7 +311,8 @@ if (typeof window !== 'undefined') {
     window.Presence = Presence;
     window.PresenceDemoAdapter = DemoAdapter;
     window.PresenceBroadcastAdapter = BroadcastChannelAdapter;
+    window.PresenceFirebaseAdapter = FirebaseAdapter;
 }
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Presence: Presence, DemoAdapter: DemoAdapter, BroadcastChannelAdapter: BroadcastChannelAdapter };
+    module.exports = { Presence: Presence, DemoAdapter: DemoAdapter, BroadcastChannelAdapter: BroadcastChannelAdapter, FirebaseAdapter: FirebaseAdapter };
 }

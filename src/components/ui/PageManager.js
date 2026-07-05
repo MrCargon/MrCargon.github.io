@@ -125,6 +125,15 @@ class PageManager {
                 cleanup: () => this.cleanupProjectsPage(),
                 preload: true
             },
+            store: {
+                path: 'src/components/pages/storePage.html',
+                title: 'Store - Games & Digital Assets',
+                // Store hosts "Play Demo" buttons + category filters, so it needs the global
+                // game-launch handler (same one Projects sets up) and the store filter handler.
+                // Both are guarded singletons, so re-calling them is a safe no-op.
+                init: () => { this.setupEnhancedGameLoading(); this.setupStoreFilters(); },
+                preload: false
+            },
             contact: {
                 path: 'src/components/pages/contactPage.html',
                 title: 'Contact - Get In Touch', 
@@ -2365,6 +2374,45 @@ class PageManager {
             console.error('Enhanced game loading setup error:', error);
             return false;
         }
+    }
+
+    /**
+     * Setup store category filtering
+     * Purpose: Let the Store's category buttons (All / 3D Models / Games / Assets)
+     *          show and hide product cards. Delegated + guarded singleton.
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 7: Singleton
+     */
+    setupStoreFilters() {
+        // Rule 5: Validate prerequisites
+        if (!document || typeof document.addEventListener !== 'function') {
+            console.warn('Document not available for store filter setup');
+            return false;
+        }
+        if (this._singletonSetup.storeFilters) {
+            return true;
+        }
+
+        this._boundHandlers.storeFilterHandler = (e) => {
+            const btn = e.target.closest('.product-filters .filter-btn[data-category]');
+            if (!btn) return;
+            const grid = document.querySelector('.products-grid');
+            if (!grid) return;
+            e.preventDefault();
+
+            const category = btn.getAttribute('data-category');
+            // Move the active state onto the clicked filter
+            document.querySelectorAll('.product-filters .filter-btn').forEach((b) =>
+                b.classList.toggle('active', b === btn));
+            // Show/hide cards ('all' reveals everything)
+            grid.querySelectorAll('.product-card').forEach((card) => {
+                const match = category === 'all' || card.getAttribute('data-category') === category;
+                card.style.display = match ? '' : 'none';
+            });
+        };
+
+        document.addEventListener('click', this._boundHandlers.storeFilterHandler);
+        this._singletonSetup.storeFilters = true;
+        return true;
     }
 
     /**

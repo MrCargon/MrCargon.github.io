@@ -190,6 +190,60 @@
     transform: translateY(-2px);
 }
 
+/* Disabled "Coming soon" buttons on placeholder (non-game) cards */
+.buy-button:disabled,
+.buy-button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-color);
+}
+
+.buy-button:disabled:hover,
+.buy-button[disabled]:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: none;
+}
+
+/* Game product cards - stacked action buttons (Play Demo / Download / Support) */
+.product-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    margin-top: auto;
+}
+
+.product-actions .buy-button {
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+.buy-button.secondary {
+    background: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.buy-button.secondary:hover {
+    background: var(--hover-bg);
+    color: var(--primary-color);
+}
+
+.buy-button.ghost {
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    font-size: 0.85rem;
+}
+
+.buy-button.ghost:hover {
+    background: var(--hover-bg);
+    color: var(--primary-color);
+}
+
 /* "Coming Soon" notice - For store items */
 .coming-soon-notice {
     background: rgba(255, 165, 0, 0.1);

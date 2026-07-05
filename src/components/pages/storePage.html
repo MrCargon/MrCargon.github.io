@@ -23,42 +23,87 @@
                 <div class="products-container">
                     <!-- Products grid -->
                     <div class="products-grid">
-                        <!-- Sample product card -->
+                        <!-- ===== Real games (multi-repo spokes). Play Demo fires the deployed
+                             PageManager launcher via [data-game]; Download hits each repo's
+                             latest GitHub Release. Pricing model: name-your-price / donation. ===== -->
+
+                        <!-- Snake -->
+                        <article class="product-card game-product" data-category="games">
+                            <div class="product-image">
+                                <img src="https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400&h=200&fit=crop&crop=center"
+                                     alt="Snake — classic arcade game" loading="lazy">
+                            </div>
+                            <div class="product-info">
+                                <h3>Snake</h3>
+                                <p>Classic arcade Snake with smooth keyboard &amp; touch controls and high-score saving. Installable as an app, plays offline.</p>
+                                <span class="price">Name your price</span>
+                                <div class="product-actions">
+                                    <button class="buy-button" data-game="snake" title="Play the Snake demo in your browser">▶ Play Demo</button>
+                                    <a class="buy-button secondary" href="https://github.com/MrCargon/game-snake/releases/latest" target="_blank" rel="noopener noreferrer">⬇ Download</a>
+                                    <a class="buy-button ghost" href="https://ko-fi.com/mrcargon" target="_blank" rel="noopener noreferrer">❤ Support</a>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Barista Trainer -->
+                        <article class="product-card game-product" data-category="games">
+                            <div class="product-image">
+                                <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=200&fit=crop&crop=center"
+                                     alt="Barista Trainer — coffee-making game" loading="lazy">
+                            </div>
+                            <div class="product-info">
+                                <h3>Barista Trainer</h3>
+                                <p>Learn Starbucks drinks, recipes and sizes through interactive challenges. Earn badges as you master the menu.</p>
+                                <span class="price">Name your price</span>
+                                <div class="product-actions">
+                                    <button class="buy-button" data-game="barista" title="Play the Barista Trainer demo in your browser">▶ Play Demo</button>
+                                    <a class="buy-button secondary" href="https://github.com/MrCargon/game-barista/releases/latest" target="_blank" rel="noopener noreferrer">⬇ Download</a>
+                                    <a class="buy-button ghost" href="https://ko-fi.com/mrcargon" target="_blank" rel="noopener noreferrer">❤ Support</a>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Tic-Tac-Toe -->
+                        <article class="product-card game-product" data-category="games">
+                            <div class="product-image">
+                                <img src="https://images.unsplash.com/photo-1611996575749-79a3a250f948?w=400&h=200&fit=crop&crop=center"
+                                     alt="Tic-Tac-Toe — strategy game vs AI" loading="lazy">
+                            </div>
+                            <div class="product-info">
+                                <h3>Tic-Tac-Toe</h3>
+                                <p>Play against a smart AI opponent that uses strategic moves. Track your wins and losses across sessions.</p>
+                                <span class="price">Name your price</span>
+                                <div class="product-actions">
+                                    <button class="buy-button" data-game="tictactoe" title="Play the Tic-Tac-Toe demo in your browser">▶ Play Demo</button>
+                                    <a class="buy-button secondary" href="https://github.com/MrCargon/game-tictactoe/releases/latest" target="_blank" rel="noopener noreferrer">⬇ Download</a>
+                                    <a class="buy-button ghost" href="https://ko-fi.com/mrcargon" target="_blank" rel="noopener noreferrer">❤ Support</a>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- 3D model pack (placeholder, non-game category) -->
                         <article class="product-card" data-category="3d-models">
                             <div class="product-image">
-                                <img src="src/assets/textures/planets/earth/earth_map.jpg" alt="3D Model Pack">
+                                <img src="src/assets/textures/planets/earth/earth_map.jpg" alt="3D Model Pack" loading="lazy">
                             </div>
                             <div class="product-info">
                                 <h3>Space Scene Pack</h3>
                                 <p>A collection of detailed 3D models for space visualization</p>
                                 <span class="price">$24.99</span>
-                                <button class="buy-button">Add to Cart</button>
+                                <button class="buy-button" disabled aria-disabled="true">Coming soon</button>
                             </div>
                         </article>
-                        
-                        <!-- Additional product card sample -->
-                        <article class="product-card" data-category="games">
-                            <div class="product-image">
-                                <img src="src/assets/textures/planets/mars/mars_map.jpg" alt="Game Asset">
-                            </div>
-                            <div class="product-info">
-                                <h3>Space Explorer Game</h3>
-                                <p>An educational game about space exploration</p>
-                                <span class="price">$19.99</span>
-                                <button class="buy-button">Add to Cart</button>
-                            </div>
-                        </article>
-                        
-                        <!-- Additional product card sample -->
+
+                        <!-- Digital assets (placeholder, non-game category) -->
                         <article class="product-card" data-category="assets">
                             <div class="product-image">
-                                <img src="src/assets/textures/planets/jupiter/jupiter_map.jpg" alt="Digital Asset">
+                                <img src="src/assets/textures/planets/jupiter/jupiter_map.jpg" alt="Digital Asset" loading="lazy">
                             </div>
                             <div class="product-info">
                                 <h3>Planet Textures Pack</h3>
                                 <p>High-resolution planet textures for 3D projects</p>
                                 <span class="price">$12.99</span>
-                                <button class="buy-button">Add to Cart</button>
+                                <button class="buy-button" disabled aria-disabled="true">Coming soon</button>
                             </div>
                         </article>
                     </div>
@@ -73,3 +118,21 @@
         </div>
     </div>
 </section>
+
+<!-- Game modal container - shared launcher target (mirrors projectsPage.html) so
+     "Play Demo" buttons on the Store also have somewhere to mount the iframe. -->
+<div id="game-container" class="game-modal-overlay" role="region" aria-label="Interactive game">
+    <header class="panel-header">
+        <h2 id="game-title">Interactive Game</h2>
+        <div class="header-controls">
+            <button class="project-btn" data-action="close-game" aria-label="Close game">
+                <span>✕</span> Close
+            </button>
+        </div>
+    </header>
+    <div id="game-positioning-layer">
+        <div id="game-content">
+            <!-- Game will be loaded here dynamically by PageManager -->
+        </div>
+    </div>
+</div>

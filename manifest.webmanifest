@@ -1,0 +1,15 @@
+{
+  "name": "MrCargon — Interactive Portfolio",
+  "short_name": "MrCargon",
+  "description": "Andrejs K — creative developer & 3D designer. An interactive 3D space portfolio with playable games.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0e14",
+  "theme_color": "#FFA500",
+  "categories": ["portfolio", "games", "education"],
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

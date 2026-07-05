@@ -13,6 +13,14 @@
         <!-- Favicon - Space themed star -->
         <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3CradialGradient id='g' cx='30%25' cy='30%25'%3E%3Cstop offset='0%25' stop-color='%23fff'/%3E%3Cstop offset='100%25' stop-color='%234a90d9'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Ccircle cx='35' cy='40' r='8' fill='%23ffffff40'/%3E%3C/svg%3E">
 
+        <!-- PWA: makes the whole portfolio installable ("Add to Home Screen") on iOS / Android / desktop -->
+        <link rel="manifest" href="./manifest.webmanifest">
+        <meta name="theme-color" content="#FFA500">
+        <link rel="apple-touch-icon" href="./icon.svg">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="MrCargon">
+
         <!-- Styles -->
         <link rel="stylesheet" href="index.css">
         <link rel="stylesheet" href="src/components/header/header.css">
@@ -197,5 +205,16 @@
     <script src="src/components/header/HeaderManager.js"></script>
     
     <script src="src/main.js" defer></script>
+
+    <!-- PWA: register the service worker so the whole portfolio is installable + works
+         offline. No-op on browsers without service-worker support. -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch((e) =>
+                    console.warn('[MrCargon] SW registration failed:', e));
+            });
+        }
+    </script>
     </body>
 </html>

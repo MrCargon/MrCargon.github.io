@@ -1026,9 +1026,11 @@ class SpaceEnvironment {
         this.controls.enablePan = false; // pan would drift off the globe
         // Inertial damping for smooth, consistent drag/zoom (the animate loop already
         // calls controls.update() every frame, which damping requires). Restored on exit.
+        // A HIGHER dampingFactor decays the motion faster = tighter, less post-release
+        // glide/drift (0.09 still coasted noticeably at close zoom). Restored on exit.
         this._preExploreDamping = this.controls.enableDamping;
         this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.09;
+        this.controls.dampingFactor = 0.15;
         // Set rotateSpeed from the CURRENT distance the instant a drag starts. Without
         // this, the per-frame rotateSpeed (set in updateExploreLOD) can be one frame
         // stale right after a wheel-zoom, so the FIRST drag at close zoom used the old
@@ -1423,6 +1425,24 @@ class SpaceEnvironment {
     }
 
     /**
+     * Explore-mode WHEEL/PINCH zoom sensitivity for a given altitude and FOV. Same two
+     * factors as rotation: ∝ altitude so each dolly tick is a small fraction of the
+     * remaining altitude (fine near the surface, normal far out), × tan(fov/2)/tan(30°)
+     * so the telephoto FOV near the surface doesn't make each tick's on-screen jump feel
+     * too fast. Lower floor than before (0.03) so the proportional term governs closer to
+     * the surface instead of a too-coarse floored step. Rule 5: 2 asserts.
+     * @param {number} alt - altitude above surface in radii (rr - 1)
+     * @param {number} fovDeg - current camera field of view in degrees
+     * @returns {number}
+     */
+    _exploreZoomSpeed(alt, fovDeg) {
+        console.assert(alt >= 0, '_exploreZoomSpeed: alt must be >= 0');
+        console.assert(fovDeg > 0, '_exploreZoomSpeed: fov must be > 0');
+        const fovComp = Math.tan((fovDeg * Math.PI / 180) / 2) / Math.tan(Math.PI / 6);
+        return Math.max(0.03, Math.min(1.0, alt * 1.1 * fovComp));
+    }
+
+    /**
      * Drive the zoom level-of-detail geography (states → cities → districts) from
      * the camera distance while exploring. GeoLOD lazily builds + cross-fades each
      * tier; safe no-op if absent. Called per-frame only while exploreMode.
@@ -1478,12 +1498,10 @@ class SpaceEnvironment {
             // telephoto FOV near the surface was magnifying the surface ~2.5×, so even with
             // altitude scaling the maxed-in drag felt too fast — the FOV term now cancels it.
             this.controls.rotateSpeed = this._exploreRotateSpeed(alt, this.camera.fov);
-            // zoomSpeed PROPORTIONAL to altitude (low floor) so the dolly DECELERATES
-            // smoothly approaching the surface. The old 0.4 floor made each wheel tick
-            // eat a huge fraction of the tiny remaining altitude → a big jump in the last
-            // 1.02→1.0013 stretch with "nothing in between". Now there are many fine
-            // steps near the surface and normal speed far out.
-            this.controls.zoomSpeed = Math.max(0.07, Math.min(1.0, alt * 1.1));
+            // zoomSpeed ∝ altitude AND ÷ FOV magnification (see _exploreZoomSpeed) so the
+            // dolly decelerates smoothly approaching the surface and each wheel/pinch tick
+            // covers a small, consistent fraction of the remaining altitude at any zoom.
+            this.controls.zoomSpeed = this._exploreZoomSpeed(alt, this.camera.fov);
             this.controls.minDistance = radius * 1.0013;
             this.controls.maxDistance = radius * 15;
         }

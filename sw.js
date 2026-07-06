@@ -9,7 +9,7 @@
  *
  * Bump CACHE_NAME to force a clean refresh of all cached assets.
  */
-const CACHE_NAME = 'mrcargon-hub-v1';
+const CACHE_NAME = 'mrcargon-hub-v2';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 
 self.addEventListener('install', (event) => {

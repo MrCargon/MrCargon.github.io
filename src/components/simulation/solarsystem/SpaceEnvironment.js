@@ -1040,7 +1040,7 @@ class SpaceEnvironment {
             const rad = (e.data && e.data.radius) || 2;
             const ep = e.getMesh().getWorldPosition(this._scratchEarthPos);
             const a = Math.max(this.camera.position.distanceTo(ep) / rad - 1, 0.001);
-            this.controls.rotateSpeed = Math.max(0.0008, Math.min(1.0, a * 0.55));
+            this.controls.rotateSpeed = this._exploreRotateSpeed(a, this.camera.fov);
         };
         this.controls.addEventListener('start', this._onExploreControlStart);
         this.controls.update();
@@ -1404,6 +1404,25 @@ class SpaceEnvironment {
     }
 
     /**
+     * Explore-mode drag sensitivity for a given altitude (rr-1) and camera FOV.
+     * Two factors keep the on-screen surface speed near-constant at ANY zoom:
+     *   1. ∝ altitude  — far = normal, near-surface = tiny (a small drag = small move).
+     *   2. × tan(fov/2)/tan(30°) — near the surface the FOV narrows to a telephoto
+     *      (~26°) that MAGNIFIES the surface ~2.5×; without this the maxed-in drag felt
+     *      too fast. This term is 1.0 at the 60° far FOV and ~0.4 at 26°, cancelling it.
+     * Rule 5: 2 asserts.
+     * @param {number} alt - altitude above surface in radii (rr - 1)
+     * @param {number} fovDeg - current camera field of view in degrees
+     * @returns {number}
+     */
+    _exploreRotateSpeed(alt, fovDeg) {
+        console.assert(alt >= 0, '_exploreRotateSpeed: alt must be >= 0');
+        console.assert(fovDeg > 0, '_exploreRotateSpeed: fov must be > 0');
+        const fovComp = Math.tan((fovDeg * Math.PI / 180) / 2) / Math.tan(Math.PI / 6);
+        return Math.max(0.0003, Math.min(1.0, alt * 0.55 * fovComp));
+    }
+
+    /**
      * Drive the zoom level-of-detail geography (states → cities → districts) from
      * the camera distance while exploring. GeoLOD lazily builds + cross-fades each
      * tier; safe no-op if absent. Called per-frame only while exploreMode.
@@ -1454,11 +1473,11 @@ class SpaceEnvironment {
         if (this.controls) {
             if (!this.cameraTransitioning) this.controls.target.lerp(earthPos, 0.2);
             const alt = Math.max(rr - 1, 0.001);
-            // rotateSpeed ∝ altitude so a drag moves the SURFACE by a near-constant
-            // amount on screen at any zoom. The old 0.02 floor kicked in below ~1.033R
-            // and left close-up rotation ~7× too fast (a tiny drag flung past the city).
-            // A much lower floor keeps fine control all the way to the surface.
-            this.controls.rotateSpeed = Math.max(0.0008, Math.min(1.0, alt * 0.55));
+            // rotateSpeed ∝ altitude AND ÷ FOV magnification (see _exploreRotateSpeed) so a
+            // drag moves the SURFACE by a near-constant amount on screen at any zoom. The
+            // telephoto FOV near the surface was magnifying the surface ~2.5×, so even with
+            // altitude scaling the maxed-in drag felt too fast — the FOV term now cancels it.
+            this.controls.rotateSpeed = this._exploreRotateSpeed(alt, this.camera.fov);
             // zoomSpeed PROPORTIONAL to altitude (low floor) so the dolly DECELERATES
             // smoothly approaching the surface. The old 0.4 floor made each wheel tick
             // eat a huge fraction of the tiny remaining altitude → a big jump in the last

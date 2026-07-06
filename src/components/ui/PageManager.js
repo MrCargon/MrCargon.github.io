@@ -134,6 +134,13 @@ class PageManager {
                 init: () => { this.setupEnhancedGameLoading(); this.setupStoreFilters(); },
                 preload: false
             },
+            calendar: {
+                path: 'src/components/pages/calendarPage.html',
+                title: 'Calendar - Launcher',
+                init: () => this.initCalendarPage(),
+                cleanup: () => this.cleanupCalendarPage(),
+                preload: false
+            },
             contact: {
                 path: 'src/components/pages/contactPage.html',
                 title: 'Contact - Get In Touch', 
@@ -2412,6 +2419,65 @@ class PageManager {
 
         document.addEventListener('click', this._boundHandlers.storeFilterHandler);
         this._singletonSetup.storeFilters = true;
+        return true;
+    }
+
+    /**
+     * Initialize the Calendar launcher module (local-first store + optional sync + UI).
+     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 6: Graceful fallback.
+     */
+    initCalendarPage() {
+        console.assert(typeof document !== 'undefined', 'initCalendarPage: document required');
+        console.assert(typeof CalendarStore !== 'undefined', 'initCalendarPage: CalendarStore required');
+        const root = document.getElementById('calendar-root');
+        if (!root || typeof Calendar === 'undefined' || typeof CalendarStore === 'undefined') {
+            console.warn('Calendar module not available');
+            return false;
+        }
+        try {
+            const sync = (typeof CalendarSync === 'function') ? new CalendarSync() : null;
+            const store = new CalendarStore({ sync: sync });
+            this._calendar = new Calendar(root, store);
+            this._calendar.mount();
+            this._calendarSync = sync;
+            this._updateCalSyncUI();
+            const btn = document.getElementById('cal-sync-btn');
+            if (btn && sync) {
+                this._boundHandlers.calSync = () => {
+                    const code = window.prompt('Personal sync code to sync this calendar across your devices (blank = off). Treat it like a password.', sync.syncCode || '');
+                    if (code === null) return;
+                    sync.setSyncCode(code.trim());
+                    this._updateCalSyncUI();
+                };
+                btn.addEventListener('click', this._boundHandlers.calSync);
+            }
+            return true;
+        } catch (error) {
+            console.error('Calendar init error:', error);
+            return false;
+        }
+    }
+
+    // Reflect sync state (on-device vs synced) in the header pill. Rule 5: 2 asserts.
+    _updateCalSyncUI() {
+        console.assert(typeof document !== 'undefined', '_updateCalSyncUI: document');
+        console.assert(this._calendarSync !== undefined, '_updateCalSyncUI: sync ref');
+        const el = document.getElementById('cal-sync-state');
+        if (!el) return false;
+        const on = !!(this._calendarSync && typeof this._calendarSync.enabled === 'function' && this._calendarSync.enabled());
+        el.textContent = on ? 'Synced' : 'On-device';
+        el.classList.toggle('synced', on);
+        return true;
+    }
+
+    // Tear down the Calendar module on navigation away. Rule 5: 2 asserts.
+    cleanupCalendarPage() {
+        console.assert(typeof document !== 'undefined', 'cleanupCalendarPage: document');
+        console.assert(this._boundHandlers, 'cleanupCalendarPage: handlers');
+        if (this._calendar && typeof this._calendar.dispose === 'function') this._calendar.dispose();
+        if (this._calendarSync && typeof this._calendarSync.detach === 'function') this._calendarSync.detach();
+        this._calendar = null;
+        this._calendarSync = null;
         return true;
     }
 

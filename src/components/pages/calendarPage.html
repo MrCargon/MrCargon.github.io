@@ -1,0 +1,20 @@
+<!-- calendarPage.html — Calendar module (launcher tool). Local-first; optional sync. -->
+<section class="main-section calendar-section" id="calendar" role="main" aria-labelledby="calendar-title">
+    <div class="calendar-panel">
+        <header class="panel-header calendar-header">
+            <h2 id="calendar-title">Calendar</h2>
+            <div class="calendar-sync">
+                <span class="cal-sync-state" id="cal-sync-state" title="Sync status">On-device</span>
+                <button class="control-btn cal-sync-btn" id="cal-sync-btn" type="button">Sync…</button>
+            </div>
+        </header>
+
+        <!-- Calendar renders here -->
+        <div id="calendar-root" class="calendar-root" aria-live="polite"></div>
+
+        <p class="calendar-note">
+            Events are saved on this device and work offline. Set a sync code (button above) to
+            share them across your devices — requires the Firebase projectId in PresenceConfig.js.
+        </p>
+    </div>
+</section>

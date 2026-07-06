@@ -6,7 +6,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
         <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes) used by Explore mode. -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com; font-src 'self'; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://*.firebaseio.com https://*.firebasedatabase.app; base-uri 'self'">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com; font-src 'self'; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'">
         <meta name="description" content="MrCargo - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
         <title>MrCargo - Portfolio</title>
 
@@ -28,6 +28,7 @@
         <link rel="stylesheet" href="src/components/pages/projectsPage.css">
         <link rel="stylesheet" href="src/components/pages/aboutPage.css">
         <link rel="stylesheet" href="src/components/pages/storePage.css">
+        <link rel="stylesheet" href="src/components/pages/calendarPage.css">
         <link rel="stylesheet" href="src/components/pages/contactPage.css">
         <link rel="stylesheet" href="src/components/footer/footer.css">
         <link rel="stylesheet" href="src/components/simulation/time/timeControls.css">
@@ -112,6 +113,10 @@
     <script src="src/utils/PresencePins.js"></script>
     <script src="src/utils/PresenceConfig.js"></script>
     <script src="src/utils/Presence.js"></script>
+    <!-- Calendar launcher module: local-first store + optional Firestore sync + UI -->
+    <script src="src/utils/CalendarStore.js"></script>
+    <script src="src/utils/CalendarSync.js"></script>
+    <script src="src/components/pages/Calendar.js"></script>
 
     <!-- 🌌 THREE.js Library - Using CDN with proper OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>

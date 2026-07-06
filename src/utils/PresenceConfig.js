@@ -34,6 +34,10 @@
 //   never come close. Presence is opt-in and coarse by design (see Presence.js privacy note).
 
 window.MRCARGON_FIREBASE = {
-    databaseURL: '',        // ← paste your Realtime Database URL here to go live
-    path: 'presence'        // DB node the roster lives under (rules above match this)
+    databaseURL: '',        // ← Realtime Database URL — enables live GLOBE PRESENCE
+    path: 'presence',       // DB node the roster lives under (rules above match this)
+    projectId: ''           // ← Firebase projectId — enables CALENDAR cross-device sync
+                            //   (Firestore REST). Set a personal "sync code" in the Calendar
+                            //   header once this is filled. Firestore rules: allow read/write
+                            //   on /calendars/{code}/events for a personal tool (test mode ok).
 };

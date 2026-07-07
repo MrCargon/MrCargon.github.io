@@ -18,6 +18,7 @@ class CalendarSync {
         var cfg = (typeof window !== 'undefined' && window.MRCARGON_FIREBASE) ? window.MRCARGON_FIREBASE : {};
         this.projectId = o.projectId || cfg.projectId || '';
         this.syncCode = o.syncCode || this._readCode();
+        this.collection = o.collection || 'events';   // reusable: 'events', 'notes', …
         this.pollMs = Number.isFinite(o.pollMs) ? o.pollMs : 15000;
         this.onRemote = null;
         this._poll = null;
@@ -45,7 +46,8 @@ class CalendarSync {
 
     _base() {
         return 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(this.projectId)
-            + '/databases/(default)/documents/calendars/' + encodeURIComponent(this.syncCode) + '/events';
+            + '/databases/(default)/documents/calendars/' + encodeURIComponent(this.syncCode)
+            + '/' + encodeURIComponent(this.collection);
     }
 
     attach(handlers) {
@@ -93,28 +95,31 @@ class CalendarSync {
         return true;
     }
 
-    // ---- Firestore typed-value (de)serialization ---------------------------
+    // ---- Firestore typed-value (de)serialization (field-agnostic) ----------
+    // Encodes any flat record of string/number/boolean values, so this adapter is reusable
+    // across modules (calendar events, notes, …). <=60 lines.
     _encode(rec) {
         console.assert(rec && typeof rec === 'object', '_encode: record');
-        console.assert(rec.date, '_encode: date');
-        return {
-            id: { stringValue: String(rec.id) },
-            date: { stringValue: String(rec.date) },
-            time: { stringValue: String(rec.time || '') },
-            title: { stringValue: String(rec.title || '') },
-            notes: { stringValue: String(rec.notes || '') },
-            updated: { integerValue: String(Number(rec.updated) || 0) },
-            deleted: { booleanValue: !!rec.deleted }
-        };
+        console.assert(rec.id != null, '_encode: record.id required');
+        var fields = {};
+        Object.keys(rec).slice(0, 50).forEach(function (k) {
+            var v = rec[k];
+            if (typeof v === 'boolean') fields[k] = { booleanValue: v };
+            else if (typeof v === 'number' && Number.isFinite(v)) fields[k] = { integerValue: String(Math.trunc(v)) };
+            else fields[k] = { stringValue: String(v == null ? '' : v) };
+        });
+        return fields;
     }
     _decode(f) {
         if (!f || !f.id) return null;
-        var s = function (v) { return v && typeof v.stringValue === 'string' ? v.stringValue : ''; };
-        return {
-            id: s(f.id), date: s(f.date), time: s(f.time), title: s(f.title), notes: s(f.notes),
-            updated: Number(f.updated && f.updated.integerValue) || 0,
-            deleted: !!(f.deleted && f.deleted.booleanValue)
-        };
+        var rec = {};
+        Object.keys(f).slice(0, 50).forEach(function (k) {
+            var v = f[k];
+            if (v && Object.prototype.hasOwnProperty.call(v, 'booleanValue')) rec[k] = !!v.booleanValue;
+            else if (v && Object.prototype.hasOwnProperty.call(v, 'integerValue')) rec[k] = Number(v.integerValue) || 0;
+            else rec[k] = (v && v.stringValue) || '';
+        });
+        return rec.id ? rec : null;
     }
 }
 

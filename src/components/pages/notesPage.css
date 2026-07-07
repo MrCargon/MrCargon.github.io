@@ -1,0 +1,81 @@
+/* notesPage.css — Notes launcher module. Uses site tokens. List + editor; stacks on mobile. */
+
+.main-section.notes-section {
+    max-width: var(--content-width);
+    width: 92%;
+    margin: var(--spacing-xl) auto;
+    display: block;
+    padding: 0;
+}
+
+.notes-panel {
+    background-color: var(--panel-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-medium);
+    overflow: hidden;
+}
+
+.notes-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+.notes-header h2 { color: var(--primary-color); margin: 0; font-size: 1.5rem; }
+.notes-sync { display: flex; align-items: center; gap: var(--spacing-sm); }
+.notes-sync-state {
+    font-size: 0.8rem; color: var(--text-color); opacity: 0.8;
+    padding: 0.2rem 0.5rem; border: 1px solid var(--border-color); border-radius: 999px;
+}
+.notes-sync-state.synced { color: #4ade80; border-color: rgba(74, 222, 128, 0.4); }
+
+.notes-root { padding: var(--spacing-lg); }
+
+.notes-wrap { display: grid; grid-template-columns: 280px 1fr; gap: var(--spacing-lg); align-items: start; min-height: 380px; }
+@media (max-width: 760px) { .notes-wrap { grid-template-columns: 1fr; } }
+
+/* ---- list ---- */
+.notes-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.notes-new { width: 100%; }
+.note-items { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
+.note-item {
+    text-align: left; background: rgba(255, 255, 255, 0.04); border: 1px solid transparent;
+    border-radius: var(--border-radius-sm); padding: 0.55rem 0.7rem; cursor: pointer;
+    display: flex; flex-direction: column; gap: 2px; transition: var(--transition); color: var(--text-color);
+}
+.note-item:hover { background: var(--hover-bg); border-color: var(--border-color); }
+.note-item.active { border-color: var(--primary-color); background: rgba(255, 165, 0, 0.12); }
+.note-item-title { font-size: 0.92rem; font-weight: 600; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-item-preview { font-size: 0.78rem; color: rgba(255, 255, 255, 0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notes-empty { color: rgba(255, 255, 255, 0.5); font-size: 0.85rem; font-style: italic; }
+
+/* ---- editor ---- */
+.notes-editor {
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm); padding: var(--spacing-md);
+    display: flex; flex-direction: column; gap: var(--spacing-sm); min-height: 380px;
+}
+.note-edit-head { display: flex; gap: var(--spacing-sm); align-items: center; }
+.note-title-in {
+    flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm); color: var(--primary-color); font-size: 1.05rem; font-weight: 600;
+    padding: 0.5rem 0.7rem;
+}
+.note-body-in {
+    flex: 1; min-height: 260px; resize: vertical;
+    background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm); color: var(--text-color); font-size: 0.95rem;
+    line-height: 1.5; padding: 0.7rem; font-family: inherit;
+}
+.note-title-in:focus-visible, .note-body-in:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+.note-del {
+    background: transparent; border: 1px solid var(--border-color); color: rgba(255,255,255,0.7);
+    border-radius: var(--border-radius-sm); padding: 0.4rem 0.7rem; cursor: pointer; font-size: 0.85rem; transition: var(--transition);
+}
+.note-del:hover { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.5); }
+.note-saved { font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); min-height: 1em; }
+.notes-placeholder { color: rgba(255, 255, 255, 0.5); font-style: italic; margin: auto; text-align: center; }
+
+.notes-note { padding: 0 var(--spacing-lg) var(--spacing-lg); color: rgba(255,255,255,0.55); font-size: 0.8rem; }
+
+@media (prefers-reduced-motion: reduce) { .note-item, .note-del { transition: none; } }

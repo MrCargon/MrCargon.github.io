@@ -1,0 +1,20 @@
+<!-- notesPage.html — Notes module (launcher tool). Local-first; optional sync. -->
+<section class="main-section notes-section" id="notes" role="main" aria-labelledby="notes-title">
+    <div class="notes-panel">
+        <header class="panel-header notes-header">
+            <h2 id="notes-title">Notes</h2>
+            <div class="notes-sync">
+                <span class="notes-sync-state" id="notes-sync-state" title="Sync status">On-device</span>
+                <button class="control-btn notes-sync-btn" id="notes-sync-btn" type="button">Sync…</button>
+            </div>
+        </header>
+
+        <!-- Notes UI (list + editor) renders here -->
+        <div id="notes-root" class="notes-root" aria-live="polite"></div>
+
+        <p class="notes-note">
+            Notes are saved on this device and work offline. Set a sync code (button above) to
+            share them across your devices — uses the same Firebase project as the Calendar.
+        </p>
+    </div>
+</section>

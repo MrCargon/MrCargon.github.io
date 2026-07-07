@@ -134,11 +134,23 @@ class PageManager {
                 init: () => { this.setupEnhancedGameLoading(); this.setupStoreFilters(); },
                 preload: false
             },
+            launcher: {
+                path: 'src/components/pages/launcherPage.html',
+                title: 'Apps - Launcher',
+                preload: false
+            },
             calendar: {
                 path: 'src/components/pages/calendarPage.html',
                 title: 'Calendar - Launcher',
                 init: () => this.initCalendarPage(),
                 cleanup: () => this.cleanupCalendarPage(),
+                preload: false
+            },
+            notes: {
+                path: 'src/components/pages/notesPage.html',
+                title: 'Notes - Launcher',
+                init: () => this.initNotesPage(),
+                cleanup: () => this.cleanupNotesPage(),
                 preload: false
             },
             contact: {
@@ -2478,6 +2490,63 @@ class PageManager {
         if (this._calendarSync && typeof this._calendarSync.detach === 'function') this._calendarSync.detach();
         this._calendar = null;
         this._calendarSync = null;
+        return true;
+    }
+
+    /**
+     * Initialize the Notes launcher module (local-first store + optional sync + UI).
+     * Mirrors the Calendar module. Rule 4: ≤60 lines | Rule 5: 2+ assertions.
+     */
+    initNotesPage() {
+        console.assert(typeof document !== 'undefined', 'initNotesPage: document required');
+        console.assert(typeof NotesStore !== 'undefined', 'initNotesPage: NotesStore required');
+        const root = document.getElementById('notes-root');
+        if (!root || typeof Notes === 'undefined' || typeof NotesStore === 'undefined') {
+            console.warn('Notes module not available');
+            return false;
+        }
+        try {
+            const sync = (typeof CalendarSync === 'function') ? new CalendarSync({ collection: 'notes' }) : null;
+            const store = new NotesStore({ sync: sync });
+            this._notesUi = new Notes(root, store);
+            this._notesUi.mount();
+            this._notesSync = sync;
+            this._updateNotesSyncUI();
+            const btn = document.getElementById('notes-sync-btn');
+            if (btn && sync) {
+                this._boundHandlers.notesSync = () => {
+                    const code = window.prompt('Personal sync code to sync notes across your devices (blank = off). Same code as your other synced modules.', sync.syncCode || '');
+                    if (code === null) return;
+                    sync.setSyncCode(code.trim());
+                    this._updateNotesSyncUI();
+                };
+                btn.addEventListener('click', this._boundHandlers.notesSync);
+            }
+            return true;
+        } catch (error) {
+            console.error('Notes init error:', error);
+            return false;
+        }
+    }
+
+    _updateNotesSyncUI() {
+        console.assert(typeof document !== 'undefined', '_updateNotesSyncUI: document');
+        console.assert(this._notesSync !== undefined, '_updateNotesSyncUI: sync ref');
+        const el = document.getElementById('notes-sync-state');
+        if (!el) return false;
+        const on = !!(this._notesSync && typeof this._notesSync.enabled === 'function' && this._notesSync.enabled());
+        el.textContent = on ? 'Synced' : 'On-device';
+        el.classList.toggle('synced', on);
+        return true;
+    }
+
+    cleanupNotesPage() {
+        console.assert(typeof document !== 'undefined', 'cleanupNotesPage: document');
+        console.assert(this._boundHandlers, 'cleanupNotesPage: handlers');
+        if (this._notesUi && typeof this._notesUi.dispose === 'function') this._notesUi.dispose();
+        if (this._notesSync && typeof this._notesSync.detach === 'function') this._notesSync.detach();
+        this._notesUi = null;
+        this._notesSync = null;
         return true;
     }
 

@@ -1,0 +1,43 @@
+<!-- launcherPage.html — the launcher HOME: a phone-style app grid. Tiles are hash links,
+     so navigation reuses the existing SPA router (no extra JS). -->
+<section class="main-section launcher-section" id="launcher" role="main" aria-labelledby="launcher-title">
+    <div class="launcher-panel">
+        <header class="launcher-head">
+            <h2 id="launcher-title">Apps</h2>
+            <p class="launcher-sub">Your tools, games and modules — installable, offline-ready.</p>
+        </header>
+
+        <div class="app-grid" role="list" aria-label="Applications">
+            <a href="#calendar" class="app-tile" role="listitem">
+                <span class="app-icon" aria-hidden="true">📅</span>
+                <span class="app-label">Calendar</span>
+            </a>
+            <a href="#notes" class="app-tile" role="listitem">
+                <span class="app-icon" aria-hidden="true">📝</span>
+                <span class="app-label">Notes</span>
+            </a>
+            <a href="#store" class="app-tile" role="listitem">
+                <span class="app-icon" aria-hidden="true">🎮</span>
+                <span class="app-label">Games</span>
+            </a>
+            <a href="#main" class="app-tile" role="listitem">
+                <span class="app-icon" aria-hidden="true">🌍</span>
+                <span class="app-label">Explore</span>
+            </a>
+            <a href="#projects" class="app-tile" role="listitem">
+                <span class="app-icon" aria-hidden="true">💼</span>
+                <span class="app-label">Projects</span>
+            </a>
+            <a href="#about" class="app-tile" role="listitem">
+                <span class="app-icon" aria-hidden="true">👤</span>
+                <span class="app-label">About</span>
+            </a>
+            <!-- Find Hub: next module (locate/ring your phone). Disabled tile until built. -->
+            <span class="app-tile app-tile-soon" role="listitem" aria-disabled="true" title="Coming soon">
+                <span class="app-icon" aria-hidden="true">📡</span>
+                <span class="app-label">Find Hub</span>
+                <span class="app-soon">soon</span>
+            </span>
+        </div>
+    </div>
+</section>

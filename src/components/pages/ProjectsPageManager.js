@@ -18,24 +18,26 @@ class ProjectsPageManager {
         this.resources = new Set(); // Unified resource tracking
         
  // Game assets registry
+ // NOTE (2026-08-13 cleanup): games are multi-repo spokes (own GitHub Pages
+ // deploys, embedded via <iframe> - see launchGame()/buildExternalGameFrame()).
+ // The in-repo game source these entries used to point at (StarbucksGame.js,
+ // classic-games/snake, classic-games/tic-tac-toe) was removed as dead code -
+ // it was already unreachable in the success path (PageManager owns game
+ // launching whenever it loads) and superseded by the standalone repos below.
+ // This class only runs at all as a fallback if PageManager fails to
+ // initialize, so these URLs mirror PageManager.gameAssets exactly.
         this.gameAssets = {
             barista: {
-                script: 'src/components/games/starbucks-game-loader.js',
-                isModule: true, // Flag to indicate ES6 module loading required
-                css: 'src/components/games/StarbucksGame.css',
-                class: 'StarbucksGame'
+                url: 'https://mrcargon.github.io/game-barista/',
+                download: 'https://github.com/MrCargon/game-barista/releases/latest'
             },
             snake: {
-                script: 'src/components/games/classic-games/snake/snake-loader.js',
-                isModule: true,
-                css: 'src/components/games/classic-games/snake/SnakeGame.css',
-                class: 'SnakeGame'
+                url: 'https://mrcargon.github.io/game-snake/',
+                download: 'https://github.com/MrCargon/game-snake/releases/latest'
             },
             tictactoe: {
-                script: 'src/components/games/classic-games/tic-tac-toe/tictactoe-loader.js',
-                isModule: true,
-                css: 'src/components/games/classic-games/tic-tac-toe/TicTacToe.css',
-                class: 'TicTacToe'
+                url: 'https://mrcargon.github.io/game-tictactoe/',
+                download: 'https://github.com/MrCargon/game-tictactoe/releases/latest'
             }
         };
         this.loadedAssets = new Set();
@@ -334,17 +336,13 @@ class ProjectsPageManager {
         
         try {
             console.log(`🎮 Launching ${gameType} game`);
-            
- // Load and initialize in parallel for speed
-            await this.loadGameAssets(gameType);
-            const game = await this.initializeGame(gameType);
-            
- // Store reference
-            this.gameInstances.set(gameType, game);
-            
+
+ // All games are external multi-repo spokes - build the iframe frame
+            this.launchExternalGame(gameType);
+
  // Setup controls
             this.setupGameControls();
-            
+
             console.log(`✅ ${gameType} game launched successfully`);
             
         } catch (error) {
@@ -377,126 +375,30 @@ class ProjectsPageManager {
     }
     
     /**
-     * Load game assets efficiently
+     * Build the external-game iframe frame for a multi-repo spoke game.
+     * Mirrors PageManager.launchExternalGame() - same markup/attributes, so
+     * the CSS in projectsPage.css (:has(.external-game-frame) overrides,
+     * dvh/safe-area handling) applies identically regardless of which
+     * manager launched the game.
      */
-    async loadGameAssets(gameType) {
+    launchExternalGame(gameType) {
         const assets = this.gameAssets[gameType];
-        if (!assets) throw new Error(`Unknown game: ${gameType}`);
-
-        const assetKey = `${gameType}-assets`;
-        if (this.loadedAssets.has(assetKey)) {
-            console.log(`✅ ${gameType} assets cached`);
-            return;
+        if (!assets || typeof assets.url !== 'string' || assets.url.length === 0) {
+            throw new Error(`External game URL missing for ${gameType}`);
+        }
+        if (!this.gameContent) {
+            throw new Error('Game content container not found');
         }
 
-        // Clean up old non-module script tags before loading ES6 modules
-        if (assets.isModule && gameType === 'barista') {
-            const oldScript = document.querySelector('script[src*="StarbucksGame.js"]');
-            if (oldScript && oldScript.type !== 'module') {
-                console.log('🧹 Removing old non-module StarbucksGame.js script tag');
-                oldScript.remove();
-            }
-        }
-
- // Load CSS and JS in parallel - pass isModule flag to loadScript
-        await Promise.all([
-            this.loadCSS(assets.css),
-            this.loadScript(assets.script, assets.isModule)
-        ]);
-
- // For ES6 modules, wait a bit for the module to export to window
-        if (assets.isModule) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-
- // Verify game class is available
-        if (!window[assets.class]) {
-            throw new Error(`Game class ${assets.class} not found after loading`);
-        }
-
-        this.loadedAssets.add(assetKey);
-        console.log(`✅ ${gameType} assets loaded`);
-    }
-    
-    /**
-     * Load CSS with caching
-     */
-    loadCSS(href) {
-        return new Promise((resolve, reject) => {
-            if (document.querySelector(`link[href="${href}"]`)) {
-                resolve();
-                return;
-            }
-            
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = href;
-            link.onload = () => resolve();
-            link.onerror = () => reject(new Error(`Failed to load CSS: ${href}`));
-            
-            document.head.appendChild(link);
-            this.resources.add(() => link.remove());
-        });
-    }
-    
-    /**
-     * Load script with caching - Enhanced for ES6 module support
-     */
-    loadScript(src, isModule = false) {
-        return new Promise((resolve, reject) => {
-            if (document.querySelector(`script[src="${src}"]`)) {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-
-            // Set type="module" for ES6 modules
-            if (isModule) {
-                script.type = 'module';
-                console.log(`📦 Loading ES6 module: ${src}`);
-            }
-
-            script.onload = () => {
-                console.log(`✅ Script loaded: ${src}`);
-                resolve();
-            };
-            script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-
-            document.head.appendChild(script);
-            // Don't remove script tags - they should persist once loaded
-            // Removing causes "already declared" errors on re-open
-            // this.resources.add(() => script.remove());
-        });
-    }
-    
-    /**
-     * Initialize game instance
-     */
-    async initializeGame(gameType) {
-        const assets = this.gameAssets[gameType];
-        const GameClass = window[assets.class];
-        
-        if (!GameClass) {
-            throw new Error(`${assets.class} not available`);
-        }
-        
- // Clear container
-        this.gameContent.innerHTML = '';
-
- // Create and initialize game
-        const game = new GameClass(this.gameContent);
-
-        if (typeof game.init === 'function') {
-            await game.init();
-        }
-
-        // Note: GameScaler initialization moved to PageManager.js
-        // where game launch actually happens
-
-        return game;
+        const dl = assets.download || assets.url;
+        this.gameContent.innerHTML = `
+            <div class="external-game-frame" style="display:flex;flex-direction:column;width:100%;height:100%;background:#14181f;">
+                <div style="display:flex;gap:.5rem;justify-content:flex-end;padding:.4rem .6rem;background:rgba(0,0,0,.35);flex:0 0 auto;">
+                    <a href="${assets.url}" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:none;font-size:.85rem;padding:.3rem .7rem;border-radius:6px;background:rgba(255,255,255,.12);">&#8599; New tab</a>
+                    <a href="${dl}" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:none;font-size:.85rem;padding:.3rem .7rem;border-radius:6px;background:rgba(255,165,0,.9);">&#8595; Download</a>
+                </div>
+                <iframe src="${assets.url}" title="${gameType} game" loading="eager" allow="fullscreen; gamepad; accelerometer" style="flex:1 1 auto;width:100%;border:0;display:block;background:#14181f;"></iframe>
+            </div>`;
     }
     
     /**
@@ -1278,7 +1180,7 @@ class ProjectsPageManager {
         
         // Define GitHub repository URLs for different projects
         const repoUrls = {
-            'barista-game': 'https://github.com/MrCargon/MrCargon.github.io/tree/main/src/components/games',
+            'barista-game': 'https://github.com/MrCargon/game-barista',
             'portfolio-site': 'https://github.com/MrCargon/MrCargon.github.io',
             'solar-system': 'https://github.com/MrCargon/MrCargon.github.io/tree/main/src/components/simulation',
             'space-explorer': 'https://github.com/MrCargon/MrCargon.github.io', // Would be separate repo

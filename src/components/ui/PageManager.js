@@ -193,7 +193,9 @@ class PageManager {
             },
             // Snake is a MULTI-REPO SPOKE: source lives at github.com/MrCargon/game-snake and
             // deploys to its own GitHub Pages URL. The hub embeds the deployed build via <iframe>
-            // rather than bundling source. (barista/tictactoe stay in-repo for now.)
+            // rather than bundling source. (All three games are external spokes now - the
+            // in-repo src/components/games/ copies this comment used to reference were removed
+            // 2026-08-13 as dead code, already unreachable and superseded by these repos.)
             'snake': {
                 external: true,
                 url: 'https://mrcargon.github.io/game-snake/',
@@ -2675,15 +2677,6 @@ class PageManager {
         
         try {
             const assets = this.gameAssets[gameType];
-
-            // Clean up old non-module script tags before loading ES6 modules
-            if (assets.isModule && gameType === 'barista') {
-                const oldScript = document.querySelector('script[src*="StarbucksGame.js"]');
-                if (oldScript && oldScript.type !== 'module') {
-                    // Removing old non-module StarbucksGame.js script tag
-                    oldScript.remove();
-                }
-            }
 
             // Load CSS first
             if (assets.css) {

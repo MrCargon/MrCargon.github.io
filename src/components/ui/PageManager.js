@@ -102,6 +102,12 @@ class PageManager {
             return false;
         }
         
+ // Pages whose nav link carries `.disabled` (see header.html) - blocking the
+ // click there does NOT stop direct hash navigation (mrcargon.github.io/#store,
+ // bookmarks, shared links), since routing only checked `this.pages[name]`
+ // exists, not whether it's meant to be reachable. Checked in navigateToPage().
+        this.disabledPages = new Set(['store', 'contact']);
+
  // Rule 3: Pre-allocated page configurations
         this.pages = {
             main: {
@@ -599,7 +605,14 @@ class PageManager {
             console.error(`Page '${pageName}' not configured`);
             return false;
         }
-        
+
+ // Closed page (see this.disabledPages) - the nav link blocks clicks, but
+ // that doesn't stop direct hash navigation. Redirect rather than 404/loop.
+        if (this.disabledPages.has(pageName)) {
+            console.warn(`Page '${pageName}' is closed - redirecting to about`);
+            return pageName === 'about' ? false : this.navigateToPage('about', updateHistory);
+        }
+
  // Check if already on page or transitioning
         if (this.isTransitioning || pageName === this.currentPage) {
             return false;

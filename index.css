@@ -1240,3 +1240,34 @@ html, body {
   transform-origin: left;
   transition: transform 0.3s ease;
 }
+
+/* FPS monitor (src/components/simulation/monitoring/FPSMonitor.js) - moved
+   here from an inline style 2026-08-13. Was fixed at top:10px/left:10px,
+   which is the same corner the header/logo occupy on mobile (see
+   header.css's max-width:835px and max-width:480px breakpoints) - the FPS
+   box's z-index:10000 sat on top of it. Bottom-left instead, clear of both
+   the header and (per audit) any bottom-fixed UI. */
+.fps-monitor-display {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(0, 0, 0, 0.8);
+  color: #0f0;
+  padding: 8px 12px;
+  font-family: monospace;
+  font-size: 14px;
+  border-radius: 4px;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .fps-monitor-display {
+    left: 8px;
+    bottom: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}

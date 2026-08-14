@@ -67,19 +67,12 @@ class FPSMonitor {
 
         if (this.displayElement) {
             this.displayElement.textContent = 'FPS: --';
-            this.displayElement.style.cssText = `
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                background: rgba(0, 0, 0, 0.8);
-                color: #0f0;
-                padding: 8px 12px;
-                font-family: monospace;
-                font-size: 14px;
-                border-radius: 4px;
-                z-index: 10000;
-                pointer-events: none;
-            `;
+            // Positioning/visuals moved to .fps-monitor-display in index.css
+            // (2026-08-13) - the old inline top:10px/left:10px collided with
+            // the header/logo on mobile, since both anchor the same corner
+            // and this had zero responsiveness. The CSS class puts it at
+            // bottom-left instead, with a mobile-specific offset.
+            this.displayElement.classList.add('fps-monitor-display');
         }
 
         console.log('FPSMonitor: Initialized');

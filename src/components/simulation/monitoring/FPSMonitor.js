@@ -47,6 +47,15 @@ class FPSMonitor {
         this.displayElement = null;
         this.warningThreshold = 30; // Warn if FPS < 30
 
+        // Display refresh throttling (2026-08-14): update() runs every
+        // requestAnimationFrame (60-120x/sec depending on the display), and
+        // updateDisplay() used to run just as often - a number rewriting
+        // itself that fast reads as flicker, not information. Stats are
+        // still sampled every frame for accuracy; only the visible text
+        // refresh is throttled.
+        this.displayUpdateIntervalMs = 500;
+        this.lastDisplayUpdateTime = 0;
+
         // State
         this.isEnabled = false;
     }
@@ -108,8 +117,10 @@ class FPSMonitor {
         this.currentFPS = fps;
         this.calculateStats();
 
-        // Update display
-        if (this.displayElement) {
+        // Update display - throttled, see displayUpdateIntervalMs above
+        if (this.displayElement &&
+            currentTime - this.lastDisplayUpdateTime >= this.displayUpdateIntervalMs) {
+            this.lastDisplayUpdateTime = currentTime;
             this.updateDisplay();
         }
     }

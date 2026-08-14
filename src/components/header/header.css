@@ -302,11 +302,19 @@
         transition: max-height 0.3s ease, opacity 0.3s ease, visibility 0.3s ease, margin-top 0.3s ease;
     }
     
-    /* Show navigation when mobile menu is active - Fixed visibility */
+    /* Show navigation when mobile menu is active - Fixed visibility
+       NOTE (2026-08-14): max-height was a fixed 400px with overflow staying
+       `hidden` (inherited from the closed-state rule above) - 8 real nav
+       items need ~460-490px (44px min-height each + gaps + chrome), so the
+       last 1-2 items rendered past the 400px line with no way to scroll to
+       them. Cap tied to viewport instead, and overflow switched to scroll. */
     .header-content.menu-active .nav-container,
     .nav-container.nav-visible {
         display: block !important;
-        max-height: 400px !important;
+        max-height: min(70vh, 490px) !important;
+        max-height: min(70dvh, 490px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
         opacity: 1 !important;
         visibility: visible !important;
         margin-top: 15px !important;

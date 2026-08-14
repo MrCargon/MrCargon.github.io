@@ -178,12 +178,13 @@ class SpaceEnvironment {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 15px 20px;
+            box-sizing: border-box;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             z-index: 10000;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 14px;
-            max-width: 350px;
+            max-width: min(350px, calc(100vw - 40px));
             animation: slideIn 0.3s ease-out;
         `;
 
@@ -229,12 +230,13 @@ class SpaceEnvironment {
             background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
             color: white;
             padding: 15px 20px;
+            box-sizing: border-box;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             z-index: 10000;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 14px;
-            max-width: 350px;
+            max-width: min(350px, calc(100vw - 40px));
             line-height: 1.5;
         `;
 
@@ -291,12 +293,13 @@ class SpaceEnvironment {
             background: linear-gradient(135deg, #e24a4a 0%, #bd3535 100%);
             color: white;
             padding: 25px 30px;
+            box-sizing: border-box;
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             z-index: 10001;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 14px;
-            max-width: 420px;
+            max-width: min(420px, calc(100vw - 40px));
             line-height: 1.6;
             text-align: left;
         `;

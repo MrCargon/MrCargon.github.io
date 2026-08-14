@@ -740,6 +740,17 @@
         font-size: 0.6rem;
         padding: 0.1rem 0.25rem;
     }
+
+    /* NOTE (2026-08-14): .games-grid's minmax(350px,1fr) had no override at
+       any breakpoint. Below ~399px viewport width the single-column track
+       still gets forced to a 350px minimum, wider than the available space
+       once the .main-section 96% width + .games-container padding are
+       accounted for - and since the ancestor .main-section is
+       `overflow: hidden`, the excess was silently clipped instead of
+       scrolling. Plain 1fr removes the forced minimum entirely. */
+    .games-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* For very small screens */

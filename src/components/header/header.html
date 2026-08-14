@@ -61,20 +61,11 @@
                             
                         </a>
                     </li>
-                    <li>
-                        <a href="#calendar"
-                           class="nav-link"
-                           aria-current="false">
-                            <span>Calendar</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#notes"
-                           class="nav-link"
-                           aria-current="false">
-                            <span>Notes</span>
-                        </a>
-                    </li>
+                    <!-- Calendar and Notes removed from top-level nav 2026-08-14 - both
+                         are already reachable as tiles from Apps (#launcher), and having
+                         them duplicated here both confused the IA and was part of why the
+                         mobile menu (8 items) didn't fit on some screens. Routes/pages are
+                         unchanged, still linked from launcherPage.html's app-grid. -->
                     <li>
                         <a href="#contact"
                            class="nav-link disabled"

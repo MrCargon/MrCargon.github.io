@@ -258,7 +258,15 @@
 
 html, body {
   font-family: cursive;
-  background-color: var(--overlay-bg);
+  /* NOTE (2026-08-15): was var(--overlay-bg), a near-transparent 10%-opacity
+     gray (rgba(88,88,88,0.1)) - meant for overlay tinting, not a base page
+     background, so it rendered as the browser's default white showing
+     through. #page-container has no background of its own, and pages like
+     Launcher/Store are intentionally content-height rather than full-
+     viewport (see launcherPage.css/storePage.css), so any gap below their
+     panel exposed this - reported as "a white tape over the screen" when
+     opening Apps. --bg-color is the site's actual dark theme token. */
+  background-color: var(--bg-color);
   color: var(--text-color);
   line-height: 0.75;
   /* OPTIMIZED VIEWPORT: Clean, responsive design */

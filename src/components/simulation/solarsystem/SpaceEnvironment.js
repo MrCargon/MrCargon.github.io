@@ -119,6 +119,13 @@ class SpaceEnvironment {
         // raycast+ring-rebuild+sort cost by roughly 6-12x during zoom.
         this._streetsUpdateIntervalMs = 110;
         this._lastStreetsUpdateTime = 0;
+        // Cached canvas rect (2026-08-15 perf fix): _handleExploreClick,
+        // _handleExploreHover and _handleExploreDblClick each independently
+        // called renderer.domElement.getBoundingClientRect() - a forced
+        // synchronous layout - and mousemove (hover) fires at very high
+        // frequency while panning the globe. Cached here, invalidated only
+        // in handleResize() where the canvas size can actually change.
+        this._cachedCanvasRect = null;
         this._onExploreClick = (e) => this._handleExploreClick(e);
         this._onExploreMove = (e) => this._handleExploreHover(e);
         this._onExploreDblClick = (e) => this._handleExploreDblClick(e);
@@ -842,8 +849,22 @@ class SpaceEnvironment {
         this.camera.updateProjectionMatrix();
         
         this.renderer.setSize(this.width, this.height);
+        this._cachedCanvasRect = null; // invalidate - see _getCanvasRect()
     }
-    
+
+    /**
+     * Cached renderer.domElement.getBoundingClientRect() - see the note by
+     * _cachedCanvasRect in the constructor. Rule 4: <=60 lines.
+     * @returns {DOMRect|null}
+     */
+    _getCanvasRect() {
+        if (!this.renderer || !this.renderer.domElement) return null;
+        if (!this._cachedCanvasRect) {
+            this._cachedCanvasRect = this.renderer.domElement.getBoundingClientRect();
+        }
+        return this._cachedCanvasRect;
+    }
+
     connectUIControls() {
         // Connect planet buttons - handled by PageManager
         
@@ -2550,7 +2571,8 @@ class SpaceEnvironment {
         if (!this.exploreMode || !this.camera || !this._detailEl) return;
         const earth = this.getEarthObject();
         if (!earth || !earth.pickables || !earth.pickables.length) return;
-        const rect = this.renderer.domElement.getBoundingClientRect();
+        const rect = this._getCanvasRect();
+        if (!rect) return;
         this._ndc.set(
             ((event.clientX - rect.left) / rect.width) * 2 - 1,
             -((event.clientY - rect.top) / rect.height) * 2 + 1
@@ -2616,7 +2638,8 @@ class SpaceEnvironment {
         if (!this.exploreMode || !this.camera) return;
         const earth = this.getEarthObject();
         if (!earth || !earth.getMesh || typeof GlobeMath === 'undefined') return;
-        const rect = this.renderer.domElement.getBoundingClientRect();
+        const rect = this._getCanvasRect();
+        if (!rect) return;
         this._ndc.set(
             ((event.clientX - rect.left) / rect.width) * 2 - 1,
             -((event.clientY - rect.top) / rect.height) * 2 + 1
@@ -2660,7 +2683,8 @@ class SpaceEnvironment {
         if (!this._tooltipEl && typeof document !== 'undefined') {
             this._tooltipEl = document.getElementById('country-tooltip');
         }
-        const rect = this.renderer.domElement.getBoundingClientRect();
+        const rect = this._getCanvasRect();
+        if (!rect) return;
         this._ndc.set(
             ((event.clientX - rect.left) / rect.width) * 2 - 1,
             -((event.clientY - rect.top) / rect.height) * 2 + 1
@@ -3948,7 +3972,8 @@ class SpaceEnvironment {
             if (!this.cosmologyFeatures.gravitationalWaves) return;
 
             // Calculate mouse position in normalized device coordinates
-            const rect = this.renderer.domElement.getBoundingClientRect();
+            const rect = this._getCanvasRect();
+            if (!rect) return;
             this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 

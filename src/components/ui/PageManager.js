@@ -1624,19 +1624,34 @@ class PageManager {
             console.warn('PageManager: Time panel or TimeControlUI not available');
         }
 
-        this._boundHandlers = this._boundHandlers || {};
-        this._boundHandlers.actionBarHandler = (e) => {
-            const button = e.target.closest('.action-btn');
-            if (!button) return;
-
-            e.preventDefault();
-            const action = button.dataset.action;
-            this.handleQuickAction(action, button);
-        };
-
-        actionButtonsRow.addEventListener('click', this._boundHandlers.actionBarHandler);
+        // NOTE (2026-08-15): was `actionButtonsRow.addEventListener(...)` with
+        // no singleton guard. This function's own docstring says it "MUST be
+        // called after mainPage.html is loaded into DOM" - i.e. it runs again
+        // on every navigation back to Main, and each call queries a FRESH
+        // .action-buttons-row element. Attaching directly to that element on
+        // every call added another click listener each time (they stack -
+        // Nth revisit fires handleQuickAction N times per click), and a naive
+        // singleton guard would have been just as wrong the other way
+        // (correctly skipping re-attachment forever, leaving the buttons on
+        // every mainPage.html reload after the first with no listener at
+        // all). Switched to the same document-level delegation pattern the
+        // sibling setup*() methods already use (see setupPlanetNavigation
+        // above) - survives page reloads since document itself never gets
+        // recreated, so it only ever needs attaching once.
         this._singletonSetup = this._singletonSetup || {};
-        this._singletonSetup.quickActionBar = true;
+        if (!this._singletonSetup.quickActionBar) {
+            this._boundHandlers = this._boundHandlers || {};
+            this._boundHandlers.actionBarHandler = (e) => {
+                const button = e.target.closest('.action-buttons-row .action-btn');
+                if (!button) return;
+
+                e.preventDefault();
+                const action = button.dataset.action;
+                this.handleQuickAction(action, button);
+            };
+            document.addEventListener('click', this._boundHandlers.actionBarHandler);
+            this._singletonSetup.quickActionBar = true;
+        }
 
         return true;
     }
@@ -2852,9 +2867,14 @@ class PageManager {
         closeBtn.removeEventListener('click', this._boundHandlers.gameClose);
         closeBtn.addEventListener('click', this._boundHandlers.gameClose);
 
-        // Add escape key handler
+        // Add escape key handler (remove any existing first - this function
+        // can run again before a close event fires, e.g. re-opening a game;
+        // unlike closeBtn above, this one was missing the idempotent
+        // removeEventListener, so repeated calls stacked duplicate
+        // document-level listeners and Escape fired handleGameClose N times)
+        document.removeEventListener('keydown', this._boundHandlers.gameKeydown);
         document.addEventListener('keydown', this._boundHandlers.gameKeydown);
-        
+
         return true;
     }
     

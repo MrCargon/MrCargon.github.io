@@ -195,7 +195,16 @@ function setupPerformanceMonitoring() {
             window.addEventListener('unhandledrejection', handleAsyncRuleViolation);
 
             // Setup periodic performance optimization
-            setInterval(() => {
+            // NOTE (2026-08-15): the interval id was never stored, so it
+            // could never be cleared - harmless for a single normal page
+            // load (init runs once), but if setupPerformanceMonitoring ever
+            // ran twice (dev HMR, a duplicate script tag, manual re-init via
+            // the exposed rules API) the old interval would keep running
+            // alongside a new one, duplicating indefinitely. Cleared first.
+            if (window.__rulesPerfMonitorInterval) {
+                clearInterval(window.__rulesPerfMonitorInterval);
+            }
+            window.__rulesPerfMonitorInterval = setInterval(() => {
                 if (window.RulesEnforcer && window.RulesEnforcer.performanceManager) {
                     window.RulesEnforcer.performanceManager.optimizeMemory();
                 }

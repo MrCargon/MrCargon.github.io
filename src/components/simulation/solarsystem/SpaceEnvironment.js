@@ -107,6 +107,18 @@ class SpaceEnvironment {
         this._scratchTarget = new THREE.Vector3();     // blended orbit target
         this._exploreRaycaster = new THREE.Raycaster();
         this._ndc = new THREE.Vector2();
+        // Throttle for _updateStreets (2026-08-14 perf fix): it was running
+        // unconditionally every animate() frame (60-120x/sec) - a raycast
+        // against the full-res Earth sphere plus rebuilding/sorting the
+        // street+satellite tile candidate rings, and BOTH the ring size and
+        // the fetch zoom level grow as the camera approaches the surface. So
+        // the exact moment described as "zooms in -> everything slow" is
+        // when this per-frame cost is largest. Capped to ~8-10 updates/sec,
+        // which is imperceptible for a background tile layer (tile
+        // fetch+decode itself takes far longer than 100ms) but cuts the
+        // raycast+ring-rebuild+sort cost by roughly 6-12x during zoom.
+        this._streetsUpdateIntervalMs = 110;
+        this._lastStreetsUpdateTime = 0;
         this._onExploreClick = (e) => this._handleExploreClick(e);
         this._onExploreMove = (e) => this._handleExploreHover(e);
         this._onExploreDblClick = (e) => this._handleExploreDblClick(e);
@@ -571,11 +583,22 @@ class SpaceEnvironment {
             this.controls.maxDistance = 300; // Don't go too far
             
             // Set up control change listener to detect manual camera movement
+            // NOTE (2026-08-14): OrbitControls fires 'change' at input-event
+            // frequency during a drag/zoom gesture, which can exceed the
+            // render frame rate - checkOrbitZone() allocates (mesh.position
+            // .clone()) and does a planet lookup + distance check each call,
+            // adding GC churn during exactly the gesture the user is most
+            // sensitive to smoothness in. Throttled; isAutoOrbiting itself
+            // stays instant since that's just a flag write.
             this.controls.addEventListener('change', () => {
                 // If user is manually controlling, stop auto-orbiting
                 if (!this.cameraTransitioning) {
                     this.isAutoOrbiting = false;
-                    this.checkOrbitZone();
+                    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+                    if (!this._lastOrbitZoneCheckTime || now - this._lastOrbitZoneCheckTime >= 100) {
+                        this._lastOrbitZoneCheckTime = now;
+                        this.checkOrbitZone();
+                    }
                 }
             });
             
@@ -1568,7 +1591,13 @@ class SpaceEnvironment {
         if (earth.presencePins && typeof earth.presencePins.update === 'function') {
             earth.presencePins.update(rr, (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000);
         }
-        if (earth.streetTiles || earth.satelliteTiles) this._updateStreets(earth, radius, dist);
+        if (earth.streetTiles || earth.satelliteTiles) {
+            const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+            if (now - this._lastStreetsUpdateTime >= this._streetsUpdateIntervalMs) {
+                this._lastStreetsUpdateTime = now;
+                this._updateStreets(earth, radius, dist);
+            }
+        }
         this._syncZoomSlider(rr);   // reflect wheel/drag zoom onto the panel slider
         return true;
     }

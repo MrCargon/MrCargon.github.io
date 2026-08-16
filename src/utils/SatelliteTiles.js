@@ -73,6 +73,18 @@ class SatelliteTiles {
         // LRU of built tiles: key "z/x/y" → { mesh, t (lastUsed), state }.
         this.tiles = new Map();
         this._building = new Set();      // in-flight keys (avoid double-fetch)
+        // 2026-08-15 perf fix: cap simultaneous in-flight builds - crossing a zoom
+        // level can invalidate most of the covering set at once, and without a cap
+        // every uncached key's TextureLoader.load() was dispatched in the same
+        // tick, competing for the browser's ~6-connections-per-origin limit.
+        // Skipped builds just retry next update() tick (already throttled).
+        // THREE.TextureLoader (r128) has no AbortController support, unlike
+        // StreetTiles' raw fetch(), so a genuinely stale build (its key fell out
+        // of the covering set before the texture finished loading) can't be
+        // network-cancelled here - _desiredKeys lets the commit step at least
+        // discard it instead of caching/showing tiles nobody wants anymore.
+        this.maxConcurrentBuilds = Number.isFinite(opts.maxConcurrentBuilds) ? opts.maxConcurrentBuilds : 6;
+        this._desiredKeys = new Set();
         this.failed = 0;
         this.visible = true;
         this._lightFactor = 1;           // sun-lit dim factor (1=day, ~0.35=night)
@@ -162,6 +174,8 @@ class SatelliteTiles {
         var t = Math.max(0, Math.min(1, (1.4 - cameraDistInRadii) / (1.4 - 1.0)));
         this._effMax = Math.round(49 + (this.maxVisibleTiles - 49) * t);
         var keys = this._buildCoveringKeys(cx, cy, n, fetchZ, c.x, c.y);
+        this._desiredKeys.clear();
+        for (var dk = 0; dk < keys.length; dk++) this._desiredKeys.add(keys[dk]);
         var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
         // Show the covering set (built tiles become visible + get t=now; missing ones
         // dispatch a build). allReady = the whole covering set is built THIS frame.
@@ -247,7 +261,9 @@ class SatelliteTiles {
             if (rec.state === 'failed') {
                 if (now - rec.failedAt > 30000) {
                     this.tiles.delete(key);
-                    if (!this._building.has(key)) this._buildTileKey(key, now);
+                    if (!this._building.has(key) && this._building.size < this.maxConcurrentBuilds) {
+                        this._buildTileKey(key, now);
+                    }
                 }
                 return false;                 // do not refresh t → stays evictable
             }
@@ -255,7 +271,12 @@ class SatelliteTiles {
             if (rec.mesh) rec.mesh.visible = true;
             return true;
         }
-        if (!this._building.has(key)) this._buildTileKey(key, now);
+        // Concurrency gate: skip dispatching if already at the in-flight budget -
+        // retried automatically next update() tick. See maxConcurrentBuilds note
+        // in the constructor.
+        if (!this._building.has(key) && this._building.size < this.maxConcurrentBuilds) {
+            this._buildTileKey(key, now);
+        }
         return false;
     }
 
@@ -273,6 +294,13 @@ class SatelliteTiles {
             // A2: disposed mid-flight → never re-add an orphan; dispose it instead.
             if (self._disposed) { if (mesh) self._disposeMesh(mesh); return; }
             if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', failedAt: now }); return; }
+            // 2026-08-15: TextureLoader can't be network-aborted (see constructor
+            // note), so a fast zoom/pan can still let this resolve after the key
+            // is no longer wanted. Discard rather than adding to the scene/cache -
+            // the fetch+decode cost is already spent either way, but this at
+            // least avoids polluting the LRU cache and an extra scene-graph add
+            // for a tile nobody will see.
+            if (!self._desiredKeys.has(key)) { self._disposeMesh(mesh); return; }
             self.earthMesh.add(mesh);
             self.tiles.set(key, { mesh: mesh, t: now, state: 'built' });
             self._evict();

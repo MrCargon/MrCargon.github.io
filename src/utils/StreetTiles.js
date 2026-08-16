@@ -59,6 +59,20 @@ class StreetTiles {
         // LRU of built tiles: key "z/x/y" → { mesh, t (lastUsed), state }.
         this.tiles = new Map();
         this._building = new Set();      // in-flight keys (avoid double-fetch)
+        // 2026-08-15 perf/cancellation fixes:
+        // - maxConcurrentBuilds: crossing a zoom level can invalidate most of the
+        //   covering set at once: without a cap, _touchOrBuild dispatched every
+        //   uncached key's fetch simultaneously, competing for the browser's
+        //   ~6-connections-per-origin HTTP/1.1 limit (near/important tiles queued
+        //   behind far ones issued in the same burst). Skipped builds just retry
+        //   next update() tick (already throttled upstream to ~9/sec).
+        // - _abortControllers: fetch() is natively cancellable, unlike
+        //   SatelliteTiles' THREE.TextureLoader. When a key falls out of the
+        //   desired set mid-flight (fast zoom/pan), the in-flight fetch is now
+        //   actually aborted instead of completing and being thrown away.
+        this.maxConcurrentBuilds = Number.isFinite(opts.maxConcurrentBuilds) ? opts.maxConcurrentBuilds : 6;
+        this._abortControllers = new Map();  // key -> AbortController
+        this._desiredKeys = new Set();       // this frame's covering set, for abort checks
         this.failed = 0;
         this.visible = true;
         // User-stylable appearance (color, opacity, pixel width), applied to all line
@@ -150,14 +164,39 @@ class StreetTiles {
         var cx = Math.floor(c.x), cy = Math.floor(c.y);
         var keys = this._buildCoveringKeys(cx, cy, n, fetchZ, c.x, c.y);
         var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
-        // Hide ALL tiles, then show only the current covering set, so stale tiles
-        // from other zoom levels don't linger and overlap. _touchOrBuild re-shows.
-        this._showTiles(false);
+        // 2026-08-15: was `_showTiles(false)` then rebuild every frame - hid ALL
+        // tiles unconditionally before the new covering set finished loading, so
+        // every zoom step that introduced new keys flashed to blank (confirmed
+        // via user report + code read). Mirrors SatelliteTiles' allReady pattern:
+        // keep the previous tiles visible as a fallback until the new covering
+        // set is FULLY built, matching standard map-app behaviour.
+        this._desiredKeys.clear();
+        for (var k = 0; k < keys.length; k++) this._desiredKeys.add(keys[k]);
+        this._abortStale();
+        var allReady = true;
         for (var i = 0; i < keys.length; i++) {
-            this._touchOrBuild(keys[i], now);
+            if (!this._touchOrBuild(keys[i], now)) allReady = false;
+        }
+        if (allReady) {
+            this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = (rec.t === now); });
         }
         this._evict();
         return true;
+    }
+
+    // Abort in-flight fetches for keys that fell out of the desired covering set
+    // (fast zoom/pan moved on before the tile was needed) - real network-level
+    // cancellation, not just discarding the result once it lands. Rule 5: 2 asserts.
+    _abortStale() {
+        console.assert(this._building instanceof Set, '_abortStale: building set required');
+        console.assert(this._abortControllers instanceof Map, '_abortStale: controllers map required');
+        var self = this;
+        this._building.forEach(function (key) {
+            if (self._desiredKeys.has(key)) return;
+            var ctrl = self._abortControllers.get(key);
+            if (ctrl) { ctrl.abort(); self._abortControllers.delete(key); }
+            self._building.delete(key);
+        });
     }
 
     // A6: enumerate the bounded ring of covering tiles, sort by Chebyshev distance
@@ -220,7 +259,9 @@ class StreetTiles {
             if (rec.state === 'failed') {
                 if (now - rec.failedAt > 30000) {
                     this.tiles.delete(key);
-                    if (!this._building.has(key)) this._buildTileKey(key, now);
+                    if (!this._building.has(key) && this._building.size < this.maxConcurrentBuilds) {
+                        this._buildTileKey(key, now);
+                    }
                 }
                 return false;                 // do not refresh t → stays evictable
             }
@@ -228,7 +269,12 @@ class StreetTiles {
             if (rec.mesh) rec.mesh.visible = true;
             return true;
         }
-        if (!this._building.has(key)) this._buildTileKey(key, now);
+        // Concurrency gate: skip dispatching if already at the in-flight budget -
+        // retried automatically next update() tick, no bookkeeping needed. See
+        // maxConcurrentBuilds note in the constructor.
+        if (!this._building.has(key) && this._building.size < this.maxConcurrentBuilds) {
+            this._buildTileKey(key, now);
+        }
         return false;
     }
 
@@ -260,9 +306,12 @@ class StreetTiles {
         var z = parseInt(p[0], 10), x = parseInt(p[1], 10), y = parseInt(p[2], 10);
         if (!Number.isFinite(z) || !Number.isFinite(x) || !Number.isFinite(y)) return;
         this._building.add(key);
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        if (controller) this._abortControllers.set(key, controller);
         var self = this;
-        this._buildTile(z, x, y).then(function (mesh) {
+        this._buildTile(z, x, y, controller ? controller.signal : undefined).then(function (mesh) {
             self._building.delete(key);
+            self._abortControllers.delete(key);
             // A2: instance was disposed while this fetch was in flight — never re-add an
             // orphan mesh to the disposed engine; dispose the just-built mesh instead.
             if (self._disposed) { if (mesh) self._disposeMesh(mesh); return; }
@@ -274,6 +323,10 @@ class StreetTiles {
             self._evict();
         }).catch(function (e) {
             self._building.delete(key);
+            self._abortControllers.delete(key);
+            // Cancelled because the key fell out of the desired set mid-flight (see
+            // _abortStale) - not a real failure, don't apply the 30s retry backoff.
+            if (e && e.name === 'AbortError') return;
             self.failed++;
             self.tiles.set(key, { mesh: null, t: now, state: 'failed', failedAt: now });
             console.warn('StreetTiles: tile ' + key + ' failed:', e && e.message);
@@ -285,14 +338,16 @@ class StreetTiles {
      * and return ONE THREE.LineSegments (merged layers). Long segments are
      * subdivided so roads follow the curvature. Fail-soft → resolves null.
      * Rule 4: <=60 lines.
+     * @param {AbortSignal} [signal] - aborts the fetch if the tile falls out of the
+     *   desired set mid-flight (see _abortStale)
      * @returns {Promise<THREE.LineSegments|null>}
      */
-    async _buildTile(z, x, y) {
+    async _buildTile(z, x, y, signal) {
         console.assert(typeof MVT !== 'undefined', '_buildTile: MVT decoder required');
         console.assert(typeof GlobeMath !== 'undefined', '_buildTile: GlobeMath required');
         if (typeof MVT === 'undefined' || typeof GlobeMath === 'undefined') return null;
         var url = this.tileTemplate.replace('{z}', z).replace('{x}', x).replace('{y}', y);
-        var res = await fetch(url);
+        var res = await fetch(url, signal ? { signal: signal } : undefined);
         if (!res || !res.ok) throw new Error('HTTP ' + (res && res.status));
         var bytes = new Uint8Array(await res.arrayBuffer());
         if (!bytes.length) return null;
@@ -530,7 +585,12 @@ class StreetTiles {
         var self = this;
         this.tiles.forEach(function (rec) { if (rec.mesh) self._disposeMesh(rec.mesh); });
         this.tiles.clear();
+        // Abort any still in-flight fetches rather than letting them complete
+        // uselessly against a disposed engine.
+        this._abortControllers.forEach(function (ctrl) { ctrl.abort(); });
+        this._abortControllers.clear();
         this._building.clear();
+        this._desiredKeys.clear();
         this._scratchKeys.length = 0;
         // Free the shared fat-line material + its resize listener.
         if (this._sharedMat && this._sharedMat.dispose) this._sharedMat.dispose();

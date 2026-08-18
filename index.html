@@ -115,6 +115,11 @@
     <script src="src/utils/PresencePins.js"></script>
     <script src="src/utils/PresenceConfig.js"></script>
     <script src="src/utils/Presence.js"></script>
+    <!-- Discord notify: contact form + calendar events -> Discord webhooks via
+         a serverless proxy (see DiscordProxyConfig.js). Loaded before Calendar.js
+         and contactPage's handler since both call into it. -->
+    <script src="src/utils/DiscordProxyConfig.js"></script>
+    <script src="src/utils/DiscordNotify.js"></script>
     <!-- Launcher modules: local-first stores + optional Firestore sync + UIs -->
     <script src="src/utils/CalendarStore.js"></script>
     <script src="src/utils/CalendarSync.js"></script>

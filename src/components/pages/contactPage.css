@@ -208,6 +208,19 @@
     margin-top: var(--spacing-sm);
 }
 
+/* Mirrors .success-message for the "could not send" case (network/proxy
+   failure or not-yet-configured DiscordProxyConfig.js) - same shape,
+   error palette instead of success green. */
+.form-error {
+    color: #ff4444;
+    padding: var(--spacing-sm);
+    background: rgba(255, 68, 68, 0.1);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    text-align: center;
+    margin-top: var(--spacing-sm);
+}
+
 /* Responsive Adjustments */
 @media (max-width: 968px) {
     .contact-grid {

@@ -18,6 +18,7 @@ class CalendarStore {
         var o = opts || {};
         this.key = o.key || 'mrcargon.calendar.events';
         this.sync = o.sync || null;          // optional CalendarSync-like adapter
+        this.notify = o.notify || null;      // optional DiscordNotify-like adapter (fire-and-forget)
         this._events = new Map();            // id -> event (pre-allocated structure)
         this._listeners = [];
         this._load();
@@ -85,6 +86,7 @@ class CalendarStore {
         console.assert(ev && typeof ev === 'object', 'upsert: event object');
         console.assert(ev.date && typeof ev.date === 'string', 'upsert: event.date required');
         var id = ev.id ? String(ev.id) : ('ev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
+        var isNew = !this._events.has(id);
         var rec = {
             id: id, date: ev.date, time: ev.time || '', title: ev.title || '(untitled)',
             notes: ev.notes || '', updated: Date.now(), deleted: false
@@ -92,6 +94,11 @@ class CalendarStore {
         this._events.set(id, rec);
         this._persist();
         if (this.sync && typeof this.sync.push === 'function') this.sync.push(rec);
+        // Fire-and-forget: a notify failure must never break the local save above,
+        // which has already happened by this point.
+        if (this.notify && typeof this.notify.calendarEvent === 'function') {
+            this.notify.calendarEvent(isNew ? 'created' : 'updated', rec);
+        }
         return rec;
     }
 
@@ -104,6 +111,9 @@ class CalendarStore {
         this._events.set(String(id), rec);
         this._persist();
         if (this.sync && typeof this.sync.push === 'function') this.sync.push(rec);
+        if (this.notify && typeof this.notify.calendarEvent === 'function') {
+            this.notify.calendarEvent('deleted', rec);
+        }
         return true;
     }
 

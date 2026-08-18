@@ -106,7 +106,9 @@ class PageManager {
  // click there does NOT stop direct hash navigation (mrcargon.github.io/#store,
  // bookmarks, shared links), since routing only checked `this.pages[name]`
  // exists, not whether it's meant to be reachable. Checked in navigateToPage().
-        this.disabledPages = new Set(['store', 'contact']);
+ // 'contact' re-enabled 2026-08-16 - the form now actually sends somewhere
+ // (see _setupContactForm / DiscordNotify), so the page has real function again.
+        this.disabledPages = new Set(['store']);
 
  // Rule 3: Pre-allocated page configurations
         this.pages = {
@@ -1075,18 +1077,68 @@ class PageManager {
         if (this.currentPage !== 'contact') {
             console.warn('Init contact page called but not on contact page');
         }
-        
+
         try {
             // Contact page initialized
-            
+
  // Set space environment to background mode
             this.showSpaceAsBackground();
-            
+            this._setupContactForm();
+
             return true;
         } catch (error) {
             console.error('Contact page initialization error:', error);
             return false; // Rule 6: Allow recovery
         }
+    }
+
+    /**
+     * Wire the contact form's submit handler -> DiscordNotify -> proxy -> Discord.
+     * contactPage.html is reloaded fresh on every navigation to Contact (same
+     * pattern as mainPage.html's .action-buttons-row), so the old form+listener
+     * is discarded with the old DOM on navigate-away; no singleton guard needed.
+     * Rule 4: <=60 lines | Rule 5: 2+ assertions | Rule 6: Graceful fallback.
+     */
+    _setupContactForm() {
+        const form = document.getElementById('contact-form');
+        console.assert(form || true, '_setupContactForm: contact-form should exist on Contact page');
+        if (!form) { console.warn('Contact form not found'); return false; }
+
+        const successEl = document.getElementById('form-success');
+        const errorEl = document.getElementById('form-error');
+        const submitBtn = form.querySelector('.submit-button');
+        const fieldError = (id, msg) => { const el = document.getElementById(id); if (el) el.textContent = msg || ''; };
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (successEl) successEl.hidden = true;
+            if (errorEl) errorEl.hidden = true;
+            ['name-error', 'email-error', 'message-error'].forEach((id) => fieldError(id, ''));
+
+            const name = (form.elements.name && form.elements.name.value || '').trim();
+            const email = (form.elements.email && form.elements.email.value || '').trim();
+            const message = (form.elements.message && form.elements.message.value || '').trim();
+            const hp = (form.elements.hp && form.elements.hp.value) || '';
+
+            let hasError = false;
+            if (!name) { fieldError('name-error', 'Name is required'); hasError = true; }
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fieldError('email-error', 'A valid email is required'); hasError = true; }
+            if (!message) { fieldError('message-error', 'Message is required'); hasError = true; }
+            if (hasError) return;
+
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending...'; }
+            const notify = (typeof DiscordNotify === 'function') ? new DiscordNotify() : null;
+            const result = notify ? await notify.contact(name, email, message, hp) : { ok: false };
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send Message'; }
+
+            if (result.ok) {
+                form.reset();
+                if (successEl) successEl.hidden = false;
+            } else if (errorEl) {
+                errorEl.hidden = false;
+            }
+        });
+        return true;
     }
     
     async cleanupMainPage() {
@@ -2478,7 +2530,8 @@ class PageManager {
         }
         try {
             const sync = (typeof CalendarSync === 'function') ? new CalendarSync() : null;
-            const store = new CalendarStore({ sync: sync });
+            const notify = (typeof DiscordNotify === 'function') ? new DiscordNotify() : null;
+            const store = new CalendarStore({ sync: sync, notify: notify });
             this._calendar = new Calendar(root, store);
             this._calendar.mount();
             this._calendarSync = sync;

@@ -233,14 +233,24 @@ class Sun {
         // Create the visible surface layer (photosphere)
         const geometry = new THREE.SphereGeometry(this.data.radius, 128, 128);
         
-        // Use MeshStandardMaterial for better lighting
-        const material = new THREE.MeshStandardMaterial({
+        // The photosphere is self-luminous, so it must NOT be shaded like a lit
+        // surface. Two things were making the Sun render as a dull brown ball
+        // (fixed 2026-08-21, verified by isolating the mesh in the live scene):
+        //
+        //   1. toneMapped. The renderer uses ACESFilmicToneMapping, which is built
+        //      for HDR where a star sits far above 1.0. Anything at ordinary range
+        //      gets compressed into muddy mid-tones. A star must opt out of it.
+        //   2. MeshStandardMaterial. It was relying on `emissive` x `emissiveMap`,
+        //      where `emissive` multiplies the map — so tinting it (0xffdd66)
+        //      darkened an already mid-brown solar photo. The `map` channel also
+        //      added a diffuse layer needing external light, and nothing lights the
+        //      Sun from outside, so that only ever contributed black.
+        //
+        // MeshBasicMaterial is unlit by definition: it shows the texture at its own
+        // brightness, which is exactly what a star should look like.
+        const material = new THREE.MeshBasicMaterial({
             map: texture,
-            emissive: 0xffdd66,
-            emissiveIntensity: 1.0,
-            emissiveMap: texture,
-            roughness: 1.0,
-            metalness: 0.0
+            toneMapped: false
         });
         
         this.mesh = new THREE.Mesh(geometry, material);
@@ -289,11 +299,18 @@ class Sun {
             this.data.radius * 1.01, 64, 64
         );
         
+        // depthWrite MUST stay false. This shell sits at radius * 1.01, i.e. just in
+        // front of the photosphere. With depthWrite enabled it wrote into the depth
+        // buffer and depth-rejected the photosphere behind it, so the Sun rendered as
+        // a flat #ff5500-at-20%-over-black disc — rgb(51,17,0), a featureless dark
+        // brown — and its actual textured surface was never drawn.
+        // (Diagnosed by raycast 2026-08-21.) Transparent overlays should not write depth.
         const chromoMaterial = new THREE.MeshBasicMaterial({
             color: 0xff5500,
             transparent: true,
             opacity: 0.2,
-            side: THREE.FrontSide
+            side: THREE.FrontSide,
+            depthWrite: false
         });
         
         const chromosphere = new THREE.Mesh(chromoGeometry, chromoMaterial);

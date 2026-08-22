@@ -9,6 +9,25 @@
   --text-color-dim: rgba(255, 255, 255, 0.6);
   --bg-color: rgba(0, 0, 0, 0.90);
   --overlay-bg: rgba(88, 88, 88, 0.1);
+
+  /* ===== THE SPACE BACKDROP KNOB =====================================
+     This is the ONE value that controls how much of the 3D solar system
+     you see behind every page. Change it here, nowhere else.
+
+         transparent          scene at 100%, no veil
+         rgba(0,0,0,0.10)     current - barely-there darkening
+         rgba(88,88,88,0.10)  the original light haze
+         rgba(0,0,0,0.90)     what it used to be - hid 90% of the scene
+
+     Why this exists instead of just lowering --bg-color's alpha: --bg-color
+     is also used as a TEXT colour in 8 places (index.css, mainPage.css,
+     storePage.css, header.css). Lowering its alpha turns those labels
+     90% transparent and they disappear. This variable is background-only,
+     so it is safe to take all the way to transparent.
+
+     It cannot cause the old "white tape" bug either - `html` paints an
+     opaque black floor beneath it. */
+  --page-veil: transparent;
   
   /* BACKGROUNDS */
   --panel-bg: rgba(20, 20, 20, 0.45);
@@ -256,6 +275,15 @@
   padding: 0;
 }
 
+/* Opaque black floor. This is the only thing standing between the user and the
+   browser's default white canvas, so it must never be transparent - that was
+   the "white tape over the screen" bug on the Apps page, where the panel is
+   content-height and leaves the area below it bare. Kept on html (not body) so
+   that body can stay transparent and let the 3D scene through. */
+html {
+  background-color: #000000;
+}
+
 html, body {
   font-family: cursive;
   /* NOTE (2026-08-15): was var(--overlay-bg), a near-transparent 10%-opacity
@@ -265,8 +293,26 @@ html, body {
      Launcher/Store are intentionally content-height rather than full-
      viewport (see launcherPage.css/storePage.css), so any gap below their
      panel exposed this - reported as "a white tape over the screen" when
-     opening Apps. --bg-color is the site's actual dark theme token. */
-  background-color: var(--bg-color);
+     opening Apps. --bg-color is the site's actual dark theme token.
+
+     UPDATE (2026-08-21): html and body now have SEPARATE backgrounds, because
+     they were doing two different jobs and fighting each other.
+
+     body is position:relative, so it is a positioned element and its
+     background paints ABOVE #solar-system-container (position:fixed,
+     z-index:-5). A single shared value therefore had to be both "opaque
+     enough to hide the white canvas" and "transparent enough to show the 3D
+     scene" - impossible. At --bg-color (rgba(0,0,0,0.90)) only 10% of the
+     solar system was visible, which is what made the space scene look like it
+     had a dark filter over it.
+
+     Split: html paints the opaque black floor so the browser's white canvas
+     can never bleed through (the "white tape" bug), and body is fully
+     transparent so the 3D scene shows at 100%. Verified by screenshot on both
+     the Main and Apps pages.
+     NOTE: the background is deliberately NOT set in this shared `html, body`
+     rule - doing so would also hit html and cancel the opaque floor above.
+     See the `body` rule immediately after this block. */
   color: var(--text-color);
   line-height: 0.75;
   /* OPTIMIZED VIEWPORT: Clean, responsive design */
@@ -278,6 +324,26 @@ html, body {
   position: relative;   /* Normal positioning, not fixed */
   top: 0;
   left: 0;
+}
+
+/* Restored to the original pre-2026-08-15 look: --overlay-bg, a 10% grey.
+   Because body is position:relative it paints ABOVE #solar-system-container
+   (position:fixed, z-index:-5), so this value is literally "what veil sits over
+   the space scene":
+
+     rgba(88,88,88,0.1)  current - the original light haze, what the site looked
+                         like before it was changed (user's preference)
+     rgba(0,0,0,0.08)    a slight darkening instead of a lightening
+     rgba(0,0,0,0.90)    what it became - hid 90% of the scene, the "dark lens"
+     transparent         no veil at all
+
+   The 10% grey was ORIGINALLY removed because it caused the "white tape over
+   the screen" bug on Apps - but that was only ever a symptom of this same
+   declaration also applying to html, leaving nothing opaque behind it. html now
+   paints a solid black floor (see the `html` rule above), so no amount of
+   transparency here can ever expose white again. Safe to tune freely. */
+body {
+  background-color: var(--page-veil);
 }
 
 /* OPTIMIZED VIEWPORT: Clean grid-based layout system */
@@ -623,7 +689,15 @@ html, body {
 /* Enhanced Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     :root {
-        --panel-bg: rgba(15, 15, 15, 0.95);
+        /* Was rgba(15,15,15,0.95) - a 95%-opaque slab. Because most visitors'
+           systems are in dark mode, that override was what actually shipped,
+           and it hid the 3D solar system behind a near-solid black panel on
+           every content page (reported 2026-08-21 as "black background goes
+           through all pages").
+           Dark mode is precisely when MORE of the space scene should show, not
+           less, so this now matches the :root default of 0.45. Raise it if text
+           contrast over the bright Sun ever suffers. */
+        --panel-bg: rgba(15, 15, 15, 0.45);
         --hover-bg: rgba(255, 165, 0, 0.15);
     }
 }

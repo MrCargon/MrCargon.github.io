@@ -9,7 +9,13 @@
  *
  * Bump CACHE_NAME to force a clean refresh of all cached assets.
  */
-const CACHE_NAME = 'mrcargon-hub-v4';
+// Bumped v4 -> v5 on 2026-08-22. The strategy below is stale-while-revalidate,
+// which serves the cached copy FIRST on every request - so after a CSS/JS change
+// a returning visitor keeps seeing the old site, and even Ctrl+Shift+R does not
+// reliably beat a service worker. Bumping this name deletes every old cache in
+// the activate handler below, forcing a clean fetch.
+// ALWAYS bump this when shipping asset changes, or nobody sees them.
+const CACHE_NAME = 'mrcargon-hub-v5';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 
 self.addEventListener('install', (event) => {

@@ -471,7 +471,7 @@ class SpaceEnvironment {
                 overflow: hidden !important;
                 pointer-events: auto !important;
                 opacity: 1 !important;
-                background-color: #000011 !important;
+                background-color: transparent !important;
                 display: block !important;
             `;
             
@@ -490,7 +490,7 @@ class SpaceEnvironment {
                 overflow: hidden !important;
                 pointer-events: auto !important;
                 opacity: 1 !important;
-                background-color: #000011 !important;
+                background-color: transparent !important;
                 display: block !important;
             `;
         }
@@ -527,8 +527,12 @@ class SpaceEnvironment {
         // Renderer with enhanced lighting capabilities
         // CRITICAL FIX: Wrap WebGLRenderer in try/catch to handle GPU/driver failures
         try {
+            // alpha:true is required for the transparent clear colour below. Without
+            // it the canvas paints an opaque background and nothing underneath (the
+            // html floor, the body tint) can ever show through.
             this.renderer = new THREE.WebGLRenderer({
                 antialias: true,
+                alpha: true,
                 powerPreference: "high-performance"
             });
         } catch (webglError) {
@@ -549,7 +553,14 @@ class SpaceEnvironment {
         }
 
         this.renderer.setSize(this.width, this.height);
-        this.renderer.setClearColor(0x000011); // Deep space color
+        // Transparent clear so the page's own layers show through and govern the
+        // backdrop: html paints the opaque black floor, body adds its slight tint
+        // (index.css). Previously this was an opaque 0x000011, which meant the
+        // canvas painted its own deep-space colour over everything and the CSS
+        // background on #solar-system-container was never visible at all.
+        // Second argument is alpha - 0 = fully transparent. Raise it toward 1 to
+        // bring back a canvas-level space tint.
+        this.renderer.setClearColor(0x000011, 0);
 
         // Enable shadows for realistic lighting
         this.renderer.shadowMap.enabled = true;
@@ -559,12 +570,25 @@ class SpaceEnvironment {
         // Enhanced tone mapping for realistic space lighting
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.25;
-        // Correct color/output and lighting model for consistent brightness (r155+)
+        // Output colour space. This MUST be set or the whole scene renders dark and
+        // desaturated, because the renderer emits linear values to an sRGB display
+        // and ACES tone mapping above assumes correctly-encoded output.
+        //
+        // index.html currently loads three.js r128, where `THREE.SRGBColorSpace` does
+        // not exist — so an r155+-only guard silently does nothing and leaves the
+        // default LinearEncoding in place. That was the cause of the "dark lens over
+        // everything" look (diagnosed 2026-08-21). Handle both APIs.
         if (THREE.SRGBColorSpace) {
-            this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+            this.renderer.outputColorSpace = THREE.SRGBColorSpace;   // r152+
+        } else if (THREE.sRGBEncoding !== undefined) {
+            this.renderer.outputEncoding = THREE.sRGBEncoding;       // r128 (current)
         }
-        // New lighting flag per three r155+ (false = modern physically-based lights)
+        // Physically-based lighting. r155+ calls it useLegacyLights (false = modern);
+        // r128 calls it physicallyCorrectLights (true = modern). Same intent.
         this.renderer.useLegacyLights = false;
+        if ('physicallyCorrectLights' in this.renderer) {
+            this.renderer.physicallyCorrectLights = true;
+        }
 
         // Add renderer to container
         this.container.appendChild(this.renderer.domElement);

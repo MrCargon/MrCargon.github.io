@@ -19,9 +19,17 @@ class Planet {
 
             // Create geometry and material
             const geometry = new THREE.SphereGeometry(this.data.radius, 64, 64);
+            // toneMapped:false for the same reason as the Sun (see Sun.js
+            // createPhotosphere): the renderer uses ACESFilmicToneMapping, which is
+            // built for HDR and compresses ordinary-range values into muddy
+            // mid-tones. Planets lit by a single point light never reach the range
+            // ACES expects, so they came out as dim grey dots. Opting out gives the
+            // bright, accurately-coloured planets-on-black look of the reference
+            // imagery. (2026-08-22)
             const material = new THREE.MeshPhongMaterial({
                 map: texture,
-                bumpScale: 0.05
+                bumpScale: 0.05,
+                toneMapped: false
             });
 
             // Load bump map if available

@@ -171,6 +171,11 @@ DwarfPlanet.createPluto = function(scene, resourceLoader) {
         radius: 0.18,
         rotationSpeed: 0.0001,
         orbitSpeed: 0.002,
+        // Real NASA/JPL periods. Without these, Planet.update() falls through to the
+        // legacy deltaTime path, which ignores TimeScaleManager entirely - that is why
+        // Pluto kept orbiting while the sim was paused and lapped the outer planets.
+        orbitalPeriodDays: 90560.0,
+        rotationPeriodHours: -153.2928,   // retrograde
         axialTilt: 122.5,
         orbitalInclination: 17.2, // Highly inclined orbit
         texturePath: "src/assets/textures/planets/dwarfplanets/pluto.jpg",
@@ -200,6 +205,11 @@ DwarfPlanet.createCeres = function(scene, resourceLoader) {
         radius: 0.07,
         rotationSpeed: 0.0002,
         orbitSpeed: 0.008,
+        // Real NASA/JPL periods. Without these, Planet.update() falls through to the
+        // legacy deltaTime path, which ignores TimeScaleManager entirely - that is why
+        // Pluto kept orbiting while the sim was paused and lapped the outer planets.
+        orbitalPeriodDays: 1681.63,
+        rotationPeriodHours: 9.074,
         axialTilt: 4.0,
         orbitalInclination: 10.6,
         texturePath: "src/assets/textures/planets/dwarfplanets/ceres.jpg",
@@ -229,6 +239,11 @@ DwarfPlanet.createEris = function(scene, resourceLoader) {
         radius: 0.17,
         rotationSpeed: 0.00008,
         orbitSpeed: 0.001,
+        // Real NASA/JPL periods. Without these, Planet.update() falls through to the
+        // legacy deltaTime path, which ignores TimeScaleManager entirely - that is why
+        // Pluto kept orbiting while the sim was paused and lapped the outer planets.
+        orbitalPeriodDays: 203830.0,
+        rotationPeriodHours: 25.9,
         axialTilt: 78.0,
         orbitalInclination: 44.0, // Extremely inclined orbit
         texturePath: "src/assets/textures/planets/dwarfplanets/eris.jpg",
@@ -258,6 +273,11 @@ DwarfPlanet.createHaumea = function(scene, resourceLoader) {
         radius: 0.12,
         rotationSpeed: 0.0003, // Fastest rotating known large object
         orbitSpeed: 0.0015,
+        // Real NASA/JPL periods. Without these, Planet.update() falls through to the
+        // legacy deltaTime path, which ignores TimeScaleManager entirely - that is why
+        // Pluto kept orbiting while the sim was paused and lapped the outer planets.
+        orbitalPeriodDays: 103774.0,
+        rotationPeriodHours: 3.9155,
         axialTilt: 126.0,
         orbitalInclination: 28.2,
         texturePath: "src/assets/textures/planets/dwarfplanets/haumea.jpg",
@@ -287,6 +307,11 @@ DwarfPlanet.createMakemake = function(scene, resourceLoader) {
         radius: 0.11,
         rotationSpeed: 0.00009,
         orbitSpeed: 0.0014,
+        // Real NASA/JPL periods. Without these, Planet.update() falls through to the
+        // legacy deltaTime path, which ignores TimeScaleManager entirely - that is why
+        // Pluto kept orbiting while the sim was paused and lapped the outer planets.
+        orbitalPeriodDays: 112897.0,
+        rotationPeriodHours: 22.8266,
         axialTilt: 0.0, // Unknown, assumed 0
         orbitalInclination: 29.0,
         texturePath: "src/assets/textures/planets/dwarfplanets/makemake.jpg",

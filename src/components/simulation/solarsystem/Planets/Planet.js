@@ -226,8 +226,11 @@ class Planet {
             const rotationsPerJ2000Day = hoursPerDay / this.data.rotationPeriodHours;
             const totalRotations = j2000Days * rotationsPerJ2000Day;
 
-            // NASA Rule 5: Validate rotation period exists
-            console.assert(this.data.rotationPeriodHours > 0,
+            // NASA Rule 5: Validate rotation period exists. Must be NON-ZERO rather
+            // than positive: Venus, Uranus and Pluto rotate retrograde and encode that
+            // as a negative period, which correctly flips the spin direction above.
+            // (The old `> 0` assert fired on exactly those three once real data landed.)
+            console.assert(this.data.rotationPeriodHours !== 0,
                 `Planet.update: ${this.data.name} has invalid rotationPeriodHours`);
 
             // Set rotation directly from time (modulo 2π to prevent overflow)

@@ -39,7 +39,12 @@ class StreetTiles {
         // 12 tiles only covered the centre (streets stopped before the screen edges).
         // 49 (7x7) z14 tiles span the whole view + corners to match the satellite fill.
         this.maxVisibleTiles = Number.isFinite(opts.maxVisibleTiles) ? opts.maxVisibleTiles : 49;
-        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 90;
+        // 2026-08-22: was 90, i.e. LESS than two full covering sets (49 each). Crossing
+        // one zoom level pushed the cache to 98 and instantly evicted the level you had
+        // just left, so zooming back out refetched all 49 tiles from the network - the
+        // in-and-out "reloading over and over". 150 holds two complete levels plus
+        // margin, so a zoom round-trip is served entirely from cache.
+        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 150;
         this.subdivideUnits = 512;   // insert a midpoint when a segment spans > this many tile units
 
         // OpenFreeMap discovery: fetch the TileJSON once → live {z}/{x}/{y}.pbf
@@ -123,8 +128,31 @@ class StreetTiles {
         console.assert(distInRadii > 0, 'zoomForDistance: positive distance');
         // distInRadii ~1.3 → z12, ~1.02 → z16 (smooth-ish log ramp).
         var t = Math.max(0, Math.min(1, (this.activateBelow - distInRadii) / (this.activateBelow - 1.01)));
-        var z = Math.round(this.minZoom + t * (this.maxZoom - this.minZoom));
-        return Math.max(this.minZoom, Math.min(this.maxZoom, z));
+        var raw = this.minZoom + t * (this.maxZoom - this.minZoom);
+        // 2026-08-22 HYSTERESIS. Plain Math.round() has zero deadband at the level
+        // boundary, and a zoom step invalidates EVERY key (the z prefix changes, so
+        // all maxVisibleTiles keys miss the cache at once). Any camera jitter sitting
+        // on a boundary therefore refetched the whole covering set, over and over -
+        // the user-reported "reloading again and again while zooming in". Requiring
+        // the continuous value to overshoot the midpoint by HYST before committing
+        // makes the level sticky, so only real zoom intent crosses it.
+        // 0.15 measured, not guessed: it takes boundary-hover flips from 116/200 ticks
+        // to 0 at every tested jitter amplitude while settling on the SAME level as
+        // before at every distance. 0.25 also works but this layer spans only 3 levels
+        // (12-14) over 0.29 radii, so that wide a deadband loses a real detail level at
+        // d=1.20 and d=1.05. (SatelliteTiles spans many more levels and does use 0.25.)
+        var HYST = 0.15;
+        var z;
+        if (!Number.isFinite(this._lastZoom)) {
+            z = Math.round(raw);
+        } else if (raw >= this._lastZoom + 0.5 + HYST || raw <= this._lastZoom - 0.5 - HYST) {
+            z = Math.round(raw);
+        } else {
+            z = this._lastZoom;                       // inside the deadband → hold
+        }
+        z = Math.max(this.minZoom, Math.min(this.maxZoom, z));
+        this._lastZoom = z;
+        return z;
     }
 
     // ---- update: enumerate covering tiles, lazily build, LRU-evict ---------
@@ -148,6 +176,9 @@ class StreetTiles {
         // and permanently stuck the engine off after the first far frame.
         if (!this.visible || cameraDistInRadii >= this.activateBelow) {
             this._showTiles(false);
+            // Invalidate the early-out: these tiles are now hidden, so re-entering
+            // range at the SAME z/cx/cy must run the full path to show them again.
+            this._lastAllReady = false;
             return false;
         }
         // Resolve the OpenFreeMap tile template once (keyless discovery). A7: after a
@@ -162,6 +193,18 @@ class StreetTiles {
         var n = Math.pow(2, fetchZ);
         var c = StreetTiles.lngLatToTile(centerLng, centerLat, fetchZ);
         var cx = Math.floor(c.x), cy = Math.floor(c.y);
+        // 2026-08-22 STEADY-STATE EARLY-OUT. The covering set is a pure function of
+        // (fetchZ, cx, cy). Upstream calls this ~9x/sec regardless of whether the
+        // camera moved, and the full body walks maxVisibleTiles keys, then walks the
+        // ENTIRE lru (up to lruCap records) to set .visible, then runs _evict - all
+        // to reach the identical state. Skipping when the inputs are unchanged and
+        // nothing is in flight makes a stationary camera free. Any of those three
+        // inputs changing, or a build landing, re-enters the full path below.
+        if (this._lastZ === fetchZ && this._lastCx === cx && this._lastCy === cy &&
+            this._building.size === 0 && this._lastAllReady === true) {
+            return true;
+        }
+        this._lastZ = fetchZ; this._lastCx = cx; this._lastCy = cy;
         var keys = this._buildCoveringKeys(cx, cy, n, fetchZ, c.x, c.y);
         var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
         // 2026-08-15: was `_showTiles(false)` then rebuild every frame - hid ALL
@@ -177,6 +220,7 @@ class StreetTiles {
         for (var i = 0; i < keys.length; i++) {
             if (!this._touchOrBuild(keys[i], now)) allReady = false;
         }
+        this._lastAllReady = allReady;   // gates the steady-state early-out above
         if (allReady) {
             this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = (rec.t === now); });
         }

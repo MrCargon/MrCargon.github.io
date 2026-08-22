@@ -249,21 +249,43 @@ class ExplorePins {
         return out;
     }
 
+    // The user toggle and the distance fade both want to own group.visible. Keep the
+    // toggle as the authoritative intent in _userVisible; _applyFade ANDs against it,
+    // so re-enabling the layer while zoomed in does not force hidden dots back on.
     setVisible(vis) {
         console.assert(typeof vis === 'boolean', 'setVisible: boolean required');
         console.assert(this.group, 'setVisible: group required');
+        this._userVisible = !!vis;
+        this._lastFade = undefined;          // force the next update() to re-evaluate
         this.group.visible = !!vis;
         return vis;
     }
 
+    // Distance band over which dot markers fade out as the camera descends.
+    // Above FADE_FAR they are the primary navigation aid (you cannot read a city
+    // from orbit without them); below FADE_NEAR the street/satellite layers own the
+    // screen and a constant-screen-size dot just parks itself over the thing you
+    // zoomed in to look at. Deliberately overlaps StreetTiles.activateBelow (1.3)
+    // so there is never a gap with neither layer showing.
+    static get FADE_FAR()  { return 1.22; }   // fully opaque at/above this (Earth radii)
+    static get FADE_NEAR() { return 1.05; }   // fully hidden at/below this
+
     // Per-frame: scale DOT markers by camera distance so they hold a near-constant
-    // screen size (instead of vanishing when far + ballooning/clipping when close).
+    // screen size (instead of vanishing when far + ballooning/clipping when close),
+    // and fade them out on approach so they stop occluding the surface detail.
     // scale = rr/2 makes the subtended angle constant; clamped. AREA pins keep their
     // real km radius (not screen-scaled). Rule 4: <=60 lines | no per-frame alloc.
     update(distInRadii) {
         console.assert(Number.isFinite(distInRadii), 'update: distance required');
         console.assert(this.markers instanceof Map, 'update: markers required');
-        if (this._disposed || !this.group || !this.group.visible) return false;
+        if (this._disposed || !this.group) return false;
+        // 0 at FADE_NEAR → 1 at FADE_FAR. smoothstep so the dots melt away rather
+        // than pop, which reads as intentional instead of as a rendering glitch.
+        var far = ExplorePins.FADE_FAR, near = ExplorePins.FADE_NEAR;
+        var t = Math.max(0, Math.min(1, (distInRadii - near) / (far - near)));
+        var fade = t * t * (3 - 2 * t);
+        this._applyFade(fade);
+        if (fade <= 0.01 || !this.group.visible) return false;   // hidden → no scaling work
         var s = Math.max(0.35, Math.min(4, distInRadii * 0.5));
         var max = Math.min(this.pins.length, this.maxPins);     // Rule 2: bounded
         for (var i = 0; i < max; i++) {
@@ -273,6 +295,27 @@ class ExplorePins {
             if (holder) holder.scale.setScalar(s);
         }
         return true;
+    }
+
+    // Multiply every marker material by `fade`, preserving each material's own
+    // authored opacity (stem 0.6, ring 0.5, area fill 0.22...) via a one-time
+    // userData stash. Early-outs unless the value actually moved, so the traverse
+    // costs nothing while the camera is still. Rule 5: 2 asserts.
+    _applyFade(fade) {
+        console.assert(Number.isFinite(fade), '_applyFade: fade required');
+        console.assert(this.markers instanceof Map, '_applyFade: markers required');
+        if (this._lastFade !== undefined && Math.abs(this._lastFade - fade) < 0.01) return;
+        this._lastFade = fade;
+        // Hiding the whole group beats drawing ~0-alpha geometry every frame.
+        this.group.visible = (this._userVisible !== false) && fade > 0.01;
+        if (!this.group.visible) return;
+        this.group.traverse(function (o) {
+            var m = o.material;
+            if (!m || m.opacity === undefined) return;
+            if (m.userData.baseOpacity === undefined) m.userData.baseOpacity = m.opacity;
+            m.opacity = m.userData.baseOpacity * fade;
+            m.transparent = true;
+        });
     }
 
     // Free everything. Rule 5: 2 asserts.

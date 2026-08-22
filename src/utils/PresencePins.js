@@ -102,9 +102,12 @@ class PresencePins {
         return true;
     }
 
+    // _userVisible is the authoritative toggle; update()'s distance fade ANDs against
+    // it so re-enabling while zoomed in does not force hidden dots back on.
     setVisible(vis) {
         console.assert(typeof vis === 'boolean', 'setVisible: boolean required');
         console.assert(this.group, 'setVisible: group required');
+        this._userVisible = !!vis;
         this.group.visible = !!vis;
         return vis;
     }
@@ -114,19 +117,36 @@ class PresencePins {
 
     // Per-frame: scale dots to a near-constant screen size + pulse the halo ring.
     // distInRadii from camera; elapsed seconds drives the pulse. Rule 4: <=60 | no alloc.
+    // Fades out on approach for the same reason as ExplorePins: a constant-screen-size
+    // marker parks itself over the surface detail you zoomed in to see. Uses the same
+    // band so both dot layers disappear together. See ExplorePins.FADE_FAR/NEAR.
     update(distInRadii, elapsed) {
         console.assert(Number.isFinite(distInRadii), 'update: distance required');
         console.assert(this.markers instanceof Map, 'update: markers required');
-        if (this._disposed || !this.group || !this.group.visible) return false;
+        if (this._disposed || !this.group) return false;
+        var far = (typeof ExplorePins !== 'undefined') ? ExplorePins.FADE_FAR : 1.22;
+        var near = (typeof ExplorePins !== 'undefined') ? ExplorePins.FADE_NEAR : 1.05;
+        var f = Math.max(0, Math.min(1, (distInRadii - near) / (far - near)));
+        var fade = f * f * (3 - 2 * f);                      // smoothstep, no popping
+        this.group.visible = (this._userVisible !== false) && fade > 0.01;
+        if (!this.group.visible) return false;
         var s = Math.max(0.35, Math.min(4, distInRadii * 0.5));
         var t = Number.isFinite(elapsed) ? elapsed : 0;
         this.markers.forEach(function (holder) {
             holder.scale.setScalar(s);
             var ud = holder.userData;
             if (ud && ud.ring && ud.ring.material) {
+                // Fade multiplies the pulse (the pulse rewrites opacity every frame,
+                // so a stashed base-opacity approach would be overwritten here).
                 var pulse = 0.35 + 0.35 * (1 + Math.sin(t * 3 + ud.phase)) * 0.5;
-                ud.ring.material.opacity = pulse;
+                ud.ring.material.opacity = pulse * fade;
                 ud.ring.scale.setScalar(1 + 0.25 * (1 + Math.sin(t * 3 + ud.phase)) * 0.5);
+            }
+            if (ud && ud.head && ud.head.material) {
+                var m = ud.head.material;
+                if (m.userData.baseOpacity === undefined) m.userData.baseOpacity = m.opacity;
+                m.opacity = m.userData.baseOpacity * fade;
+                m.transparent = true;
             }
         });
         return true;

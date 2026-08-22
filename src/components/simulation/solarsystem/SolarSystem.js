@@ -79,6 +79,7 @@ class SolarSystem {
                     radius: 1,
                     distance: 35,
                     rotationSpeed: 0.004,
+                    rotationPeriodHours: 1407.6,   // NASA sidereal day - enables time-sync spin
                     orbitSpeed: 0.02,
                     axialTilt: 0.03,
                     orbitalPeriodDays: 87.969, // Phase 2: NASA JPL Horizons orbital period
@@ -101,6 +102,7 @@ class SolarSystem {
                     radius: 1.8,
                     distance: 45,
                     rotationSpeed: 0.002,
+                    rotationPeriodHours: -5832.6,   // retrograde   // NASA sidereal day - enables time-sync spin
                     orbitSpeed: 0.015,
                     axialTilt: 177.4,
                     orbitalPeriodDays: 224.701, // Phase 2: NASA JPL Horizons orbital period
@@ -149,6 +151,7 @@ class SolarSystem {
                     radius: 1.5,
                     distance: 92,
                     rotationSpeed: 0.008,
+                    rotationPeriodHours: 24.6229,   // NASA sidereal day - enables time-sync spin
                     orbitSpeed: 0.008,
                     axialTilt: 25.2,
                     orbitalPeriodDays: 686.980, // Phase 2: NASA JPL Horizons orbital period
@@ -169,6 +172,7 @@ class SolarSystem {
                     radius: 5,
                     distance: 312,
                     rotationSpeed: 0.02,
+                    rotationPeriodHours: 9.925,   // NASA sidereal day - enables time-sync spin
                     orbitSpeed: 0.005,
                     axialTilt: 3.1,
                     orbitalPeriodDays: 4332.589, // Phase 2: NASA JPL Horizons orbital period (~11.86 years)
@@ -189,6 +193,7 @@ class SolarSystem {
                     radius: 4.5,
                     distance: 572,
                     rotationSpeed: 0.018,
+                    rotationPeriodHours: 10.656,   // NASA sidereal day - enables time-sync spin
                     orbitSpeed: 0.003,
                     axialTilt: 26.7,
                     orbitalPeriodDays: 10759.22, // Phase 2: NASA JPL Horizons orbital period (~29.46 years)
@@ -211,6 +216,7 @@ class SolarSystem {
                     radius: 3.5,
                     distance: 1151,
                     rotationSpeed: 0.012,
+                    rotationPeriodHours: -17.24,   // retrograde (98 deg axial tilt)   // NASA sidereal day - enables time-sync spin
                     orbitSpeed: 0.002,
                     axialTilt: 97.8,
                     orbitalPeriodDays: 30688.5, // Phase 2: NASA JPL Horizons orbital period (~84.02 years)
@@ -233,6 +239,7 @@ class SolarSystem {
                     radius: 3.5,
                     distance: 1804,
                     rotationSpeed: 0.014,
+                    rotationPeriodHours: 16.11,   // NASA sidereal day - enables time-sync spin
                     orbitSpeed: 0.001,
                     axialTilt: 28.3,
                     orbitalPeriodDays: 60182, // Phase 2: NASA JPL Horizons orbital period (~164.8 years)

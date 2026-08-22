@@ -46,7 +46,13 @@ class SatelliteTiles {
         // tilted it covers the whole screen rectangle + its corners, at any FOV. lruCap
         // bounds the texture cache above the visible budget.
         this.maxVisibleTiles = Number.isFinite(opts.maxVisibleTiles) ? opts.maxVisibleTiles : 121;
-        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 170;
+        // 2026-08-22: was 170, LESS than two covering sets (up to 121 each up close).
+        // Crossing one zoom level pushed the cache past the cap and evicted most of the
+        // level just left, so a zoom out-and-back re-downloaded ~100 image tiles. 240
+        // holds two full close-up levels, making a zoom round-trip cache-served.
+        // Textures dominate this layer's memory, so do not raise this much further
+        // without also checking GPU memory on a low-end device.
+        this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 240;
         this.patchSegments = Number.isFinite(opts.patchSegments) ? opts.patchSegments : 12;
 
         // Keyless Esri basemap modes (all {z}/{y}/{x}, CORS-enabled). Switchable.
@@ -142,8 +148,26 @@ class SatelliteTiles {
         // still fills it — one z-level finer than the old 4.5 (so close-up urban areas
         // show crisp streets instead of a stretched coarse-zoom white blob).
         var twoPowZ = 9.0 / (0.184 * alt);
-        var z = Math.round(Math.log(twoPowZ) / Math.LN2);
-        return Math.max(this.minZoom, Math.min(this.maxZoom, z));
+        var raw = Math.log(twoPowZ) / Math.LN2;               // continuous zoom
+        // 2026-08-22 HYSTERESIS - see the matching note in StreetTiles. Worse here:
+        // raw is a continuous log of altitude spanning many levels, so a smooth
+        // zoom-in crosses several boundaries, and EVERY crossing invalidates all
+        // maxVisibleTiles keys at once (the z prefix changes). With bare Math.round
+        // there is no deadband, so camera jitter parked on a boundary re-downloaded
+        // the entire image-tile set repeatedly. Requiring a 0.25-level overshoot
+        // makes the level sticky without changing which level you settle on.
+        var HYST = 0.25;
+        var z;
+        if (!Number.isFinite(this._lastZoom)) {
+            z = Math.round(raw);
+        } else if (raw >= this._lastZoom + 0.5 + HYST || raw <= this._lastZoom - 0.5 - HYST) {
+            z = Math.round(raw);
+        } else {
+            z = this._lastZoom;
+        }
+        z = Math.max(this.minZoom, Math.min(this.maxZoom, z));
+        this._lastZoom = z;
+        return z;
     }
 
     // ---- update: enumerate covering tiles, lazily build, LRU-evict ---------
@@ -161,6 +185,7 @@ class SatelliteTiles {
         // Must NOT mutate this.visible here (per-frame range vs user toggle).
         if (!this.visible || cameraDistInRadii >= this.activateBelow) {
             this._showTiles(false);
+            this._lastAllReady = false;   // hidden now → re-entering range must re-show
             return false;
         }
         var fetchZ = this.zoomForDistance(cameraDistInRadii);
@@ -172,7 +197,18 @@ class SatelliteTiles {
         // shows a smaller patch so far fewer tiles cover the view — loading the full
         // budget there just wastes network/draw-calls/texture memory.
         var t = Math.max(0, Math.min(1, (1.4 - cameraDistInRadii) / (1.4 - 1.0)));
-        this._effMax = Math.round(49 + (this.maxVisibleTiles - 49) * t);
+        var effMax = Math.round(49 + (this.maxVisibleTiles - 49) * t);
+        // 2026-08-22 STEADY-STATE EARLY-OUT - see the matching note in StreetTiles.
+        // The covering set is a pure function of (fetchZ, cx, cy, effMax); upstream
+        // calls this ~9x/sec whether or not the camera moved, and the full body walks
+        // up to 121 keys plus the entire lru. Skip it when nothing can have changed.
+        if (this._lastZ === fetchZ && this._lastCx === cx && this._lastCy === cy &&
+            this._lastEffMax === effMax && this._building.size === 0 &&
+            this._lastAllReady === true) {
+            return true;
+        }
+        this._lastZ = fetchZ; this._lastCx = cx; this._lastCy = cy; this._lastEffMax = effMax;
+        this._effMax = effMax;
         var keys = this._buildCoveringKeys(cx, cy, n, fetchZ, c.x, c.y);
         this._desiredKeys.clear();
         for (var dk = 0; dk < keys.length; dk++) this._desiredKeys.add(keys[dk]);
@@ -188,6 +224,7 @@ class SatelliteTiles {
         // the previous tiles as a fallback so the user never sees a white/blank flash —
         // standard map-app behaviour (coarse imagery holds until the finer set lands).
         // Tiles touched this frame have rec.t === now; everything else is stale.
+        this._lastAllReady = allReady;   // gates the steady-state early-out above
         if (allReady) {
             this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = (rec.t === now); });
         }

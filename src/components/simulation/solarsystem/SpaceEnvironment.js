@@ -70,8 +70,12 @@ class SpaceEnvironment {
         
         // Background mode settings
         this.backgroundMode = false;
-        this.gentleRotationSpeed = 0.0001; // Very slow rotation for background mode
-        this.backgroundOpacity = 0.3;
+        // radians per SECOND (deltaTime-scaled in updateGentleRotation). Was 0.0001
+        // per FRAME, i.e. one orbit every ~17 min at 60fps and frame-rate dependent.
+        this.gentleRotationSpeed = 0.06;   // ~105s per orbit
+        // 0.3 made the backdrop so faint that even correct motion read as frozen.
+        // 0.45 keeps it clearly secondary to page content but visibly alive.
+        this.backgroundOpacity = 0.45;
         this.backgroundCameraDistance = 150; // Default distance for background viewing
         
         // Camera state preservation for page transitions
@@ -3317,9 +3321,14 @@ class SpaceEnvironment {
             this.controls.update();
         }
 
+        // Declared at animate() scope, not inside the block below, because the
+        // background-rotation call further down needs it too. clock.getDelta() RESETS
+        // the clock on read, so it must stay a single call per frame.
+        let deltaTime = 0;
+
         // Update solar system with time synchronization (Phase 2)
         if (this.solarSystem) {
-            const deltaTime = this.clock.getDelta(); // Keep original deltaTime for realistic speed
+            deltaTime = this.clock.getDelta(); // Keep original deltaTime for realistic speed
 
             // Phase 2: Update virtual time and pass to solar system
             // NASA Rule 7: Check if timeManager exists before using
@@ -3378,7 +3387,7 @@ class SpaceEnvironment {
         
         // Update gentle rotation for background mode
         if (this.backgroundMode) {
-            this.updateGentleRotation();
+            this.updateGentleRotation(deltaTime);
         }
         
         // Render scene
@@ -3547,6 +3556,7 @@ class SpaceEnvironment {
             this.container.style.pointerEvents = 'none'; // Non-interactive
             
             // Enable gentle auto-rotation for ambient effect
+            this._gentleSeeded = false;   // re-seed the orbit from the preserved camera
             this.enableGentleAutoRotation();
             this.disableInteractiveControls();
             
@@ -3691,24 +3701,43 @@ class SpaceEnvironment {
      * Update gentle rotation for background mode
      * Purpose: Rule 2 bounded gentle movement | Called from animate loop
      */
-    updateGentleRotation() {
+    updateGentleRotation(deltaTime) {
         if (!this.gentleRotationActive || !this.camera || this.backgroundMode !== true) {
             return;
         }
-        
-        // Skip rotation if we're preserving camera position
-        if (this.shouldPreserveCameraPosition && this.preservedCameraState) {
-            return; // Keep camera at preserved position
+
+        // THE BACKGROUND FREEZE (fixed 2026-08-24). This used to read:
+        //     if (this.shouldPreserveCameraPosition && this.preservedCameraState) return;
+        // shouldPreserveCameraPosition defaults to true, and setBackgroundMode() calls
+        // preserveCameraState() immediately before enabling gentle rotation — so
+        // preservedCameraState was ALWAYS set and this returned on every single frame.
+        // The background rotation never ran once. On any page other than Main the
+        // solar system sat perfectly still, which is exactly what the user reported.
+        //
+        // Preserving the camera and orbiting it are not in conflict: seed the orbit
+        // FROM wherever the camera was preserved, then let it move. Done once, on the
+        // first frame after the mode switch.
+        if (!this._gentleSeeded) {
+            this.gentleRotationAngle = Math.atan2(this.camera.position.z, this.camera.position.x);
+            const r = Math.hypot(this.camera.position.x, this.camera.position.z);
+            if (r > 1) this.gentleRotationRadius = r;
+            this._gentleSeeded = true;
         }
-        
-        // Rule 2: Increment angle with bounded speed
-        this.gentleRotationAngle += this.gentleRotationSpeed;
-        
+
+        // deltaTime-based, in radians PER SECOND. The old code added a fixed
+        // 0.0001 per FRAME with no deltaTime: at 60fps that is one orbit every ~17
+        // minutes, and on a machine running 8fps it is over two hours — invisible
+        // either way, and it changed speed with the frame rate. Now 0.06 rad/s gives
+        // one slow orbit every ~105s, clearly alive but not distracting, and identical
+        // on every machine. Guarded so a long tab-switch stall cannot jump the camera.
+        const dt = Math.min(Number.isFinite(deltaTime) ? deltaTime : 0.016, 0.1);
+        this.gentleRotationAngle += this.gentleRotationSpeed * dt;
+
         // Keep angle bounded (Rule 2: 0 to 2π)
         if (this.gentleRotationAngle > Math.PI * 2) {
-            this.gentleRotationAngle = 0;
+            this.gentleRotationAngle -= Math.PI * 2;
         }
-        
+
         // Calculate gentle orbital position around the solar system
         const x = Math.cos(this.gentleRotationAngle) * this.gentleRotationRadius;
         const z = Math.sin(this.gentleRotationAngle) * this.gentleRotationRadius;

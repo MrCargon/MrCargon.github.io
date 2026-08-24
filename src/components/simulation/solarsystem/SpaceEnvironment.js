@@ -40,7 +40,12 @@ class SpaceEnvironment {
         this.timeControlUI = null;
         if (typeof TimeScaleManager !== 'undefined') {
             this.timeManager = new TimeScaleManager(new Date()); // Start at current time
-            this.timeManager.setTimeScale(5); // BUG FIX 2: Default 5000x (was 50000x - too fast, planets blurred)
+            // REAL TIME. TimeScaleManager advances virtual time by (delta * timeScale),
+            // so 1.0 is literally one second per second — the day/night terminator and
+            // every orbit now match the real sky. (The old value was 5, and the '5000x'
+            // in the comment beside it was simply wrong about the units.)
+            // Users who want to watch orbits move can still scrub with the Time panel.
+            this.timeManager.setTimeScale(1);
             console.log('Phase 2: TimeScaleManager initialized (5000x speed)');
         } else {
             console.warn('Phase 2: TimeScaleManager not available - orbital positions will use fallback animation mode');
@@ -63,7 +68,10 @@ class SpaceEnvironment {
         this.transitionDuration = 1.5; // seconds
         
         // Auto-orbit settings for when camera is orbiting a planet
-        this.autoOrbitSpeed = 0.0005; // Speed of automatic orbiting around planet
+        // radians per SECOND (deltaTime-scaled where it is applied). Was 0.0005 per
+        // FRAME, which is both frame-rate dependent and fast enough to be dizzying
+        // after a few seconds. 0.012 is ~8.7 minutes per lap.
+        this.autoOrbitSpeed = 0.012;
         this.orbitRadius = 15; // Distance to maintain when orbiting
         this.orbitAngle = 0; // Current angle for auto-orbit
         this.isAutoOrbiting = false;
@@ -72,7 +80,7 @@ class SpaceEnvironment {
         this.backgroundMode = false;
         // radians per SECOND (deltaTime-scaled in updateGentleRotation). Was 0.0001
         // per FRAME, i.e. one orbit every ~17 min at 60fps and frame-rate dependent.
-        this.gentleRotationSpeed = 0.06;   // ~105s per orbit
+        this.gentleRotationSpeed = 0.015;  // ~7 min per orbit — ambient, not a carousel
         // 0.3 made the backdrop so faint that even correct motion read as frozen.
         // 0.45 keeps it clearly secondary to page content but visibly alive.
         this.backgroundOpacity = 0.45;
@@ -1492,7 +1500,10 @@ class SpaceEnvironment {
             btn.style.zIndex = '300';
             btn.style.bottom = '96px';
         }
-        const show = (this.selectedPlanet === 'Earth') && !this.exploreMode;
+        // backgroundMode is true on every page except Main. Without that check the
+        // Explore Earth button stayed on screen after navigating away — clicking it
+        // from Projects or About started Explore behind an unrelated page.
+        const show = (this.selectedPlanet === 'Earth') && !this.exploreMode && !this.backgroundMode;
         btn.hidden = !show;
         btn.style.display = show ? 'block' : 'none';
         return show;
@@ -3352,7 +3363,7 @@ class SpaceEnvironment {
                 this.updateExploreClouds();
                 this.updateExploreLOD();
             } else if (this.selectedPlanet && !this.cameraTransitioning) {
-                this.updateCameraPlanetTracking();
+                this.updateCameraPlanetTracking(deltaTime);
             }
             
             // 🌟 UPDATE DYNAMIC LIGHTING SYSTEM
@@ -3399,7 +3410,7 @@ class SpaceEnvironment {
     /**
      * Update camera to track selected planet
      */
-    updateCameraPlanetTracking() {
+    updateCameraPlanetTracking(deltaTime) {
         if (!this.selectedPlanet || !this.solarSystem) return;
         
         // Skip if transitioning
@@ -3428,8 +3439,11 @@ class SpaceEnvironment {
         
         // Handle auto-orbiting around the planet
         if (this.isAutoOrbiting && this.insideOrbitZone) {
-            // Update orbit angle
-            this.orbitAngle += this.autoOrbitSpeed;
+            // deltaTime-scaled: autoOrbitSpeed is radians per SECOND. Adding it per
+            // FRAME made the orbit speed depend on the frame rate — faster machines
+            // literally spun the camera faster — and at the old value it was quick
+            // enough to be disorienting after a few seconds of watching.
+            this.orbitAngle += this.autoOrbitSpeed * Math.min(deltaTime || 0.016, 0.1);
             
             // Calculate new camera position orbiting around the planet
             const orbitX = Math.cos(this.orbitAngle) * this.orbitRadius;

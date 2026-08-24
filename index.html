@@ -138,12 +138,19 @@
          methods), never at class-definition time - verified before the upgrade. Module
          scripts are deferred, so they run after those classes are defined but BEFORE the
          window 'load' event, which is when anything actually instantiates them. -->
+    <!-- Import map below MUST stay strict JSON — no comments, no trailing commas.
+         A comment inside it silently kills the whole map ("Failed to parse import
+         map: invalid JSON") and then every `import 'three'` fails to resolve.
+
+         MUST also be the .min build. three.module.js re-exports three.core.js, so the
+         unminified pair costs 125 + 274 = 399 KB gzipped, versus 84 + 98 = 182 KB
+         minified. The old r128 three.min.js was 146 KB, so shipping the unminified
+         module build made the site ~2.7x heavier to load than before the upgrade.
+         webgpu/tsl entries were dropped: nothing imports them. -->
     <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
-        "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.webgpu.js",
-        "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.tsl.js",
+        "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.min.js",
         "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
       }
     }

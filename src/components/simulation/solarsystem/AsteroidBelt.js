@@ -11,6 +11,38 @@ class AsteroidBelt {
         this.lastJ2000Days = null; // For time-scaling calculations
     }
 
+    /**
+     * Pick an orbital radius that respects the KIRKWOOD GAPS.
+     *
+     * The real main belt is not a uniform smear. Jupiter's mean-motion resonances have
+     * swept near-empty lanes through it over billions of years, and they are the most
+     * recognisable feature the belt has. Previously the radius was a flat
+     * `inner + random*(outer-inner)`, which produced a featureless ring.
+     *
+     * Rejection sampling against a Gaussian notch at each resonance. Bounded to a fixed
+     * number of attempts so this can never spin (NASA Rule 2) — on exhaustion it simply
+     * accepts the last candidate, which at worst puts one rock in a gap.
+     * Rule 5: 2 asserts.
+     */
+    _sampleRadius() {
+        console.assert(this.outerRadius > this.innerRadius, '_sampleRadius: bad belt bounds');
+        console.assert(Array.isArray(AsteroidBelt.KIRKWOOD_GAPS_AU), '_sampleRadius: gap table required');
+        const AU = (typeof SolarSystem !== 'undefined' && SolarSystem.AU) ? SolarSystem.AU : 60;
+        let r = 0;
+        for (let attempt = 0; attempt < 12; attempt++) {          // Rule 2: bounded
+            r = this.innerRadius + Math.random() * (this.outerRadius - this.innerRadius);
+            const au = r / AU;
+            let keep = 1;
+            for (let g = 0; g < AsteroidBelt.KIRKWOOD_GAPS_AU.length; g++) {
+                const gap = AsteroidBelt.KIRKWOOD_GAPS_AU[g];
+                const d = (au - gap.au) / gap.width;
+                keep *= 1 - gap.depth * Math.exp(-0.5 * d * d);    // Gaussian notch
+            }
+            if (Math.random() < keep) return r;
+        }
+        return r;
+    }
+
     async init() {
         const geometry = new THREE.SphereGeometry(0.2, 8, 8);
         const material = new THREE.MeshPhongMaterial({
@@ -22,9 +54,12 @@ class AsteroidBelt {
 
         // Initialize each asteroid
         for (let i = 0; i < this.count; i++) {
-            const radius = this.innerRadius + Math.random() * (this.outerRadius - this.innerRadius);
+            const radius = this._sampleRadius();
             const angle = Math.random() * Math.PI * 2;
-            const height = (Math.random() - 0.5) * 4;
+            // Belt inclination is real: most of the main belt sits within ~10 deg of the
+            // ecliptic, so scale the vertical spread with orbital radius instead of a
+            // flat +/-2 units, which made the belt a suspiciously uniform slab.
+            const height = (Math.random() - 0.5) * radius * 0.18;
             const scale = 0.5 + Math.random() * 1.5;
 
             // Store orbital data (not in userData - that's for meshes)
@@ -33,7 +68,12 @@ class AsteroidBelt {
                 orbitAngle: angle,
                 height: height,
                 scale: scale,
-                orbitSpeed: 0.001 + Math.random() * 0.003,
+                // KEPLER, not random. Angular speed goes as a^-3/2 (third law), so inner
+                // asteroids genuinely lap outer ones. The old `0.001 + random*0.003`
+                // gave a body at 3.3 AU a decent chance of orbiting faster than one at
+                // 2.1 AU, which is simply not how gravity works — and it made the belt
+                // visibly shear in the wrong direction over time.
+                orbitSpeed: AsteroidBelt.BASE_SPEED * Math.pow(radius, -1.5),
                 rotationSpeed: {
                     x: (Math.random() - 0.5) * 0.01,
                     y: (Math.random() - 0.5) * 0.01,
@@ -132,3 +172,34 @@ class AsteroidBelt {
         this.orbitData = [];
     }
 }
+
+// Kirkwood gaps — mean-motion resonances with Jupiter that have cleared near-empty
+// lanes through the main belt. `au` is the resonance location, `width` the Gaussian
+// sigma in AU, `depth` how strongly the lane is depleted (1 = fully empty).
+// Source: JPL / standard main-belt resonance positions.
+AsteroidBelt.KIRKWOOD_GAPS_AU = [
+    { au: 2.065, width: 0.015, depth: 0.75, res: '4:1' },
+    { au: 2.502, width: 0.020, depth: 0.92, res: '3:1' },   // the most prominent gap
+    { au: 2.825, width: 0.018, depth: 0.85, res: '5:2' },
+    { au: 2.958, width: 0.012, depth: 0.60, res: '7:3' },
+    { au: 3.279, width: 0.020, depth: 0.88, res: '2:1' }
+];
+
+// Angular speed scale for orbitSpeed = BASE_SPEED * r^-1.5 (Kepler's third law).
+// Tuned so the belt drifts at a believable rate against the planets rather than
+// matching real seconds, which at real time would be visually static.
+AsteroidBelt.BASE_SPEED = 2.2;
+
+// Largest main-belt bodies, real JPL Small-Body Database values (a in AU,
+// e, i in degrees, diameter in km). These are rendered as NAMED asteroids rather
+// than anonymous instanced rocks, because "the asteroid belt" containing Ceres and
+// Vesta is a different claim from "the asteroid belt is a thousand grey dots".
+// Fetched from https://ssd-api.jpl.nasa.gov/sbdb.api
+AsteroidBelt.MAJOR_BODIES = [
+    { name: 'Ceres',   a: 2.77, e: 0.0797, i: 10.6, diameterKm: 939.4, color: 0x9c9186 },
+    { name: 'Vesta',   a: 2.36, e: 0.0902, i: 7.14, diameterKm: 522.8, color: 0xb9a887 },
+    { name: 'Pallas',  a: 2.77, e: 0.231,  i: 34.9, diameterKm: 513.0, color: 0x8e8e96 },
+    { name: 'Hygiea',  a: 3.15, e: 0.107,  i: 3.83, diameterKm: 407.1, color: 0x6f6b66 },
+    { name: 'Juno',    a: 2.67, e: 0.256,  i: 13.0, diameterKm: 246.6, color: 0xa39481 },
+    { name: 'Psyche',  a: 2.93, e: 0.135,  i: 3.10, diameterKm: 222.0, color: 0xa89a7c }
+];

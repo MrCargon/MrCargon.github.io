@@ -193,6 +193,7 @@ class StreetTiles {
         var fetchZ = Math.min(z, this.dataMaxZoom);
         var n = Math.pow(2, fetchZ);
         var c = StreetTiles.lngLatToTile(centerLng, centerLat, fetchZ);
+        this._applyLead(c, fetchZ);          // stream AHEAD of the camera, not behind it
         var cx = Math.floor(c.x), cy = Math.floor(c.y);
         // 2026-08-22 STEADY-STATE EARLY-OUT. The covering set is a pure function of
         // (fetchZ, cx, cy). Upstream calls this ~9x/sec regardless of whether the
@@ -227,6 +228,55 @@ class StreetTiles {
         }
         this._evict();
         return true;
+    }
+
+    // PREDICTIVE STREAMING — shift the covering set toward where the camera is HEADING.
+    //
+    // Straight out of how open-world engines stream: the world is loaded just ahead of
+    // where you are moving, and the faster you move the further ahead it reaches. This
+    // engine previously centred the covering set on the camera's CURRENT look-at, so
+    // while panning, every newly-needed tile was only requested at the moment it was
+    // already on screen — guaranteeing it arrives late. Leading the centre by the
+    // measured pan velocity buys the fetch a head start of roughly `LEAD_SECONDS`.
+    //
+    // The counterpart is already in place: _abortStale() cancels in-flight fetches whose
+    // keys leave the desired set, which is exactly the "reprioritise the queue on a
+    // U-turn" behaviour — reversing direction drops the now-wrong lead tiles instead of
+    // letting them land unused.
+    //
+    // Mutates `c` in place (no per-frame allocation). Rule 5: 2 asserts.
+    _applyLead(c, fetchZ) {
+        console.assert(c && Number.isFinite(c.x), '_applyLead: tile coords required');
+        console.assert(Number.isFinite(fetchZ), '_applyLead: zoom required');
+        var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+        var LEAD_SECONDS = 0.6;      // how far ahead to reach
+        var MAX_LEAD_TILES = 2.5;    // never overshoot the covering ring itself
+        var prev = this._leadPrev;
+        if (prev && prev.z === fetchZ) {
+            var dt = (now - prev.t) / 1000;
+            if (dt > 0.008 && dt < 0.5) {                 // ignore stalls and dupe ticks
+                var vx = (c.x - prev.x) / dt;             // tiles per second
+                var vy = (c.y - prev.y) / dt;
+                var lx = vx * LEAD_SECONDS, ly = vy * LEAD_SECONDS;
+                var mag = Math.hypot(lx, ly);
+                if (mag > MAX_LEAD_TILES) { var s = MAX_LEAD_TILES / mag; lx *= s; ly *= s; }
+                // Smooth so a single jittery tick cannot fling the covering set.
+                this._leadX = (this._leadX || 0) * 0.6 + lx * 0.4;
+                this._leadY = (this._leadY || 0) * 0.6 + ly * 0.4;
+            }
+        } else {
+            this._leadX = 0; this._leadY = 0;             // new zoom level: no history
+        }
+        // Pooled, not reallocated: update() runs ~9x/sec and this file's contract is no
+        // per-frame allocation. Stores the RAW look-at, never the lead-adjusted one —
+        // measuring velocity from an already-led position would compound each tick and
+        // run the covering set away from the camera.
+        if (!this._leadPrev) this._leadPrev = { x: 0, y: 0, z: -1, t: 0 };
+        this._leadPrev.x = c.x; this._leadPrev.y = c.y;
+        this._leadPrev.z = fetchZ; this._leadPrev.t = now;
+        c.x += (this._leadX || 0);
+        c.y += (this._leadY || 0);
+        return c;
     }
 
     // Exponential backoff with EQUAL JITTER for a failed tile.

@@ -268,18 +268,13 @@ class Sun {
             
             // Create spot geometry (slightly inset from surface)
             const spotGeometry = new THREE.CircleGeometry(spotSize, 32);
-            // toneMapped:false to match the photosphere these are painted onto — the
-            // Sun's own material opts out of ACES, so a tone-mapped spot sits in a
-            // different colour pipeline than its background and reads as a hole.
-            // Opacity dropped 0.7 -> 0.45 with the r128->r184 upgrade: r128 had no
-            // sRGB->linear INPUT conversion, so 0x663300 was silently lightened to a
-            // soft brown. r184 colour management renders the authored value, which is
-            // far darker; 0.45 restores the previous on-screen weight.
+            // Opacity is back to the authored 0.7 (and no toneMapped override): the
+            // 0.45 value was only ever compensating for colour management darkening
+            // 0x663300, and index.html now disables colour management outright.
             const spotMaterial = new THREE.MeshBasicMaterial({
                 color: 0x663300,
                 transparent: true,
-                opacity: 0.45,
-                toneMapped: false,
+                opacity: 0.7,
                 side: THREE.FrontSide
             });
             
@@ -524,18 +519,14 @@ class Sun {
         geometry.setAttribute('position',
             new THREE.BufferAttribute(this.solarWindPositions, 3));
 
-        // Create PointsMaterial with plasma glow.
-        // Opacity dropped 0.6 -> 0.3 with the r128 -> r184 upgrade. The colour
-        // (0xffaa44) is unchanged and always WAS orange; r128 simply had no
-        // sRGB->linear input conversion, so it was washed out to a pale ~0xffd68c and
-        // read as faint white specks. r184 colour management renders the authored
-        // orange, which turned the whole field into visible confetti. Halving opacity
-        // restores the previous subtlety while keeping the now-correct hue.
+        // Create PointsMaterial with plasma glow. Opacity is back to the authored 0.6:
+        // the 0.3 value was compensating for colour management rendering 0xffaa44 as
+        // saturated orange confetti, and index.html now disables colour management.
         const material = new THREE.PointsMaterial({
             size: 0.5,
             color: this.solarWindConfig.color,
             transparent: true,
-            opacity: 0.3,
+            opacity: 0.6,
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });

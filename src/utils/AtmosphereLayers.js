@@ -7,7 +7,7 @@
 // parented to the Earth mesh so it tracks the globe. The whole set fades out as the
 // camera zooms close so it never blocks the surface/streets view.
 //
-// global THREE r128, classic script (no modules). NASA Power-of-10 style:
+// global THREE (r184, republished from an ES module by index.html), classic script (no modules). NASA Power-of-10 style:
 // bounded loops, >=2 asserts/method, methods <=60 lines, no per-frame allocation.
 class AtmosphereLayers {
     /**

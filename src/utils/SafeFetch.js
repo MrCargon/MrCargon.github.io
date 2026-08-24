@@ -3,7 +3,7 @@
 //   - TTL cache so repeated reads don't hammer the API
 //   - circuit breaker: after N consecutive failures, stop trying for a cooldown
 //   - never throws; returns null on failure so one dead feed can't blank the globe
-// global SafeFetch, no modules. three.js r128 codebase convention.
+// global SafeFetch, no modules. three.js r184 codebase convention.
 class SafeFetch {
     // NASA Rule 5: validate inputs; Rule 2: all bounds fixed.
     static async json(url, options = {}) {

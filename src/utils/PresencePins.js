@@ -7,7 +7,7 @@
 // DATA + MESHES only. The backend (heartbeat/roster) lives in Presence.js; this module
 // just renders whatever roster it is handed via setUsers().
 //
-// global THREE r128 + GlobeMath, classic script. NASA Power-of-10: bounded loops,
+// global THREE (r184) + GlobeMath, classic script. NASA Power-of-10: bounded loops,
 // >=2 asserts/method, methods <=60 lines, pre-allocated structures, graceful fallback.
 class PresencePins {
     /**

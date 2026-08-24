@@ -127,39 +127,53 @@
     <script src="src/utils/NotesStore.js"></script>
     <script src="src/components/pages/Notes.js"></script>
 
-    <!-- 🌌 THREE.js Library - Using CDN with proper OrbitControls -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
-    <!-- Fat lines (Line2/LineMaterial) — real pixel-width lines for stylable street thickness -->
-    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/lines/LineSegmentsGeometry.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/lines/LineMaterial.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/lines/LineSegments2.js" crossorigin="anonymous"></script>
+    <!-- 🌌 THREE.js r184 (was r128, 2021).
+         Modern three.js ships ESM ONLY - the UMD `three.min.js` global build and the
+         whole `examples/js` folder were deleted in r14x, so the old <script src> tags
+         cannot be version-bumped in place. Instead we load three as a module via an
+         import map and republish it as `window.THREE`.
+
+         Why this keeps the rest of the site working: every simulation class below is a
+         plain classic script that only touches THREE at RUNTIME (inside constructors and
+         methods), never at class-definition time - verified before the upgrade. Module
+         scripts are deferred, so they run after those classes are defined but BEFORE the
+         window 'load' event, which is when anything actually instantiates them. -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+        "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.webgpu.js",
+        "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.tsl.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+      import * as THREE_NS from 'three';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+      import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+      import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+
+      // An ES module namespace object is immutable, so the addons cannot be hung off it
+      // directly the way examples/js used to. Spread into a plain object first.
+      const THREE = { ...THREE_NS };
+      THREE.OrbitControls = OrbitControls;
+      THREE.LineSegmentsGeometry = LineSegmentsGeometry;
+      THREE.LineMaterial = LineMaterial;
+      THREE.LineSegments2 = LineSegments2;
+      window.THREE = THREE;
+      window.__threeReady = true;
+    </script>
     <script>
-      window.addEventListener('load', function() {
-        if (typeof THREE !== 'undefined') {
-          if (typeof THREE.OrbitControls !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('threejs-ready'));
-          } else {
-            THREE.OrbitControls = function(camera, domElement) {
-              this.camera = camera;
-              this.domElement = domElement || document;
-              this.enabled = true;
-              this.target = new THREE.Vector3();
-              this.enableDamping = false;
-              this.dampingFactor = 0.05;
-              this.enableZoom = true;
-              this.minDistance = 0;
-              this.maxDistance = Infinity;
-              this.addEventListener = function() {};
-              this.removeEventListener = function() {};
-              this.dispatchEvent = function() {};
-              this.update = function() { return false; };
-            };
-            window.dispatchEvent(new CustomEvent('threejs-ready'));
-          }
-        } else {
-          window.dispatchEvent(new CustomEvent('threejs-failed'));
-        }
+      // Fail-soft: if the module never ran (no import-map support, CDN blocked, offline),
+      // window.THREE is absent and the app shows its 3D-unavailable path instead of
+      // throwing. The old inline OrbitControls stub is gone - it silently produced a
+      // dead camera that looked like a bug rather than a load failure.
+      window.addEventListener('load', function () {
+        var ok = (typeof window.THREE !== 'undefined') && !!window.THREE.OrbitControls;
+        window.dispatchEvent(new CustomEvent(ok ? 'threejs-ready' : 'threejs-failed'));
+        if (!ok) console.error('THREE.js failed to load (import map / module blocked?)');
       });
     </script>
     

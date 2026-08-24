@@ -8,7 +8,7 @@
 // update(deltaTime, j2000Days) drives rotation from rotationPeriodHours and
 // orbital position from OrbitalCalculator, and the moon is J2000-synced. Texture
 // keys follow the Vite SolarSystem config (data.nightLightsPath, etc.).
-// global THREE, three.js r128, classic script (no modules).
+// global THREE (r184, republished from an ES module by index.html), classic script (no modules).
 class Earth extends Planet {
     constructor(scene, resourceLoader, data) {
         super(scene, resourceLoader, data);

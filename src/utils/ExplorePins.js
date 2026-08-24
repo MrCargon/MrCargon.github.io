@@ -7,7 +7,7 @@
 // This module owns DATA + MESHES only. The panel UI, raycast picking and drag-to-move
 // interaction live in SpaceEnvironment (which owns the camera/controls/DOM).
 //
-// global THREE r128, classic script. NASA Power-of-10: bounded loops, >=2 asserts/
+// global THREE (r184, republished from an ES module by index.html), classic script. NASA Power-of-10: bounded loops, >=2 asserts/
 // method, methods <=60 lines, graceful fallback, dispose.
 class ExplorePins {
     /**

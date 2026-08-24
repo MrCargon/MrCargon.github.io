@@ -550,8 +550,38 @@ body {
 #explore-panel button:focus-visible, #explore-panel input:focus-visible, #explore-panel [tabindex]:focus-visible {
   outline: 2px solid var(--primary-color); outline-offset: 2px;
 }
+/* Collapsed: hide everything except the header, so there is always a way back.
+   Works at every width — on desktop it shrinks the docked panel to its title bar. */
+#explore-panel.ep-collapsed > *:not(.ep-header) { display: none; }
+/* Deliberately does NOT touch `bottom`. The desktop panel is top-anchored, but the
+   mobile one is anchored to bottom:78px — resetting bottom here sent the collapsed
+   sheet off the bottom of the phone screen, taking the only re-open control with it.
+   Overriding height/min-height alone shrinks it to the header against whichever edge
+   it is anchored to. */
+#explore-panel.ep-collapsed { height: auto; min-height: 0; max-height: none; resize: none; }
+
+.ep-collapse {
+  background: none; border: 0; color: inherit; cursor: pointer;
+  font-size: 14px; line-height: 1; padding: 4px 6px; margin-left: auto; opacity: 0.75;
+}
+.ep-collapse:hover { opacity: 1; }
+/* The close button used to be pushed right by margin-left:auto on itself; the
+   collapse button now owns that, so they sit together at the right edge. */
+#explore-panel .ep-header .ep-close { margin-left: 0; }
+
 @media (max-width: 600px) {
-  #explore-panel { top: 70px; right: 8px; left: 8px; width: auto; bottom: 78px; }
+  /* Was top:70px + bottom:78px, i.e. the panel covered the ENTIRE phone screen, so
+     Explore mode showed no globe at all. Now a bottom sheet capped at 45vh: the
+     globe keeps the upper half of the screen, and the sheet scrolls internally. */
+  #explore-panel {
+    top: auto; right: 8px; left: 8px; width: auto; bottom: 78px;
+    max-height: 45vh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Bigger tap targets — 14px glyphs are below the ~44px accessible minimum. */
+  #explore-panel .ep-collapse, #explore-panel .ep-close {
+    font-size: 18px; padding: 10px 12px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .ep-btn, .ep-switch, .ep-pin, .ep-sec-head .ep-caret { transition: none; }

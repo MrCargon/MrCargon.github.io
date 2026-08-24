@@ -277,6 +277,14 @@
         <aside class="explore-panel" id="explore-panel" hidden role="region" aria-label="Explore Earth controls">
             <div class="ep-header" id="ep-drag-handle">
                 <strong>🌍 Explore Earth</strong>
+                <!-- Collapse is deliberately SEPARATE from exit. On a phone the panel
+                     fills the screen, and when ✕ was the only control it both dismissed
+                     the panel and left Explore mode — so the globe could never actually
+                     be looked at on mobile. This one hides the controls and keeps you
+                     in Explore; ✕ still leaves entirely. -->
+                <button type="button" class="ep-collapse" id="explore-collapse"
+                        aria-expanded="true" aria-controls="explore-panel"
+                        aria-label="Hide controls and keep exploring" title="Hide controls (keep exploring)">▾</button>
                 <button type="button" class="ep-close" id="explore-exit" aria-label="Exit Explore Earth mode">✕</button>
             </div>
             <div class="ep-info">

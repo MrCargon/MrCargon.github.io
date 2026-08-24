@@ -2048,6 +2048,32 @@ class SpaceEnvironment {
     }
 
     /**
+     * Collapse/expand the Explore panel WITHOUT leaving Explore mode.
+     *
+     * On phones (<=600px) the panel is a bottom sheet and the header stays visible when
+     * collapsed, so there is always a control to bring it back. Before this existed the
+     * only dismiss control was ✕, which also exited Explore — meaning the globe could
+     * never be viewed on a phone at all. Rule 4: <=60 lines | Rule 5: 2 asserts.
+     * @returns {boolean} true if now collapsed
+     */
+    toggleExplorePanelCollapsed(force) {
+        console.assert(typeof document !== 'undefined', 'toggleExplorePanelCollapsed: document required');
+        console.assert(force === undefined || typeof force === 'boolean', 'toggleExplorePanelCollapsed: bad force');
+        const panel = document.getElementById('explore-panel');
+        if (!panel) return false;
+        const next = (force !== undefined) ? force : !panel.classList.contains('ep-collapsed');
+        panel.classList.toggle('ep-collapsed', next);
+        const btn = document.getElementById('explore-collapse');
+        if (btn) {
+            btn.setAttribute('aria-expanded', next ? 'false' : 'true');
+            btn.textContent = next ? '▴' : '▾';
+            btn.setAttribute('aria-label', next ? 'Show controls' : 'Hide controls and keep exploring');
+            btn.title = next ? 'Show controls' : 'Hide controls (keep exploring)';
+        }
+        return next;
+    }
+
+    /**
      * Remove the window-level explore-panel listeners (move/up/resize) if present.
      * Safe to call when none are attached. Rule 5: 2 asserts.
      * @returns {boolean}
@@ -2112,6 +2138,8 @@ class SpaceEnvironment {
             if (mode) mode.addEventListener('click', () => this._cycleMapMode(mode));
             const exit = document.getElementById('explore-exit');
             if (exit) exit.addEventListener('click', () => this.exitExploreMode());
+            const collapse = document.getElementById('explore-collapse');
+            if (collapse) collapse.addEventListener('click', () => this.toggleExplorePanelCollapsed());
             this._wireExploreSections(panel);     // collapsible section headers
             this._wireDetailSubToggles();         // satellite/streets/states/cities/districts
             this._wirePinControls();              // add / editor / list delegation

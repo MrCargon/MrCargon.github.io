@@ -283,6 +283,7 @@ class SolarSystem {
     }
     
     async createPlanets() {
+        const pending = [];
         for (const planetData of this.planetData.planets) {
             // Create planet instance based on its name
             let planet;
@@ -316,18 +317,30 @@ class SolarSystem {
                     planet = new Planet(this.scene, this.resourceLoader, planetData);
             }
 
-            // NASA Rule 7: Check initialization return value
-            const initSuccess = await planet.init();
+            pending.push({ planet, planetData });
+        }
 
-            if (!initSuccess) {
+        // PARALLEL init. This used to `await planet.init()` INSIDE the loop, so all
+        // eight planets fetched their textures strictly one after another — each one a
+        // full network round trip before the next even started. Measured on the live
+        // site, the "Loading planet textures" phase was 4501ms of a 5177ms load, i.e.
+        // 87% of everything the visitor waits for. The browser will happily run ~6
+        // connections at once; serialising them threw that away.
+        //
+        // Promise.all preserves array order, and allSettled semantics are emulated by
+        // init() already being fail-soft (it returns false rather than throwing), so a
+        // single missing texture cannot reject the whole solar system.
+        const results = await Promise.all(pending.map(e => e.planet.init()));
+
+        // Registration and orbit lines stay in declaration order, so scene ordering and
+        // this.objects iteration order are unchanged from the serial version.
+        for (let i = 0; i < pending.length; i++) {          // Rule 2: bounded
+            const { planet, planetData } = pending[i];
+            if (!results[i]) {
                 console.warn(`SolarSystem: ${planetData.name} initialization failed, using fallback rendering`);
-                // Planet base class should handle fallback internally
-                // Still add to scene - will render with basic material
+                // Planet base class handles fallback internally; still added to scene.
             }
-
             this.objects.set(planetData.name.toLowerCase(), planet);
-
-            // Create orbit visualization
             this.createOrbitLine(planetData);
         }
     }
@@ -346,11 +359,15 @@ class SolarSystem {
             DwarfPlanet.createMakemake(this.scene, this.resourceLoader)
         ];
 
-        // Initialize each dwarf planet and add to scene
+        // Initialize in PARALLEL for the same reason as createPlanets: awaiting each
+        // init() inside the loop made five more bodies fetch their textures strictly
+        // one after another, on top of the eight planets already doing so.
         // NASA Rule 7: Check all return values
-        for (let i = 0; i < dwarfPlanets.length; i++) {
+        const dwarfResults = await Promise.all(dwarfPlanets.map(d => d.init()));
+
+        for (let i = 0; i < dwarfPlanets.length; i++) {      // Rule 2: bounded
             const dwarfPlanet = dwarfPlanets[i];
-            const initSuccess = await dwarfPlanet.init();
+            const initSuccess = dwarfResults[i];
 
             // NASA Rule 7: Handle initialization failure with fallback
             if (!initSuccess) {

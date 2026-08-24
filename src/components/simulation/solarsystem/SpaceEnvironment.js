@@ -71,7 +71,7 @@ class SpaceEnvironment {
         // radians per SECOND (deltaTime-scaled where it is applied). Was 0.0005 per
         // FRAME, which is both frame-rate dependent and fast enough to be dizzying
         // after a few seconds. 0.012 is ~8.7 minutes per lap.
-        this.autoOrbitSpeed = 0.012;
+        this.autoOrbitSpeed = 0.006;   // ~17 min per lap; was dizzying to watch
         this.orbitRadius = 15; // Distance to maintain when orbiting
         this.orbitAngle = 0; // Current angle for auto-orbit
         this.isAutoOrbiting = false;
@@ -80,7 +80,10 @@ class SpaceEnvironment {
         this.backgroundMode = false;
         // radians per SECOND (deltaTime-scaled in updateGentleRotation). Was 0.0001
         // per FRAME, i.e. one orbit every ~17 min at 60fps and frame-rate dependent.
-        this.gentleRotationSpeed = 0.015;  // ~7 min per orbit — ambient, not a carousel
+        // Tuned down twice on user feedback: 0.06 (2.4 min/lap) read as a carousel,
+        // 0.015 (8 min) was still 'a bit too fast' behind page content. 0.006 is a
+        // ~17 min lap — a drift you notice only if you look for it.
+        this.gentleRotationSpeed = 0.006;
         // 0.3 made the backdrop so faint that even correct motion read as frozen.
         // 0.45 keeps it clearly secondary to page content but visibly alive.
         this.backgroundOpacity = 0.45;

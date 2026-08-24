@@ -8,7 +8,7 @@
 // This is layer 1 of the staged "atmosphere objects" vision; mesosphere meteors,
 // thermosphere auroras and exosphere stations follow as sibling modules.
 //
-// global THREE r128, classic script (no modules). NASA Power-of-10 style: bounded
+// global THREE (r184, republished from an ES module by index.html), classic script (no modules). NASA Power-of-10 style: bounded
 // object counts, >=2 asserts/method, methods <=60 lines, no per-frame allocation
 // (pooled scratch + pre-seeded arrays), graceful dispose, reduced-motion aware.
 class TroposphereObjects {

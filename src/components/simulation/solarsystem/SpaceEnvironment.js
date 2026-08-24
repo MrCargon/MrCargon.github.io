@@ -574,31 +574,27 @@ class SpaceEnvironment {
         // desaturated, because the renderer emits linear values to an sRGB display
         // and ACES tone mapping above assumes correctly-encoded output.
         //
-        // index.html currently loads three.js r128, where `THREE.SRGBColorSpace` does
-        // not exist — so an r155+-only guard silently does nothing and leaves the
-        // default LinearEncoding in place. That was the cause of the "dark lens over
-        // everything" look (diagnosed 2026-08-21). Handle both APIs.
-        if (THREE.SRGBColorSpace) {
-            this.renderer.outputColorSpace = THREE.SRGBColorSpace;   // r152+
-        } else if (THREE.sRGBEncoding !== undefined) {
-            this.renderer.outputEncoding = THREE.sRGBEncoding;       // r128 (current)
-        }
-        // Physically-based lighting. r155+ calls it useLegacyLights (false = modern);
-        // r128 calls it physicallyCorrectLights (true = modern). Same intent.
-        this.renderer.useLegacyLights = false;
-        if ('physicallyCorrectLights' in this.renderer) {
-            this.renderer.physicallyCorrectLights = true;
-        }
+        // On r184 (upgraded from r128 in 2026-08) sRGB output is the standard API and
+        // is always present. The old r128 `outputEncoding`/`sRGBEncoding` fallback has
+        // been removed along with the version guard: on r128 that guard silently did
+        // nothing and left LinearEncoding in place, which was the original cause of the
+        // "dark lens over everything" bug. Keeping a dead branch here would just invite
+        // the same silent failure back.
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // NOTE: physicallyCorrectLights / useLegacyLights are both GONE as of r165 —
+        // physically-correct lighting is now unconditional, so there is nothing to set.
+        // Light *intensities* are what carry the change; see setupRealisticLighting().
 
         // Add renderer to container
         this.container.appendChild(this.renderer.domElement);
 
         // Debug renderer settings
         console.log('Renderer lighting config', {
+            revision: THREE.REVISION,
             outputColorSpace: this.renderer.outputColorSpace,
             toneMapping: this.renderer.toneMapping,
-            exposure: this.renderer.toneMappingExposure,
-            useLegacyLights: this.renderer.useLegacyLights
+            exposure: this.renderer.toneMappingExposure
         });
         
         // 🌟 COMPREHENSIVE LIGHTING SYSTEM

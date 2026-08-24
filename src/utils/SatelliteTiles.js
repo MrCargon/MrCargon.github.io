@@ -19,7 +19,7 @@
 // Architecture MIRRORS StreetTiles: lazy build, LRU eviction, centered Chebyshev
 // tile selection, _disposed guard, reduced-motion snap, failed-tile 30s retry,
 // fail-soft. NASA Power-of-10 style: bounded loops, >=2 asserts/method, methods
-// <=60 lines, no per-frame allocation in update(). global THREE r128, classic script.
+// <=60 lines, no per-frame allocation in update(). global THREE (r184, republished from an ES module by index.html), classic script.
 class SatelliteTiles {
     /**
      * @param {THREE.Mesh} earthMesh - the globe mesh; built patches are parented to it
@@ -84,7 +84,7 @@ class SatelliteTiles {
         // every uncached key's TextureLoader.load() was dispatched in the same
         // tick, competing for the browser's ~6-connections-per-origin limit.
         // Skipped builds just retry next update() tick (already throttled).
-        // THREE.TextureLoader (r128) has no AbortController support, unlike
+        // THREE.TextureLoader has no AbortController support, unlike
         // StreetTiles' raw fetch(), so a genuinely stale build (its key fell out
         // of the covering set before the texture finished loading) can't be
         // network-cancelled here - _desiredKeys lets the commit step at least
@@ -437,14 +437,15 @@ class SatelliteTiles {
         return geometry;
     }
 
-    // Apply sRGB color space + anisotropy, guarded for r128 variants. Rule 5: 2 asserts.
+    // Apply sRGB color space + anisotropy. Rule 5: 2 asserts.
     _configureTexture(texture) {
         console.assert(texture && typeof texture === 'object', '_configureTexture: texture required');
         console.assert(typeof THREE !== 'undefined', '_configureTexture: THREE required');
-        // r128 uses texture.encoding = THREE.sRGBEncoding; newer builds use colorSpace.
-        if ('colorSpace' in texture && THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
-        else if ('encoding' in texture && THREE.sRGBEncoding) texture.encoding = THREE.sRGBEncoding;
-        texture.anisotropy = 4;                 // guarded: harmless integer in r128
+        // r184: colorSpace is the API. The old `texture.encoding = THREE.sRGBEncoding`
+        // branch was removed with the r128 upgrade - `encoding` no longer exists, so a
+        // fallback would only ever be dead code hiding a future silent regression.
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 4;
         // No mipmaps: tiles render near 1:1, so the mip chain is wasted GPU memory
         // (~25% per texture). With up to 72 cached tiles this is a real saving on
         // integrated/mobile GPUs. LinearFilter avoids the mipmap requirement.

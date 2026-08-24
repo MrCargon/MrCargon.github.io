@@ -14,7 +14,7 @@
 // Patterns mirrored from Earth.js (buildBorders/buildGraticule): lazy build, one
 // draw call per unit, rOffset z-lift, opacity cross-fade, dispose, fail-soft.
 // NASA Power-of-10 style: bounded loops, >=2 asserts/method, methods <=60 lines,
-// no per-frame allocation in update(). global THREE r128, classic script.
+// no per-frame allocation in update(). global THREE (r184, republished from an ES module by index.html), classic script.
 class StreetTiles {
     /**
      * @param {THREE.Mesh} earthMesh - the globe mesh; built tiles are parented to it

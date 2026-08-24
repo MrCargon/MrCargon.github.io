@@ -10,7 +10,7 @@
 //
 // REUSE: GlobeMath.latLngToVector3(lat,lng,radius) for all lat/lng -> Vector3, and
 // SafeFetch.json(url,{ttl}) for fetching (falls back to fetch(); fails soft).
-// global THREE (r128), global GlobeMath, global SafeFetch. Classic script, no modules.
+// global THREE (r184), global GlobeMath, global SafeFetch. Classic script, no modules.
 class GeoLOD {
     // NASA Rule 5: validate deps. Does NOT build geometry (lazy).
     constructor(earthMesh, radius, options = {}) {

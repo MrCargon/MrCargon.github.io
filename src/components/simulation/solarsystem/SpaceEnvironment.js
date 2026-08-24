@@ -673,7 +673,24 @@ class SpaceEnvironment {
         console.log('🌟 Setting up comprehensive solar lighting system...');
         
         // 1. PRIMARY SUN LIGHT - The main star illumination
-        this.sunLight = new THREE.PointLight(0xFFFFE0, 0.8, 0, 2); // Warm sunlight color, more realistic intensity
+        // decay MUST be 0 here, not the physical 2.
+        //
+        // Inverse-square falloff is correct for real units, but this scene is not in
+        // real units: planets sit 40 (Mercury) to 1800 (Neptune) scene units from the
+        // Sun. With decay 2 the received intensity is intensity/d^2, i.e. 0.8/40^2 =
+        // 0.0005 at Mercury and 2.4e-7 at Neptune - indistinguishable from zero. The
+        // planets were therefore lit ENTIRELY by ambient light and rendered perfectly
+        // flat, with no day/night terminator at all: measured lit-limb/dark-limb
+        // brightness ratios of 0.78-1.02 across all six tested planets, where a real
+        // point-lit sphere gives well above 2.
+        //
+        // To keep decay 2 you would need intensity ~ d^2, i.e. millions, and it would
+        // still be unusable because one intensity cannot serve both Mercury and
+        // Neptune. decay 0 gives every planet the same solar illumination regardless
+        // of distance. That is not physically right either - real irradiance does fall
+        // off - but the alternative is no sunlight anywhere, and the direction of the
+        // light (which is what produces the terminator) is correct at every distance.
+        this.sunLight = new THREE.PointLight(0xFFFFE0, 2.2, 0, 0);
         this.sunLight.position.set(0, 0, 0); // At Sun's position
         this.sunLight.castShadow = true;
         
@@ -690,12 +707,17 @@ class SpaceEnvironment {
         console.log('☀️ Primary sun light configured');
         
         // 2. AMBIENT SPACE LIGHT - Minimal fill lighting for visibility
-        this.ambientLight = new THREE.AmbientLight(0x404080, 0.08); // Cool deep space ambient (realistic level)
+        // Ambient is now FILL only. It used to be the sole illumination (see the sunLight
+        // note above), which is why every planet looked flat. Kept low so the night side
+        // reads as night rather than pure black.
+        this.ambientLight = new THREE.AmbientLight(0x404080, 0.05);
         this.scene.add(this.ambientLight);
         console.log('🌌 Ambient space light added');
         
         // 3. SECONDARY SUN GLOW - Enhances the sun's visual presence
-        this.sunGlow = new THREE.PointLight(0xFFA500, 0.4, 150, 1.5); // Orange glow (more realistic)
+        // Warm rim glow near the Sun. distance 150 deliberately keeps this LOCAL - it is a
+        // look-of-the-corona light, not the illumination source; sunLight above does that.
+        this.sunGlow = new THREE.PointLight(0xFFA500, 0.5, 150, 0);
         this.sunGlow.position.set(0, 0, 0);
         this.scene.add(this.sunGlow);
         console.log('🔥 Sun glow enhancement added');

@@ -322,7 +322,12 @@ class Sun {
     
     createLight() {
         // Scientific values for solar illumination
-        this.light = new THREE.PointLight(0xffffff, 2, 1);
+        // distance was 1: this light reached one scene unit from the Sun's centre,
+        // i.e. it lit nothing at all (the Sun's own radius is far larger). It has been
+        // dead since it was written. distance 0 = unlimited, decay 0 to match the main
+        // sunLight in SpaceEnvironment (see the long note there on why physical decay
+        // is unusable at this scene's scale).
+        this.light = new THREE.PointLight(0xffffff, 0.6, 0, 0);
         this.mesh.add(this.light);
         
         // Add ambient light for general illumination

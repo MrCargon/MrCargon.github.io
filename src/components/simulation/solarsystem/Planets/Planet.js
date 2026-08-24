@@ -218,6 +218,12 @@ class Planet {
             return;
         }
 
+        // Scale View (the size-comparison "family portrait") parks the planets in a row
+        // and owns their transforms while active. Without this early-out the orbital
+        // solver below would rewrite mesh.position every frame and yank each planet
+        // straight back into its orbit. Spin is skipped too so the lineup stays still.
+        if (this.freezePosition) return;
+
         // BUG FIX 1: Sync rotation with TimeScaleManager (just like orbital position)
         // NASA Rule 7: Check if time-synchronized mode is available
         if (j2000Days !== null && this.data.rotationPeriodHours) {

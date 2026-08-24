@@ -539,6 +539,14 @@ class Earth extends Planet {
     update(deltaTime, j2000Days = null) {
         if (!this.mesh) return;
 
+        // Scale View owns every planet's transform while active. This override does NOT
+        // call super.update(), so the identical guard in Planet.update() never runs for
+        // Earth — without this line Earth was the one body that stayed in its orbit
+        // while the other eight lined up. Returning early (rather than relying on
+        // `frozen`) keeps the two modes independent: `frozen` is explore mode's flag and
+        // is cleared on explore exit, which would silently release Earth mid-lineup.
+        if (this.freezePosition) return;
+
         // Frozen (explore mode): skip orbit/spin/clouds/moon so the globe holds
         // still for inspection. Sun + marker refresh below still run.
         if (!this.frozen) {

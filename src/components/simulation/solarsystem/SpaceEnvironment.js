@@ -893,6 +893,11 @@ class SpaceEnvironment {
         // Connect planet buttons - handled by PageManager
         
         // Connect camera controls
+        const scaleViewBtn = document.getElementById('scale-view');
+        if (scaleViewBtn) {
+            scaleViewBtn.addEventListener('click', () => this.toggleScaleView());
+        }
+
         const resetCameraBtn = document.getElementById('reset-camera');
         if (resetCameraBtn) {
             resetCameraBtn.addEventListener('click', () => this.resetCamera());
@@ -964,6 +969,15 @@ class SpaceEnvironment {
             if (this.exploreMode) {
                 this.exitExploreMode(true);
             }
+            // Same for Scale View: it freezes every planet's position, so leaving it
+            // engaged here would reset the camera onto a solar system stuck in a row.
+            // Clear the saved camera BEFORE exiting so _exitScaleView restores the
+            // orbits without also starting its own fly-back — otherwise two competing
+            // smoothCameraTransition calls fight over the camera in the same frame.
+            if (this.scaleViewActive) {
+                this._scaleViewCamSaved = null;
+                this._exitScaleView();
+            }
             this.cameraTransitioning = true;
             this.isAutoOrbiting = false;
             
@@ -985,6 +999,200 @@ class SpaceEnvironment {
                 }
             );
         }
+    }
+
+    // ---- Scale View: the planetary "family portrait" -----------------------
+    //
+    // Lines the planets up side by side at their TRUE relative sizes so you can
+    // actually see that Jupiter dwarfs Earth. The orbital view can never show this:
+    // there, planets sit at wildly different distances, so apparent size is dominated
+    // by perspective rather than by real size.
+    //
+    // Positions are DERIVED from each body's own data.radius rather than hard-coded,
+    // so adding or resizing a planet needs no changes here.
+
+    /** Toggle the size-comparison lineup on/off. Rule 5: 2 asserts. */
+    toggleScaleView() {
+        console.assert(this.solarSystem, 'toggleScaleView: solarSystem required');
+        console.assert(this.camera, 'toggleScaleView: camera required');
+        if (this.scaleViewActive) return this._exitScaleView();
+        return this._enterScaleView();
+    }
+
+    /** Collect the bodies to line up, innermost first. Rule 5: 2 asserts. */
+    _scaleViewBodies() {
+        console.assert(this.solarSystem, '_scaleViewBodies: solarSystem required');
+        console.assert(this.solarSystem.objects instanceof Map, '_scaleViewBodies: objects map required');
+        // Sun excluded on purpose: at true scale it is ~10x Jupiter, so including it
+        // shrinks every planet to a speck and destroys the comparison the view exists
+        // to make. Ordered sunward-out, the way the size story reads.
+        const ORDER = ['mercury', 'venus', 'earth', 'mars',
+                       'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+        const out = [];
+        for (let i = 0; i < ORDER.length; i++) {                     // Rule 2: bounded
+            const body = this.solarSystem.objects.get(ORDER[i]);
+            if (!body) continue;
+            const mesh = (typeof body.getMesh === 'function') ? body.getMesh() : body.mesh;
+            const r = body.data && body.data.radius;
+            if (mesh && Number.isFinite(r) && r > 0) out.push({ body, mesh, r });
+        }
+        return out;
+    }
+
+    /** Park the planets in a row and frame them. Rule 4: <=60 lines | Rule 5: 2 asserts. */
+    _enterScaleView() {
+        console.assert(!this.scaleViewActive, '_enterScaleView: not already active');
+        console.assert(this.camera, '_enterScaleView: camera required');
+        const items = this._scaleViewBodies();
+        if (items.length === 0) return false;
+        if (this.exploreMode) this.exitExploreMode(true);
+        this.isAutoOrbiting = false;
+
+        // Remember everything we are about to overwrite, so exit is exact.
+        this._scaleViewSaved = items.map(it => ({
+            body: it.body, mesh: it.mesh,
+            pos: it.mesh.position.clone(),
+            parent: it.mesh.parent,
+            visible: it.mesh.visible
+        }));
+        this._scaleViewCamSaved = {
+            pos: this.camera.position.clone(),
+            target: this.controls ? this.controls.target.clone() : new THREE.Vector3()
+        };
+
+        // Lay out along +X, touching-with-a-gap: each centre is offset from the last
+        // by both radii plus a fixed fraction of the larger one.
+        const GAP = 0.35;                       // fraction of the larger neighbour radius
+        let cursor = 0;
+        for (let i = 0; i < items.length; i++) {                     // Rule 2: bounded
+            const it = items[i];
+            if (i > 0) cursor += items[i - 1].r + it.r + GAP * Math.max(items[i - 1].r, it.r);
+            it.body.freezePosition = true;      // stop the orbital solver fighting us
+            it.mesh.position.set(cursor, 0, 0);
+            it.mesh.visible = true;
+        }
+        const width = cursor + items[items.length - 1].r;
+        const midX = width / 2;
+        this._hideSolarBackdrop(true);
+
+        this.scaleViewActive = true;
+        this._frameScaleView(midX, width, items);
+        this._setScaleViewButton(true);
+        return true;
+    }
+
+    /** Fly the camera to frame the whole lineup. Rule 5: 2 asserts. */
+    _frameScaleView(midX, width, items) {
+        console.assert(Number.isFinite(midX) && Number.isFinite(width), '_frameScaleView: extent required');
+        console.assert(Array.isArray(items) && items.length > 0, '_frameScaleView: items required');
+        // Fit the row's WIDTH to the viewport: horizontal FOV is the vertical FOV
+        // widened by the aspect ratio, so framing off vertical FOV alone would crop
+        // the ends on wide screens and over-zoom on tall ones.
+        const vFov = (this.camera.fov || 60) * Math.PI / 180;
+        const aspect = this.camera.aspect || 1;
+        const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+        let maxR = 0;
+        for (let i = 0; i < items.length; i++) maxR = Math.max(maxR, items[i].r);
+        const distW = (width / 2) / Math.tan(hFov / 2);
+        const distH = maxR / Math.tan(vFov / 2);
+        const dist = Math.max(distW, distH) * 1.18;      // 18% breathing room
+        const target = new THREE.Vector3(midX, 0, 0);
+        this.cameraTransitioning = true;
+        this.smoothCameraTransition(
+            new THREE.Vector3(midX, maxR * 0.35, dist),
+            target,
+            () => { this.cameraTransitioning = false; }
+        );
+        return dist;
+    }
+
+    /** Restore orbits and the previous camera. Rule 4: <=60 | Rule 5: 2 asserts. */
+    _exitScaleView() {
+        console.assert(this.scaleViewActive, '_exitScaleView: must be active');
+        console.assert(Array.isArray(this._scaleViewSaved), '_exitScaleView: saved state required');
+        const saved = this._scaleViewSaved || [];
+        for (let i = 0; i < saved.length; i++) {                     // Rule 2: bounded
+            const s = saved[i];
+            s.body.freezePosition = false;   // orbital solver resumes and re-derives
+            s.mesh.position.copy(s.pos);     // exact restore in case it stays paused
+            s.mesh.visible = s.visible;
+        }
+        this._hideSolarBackdrop(false);
+        this.scaleViewActive = false;
+        this._scaleViewSaved = null;
+        this._setScaleViewButton(false);
+
+        const cam = this._scaleViewCamSaved;
+        if (cam) {
+            this.cameraTransitioning = true;
+            this.smoothCameraTransition(cam.pos, cam.target, () => { this.cameraTransitioning = false; });
+            this._scaleViewCamSaved = null;
+        }
+        return true;
+    }
+
+    /**
+     * Hide the Sun + orbit rings during Scale View and light the lineup flatly.
+     * The Sun sits at the origin at ~10x Jupiter, so with the row starting near x=0 it
+     * simply swallowed the four inner planets. Hiding an Object3D also removes any
+     * lights beneath it from the render traversal, which would leave every planet
+     * black — hence the temporary portrait rig. Flat, even light is what a size
+     * comparison wants anyway: half-lit crescents hide exactly the silhouette you are
+     * trying to compare. Rule 4: <=60 lines | Rule 5: 2 asserts.
+     */
+    _hideSolarBackdrop(hide) {
+        console.assert(typeof hide === 'boolean', '_hideSolarBackdrop: boolean required');
+        console.assert(this.scene, '_hideSolarBackdrop: scene required');
+        if (hide) {
+            this._scaleViewHidden = [];
+            const sun = this.solarSystem.objects.get('sun');
+            const sunMesh = sun && (typeof sun.getMesh === 'function' ? sun.getMesh() : sun.mesh);
+            if (sunMesh && sunMesh.visible) {
+                this._scaleViewHidden.push(sunMesh);
+                sunMesh.visible = false;
+            }
+            // Orbit rings would still be drawn across the lineup as stray arcs.
+            this.scene.traverse(o => {
+                if (!o.visible || o === sunMesh) return;
+                const n = (o.name || '').toLowerCase();
+                if (n.indexOf('orbit') !== -1 || n.indexOf('asteroid') !== -1 || n.indexOf('kuiper') !== -1) {
+                    this._scaleViewHidden.push(o);
+                    o.visible = false;
+                }
+            });
+            // Portrait rig: strong ambient so nothing is in shadow, plus a gentle key
+            // from the camera side to keep the spheres reading as spheres, not discs.
+            this._scaleViewRig = new THREE.Group();
+            this._scaleViewRig.name = 'scaleViewRig';
+            this._scaleViewRig.add(new THREE.AmbientLight(0xffffff, 2.2));
+            const key = new THREE.DirectionalLight(0xffffff, 2.0);
+            key.position.set(0.4, 0.6, 1);
+            this._scaleViewRig.add(key);
+            this.scene.add(this._scaleViewRig);
+            return true;
+        }
+        const hidden = this._scaleViewHidden || [];
+        for (let i = 0; i < hidden.length; i++) hidden[i].visible = true;   // Rule 2: bounded
+        this._scaleViewHidden = null;
+        if (this._scaleViewRig) {
+            this.scene.remove(this._scaleViewRig);
+            this._scaleViewRig.traverse(o => { if (o.dispose) o.dispose(); });
+            this._scaleViewRig = null;
+        }
+        return true;
+    }
+
+    /** Reflect state on the button (pressed + label). Rule 5: 2 asserts. */
+    _setScaleViewButton(on) {
+        console.assert(typeof on === 'boolean', '_setScaleViewButton: boolean required');
+        console.assert(typeof document !== 'undefined', '_setScaleViewButton: document required');
+        const btn = document.getElementById('scale-view');
+        if (!btn) return false;
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.classList.toggle('active', on);
+        const label = btn.querySelector('.btn-label');
+        if (label) label.textContent = on ? 'Exit Scale' : 'Scale View';
+        return true;
     }
 
     /**

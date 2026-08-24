@@ -11,6 +11,14 @@ class SolarSystem {
         };
         
         this.objects = new Map();
+
+        // Scene units per astronomical unit. This is the ONE number that ties the
+        // simulation's geometry to reality: Earth's semiMajorAxis is 60 for 1.000 AU,
+        // Mars 92 for 1.524, Jupiter 312 for 5.203, Neptune 1804 for 30.07 — all
+        // consistent at 60. Belts and any future ring/orbit MUST be derived from this
+        // rather than hand-typed, because hand-typed radii are exactly how the asteroid
+        // belt ended up wrapped around Mars and the Kuiper belt ended up inside
+        // Jupiter's orbit.
         this.animationEnabled = true;
         this.showOrbits = true;
         this.orbitLines = new THREE.Group();
@@ -424,7 +432,20 @@ class SolarSystem {
     }
     
     async createAsteroidBelt() {
-        const asteroidBelt = new AsteroidBelt(this.scene, 85, 95, 1000);
+        // Derived from AU, never hand-tuned. The scene runs at UNITS_PER_AU (Earth's
+        // semiMajorAxis is 60 for 1.000 AU, Mars 92 for 1.524, Neptune 1804 for 30.07).
+        //
+        // This was `new AsteroidBelt(this.scene, 85, 95, 1000)` — a belt spanning
+        // 1.42 to 1.58 AU. Mars orbits at 92 units = 1.53 AU, i.e. the planet sat in
+        // the MIDDLE of the asteroid belt. The real main belt is 2.1-3.3 AU, safely
+        // outside Mars. Deriving the radii from AU means this cannot silently drift
+        // out of agreement with the planet data again.
+        const asteroidBelt = new AsteroidBelt(
+            this.scene,
+            SolarSystem.AU * 2.1,    // inner edge of the main belt
+            SolarSystem.AU * 3.3,    // outer edge (Kirkwood gaps aside)
+            1000
+        );
 
         // NASA Rule 7: Check initialization return value
         const initSuccess = await asteroidBelt.init();
@@ -439,13 +460,16 @@ class SolarSystem {
     }
 
     createKuiperBelt() {
-        // Kuiper Belt: 30-50 AU from Sun (Neptune at 30 AU)
-        // Scaled to simulation units with 30-unit gap from Neptune (210 units)
-        // Particle count: 1500 (conservative for 60fps target, reduce to 1000 if performance degrades)
+        // Kuiper Belt: 30-50 AU, i.e. starting at Neptune's orbit and extending out.
+        //
+        // Was hard-coded 240-380 units on the stated assumption that Neptune sits at
+        // 210 units. Neptune's semiMajorAxis is 1804. So the "Kuiper belt" was being
+        // drawn at 4-6.3 AU — in between Jupiter (312) and Saturn (572), nowhere near
+        // where it belongs. Derived from AU now, same as the asteroid belt.
         const kuiperBelt = new KuiperBelt(
             this.scene,
-            240, // Inner radius (30 AU scaled, 30-unit gap from Neptune at 210)
-            380, // Outer radius (50 AU scaled, maintains ~140 unit belt width)
+            SolarSystem.AU * 30,   // inner edge, at Neptune's orbit
+            SolarSystem.AU * 50,   // outer edge of the classical belt
             1500 // Particle count (reduced from 2000 for performance safety)
         );
         this.objects.set('kuiperBelt', kuiperBelt);
@@ -604,3 +628,6 @@ class SolarSystem {
 
 // Make globally available
 window.SolarSystem = SolarSystem;
+
+// Scene units per astronomical unit — see the note in the constructor.
+SolarSystem.AU = 60;

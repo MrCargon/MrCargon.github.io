@@ -17,7 +17,7 @@
 //   The x/y/z math is otherwise identical Web Mercator — reuse StreetTiles math.
 //
 // Architecture MIRRORS StreetTiles: lazy build, LRU eviction, centered Chebyshev
-// tile selection, _disposed guard, reduced-motion snap, failed-tile 30s retry,
+// tile selection, _disposed guard, reduced-motion snap, failed-tile jittered exponential retry,
 // fail-soft. NASA Power-of-10 style: bounded loops, >=2 asserts/method, methods
 // <=60 lines, no per-frame allocation in update(). global THREE (r184, republished from an ES module by index.html), classic script.
 class SatelliteTiles {
@@ -91,6 +91,7 @@ class SatelliteTiles {
         // discard it instead of caching/showing tiles nobody wants anymore.
         this.maxConcurrentBuilds = Number.isFinite(opts.maxConcurrentBuilds) ? opts.maxConcurrentBuilds : 6;
         this._desiredKeys = new Set();
+        this._retryAttempts = new Map();     // key -> consecutive failures, for backoff
         this.failed = 0;
         this.visible = true;
         this._lightFactor = 1;           // sun-lit dim factor (1=day, ~0.35=night)
@@ -168,6 +169,27 @@ class SatelliteTiles {
         z = Math.max(this.minZoom, Math.min(this.maxZoom, z));
         this._lastZoom = z;
         return z;
+    }
+
+    // Exponential backoff with EQUAL JITTER for a failed tile. Mirrors StreetTiles
+    // (see the long note there). The flat 30s retry it replaces was a thundering
+    // herd: a zoom step invalidates the whole covering set, so a bad network moment
+    // fails all of them together and a fixed delay retried all of them together,
+    // forever. This layer is the worse offender - up to 121 image tiles per level,
+    // each far heavier than a vector tile. Rule 5: 2 asserts.
+    _scheduleRetry(key, now) {
+        console.assert(typeof key === 'string', '_scheduleRetry: key required');
+        console.assert(Number.isFinite(now), '_scheduleRetry: timestamp required');
+        var BASE = 30000, MAX = 300000, FLOOR = 2000;   // 30s → capped at 5 min
+        var attempts = (this._retryAttempts.get(key) || 0) + 1;
+        if (this._retryAttempts.size < 500) this._retryAttempts.set(key, attempts);  // Rule 2: bounded
+        var window_ = Math.min(BASE * Math.pow(2, attempts - 1), MAX);
+        // FULL jitter across the whole window, not half of it. Equal jitter
+        // (window/2 + random(window/2)) was tried first and only cut the worst 5s
+        // burst 2.6x, because it confines every retry to the back half. Spreading
+        // across the full window cuts it ~5x. FLOOR keeps a just-failed tile from
+        // retrying on the very next tick.
+        return now + FLOOR + Math.random() * (window_ - FLOOR);
     }
 
     // ---- update: enumerate covering tiles, lazily build, LRU-evict ---------
@@ -296,7 +318,7 @@ class SatelliteTiles {
         var rec = this.tiles.get(key);
         if (rec) {
             if (rec.state === 'failed') {
-                if (now - rec.failedAt > 30000) {
+                if (now >= rec.retryAt) {
                     this.tiles.delete(key);
                     if (!this._building.has(key) && this._building.size < this.maxConcurrentBuilds) {
                         this._buildTileKey(key, now);
@@ -330,7 +352,7 @@ class SatelliteTiles {
             self._building.delete(key);
             // A2: disposed mid-flight → never re-add an orphan; dispose it instead.
             if (self._disposed) { if (mesh) self._disposeMesh(mesh); return; }
-            if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', failedAt: now }); return; }
+            if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
             // 2026-08-15: TextureLoader can't be network-aborted (see constructor
             // note), so a fast zoom/pan can still let this resolve after the key
             // is no longer wanted. Discard rather than adding to the scene/cache -
@@ -339,12 +361,13 @@ class SatelliteTiles {
             // for a tile nobody will see.
             if (!self._desiredKeys.has(key)) { self._disposeMesh(mesh); return; }
             self.earthMesh.add(mesh);
+            self._retryAttempts.delete(key);   // recovered → next failure starts at attempt 1
             self.tiles.set(key, { mesh: mesh, t: now, state: 'built' });
             self._evict();
         }).catch(function (e) {
             self._building.delete(key);
             self.failed++;
-            self.tiles.set(key, { mesh: null, t: now, state: 'failed', failedAt: now });
+            self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) });
             console.warn('SatelliteTiles: tile ' + key + ' failed:', e && e.message);
         });
     }

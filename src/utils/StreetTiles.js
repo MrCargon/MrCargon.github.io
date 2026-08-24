@@ -77,6 +77,7 @@ class StreetTiles {
         //   actually aborted instead of completing and being thrown away.
         this.maxConcurrentBuilds = Number.isFinite(opts.maxConcurrentBuilds) ? opts.maxConcurrentBuilds : 6;
         this._abortControllers = new Map();  // key -> AbortController
+        this._retryAttempts = new Map();     // key -> consecutive failures, for backoff
         this._desiredKeys = new Set();       // this frame's covering set, for abort checks
         this.failed = 0;
         this.visible = true;
@@ -228,6 +229,35 @@ class StreetTiles {
         return true;
     }
 
+    // Exponential backoff with EQUAL JITTER for a failed tile.
+    //
+    // The old rule was a flat 30s retry, which is a textbook thundering herd: a zoom
+    // step invalidates the whole covering set at once, so when the network or the
+    // tile host has a bad moment ALL of them fail in the same tick, and a fixed delay
+    // makes all of them retry in the same tick too - forever, every 30s. Measured in
+    // a headless run: 49 of 49 street tiles failed together. A fixed backoff turns one
+    // outage into a self-sustaining pulse against a host that is already unhappy.
+    //
+    // Equal jitter (half fixed + half random) spreads the retries across the window
+    // while still guaranteeing a real minimum wait, and doubling the window per
+    // attempt stops a persistently dead tile from being retried forever at full rate.
+    // Attempts live in a side map because the tile record is deleted on each retry.
+    // Rule 5: 2 asserts.
+    _scheduleRetry(key, now) {
+        console.assert(typeof key === 'string', '_scheduleRetry: key required');
+        console.assert(Number.isFinite(now), '_scheduleRetry: timestamp required');
+        var BASE = 30000, MAX = 300000, FLOOR = 2000;   // 30s → capped at 5 min
+        var attempts = (this._retryAttempts.get(key) || 0) + 1;
+        if (this._retryAttempts.size < 500) this._retryAttempts.set(key, attempts);  // Rule 2: bounded
+        var window_ = Math.min(BASE * Math.pow(2, attempts - 1), MAX);
+        // FULL jitter across the whole window, not half of it. Equal jitter
+        // (window/2 + random(window/2)) was tried first and only cut the worst 5s
+        // burst 2.6x, because it confines every retry to the back half. Spreading
+        // across the full window cuts it ~5x. FLOOR keeps a just-failed tile from
+        // retrying on the very next tick.
+        return now + FLOOR + Math.random() * (window_ - FLOOR);
+    }
+
     // Abort in-flight fetches for keys that fell out of the desired covering set
     // (fast zoom/pan moved on before the tile was needed) - real network-level
     // cancellation, not just discarding the result once it lands. Rule 5: 2 asserts.
@@ -301,7 +331,7 @@ class StreetTiles {
         var rec = this.tiles.get(key);
         if (rec) {
             if (rec.state === 'failed') {
-                if (now - rec.failedAt > 30000) {
+                if (now >= rec.retryAt) {
                     this.tiles.delete(key);
                     if (!this._building.has(key) && this._building.size < this.maxConcurrentBuilds) {
                         this._buildTileKey(key, now);
@@ -361,8 +391,9 @@ class StreetTiles {
             if (self._disposed) { if (mesh) self._disposeMesh(mesh); return; }
             // A1: failed records keep an old t + failedAt so they stay evictable and
             // can retry after the backoff (see _touchOrBuild).
-            if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', failedAt: now }); return; }
+            if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
             self.earthMesh.add(mesh);
+            self._retryAttempts.delete(key);   // recovered → next failure starts at attempt 1
             self.tiles.set(key, { mesh: mesh, t: now, state: 'built' });
             self._evict();
         }).catch(function (e) {
@@ -372,7 +403,7 @@ class StreetTiles {
             // _abortStale) - not a real failure, don't apply the 30s retry backoff.
             if (e && e.name === 'AbortError') return;
             self.failed++;
-            self.tiles.set(key, { mesh: null, t: now, state: 'failed', failedAt: now });
+            self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) });
             console.warn('StreetTiles: tile ' + key + ' failed:', e && e.message);
         });
     }

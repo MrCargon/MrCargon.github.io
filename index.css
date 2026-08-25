@@ -1383,3 +1383,45 @@ body {
     padding: 6px 10px;
   }
 }
+
+/* Touch drag on the 3D view must reach OrbitControls, not scroll the page.
+   Without touch-action:none a one-finger drag on a phone is consumed as a page
+   scroll gesture and the camera never rotates — free look silently does nothing
+   on mobile while working fine with a mouse. */
+#solar-system-container,
+#solar-system-container canvas {
+  touch-action: none;
+  -ms-touch-action: none;
+}
+
+/* CAMERA DRAG PASS-THROUGH CHAIN.
+   The 3D canvas lives at z-index:-5, i.e. BEHIND the entire page. Every wrapper
+   above it (#content > #page-container > #main.main-section >
+   .space-exploration-container) defaulted to pointer-events:auto, so a drag on empty
+   space hit a wrapper and OrbitControls received exactly zero pointer events — free
+   camera rotation could not work on mouse or touch, on any page.
+
+   Each wrapper is transparent to pointers in its OWN empty area and re-enables its
+   children, so all real UI keeps working. Only genuinely empty regions fall through
+   to the canvas.
+
+   The :not() list is load-bearing. A plain `> *` re-enable has the SAME specificity
+   as the wrapper rules and, coming later, silently switched the next wrapper back on
+   — which is exactly what happened on the first attempt and left the drag still
+   blocked. Excluding the wrappers from their parent's re-enable keeps the whole
+   chain transparent.
+
+   Caveat: a handler bound to one of these wrappers to catch "clicks outside" will no
+   longer fire for empty-area clicks. Bind those to document instead. */
+#content,
+#page-container,
+#main.main-section,
+.space-exploration-container {
+  pointer-events: none;
+}
+#content > *:not(#page-container),
+#page-container > *:not(#main),
+#main.main-section > *:not(.space-exploration-container),
+.space-exploration-container > * {
+  pointer-events: auto;
+}

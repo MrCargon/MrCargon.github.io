@@ -1296,3 +1296,22 @@ html {
     position: relative;
     z-index: 1;
 }
+
+/* FREE CAMERA PASS-THROUGH.
+   .space-exploration-container is a 900x608 transparent box sitting at z-index 1
+   directly over the 3D canvas (which lives at z-index -5). With pointer-events:auto
+   it swallowed every drag in the middle of the screen, so OrbitControls never saw a
+   single pointer event and free-look around a planet simply did not work — on mouse
+   OR touch. document.elementFromPoint at screen centre returned this div, not the
+   canvas.
+
+   The container itself is empty space, so it should be transparent to pointers; its
+   CHILDREN are the actual UI (planet selector, action buttons, side popups, explore
+   panel) and each gets pointer-events back. Any new interactive child must opt in
+   the same way or it will be unclickable. */
+.space-exploration-container {
+  pointer-events: none;
+}
+.space-exploration-container > * {
+  pointer-events: auto;
+}

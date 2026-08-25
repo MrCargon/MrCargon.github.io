@@ -63,6 +63,26 @@ class Mars extends Planet {
             return false;
         }
 
+        // REAL MARS IMAGERY, draped the same way Earth's is. Reuses SatelliteTiles
+        // wholesale — the streaming, LOD, predictive lead, jittered retry and LRU
+        // eviction all already work, so a second explorable planet is configuration
+        // rather than new engine code.
+        //
+        // Source: OpenPlanetary Mars basemap (keyless, CORS: *), chosen over NASA
+        // Trek's Viking MDIM21 for one specific reason: Trek's EQ endpoint serves
+        // EQUIRECTANGULAR tiles, while SatelliteTiles does Web Mercator maths. Feeding
+        // equirectangular tiles through Mercator code misaligns every latitude. This
+        // one is standard XYZ Web Mercator, so the existing maths is correct as-is.
+        // Verified z0-z10 (z11+ absent), {z}/{x}/{y} order.
+        this.satelliteTiles = (typeof SatelliteTiles !== 'undefined' && this.mesh)
+            ? new SatelliteTiles(this.mesh, this.data.radius, {
+                urlTemplate: 'https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/all/{z}/{x}/{y}.png',
+                minZoom: 2,
+                maxZoom: 10,          // z11 returns 404 on this tileset
+                mode: 'mars'
+            })
+            : null;
+
         // Create moon orbit group (attached to Mars mesh)
         this.moonGroup = new THREE.Group();
         this.mesh.add(this.moonGroup);

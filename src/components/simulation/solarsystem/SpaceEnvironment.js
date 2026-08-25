@@ -56,7 +56,12 @@ class SpaceEnvironment {
         
         // Camera behavior flags
         this.followingPlanet = false;
-        this.orbitingPlanet = true; // Default to orbiting when focused
+        // Free look is the DEFAULT when a planet is focused. Auto-orbit is still
+        // available on demand via the Auto Orbit button in View Controls, but it is no
+        // longer forced: being spun around a planet the moment you click it, with the
+        // manual controls disabled, is disorienting and removes the one thing you
+        // actually want when looking at a planet — choosing the angle.
+        this.orbitingPlanet = false;
         this.selectedPlanet = null;
         
         // Orbit zones - determines camera behavior
@@ -617,12 +622,23 @@ class SpaceEnvironment {
         
         // Add OrbitControls if available
         if (typeof THREE.OrbitControls !== 'undefined') {
-            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls = new THREE.OrbitControls(this.camera, this._createCameraInputLayer());
             this.controls.enableDamping = true;
             this.controls.dampingFactor = 0.05;
             this.controls.enableZoom = true;
             this.controls.minDistance = 2; // Don't get too close to objects
-            this.controls.maxDistance = 300; // Don't go too far
+            // 300 was not far enough to frame an outer planet together with the Sun —
+            // Neptune alone orbits at 1804 units. 4000 clears the whole system.
+            this.controls.maxDistance = 4000;
+            // MOBILE: one finger orbits, two fingers pinch-zoom and pan. OrbitControls
+            // routes touch through the same code path as the mouse, so free look works
+            // on phones with no extra handling — but the mapping must be stated, and
+            // the canvas needs touch-action:none (see index.css) or the browser
+            // swallows the drag as a page scroll before OrbitControls ever sees it.
+            if (THREE.TOUCH) {
+                this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+            }
+            this.controls.enableRotate = true;
             
             // Set up control change listener to detect manual camera movement
             // NOTE (2026-08-14): OrbitControls fires 'change' at input-event
@@ -1226,6 +1242,44 @@ class SpaceEnvironment {
         const label = btn.querySelector('.btn-label');
         if (label) label.textContent = on ? 'Exit Scale' : 'Scale View';
         return true;
+    }
+
+    /**
+     * Full-viewport transparent layer that receives camera drags.
+     *
+     * OrbitControls cannot listen on the WebGL canvas here: the canvas sits at
+     * z-index -5, behind the page, so it is never the hit-test target — a pointerdown
+     * at screen centre resolves to <body>, and the canvas receives literally zero
+     * pointer events. That is why free camera rotation did not work with a mouse or
+     * with touch, on any planet.
+     *
+     * Listening on <body> instead would be worse: events bubble, so dragging a button
+     * or a panel would also rotate the camera.
+     *
+     * So: a dedicated layer at z-index 0 — above the background canvas (-5), below
+     * every piece of UI (>=1). Empty space hits this layer and rotates the camera;
+     * anything with real UI on top gets its own events and never reaches it.
+     * touch-action:none is required or a phone treats the drag as a page scroll and
+     * OrbitControls never sees the move. Rule 5: 2 asserts.
+     * @returns {HTMLElement}
+     */
+    _createCameraInputLayer() {
+        console.assert(typeof document !== 'undefined', '_createCameraInputLayer: document required');
+        console.assert(this.renderer && this.renderer.domElement, '_createCameraInputLayer: renderer required');
+        let el = document.getElementById('camera-input-layer');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'camera-input-layer';
+            el.setAttribute('aria-hidden', 'true');
+            el.style.cssText = [
+                'position:fixed', 'inset:0', 'z-index:0',
+                'background:transparent', 'pointer-events:auto',
+                'touch-action:none', '-ms-touch-action:none'
+            ].join(';');
+            document.body.appendChild(el);
+        }
+        this.cameraInputLayer = el;
+        return el;
     }
 
     /**
@@ -3104,6 +3158,10 @@ class SpaceEnvironment {
                     () => {
                         this.cameraTransitioning = false;
                         this.insideOrbitZone = true;
+                        // New target: drop the previous planet's position so the first
+                        // follow delta is measured from the new planet, not across the
+                        // gap between them.
+                        this._followPrev = null;
 
                         // Earth: do NOT auto-enter explore. Earth now orbits like any
                         // other planet; the opt-in "Explore Earth" button (managed by
@@ -3469,23 +3527,37 @@ class SpaceEnvironment {
             }
         }
         
-        // If following is enabled and not auto-orbiting, follow the planet's movement
-        else if (this.followingPlanet && this.insideOrbitZone && !this.isAutoOrbiting) {
-            // Get original relative position between camera and planet
-            const cameraInfo = this.getPlanetCameraInfo(this.selectedPlanet);
-            if (!cameraInfo) return;
-            
-            // Create the relative offset vector
-            const relativeOffset = cameraInfo.position.clone().sub(planetPosition);
-            
-            // Apply this offset to the current planet position
-            const newCameraPosition = planetPosition.clone().add(relativeOffset);
-            
-            // Update camera position while maintaining the relative offset
-            this.camera.position.copy(newCameraPosition);
-            
-            // Ensure the camera is looking at the planet
+        // FREE ORBIT — the default once a planet is selected.
+        //
+        // Previously this branch recomputed the camera from getPlanetCameraInfo() every
+        // frame and hard-copied it onto camera.position, which silently threw away any
+        // drag the user had just made. Combined with auto-orbit disabling the controls
+        // outright, and controls.target never being set otherwise (so dragging pivoted
+        // around the Sun at the origin), there was NO state in which you could freely
+        // look around a planet. That is what the user hit.
+        //
+        // The fix is to move the camera by the planet's own DELTA rather than to an
+        // absolute recomputed point. The camera keeps whatever angle and distance the
+        // user chose, and simply travels along with the planet as it orbits. Works for
+        // every planet, needs no Explore mode, and is identical on touch because
+        // OrbitControls handles pointer and touch through the same path.
+        else if (this.insideOrbitZone && !this.isAutoOrbiting) {
+            if (!this._followPrev) this._followPrev = new THREE.Vector3().copy(planetPosition);
+
+            // Translate by how far the planet moved since last frame, preserving the
+            // user's viewing angle. Guarded: on a planet switch or a long tab stall the
+            // delta is huge and would fling the camera, so re-seed instead of applying.
+            this._followDelta = this._followDelta || new THREE.Vector3();
+            this._followDelta.subVectors(planetPosition, this._followPrev);
+            if (this._followDelta.lengthSq() < 1e6) {
+                this.camera.position.add(this._followDelta);
+            }
+            this._followPrev.copy(planetPosition);
+
+            // The pivot is the planet, so drag-rotate orbits the planet rather than the
+            // Sun. Left enabled so the user keeps full control.
             if (this.controls) {
+                this.controls.enabled = true;
                 this.controls.target.copy(planetPosition);
                 this.controls.update();
             } else {

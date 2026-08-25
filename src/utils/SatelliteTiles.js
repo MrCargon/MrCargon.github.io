@@ -38,8 +38,11 @@ class SatelliteTiles {
         // Appear as soon as the camera zooms toward Earth (radii), so the whole
         // surface sharpens progressively, not only at street level.
         this.activateBelow = Number.isFinite(opts.activateBelow) ? opts.activateBelow : 2.8;
-        this.minZoom = 3;            // Esri imagery starts shallow
-        this.maxZoom = 17;           // upper clamp; zoomForDistance picks z to FILL the view
+        // Configurable: different bodies have different tilesets. Esri Earth imagery
+        // goes deep; the OpenPlanetary Mars basemap stops at z10 (z11 is a 404), and
+        // requesting past a tileset's max just generates guaranteed failures.
+        this.minZoom = Number.isFinite(opts.minZoom) ? opts.minZoom : 3;
+        this.maxZoom = Number.isFinite(opts.maxZoom) ? opts.maxZoom : 17;
         // The covering patch is a lat/lng-aligned SQUARE that renders TILTED on screen
         // (north isn't screen-up), so an 81 (9x9) patch left the screen CORNERS uncovered
         // (gray base showing top-right). A 13x13 (169) patch is large enough that even

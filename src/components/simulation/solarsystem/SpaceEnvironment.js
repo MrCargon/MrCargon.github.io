@@ -1286,6 +1286,32 @@ class SpaceEnvironment {
     }
 
     /**
+     * Keep #camera-input-layer directly ABOVE the 3D container, whatever the container's
+     * current z-index is.
+     *
+     * This is not cosmetic. OrbitControls listens on the input layer, so if the canvas
+     * ever paints above it the layer stops being the hit-test target and the camera
+     * freezes outright. That is exactly what happened when Explore mode was entered:
+     * enterExploreMode raises the container to z-index 30, the canvas went above the
+     * layer at 0, and rotation and zoom both died — measured as literally 0.0000
+     * camera movement on a full drag.
+     *
+     * Floored at 0 because the container sits at -5 in normal mode, and a negative
+     * layer would fall behind <body> and stop receiving pointer events for the opposite
+     * reason. Kept well below the Explore panel (210) and header (300+) so UI still
+     * wins. Rule 5: 2 asserts.
+     */
+    _syncInputLayerZ() {
+        console.assert(typeof document !== 'undefined', '_syncInputLayerZ: document required');
+        console.assert(this.container, '_syncInputLayerZ: container required');
+        const el = this.cameraInputLayer || document.getElementById('camera-input-layer');
+        if (!el) return false;
+        const cz = parseInt(getComputedStyle(this.container).zIndex, 10);
+        el.style.zIndex = String(Math.max(0, (Number.isFinite(cz) ? cz : -5) + 1));
+        return true;
+    }
+
+    /**
      * Full-viewport transparent layer that receives camera drags.
      *
      * OrbitControls cannot listen on the WebGL canvas here: the canvas sits at
@@ -1320,6 +1346,7 @@ class SpaceEnvironment {
             document.body.appendChild(el);
         }
         this.cameraInputLayer = el;
+        if (this.container) this._syncInputLayerZ();
         return el;
     }
 
@@ -1461,6 +1488,7 @@ class SpaceEnvironment {
         // explore so it gets mouse/touch/wheel events. #content is made transparent
         // to pointer events so they fall through. Both restored on exit.
         if (this.container) { this._prevContainerZ = this.container.style.zIndex; this.container.style.zIndex = '30'; }
+        this._syncInputLayerZ();   // layer MUST stay above the canvas or the camera freezes
         const content = document.getElementById('content');
         if (content) { this._prevContentPE = content.style.pointerEvents; content.style.pointerEvents = 'none'; }
         // Hide the solar-system side panels (meaningless over a single frozen globe).
@@ -1702,6 +1730,7 @@ class SpaceEnvironment {
         window.removeEventListener('dblclick', this._onExploreDblClick);
         // Restore canvas z-index + content pointer-events + the hidden side panels.
         if (this.container) this.container.style.zIndex = (this._prevContainerZ != null ? this._prevContainerZ : '-5');
+        this._syncInputLayerZ();
         const content = document.getElementById('content');
         if (content) content.style.pointerEvents = (this._prevContentPE || '');
         document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = ''; });
@@ -3620,6 +3649,7 @@ class SpaceEnvironment {
         this.container.style.display = 'block';
         this.container.style.opacity = '1';
         this.container.style.zIndex = '-5'; // Keep behind content
+        this._syncInputLayerZ();
         this.container.style.pointerEvents = 'auto'; // Always allow interaction
         
         // If controls exist, enable them based on auto-orbit state
@@ -3684,6 +3714,7 @@ class SpaceEnvironment {
             // Background mode: subtle, non-intrusive
             this.container.style.opacity = this.backgroundOpacity.toString();
             this.container.style.zIndex = '-10'; // Further behind
+            this._syncInputLayerZ();
             this.container.style.pointerEvents = 'none'; // Non-interactive
             
             // Enable gentle auto-rotation for ambient effect

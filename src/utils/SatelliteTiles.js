@@ -58,6 +58,14 @@ class SatelliteTiles {
         this.lruCap = Number.isFinite(opts.lruCap) ? opts.lruCap : 240;
         this.patchSegments = Number.isFinite(opts.patchSegments) ? opts.patchSegments : 12;
 
+        // TILE PROJECTION. 'mercator' is the slippy-map standard used by Esri/OSM and
+        // is the default. 'equirect' (plate carree) is what NASA Trek's planetary WMTS
+        // endpoints serve, and its grid is 2^(z+1) columns by 2^z rows rather than a
+        // square 2^z. Running equirectangular tiles through Mercator maths misplaces
+        // every latitude - the error is zero at the equator and grows without bound
+        // toward the poles - so this must match the source, not be guessed.
+        this.projection = (opts.projection === 'equirect') ? 'equirect' : 'mercator';
+
         // Keyless Esri basemap modes (all {z}/{y}/{x}, CORS-enabled). Switchable.
         this.modes = {
             satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -244,6 +252,40 @@ class SatelliteTiles {
         return now + FLOOR + Math.random() * (window_ - FLOOR);
     }
 
+    // Columns / rows in the tile grid at zoom z. Mercator is square (2^z x 2^z);
+    // equirectangular covers 360 deg of longitude against 180 of latitude, so it is
+    // twice as wide as it is tall. Rule 5: 2 asserts.
+    _cols(z) {
+        console.assert(Number.isFinite(z) && z >= 0, '_cols: zoom required');
+        console.assert(this.projection, '_cols: projection required');
+        return (this.projection === 'equirect') ? Math.pow(2, z + 1) : Math.pow(2, z);
+    }
+    _rows(z) {
+        console.assert(Number.isFinite(z) && z >= 0, '_rows: zoom required');
+        console.assert(this.projection, '_rows: projection required');
+        return Math.pow(2, z);
+    }
+
+    // lng/lat -> fractional tile coords, honouring this instance's projection.
+    // Rule 5: 2 asserts.
+    _toTile(lng, lat, z) {
+        console.assert(Number.isFinite(lng) && Number.isFinite(lat), '_toTile: coords required');
+        console.assert(Number.isFinite(z), '_toTile: zoom required');
+        if (this.projection !== 'equirect') return SatelliteTiles.lngLatToTile(lng, lat, z);
+        // Plate carree: both axes are linear in degrees. No Mercator log/tan term.
+        var cols = this._cols(z), rows = this._rows(z);
+        return { x: (lng + 180) / 360 * cols, y: (90 - lat) / 180 * rows };
+    }
+
+    // Inverse of _toTile. Rule 5: 2 asserts.
+    _toLngLat(x, y, z) {
+        console.assert(Number.isFinite(x) && Number.isFinite(y), '_toLngLat: tile coords required');
+        console.assert(Number.isFinite(z), '_toLngLat: zoom required');
+        if (this.projection !== 'equirect') return SatelliteTiles.tileToLngLat(x, y, z);
+        var cols = this._cols(z), rows = this._rows(z);
+        return { lng: x / cols * 360 - 180, lat: 90 - y / rows * 180 };
+    }
+
     // ---- update: enumerate covering tiles, lazily build, LRU-evict ---------
 
     /**
@@ -263,8 +305,12 @@ class SatelliteTiles {
             return false;
         }
         var fetchZ = this.zoomForDistance(cameraDistInRadii);
-        var n = Math.pow(2, fetchZ);
-        var c = SatelliteTiles.lngLatToTile(centerLng, centerLat, fetchZ);
+        var n = this._cols(fetchZ);          // horizontal wrap modulus
+        var nRows = this._rows(fetchZ);      // vertical clamp
+        // _buildCoveringKeys receives `n` for the horizontal wrap; rows differ from
+        // columns under equirectangular, so hand the row count over separately.
+        this._gridRows = nRows;
+        var c = this._toTile(centerLng, centerLat, fetchZ);
         this._applyLead(c, fetchZ);          // stream AHEAD of the camera, not behind it
         var cx = Math.floor(c.x), cy = Math.floor(c.y);
         // Scale the kept tile count with zoom: the big corner-covering budget is only
@@ -326,7 +372,7 @@ class SatelliteTiles {
         for (var dx = -ring; dx <= ring; dx++) {
             for (var dy = -ring; dy <= ring; dy++) {
                 var ty = cy + dy;
-                if (ty < 0 || ty >= n) continue;
+                if (ty < 0 || ty >= (this._gridRows || n)) continue;
                 var tx = ((cx + dx) % n + n) % n;
                 var slot = cands[count] || (cands[count] = { key: '', d: 0 });
                 slot.key = fetchZ + '/' + tx + '/' + ty;
@@ -483,8 +529,8 @@ class SatelliteTiles {
         console.assert(typeof GlobeMath !== 'undefined', '_buildPatchGeometry: GlobeMath required');
         console.assert(Number.isFinite(z) && Number.isFinite(x) && Number.isFinite(y), '_buildPatchGeometry: zxy required');
         var N = this.patchSegments;
-        var nw = SatelliteTiles.tileToLngLat(x, y, z);          // west lng, north lat
-        var se = SatelliteTiles.tileToLngLat(x + 1, y + 1, z);  // east lng, south lat
+        var nw = this._toLngLat(x, y, z);          // west lng, north lat
+        var se = this._toLngLat(x + 1, y + 1, z);  // east lng, south lat
         var west = nw.lng, north = nw.lat, east = se.lng, south = se.lat;
         var r = this.radius * this.rOffset;
         var positions = [], uvs = [], indices = [];

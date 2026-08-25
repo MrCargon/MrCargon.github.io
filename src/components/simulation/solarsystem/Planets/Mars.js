@@ -68,17 +68,21 @@ class Mars extends Planet {
         // eviction all already work, so a second explorable planet is configuration
         // rather than new engine code.
         //
-        // Source: OpenPlanetary Mars basemap (keyless, CORS: *), chosen over NASA
-        // Trek's Viking MDIM21 for one specific reason: Trek's EQ endpoint serves
-        // EQUIRECTANGULAR tiles, while SatelliteTiles does Web Mercator maths. Feeding
-        // equirectangular tiles through Mercator code misaligns every latitude. This
-        // one is standard XYZ Web Mercator, so the existing maths is correct as-is.
-        // Verified z0-z10 (z11+ absent), {z}/{x}/{y} order.
+        // Both candidate sources are keyless and CORS-enabled; see below for why this
+        // one won and what had to be built to support it.
         this.satelliteTiles = (typeof SatelliteTiles !== 'undefined' && this.mesh)
             ? new SatelliteTiles(this.mesh, this.data.radius, {
-                urlTemplate: 'https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/all/{z}/{x}/{y}.png',
+                // NASA Trek, Viking MDIM21 global colour mosaic at 232 m/px — actual
+                // photographic imagery of Mars. OpenPlanetary's basemap was tried first
+                // and dropped: it is a STYLED cartographic map (contours, place labels)
+                // which looked like a road atlas pasted over a photograph of a planet.
+                // Trek is equirectangular, hence projection:'equirect' — its grid is
+                // 2^(z+1) x 2^z and its latitudes are linear, so Mercator maths would
+                // misplace everything away from the equator.
+                urlTemplate: 'https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg',
+                projection: 'equirect',
                 minZoom: 2,
-                maxZoom: 10,          // z11 returns 404 on this tileset
+                maxZoom: 7,           // z8 returns 404 on this mosaic
                 mode: 'mars'
             })
             : null;

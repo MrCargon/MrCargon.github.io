@@ -1245,6 +1245,47 @@ class SpaceEnvironment {
     }
 
     /**
+     * Stream real surface imagery for whichever planet is selected.
+     *
+     * The tile engine was only ever driven from updateExploreLOD(), which runs solely
+     * in Explore mode and solely for Earth — so Mars could hold a SatelliteTiles
+     * instance and it would sit there inert. _updateStreets() is already parameterised
+     * by object, so this just feeds it the selected planet instead.
+     *
+     * Deliberately minimal: no pins, no layers, no Explore panel, no camera takeover.
+     * Selecting Mars and zooming in simply sharpens the surface into real imagery,
+     * and free-look still works exactly as it does everywhere else. Earth keeps its
+     * full Explore experience via the separate button.
+     *
+     * Throttled to the same cadence as the Explore path (~9/sec) — the tile engines
+     * have a steady-state early-out, but there is no reason to pay the raycast at
+     * frame rate. Rule 5: 2 asserts.
+     * @returns {boolean} whether a surface layer was driven this frame
+     */
+    _updateSelectedPlanetSurface() {
+        console.assert(this.camera, '_updateSelectedPlanetSurface: camera required');
+        console.assert(this.solarSystem, '_updateSelectedPlanetSurface: solarSystem required');
+        if (this.exploreMode) return false;             // Explore drives Earth itself
+        const obj = this.solarSystem.getPlanetByName(this.selectedPlanet);
+        if (!obj || !obj.satelliteTiles || typeof obj.getMesh !== 'function') return false;
+
+        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        if (now - (this._lastSurfaceTick || 0) < this._streetsUpdateIntervalMs) return false;
+        this._lastSurfaceTick = now;
+
+        const mesh = obj.getMesh();
+        if (!mesh) return false;
+        const radius = (obj.data && obj.data.radius) || 1;
+        const pos = mesh.getWorldPosition(this._scratchEarthPos);
+        const dist = this.camera.position.distanceTo(pos);
+        // Far away there is nothing to sharpen and the engine would only burn a
+        // raycast; SatelliteTiles.activateBelow gates the rest.
+        if (dist / radius > 4) return false;
+        this._updateStreets(obj, radius, dist);
+        return true;
+    }
+
+    /**
      * Full-viewport transparent layer that receives camera drags.
      *
      * OrbitControls cannot listen on the WebGL canvas here: the canvas sits at
@@ -3425,6 +3466,7 @@ class SpaceEnvironment {
                 this.updateExploreLOD();
             } else if (this.selectedPlanet && !this.cameraTransitioning) {
                 this.updateCameraPlanetTracking(deltaTime);
+                this._updateSelectedPlanetSurface();
             }
             
             // 🌟 UPDATE DYNAMIC LIGHTING SYSTEM

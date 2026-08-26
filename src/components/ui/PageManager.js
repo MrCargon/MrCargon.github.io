@@ -119,6 +119,16 @@ class PageManager {
                 cleanup: () => this.cleanupMainPage(),
                 preload: true
             },
+            life: {
+                path: 'src/components/pages/lifePage.html',
+                title: 'Life - Artificial Life Simulation',
+                // Owns a WebGL context of its own, so cleanup is mandatory rather than
+                // optional: leaked contexts are not GC'd and the browser caps how many
+                // a tab may hold.
+                init: () => { this._lifePage = new LifePage(); this._lifePage.init(); },
+                cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
+                preload: false
+            },
             about: {
                 path: 'src/components/pages/aboutPage.html', 
                 title: 'About - Developer Profile',

@@ -1,0 +1,60 @@
+<section id="life" class="main-section life-section">
+    <div class="life-panel">
+        <header class="life-header">
+            <h1 class="life-title">Artificial Life</h1>
+            <p class="life-sub">
+                Continuous cellular automata — <strong>Lenia</strong>. No sprites, no
+                textures, no audio files. Every pixel and every sound on this page is
+                generated from maths at runtime.
+            </p>
+        </header>
+
+        <div class="life-stage">
+            <canvas id="life-canvas" width="512" height="512"
+                    aria-label="Lenia artificial life simulation"></canvas>
+            <div id="life-stats" class="life-stats" aria-live="polite">
+                <span id="life-gen">generation 0</span>
+                <span id="life-pop">population 0%</span>
+            </div>
+        </div>
+
+        <div class="life-controls">
+            <button type="button" id="life-reseed" class="life-btn">↻ New world</button>
+            <button type="button" id="life-pause" class="life-btn" aria-pressed="false">⏸ Pause</button>
+            <button type="button" id="life-sound" class="life-btn" aria-pressed="false">🔈 Sound</button>
+            <label class="life-slider">
+                <span>Growth&nbsp;μ</span>
+                <input type="range" id="life-mu" min="0.10" max="0.35" step="0.005" value="0.15">
+                <output id="life-mu-out">0.150</output>
+            </label>
+        </div>
+
+        <div class="life-notes">
+            <h2>How it works</h2>
+            <p>
+                Conway's Game of Life gives each cell two states, alive or dead. Lenia
+                makes everything continuous — cell values, the neighbourhood, time
+                itself. That smoothness is what lets organisms appear: shapes with a
+                boundary that hold themselves together, move, and reproduce.
+            </p>
+            <p>
+                Each step convolves the grid with a smooth <strong>ring</strong> kernel,
+                then applies a bell-curve growth function. A ring, not a disc: a
+                creature's centre sees a complete ring and holds steady while its edge
+                sees a partial one and grows or dies. That single detail is the
+                difference between organisms and mush.
+            </p>
+            <p class="life-warn">
+                The habitable band is narrow. Slide <strong>μ</strong> too far and the
+                world goes sterile within a few hundred steps, or floods and saturates.
+                Radius 10 lives; radius 9, with everything else identical, goes extinct.
+            </p>
+            <p class="life-credit">
+                Lenia was devised by Bert Chan. Implemented here as a GPU fragment
+                shader over ping-pong render targets — roughly 300 neighbourhood samples
+                per cell per step, which is hopeless in JavaScript and trivial for a
+                graphics card.
+            </p>
+        </div>
+    </div>
+</section>

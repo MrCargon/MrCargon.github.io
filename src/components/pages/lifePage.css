@@ -1,0 +1,133 @@
+/* lifePage.css — Artificial Life page.
+   Deliberately quiet: the simulation is the content, so the chrome stays out of its
+   way. Zero images; the only visual asset on this page is the shader output. */
+
+.life-section {
+    position: relative;
+    width: 100%;
+    padding: clamp(0.5rem, 2vw, 1rem);
+}
+
+.life-panel {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--panel-bg, rgba(20, 20, 20, 0.72));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    border-radius: 14px;
+    padding: clamp(0.75rem, 2.5vw, 1.5rem);
+}
+
+.life-header { margin-bottom: 1rem; }
+
+.life-title {
+    margin: 0 0 0.35rem;
+    color: var(--primary-color, #ff8500);
+    font-size: clamp(1.4rem, 3.5vw, 2rem);
+}
+
+.life-sub {
+    margin: 0;
+    max-width: 62ch;
+    line-height: 1.55;
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.72));
+}
+
+/* --- stage ------------------------------------------------------------- */
+
+.life-stage {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+#life-canvas {
+    /* Square and capped by the SHORTER of width/height so the simulation is never
+       cropped and never taller than the viewport on a phone in portrait. */
+    width: min(100%, 70vh, 560px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    display: block;
+    border-radius: 10px;
+    background: #05060a;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    /* Nearest-neighbour: the grid is 256px shown much larger, and smoothing it turns
+       crisp organisms into a blur. The pixels are the point. */
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    /* The page scrolls; the canvas must not eat touch gestures. */
+    touch-action: pan-y;
+}
+
+.life-stats {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    font: 11px/1.4 monospace;
+    color: var(--primary-color, #ff8500);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* --- controls ---------------------------------------------------------- */
+
+.life-controls {
+    display: flex;
+    flex-wrap: wrap;          /* never a horizontal scroller; see the Projects filter bar */
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+}
+
+.life-btn {
+    padding: 0.5rem 1rem;
+    min-height: 40px;         /* comfortable tap target on a phone */
+    background: var(--card-bg, rgba(40, 40, 40, 0.85));
+    color: var(--text-color, #fff);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.18s, border-color 0.18s;
+}
+
+.life-btn:hover { background: rgba(255, 133, 0, 0.18); border-color: var(--primary-color, #ff8500); }
+.life-btn[aria-pressed="true"] { background: rgba(255, 133, 0, 0.28); border-color: var(--primary-color, #ff8500); }
+.life-btn:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: 2px; }
+
+.life-slider {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.72));
+}
+.life-slider input { width: clamp(90px, 20vw, 160px); accent-color: var(--primary-color, #ff8500); }
+.life-slider output { min-width: 3.6ch; font-family: monospace; color: var(--primary-color, #ff8500); }
+
+/* --- notes ------------------------------------------------------------- */
+
+.life-notes { max-width: 68ch; margin: 0 auto; line-height: 1.6; }
+.life-notes h2 { color: var(--primary-color, #ff8500); font-size: 1.05rem; margin: 0 0 0.5rem; }
+.life-notes p { margin: 0 0 0.75rem; color: var(--text-color-dim, rgba(255, 255, 255, 0.72)); }
+.life-notes strong { color: var(--text-color, #fff); }
+.life-warn { border-left: 2px solid var(--primary-color, #ff8500); padding-left: 0.75rem; }
+.life-credit { font-size: 0.85rem; opacity: 0.75; }
+
+@media (max-width: 600px) {
+    .life-controls { gap: 0.45rem; }
+    .life-slider { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* The simulation is motion by definition, so it starts PAUSED rather than being
+       forced to animate. The reseed button still steps it on demand. */
+    .life-btn { transition: none; }
+}

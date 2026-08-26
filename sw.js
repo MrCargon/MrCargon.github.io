@@ -15,7 +15,7 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-v33';
+const CACHE_NAME = 'mrcargon-hub-v34';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 
 self.addEventListener('install', (event) => {
@@ -45,6 +45,43 @@ self.addEventListener('fetch', (event) => {
     // Only manage same-origin assets; let CDNs / Unsplash / game iframes pass through.
     if (url.origin !== self.location.origin) return;
 
+    // CODE is network-first; ASSETS stay cache-first.
+    //
+    // Pure stale-while-revalidate was the single biggest source of confusion in this
+    // project. On the very load where a new service worker activates, JS and HTML were
+    // still served from the OLD cache and only refreshed in the background — so the
+    // first reload after every deploy ran the previous version. That produced repeated
+    // reports of bugs that were already fixed, including stack traces whose line
+    // numbers matched a file that no longer existed on the server. Bumping CACHE_NAME
+    // did not help, because the stale response was served before the new cache was
+    // consulted.
+    //
+    // Code is small and correctness matters, so it goes to the network first and falls
+    // back to cache offline. Textures and images are large and effectively immutable,
+    // so they stay cache-first and the load budget is unaffected.
+    const isCode = /\.(?:js|css|html)$/i.test(url.pathname) || req.mode === 'navigate';
+
+    if (isCode) {
+        event.respondWith(
+            fetch(req)
+                .then((res) => {
+                    if (res && res.status === 200) {
+                        const copy = res.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+                    }
+                    return res;
+                })
+                .catch(() =>
+                    caches.open(CACHE_NAME).then((cache) =>
+                        cache.match(req).then((cached) =>
+                            cached || (req.mode === 'navigate' ? cache.match('./index.html') : undefined)
+                        )
+                    )
+                )
+        );
+        return;
+    }
+
     event.respondWith(
         caches.open(CACHE_NAME).then((cache) =>
             cache.match(req).then((cached) => {
@@ -56,7 +93,7 @@ self.addEventListener('fetch', (event) => {
                     .catch(() =>
                         cached || (req.mode === 'navigate' ? cache.match('./index.html') : undefined)
                     );
-                // stale-while-revalidate: serve cache now if we have it, else wait for network.
+                // stale-while-revalidate is fine for immutable assets.
                 return cached || network;
             })
         )

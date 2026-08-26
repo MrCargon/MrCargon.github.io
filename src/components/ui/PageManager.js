@@ -1136,16 +1136,49 @@ class PageManager {
             if (!message) { fieldError('message-error', 'Message is required'); hasError = true; }
             if (hasError) return;
 
+            // Honeypot: a bot fills every field it finds, a human never sees this one.
+            // Bail silently and claim success so the bot has nothing to learn from.
+            if (hp) { form.reset(); if (successEl) successEl.hidden = false; return; }
+
             if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending...'; }
             const notify = (typeof DiscordNotify === 'function') ? new DiscordNotify() : null;
-            const result = notify ? await notify.contact(name, email, message, hp) : { ok: false };
+            const configured = !!(notify && notify.enabled());
+            const result = configured ? await notify.contact(name, email, message, hp) : { ok: false };
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send Message'; }
 
             if (result.ok) {
                 form.reset();
-                if (successEl) successEl.hidden = false;
-            } else if (errorEl) {
+                if (successEl) { successEl.hidden = false; successEl.textContent = 'Thanks — your message has been sent.'; }
+                return;
+            }
+
+            // MAILTO FALLBACK. Without this the form is a dead end: with no proxy
+            // deployed every submission failed and the visitor's message went
+            // nowhere. Handing the composed message to their own mail client needs
+            // no account, no deployment and no keys, and it degrades honestly — the
+            // message is real and the user can see exactly what is being sent.
+            if (!configured) {
+                const to = (window.MRCARGON_DISCORD_PROXY || {}).contactEmail || '';
+                if (to) {
+                    const subject = `Portfolio enquiry from ${name}`;
+                    const body = `${message}\n\n—\nFrom: ${name}\nEmail: ${email}\nSent from mrcargon.github.io`;
+                    // encodeURIComponent, not escape: newlines and non-ASCII must survive.
+                    const href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    window.location.href = href;
+                    form.reset();
+                    if (successEl) {
+                        successEl.hidden = false;
+                        successEl.textContent = 'Your email app should now be open with the message ready — press send there to deliver it.';
+                    }
+                    return;
+                }
+            }
+
+            if (errorEl) {
                 errorEl.hidden = false;
+                errorEl.textContent = configured
+                    ? 'Sending failed. Please try again, or email me directly.'
+                    : 'No delivery method is configured yet. Please email me directly.';
             }
         });
         return true;

@@ -1286,6 +1286,36 @@ class SpaceEnvironment {
     }
 
     /**
+     * Remove orphaned explore-UI clones left in <body> by earlier sessions.
+     *
+     * Anything reparented to <body> outlives PageManager's re-render of #content, so
+     * every navigate-away-and-back cycle leaves the previous copy behind. Keeps only
+     * the live nodes passed in; everything else sharing their id is detached and
+     * disposed of. Bounded by the number of matches, which is small by construction.
+     * Rule 5: 2 asserts.
+     * @param {Array<HTMLElement|null>} keep - the nodes that are currently live
+     * @returns {number} how many stale clones were removed
+     */
+    _purgeStaleExploreUI(keep) {
+        console.assert(Array.isArray(keep), '_purgeStaleExploreUI: keep array required');
+        console.assert(typeof document !== 'undefined', '_purgeStaleExploreUI: document required');
+        const live = keep.filter(Boolean);
+        const ids = live.map(el => el.id).filter(Boolean);
+        let removed = 0;
+        for (let i = 0; i < ids.length; i++) {                  // Rule 2: bounded
+            const matches = document.querySelectorAll('#' + CSS.escape(ids[i]));
+            for (let j = 0; j < matches.length; j++) {
+                const node = matches[j];
+                if (live.indexOf(node) !== -1) continue;        // this is the live one
+                if (node.parentElement) node.parentElement.removeChild(node);
+                removed++;
+            }
+        }
+        if (removed) console.warn(`SpaceEnvironment: removed ${removed} stale explore panel(s) left in <body>`);
+        return removed;
+    }
+
+    /**
      * Keep #camera-input-layer directly ABOVE the 3D container, whatever the container's
      * current z-index is.
      *
@@ -2257,7 +2287,18 @@ class SpaceEnvironment {
         // The canvas is raised to z-index 30 in explore; the panel's z is trapped
         // inside #content's stacking context (painted below the canvas → unclickable).
         // Reparent the explore UI to <body> so it's in the root stacking context and
-        // sits above the canvas. Idempotent.
+        // sits above the canvas.
+        //
+        // PURGE FIRST. Reparenting to <body> survives page navigation, but PageManager
+        // wipes and re-renders #content — so the next visit to Main builds a BRAND NEW
+        // #explore-panel while the previous one is still orphaned in <body>. Entering
+        // explore again moved that new one to <body> too, and the copies accumulated:
+        // measured 1, 2, 3, 4 panels over four navigate/explore cycles. The stale ones
+        // rendered at full size but were wired to a dead SpaceEnvironment, so they sat
+        // on screen doing nothing — exactly the "second panel that does not respond"
+        // the user reported. Duplicate IDs also mean getElementById is a coin flip.
+        this._purgeStaleExploreUI([panel, this._detailEl, this._tooltipEl]);
+
         [panel, this._detailEl, this._tooltipEl].forEach((el) => {
             if (el && el.parentElement !== document.body) document.body.appendChild(el);
         });

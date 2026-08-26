@@ -1308,6 +1308,18 @@ class SpaceEnvironment {
         if (!el) return false;
         const cz = parseInt(getComputedStyle(this.container).zIndex, 10);
         el.style.zIndex = String(Math.max(0, (Number.isFinite(cz) ? cz : -5) + 1));
+
+        // MUST go inert in background mode. The layer sits at z-index 0, and page
+        // content on Projects/Apps/About has no z-index of its own, so a live layer
+        // covers all of it — every link and button on those pages became unclickable
+        // (confirmed: elementsFromPoint returned the layer stacked over
+        // H3#portfolio-title). The Main page only escaped this because its own
+        // container is z-index 1, above the layer.
+        //
+        // Background mode is precisely when the 3D view is non-interactive anyway —
+        // setBackgroundMode already sets pointerEvents:'none' on the container — so
+        // there is nothing to lose by switching the layer off with it.
+        el.style.pointerEvents = this.backgroundMode ? 'none' : 'auto';
         return true;
     }
 

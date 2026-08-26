@@ -167,8 +167,45 @@
     }
 }
 
+
+/* The filters dropdown lives inside .panel-header and must paint OVER the project
+   cards below it. Raising z-index on the dropdown alone does nothing: .panel-header
+   and .projects-content are both z-auto siblings, so DOM order decides, and content
+   comes last — a stacking context created INSIDE the header cannot escape the
+   header's own paint position. .project-grid also sets container-type:inline-size
+   (four @container queries depend on it, so it cannot be removed), which makes the
+   grid its own stacking context and stops the dropdown winning locally.
+   Lifting the whole header is the fix. */
+.projects-panel > .panel-header,
+.panel-header {
+    position: relative;
+    z-index: 1200;
+    /* overflow MUST be visible. This was the actual bug, and it is a CLIPPING problem
+       rather than a stacking one: .panel-header carried overflow:hidden, and an
+       absolutely-positioned dropdown inside an overflow:hidden ancestor is clipped to
+       that ancestor's box. The header is only ~50px tall, so the filter panel below it
+       was cut away entirely and hit-testing fell straight through to the project cards
+       behind — which is why raising z-index changed nothing. */
+    overflow: visible;
+}
+
+/* Same reason: the panel wrapper clips its children too, and the dropdown has to be
+   able to hang below the header without being cut off. */
+.projects-panel {
+    overflow: visible;
+}
+
 /* ------ INLINE FILTER SYSTEM ------ */
 .inline-filters-container {
+    /* z-index here, not just on the dropdown itself. .project-grid sets
+       `contain: layout`, which silently makes it a STACKING CONTEXT even though it is
+       position:static with z-index:auto — so the grid painted over the dropdown's
+       second row of filter buttons and swallowed their clicks. This container was
+       position:relative with z-index:auto, which establishes no context of its own,
+       leaving the bar's z-index:1000 unable to win. Giving the container a real
+       z-index lifts the whole dropdown above the grid. */
+    z-index: 1001;
+
     position: relative;
     min-width: 200px;
 }
@@ -211,12 +248,21 @@
 .inline-filters-bar {
     position: absolute;
     top: calc(100% + var(--spacing-xs));
-    left: 0;
+    /* RIGHT-anchored, not left. Its container sits near the right edge of the
+       content area (measured at x=883, only 200px wide), so anchoring left and then
+       forcing min-width:500px pushed the panel straight off the viewport: five of
+       the seven filter buttons AND the close button rendered past x=1280 on a
+       1280px screen, i.e. unreachable. Opening leftward from the anchor's right
+       edge is also the normal behaviour for a dropdown near a right edge. */
     right: 0;
+    left: auto;
     z-index: 1000;
-    
-    min-width: 500px;
-    max-width: min(90vw, 800px);
+
+    /* Never wider than the space actually available to the left of the anchor.
+       min-width is a floor, so it must not exceed that or the overflow returns. */
+    width: max-content;
+    min-width: min(500px, 88vw);
+    max-width: min(88vw, 800px);
     
     background: var(--panel-bg-solid, rgba(30, 30, 30, 0.98));
     -webkit-backdrop-filter: blur(15px);
@@ -244,8 +290,11 @@
 .filters-scroll-container {
     display: flex;
     gap: var(--spacing-sm);
-    overflow-x: auto;
-    overflow-y: hidden;
+    /* visible, not auto: the row inside now wraps, so there is nothing to scroll
+       horizontally and an auto scroller would just clip the second row. */
+    overflow-x: visible;
+    overflow-y: visible;
+    min-width: 0;
     
     scrollbar-width: thin;
     scrollbar-color: var(--primary-color, #ff8500) transparent;
@@ -272,7 +321,14 @@
     display: flex;
     gap: var(--spacing-sm);
     align-items: center;
-    min-width: fit-content;
+    /* WRAP rather than scroll sideways. `min-width: fit-content` forced all seven
+       buttons onto one 934px line inside a ~270px scroll container, so three of them
+       were only reachable by horizontal scrolling — and a horizontal scrollbar is
+       the least discoverable control on a desktop page. Wrapping to two short rows
+       shows every filter at once and costs a few pixels of height. */
+    flex-wrap: wrap;
+    row-gap: var(--spacing-xs);
+    min-width: 0;
 }
 
 .inline-filter-btn {
@@ -2158,16 +2214,36 @@ body.game-modal-open {
     }
     
     .inline-filters-bar {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        min-width: min(90vw, 400px);
-        max-width: 90vw;
+        /* Stays an ABSOLUTE right-anchored dropdown here, exactly as on desktop.
+           It used to be position:fixed with top/left 50% + translate centring, i.e. a
+           modal. That is unreliable in this tree: `fixed` anchors to the nearest
+           transformed ancestor rather than the viewport, so the panel resolved to
+           y=-7 with its top edge off-screen and five controls unreachable. Keeping one
+           positioning model for all widths removes the whole class of bug.
+
+           Width is clamped to the viewport instead of min-width:400px, which on a
+           390px phone forced the panel wider than the screen and made the buttons
+           wrap into a tower. */
+        position: absolute;
+        top: calc(100% + var(--spacing-xs));
+        /* LEFT-anchored on narrow screens. Right-anchoring is correct on desktop where
+           the container sits near the right edge, but on a phone the container is near
+           the LEFT edge, so right:0 pushed a 359px panel out to x=-9. Anchoring left
+           and capping the width to the viewport keeps it on screen at any width. */
+        left: 0;
+        right: auto;
+        transform: none;
+        width: min(86vw, 560px);
+        min-width: 0;
+        max-width: 86vw;
+        max-height: 70vh;
+        overflow-y: auto;
     }
     
     .inline-filters-bar.collapsed {
-        transform: translate(-50%, -50%) scale(0.9);
+        /* No translate here any more — the mobile panel is no longer a centred modal,
+           so a -50%/-50% shift just threw it off the left edge (measured x=-9). */
+        transform: translateY(-8px) scaleY(0.9);
     }
     
     .project-grid {

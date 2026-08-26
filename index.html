@@ -99,6 +99,9 @@
          inline script that uses these globals at top level -- inline scripts run
          BEFORE deferred ones. -->
     <!-- Main Scripts -->
+    <!-- FIRST: mutes 273 console.log calls in production. defer preserves
+         document order, so this runs before anything that logs. -->
+    <script src="src/utils/DebugLog.js" defer></script>
     <script src="src/components/ui/LoadingScreen.js" defer></script>
     
     <!-- 📏 Consolidated Rules System - Load in proper dependency order -->

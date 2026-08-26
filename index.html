@@ -207,6 +207,11 @@
       THREE.LineSegmentsGeometry = LineSegmentsGeometry;
       THREE.LineMaterial = LineMaterial;
       THREE.LineSegments2 = LineSegments2;
+      // NOTE: THREE.Timer needs NO import — it moved into CORE in r184 and already
+      // arrives via the namespace spread above. Importing it from
+      // 'three/addons/misc/Timer.js' 404s, and a failed import in this module aborts
+      // the whole bootstrap, so window.THREE is never set and the entire site dies
+      // silently. Verified the hard way.
       window.THREE = THREE;
       window.__threeReady = true;
     </script>

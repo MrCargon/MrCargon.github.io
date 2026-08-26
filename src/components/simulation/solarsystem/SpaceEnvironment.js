@@ -28,7 +28,16 @@ class SpaceEnvironment {
         this.renderer = null;
         this.container = null;
         this.solarSystem = null;
-        this.clock = new THREE.Clock();
+        // THREE.Clock is deprecated on r184 ("please use THREE.Timer"). Timer lives in
+        // addons and is exposed by the module bootstrap in index.html. Fall back to
+        // Clock if it is missing so the sim never dies over a timing helper.
+        //
+        // Semantics differ and it matters: Clock.getDelta() RESETS on read, so a second
+        // call in the same frame returns ~0 — a trap this file already hit once. Timer
+        // separates update() from getDelta(), so the delta is stable for the whole
+        // frame no matter how many times it is read.
+        this.clock = (typeof THREE.Timer === 'function') ? new THREE.Timer() : new THREE.Clock();
+        this._usingTimer = (typeof THREE.Timer === 'function');
         this.initialized = false;
         this.animationId = null;
         this.resourceLoader = null;
@@ -582,10 +591,21 @@ class SpaceEnvironment {
         // bring back a canvas-level space tint.
         this.renderer.setClearColor(0x000011, 0);
 
-        // Enable shadows for realistic lighting
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.shadowMap.autoUpdate = true;
+        // SHADOWS OFF — deliberately, and this is a straight win.
+        //
+        // Nothing in the scene casts or receives them: an audit found zero meshes with
+        // castShadow/receiveShadow set to true. The renderer was still running a full
+        // shadow-map pass every single frame and producing nothing with it. (The dark
+        // ovals on the Sun that look like planet shadows are the twelve sunspot meshes.)
+        //
+        // It also emitted a deprecation warning on r184, because PCFSoftShadowMap is
+        // gone and silently falls back to PCFShadowMap.
+        //
+        // If real shadows are wanted later — moons on planets, planets on rings — this
+        // needs enabling AND the participating meshes need castShadow/receiveShadow,
+        // plus a shadow camera sized to the body. Turning the flag on alone does
+        // nothing except cost a render pass, which is exactly what was happening.
+        this.renderer.shadowMap.enabled = false;
 
         // Enhanced tone mapping for realistic space lighting
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -723,7 +743,7 @@ class SpaceEnvironment {
         // light (which is what produces the terminator) is correct at every distance.
         this.sunLight = new THREE.PointLight(0xFFFFE0, 2.2, 0, 0);
         this.sunLight.position.set(0, 0, 0); // At Sun's position
-        this.sunLight.castShadow = true;
+        this.sunLight.castShadow = false;   // shadowMap is off; see the note in setupRenderer
         
         // Configure sun shadow properties for realistic shadows
         this.sunLight.shadow.mapSize.width = 2048;
@@ -3523,7 +3543,10 @@ class SpaceEnvironment {
 
         // Update solar system with time synchronization (Phase 2)
         if (this.solarSystem) {
-            deltaTime = this.clock.getDelta(); // Keep original deltaTime for realistic speed
+            // Timer must be advanced once per frame before reading; Clock resets on
+            // read and needs no update call.
+            if (this._usingTimer) this.clock.update();
+            deltaTime = this.clock.getDelta();
 
             // Phase 2: Update virtual time and pass to solar system
             // NASA Rule 7: Check if timeManager exists before using

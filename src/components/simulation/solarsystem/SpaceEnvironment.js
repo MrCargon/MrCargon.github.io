@@ -3872,25 +3872,65 @@ class SpaceEnvironment {
      * Set camera position for background viewing
      * Purpose: Rule 2 bounded distance | Rule 5 validated positioning
      */
+    /**
+     * Which body the backdrop should frame, and how big it is.
+     *
+     * Prefers the last planet the user actually selected. Falls back to the Sun only
+     * when they never picked one — a fresh visitor who has never clicked a planet
+     * still gets the whole-system view, which is the right first impression.
+     * Also records the body's radius so the framing distance can scale with it.
+     * Rule 5: 2 asserts.
+     * @returns {THREE.Vector3}
+     */
+    _resolveBackdropFocus() {
+        console.assert(typeof THREE !== 'undefined', '_resolveBackdropFocus: THREE required');
+        console.assert(this.solarSystem !== undefined, '_resolveBackdropFocus: solarSystem field expected');
+        if (!this._bgFocusVec) this._bgFocusVec = new THREE.Vector3();
+        const name = this._lastFocusedPlanet;
+        if (name && this.solarSystem && typeof this.solarSystem.getPlanetByName === 'function') {
+            const obj = this.solarSystem.getPlanetByName(name);
+            const mesh = obj && (typeof obj.getMesh === 'function' ? obj.getMesh() : obj.mesh);
+            if (mesh) {
+                this._bgFocusRadius = (obj.data && obj.data.radius) || 2;
+                return this._bgFocusVec.copy(mesh.position);
+            }
+        }
+        this._bgFocusRadius = 20;                 // Sun radius: keeps the fallback framed wide
+        return this._bgFocusVec.set(0, 0, 0);
+    }
+
     setBackgroundCameraPosition() {
         if (!this.camera) {
             console.warn('Cannot set background camera position - camera not available');
             return false;
         }
         
-        // Rule 2: Set bounded background viewing position
-        const backgroundPosition = new THREE.Vector3(
-            this.backgroundCameraDistance * 0.7, // Side angle
-            this.backgroundCameraDistance * 0.4, // Elevated view  
-            this.backgroundCameraDistance * 0.8 // Distance from center
+        // Frame the LAST PLANET the user was looking at, not the Sun.
+        //
+        // This used to hard-look at (0,0,0). Leaving Main therefore yanked the camera
+        // onto the Sun, and because the Sun has by far the largest radius in the scene
+        // it frequently filled the whole screen behind the page content. Keeping the
+        // user's last subject is both calmer and more useful — you leave Mars, the
+        // backdrop stays Mars.
+        const focus = this._resolveBackdropFocus();
+        this._bgFocus = focus;
+
+        // Distance scales with the body's own radius so a small planet is framed just
+        // as well as a gas giant, and the Sun (radius 20) can never swallow the view.
+        const r = this._bgFocusRadius || 2;
+        const dist = Math.max(this.backgroundCameraDistance * 0.35, r * 9);
+        this.gentleRotationRadius = dist;
+
+        this.camera.position.set(
+            focus.x + dist * 0.7,
+            focus.y + dist * 0.35,
+            focus.z + dist * 0.8
         );
-        
-        this.camera.position.copy(backgroundPosition);
-        this.camera.lookAt(0, 0, 0); // Look at solar system center
-        
+        this.camera.lookAt(focus);
+
         // Update controls target if available
         if (this.controls) {
-            this.controls.target.set(0, 0, 0);
+            this.controls.target.copy(focus);
             this.controls.update();
         }
         
@@ -3924,6 +3964,9 @@ class SpaceEnvironment {
         }
 
         // Clear any active selections
+        // Remember what the user was looking at BEFORE clearing the selection. The
+        // backdrop then keeps framing that body instead of snapping to the Sun.
+        if (this.selectedPlanet) this._lastFocusedPlanet = this.selectedPlanet;
         this.selectedPlanet = null;
         this.isAutoOrbiting = false;
         this.insideOrbitZone = false;
@@ -3987,13 +4030,19 @@ class SpaceEnvironment {
         }
 
         // Calculate gentle orbital position around the solar system
+        // Orbit the FOCUS body, not the origin. Orbiting (0,0,0) dragged the backdrop
+        // back onto the Sun within a few seconds even after the camera had been framed
+        // on a planet, which defeated the whole point of remembering the selection.
+        // The focus is re-read each frame so the camera travels with the planet.
+        const f = this._resolveBackdropFocus();
         const x = Math.cos(this.gentleRotationAngle) * this.gentleRotationRadius;
         const z = Math.sin(this.gentleRotationAngle) * this.gentleRotationRadius;
         const y = Math.sin(this.gentleRotationAngle * 0.3) * (this.gentleRotationRadius * 0.2); // Gentle vertical movement
-        
+
         // Update camera position smoothly
-        this.camera.position.set(x, y + (this.gentleRotationRadius * 0.3), z);
-        this.camera.lookAt(0, 0, 0);
+        this.camera.position.set(f.x + x, f.y + y + (this.gentleRotationRadius * 0.3), f.z + z);
+        this.camera.lookAt(f);
+        if (this.controls) this.controls.target.copy(f);
         
         // Update controls if available
         if (this.controls) {

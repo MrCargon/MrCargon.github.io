@@ -3398,12 +3398,22 @@ class SpaceEnvironment {
         const startPosition = this.camera.position.clone();
         const startTarget = this.controls ? this.controls.target.clone() : new THREE.Vector3(0, 0, 0);
         
-        // Animation variables
-        const startTime = this.clock.getElapsedTime();
-        
+        // Animation variables.
+        //
+        // performance.now(), NOT this.clock. Swapping THREE.Clock for THREE.Timer to
+        // clear a deprecation warning silently broke this: Clock has getElapsedTime(),
+        // Timer has getElapsed(). The call threw every frame, the fly-to died on its
+        // first tick, and clicking a planet stopped moving the camera at all. The
+        // deprecation warning was gone and the feature was broken.
+        //
+        // A wall clock is the right tool for a UI transition anyway — it has nothing
+        // to do with simulation time, must not pause with it, and cannot be broken by
+        // a future change of timing helper.
+        const startTime = performance.now() / 1000;
+
         // Create animation function
         const animate = () => {
-            const currentTime = this.clock.getElapsedTime();
+            const currentTime = performance.now() / 1000;
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / this.transitionDuration, 1);
             

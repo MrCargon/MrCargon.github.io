@@ -409,6 +409,53 @@ PROJECTS PAGE
                                 </div>
                             </div>
                         </article>
+                        <!-- Life: the Lenia artificial-life simulation. Lives in Projects
+                             rather than the header, so all interactive work sits in one
+                             place. No <img> on purpose — the page's whole point is that it
+                             ships zero image assets, so the card renders its own preview. -->
+                        <article class="project-card interactive-game"
+                                id="life-sim"
+                                tabindex="0"
+                                role="gridcell"
+                                data-featured="true"
+                                data-category="interactive"
+                                aria-labelledby="life-sim-title">
+                            <div class="project-image project-image--generated" aria-hidden="true"></div>
+                            <div class="project-info">
+                                <div class="project-meta">
+                                    <span class="project-type">Simulation</span>
+                                    <span class="project-date">2026</span>
+                                </div>
+                                <h3 id="life-sim-title">Artificial Life</h3>
+                                <div class="project-actions">
+                                    <a class="project-btn" href="#life"
+                                       aria-describedby="life-sim-title"
+                                       title="Open the Lenia artificial life simulation">
+                                        🧬 Open Simulation
+                                    </a>
+                                    <button class="project-btn secondary view-details-btn"
+                                            data-project="life-sim"
+                                            aria-describedby="life-sim-title">
+                                        View Details
+                                    </button>
+                                </div>
+                                <div class="project-hidden-data hidden-content">
+                                    <p data-description>
+                                        Lenia — continuous cellular automata running as a GPU shader.
+                                        Organisms with real boundaries emerge from one convolution and a
+                                        growth curve, then spread and self-replicate. No images, no
+                                        textures, no audio files: every pixel and sound is computed at
+                                        runtime.
+                                    </p>
+                                    <div class="project-tags">
+                                        <span class="tag">WebGL</span>
+                                        <span class="tag">Shaders</span>
+                                        <span class="tag">Cellular Automata</span>
+                                        <span class="tag">Procedural</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
                     </div>
 
                     <!-- Loading State (hidden by default) -->

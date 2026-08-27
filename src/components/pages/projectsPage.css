@@ -2389,3 +2389,18 @@ body.game-modal-open {
     transition-duration: 0.01s !important;
     animation-duration: 0.01s !important;
 }
+
+/* Generated card preview — no <img>, no network request, no asset bytes.
+   Used by the Artificial Life card, whose entire premise is that the page ships
+   zero image assets; loading a stock photo to advertise it would be absurd.
+   Radial blobs over a dark field read as a cell colony at thumbnail size. */
+.project-image--generated {
+    background:
+        radial-gradient(circle at 30% 35%, rgba(255,183,77,0.85) 0 6%, transparent 7%),
+        radial-gradient(circle at 62% 28%, rgba(38,198,182,0.75) 0 5%, transparent 6%),
+        radial-gradient(circle at 45% 62%, rgba(255,183,77,0.65) 0 9%, transparent 10%),
+        radial-gradient(circle at 72% 68%, rgba(38,198,182,0.85) 0 7%, transparent 8%),
+        radial-gradient(circle at 20% 75%, rgba(38,198,182,0.55) 0 4%, transparent 5%),
+        linear-gradient(160deg, #0a1420 0%, #05060a 100%);
+    min-height: 160px;
+}

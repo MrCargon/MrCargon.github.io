@@ -129,14 +129,18 @@ class PageManager {
                 cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
                 preload: false
             },
+            // #conway is an ALIAS for #life, not a second page.
+            //
+            // Conway and Lenia briefly lived on separate pages. They are the discrete and
+            // continuous ends of one subject, and two half-finished pages are worse than
+            // one finished one, so they were merged behind a mode switch. This entry keeps
+            // every existing /#conway link, bookmark and Projects card working — it loads
+            // the same markup and the same controller, which opens in Conway mode.
             conway: {
-                path: 'src/components/pages/conwayPage.html',
+                path: 'src/components/pages/lifePage.html',
                 title: "Conway's Game of Life - Cellular Automata",
-                // Same WebGL rule as `life` above: this page owns a context of its own, so
-                // cleanup is mandatory rather than optional. Leaked contexts are not GC'd
-                // and the browser caps how many a tab may hold.
-                init: () => { this._conwayPage = new ConwayPage(); this._conwayPage.init(); },
-                cleanup: () => { if (this._conwayPage) { this._conwayPage.cleanup(); this._conwayPage = null; } },
+                init: () => { this._lifePage = new LifePage(); this._lifePage.init(); },
+                cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
                 preload: false
             },
             about: {

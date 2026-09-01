@@ -1,51 +1,43 @@
 import { test, expect } from '@playwright/test';
 
-// Runs against the standard dev server from playwright.config.js.
-//
-// This used to need a separate static server: three.js comes from the browser import map
-// pointing at a CDN and is deliberately not an npm dependency, and Vite did not honour
-// import maps — it tried to resolve the bare specifier "three" from node_modules, failed,
-// and returned 500 for the inline module, so `npm run dev` served a page with no THREE at
-// all. The importMapPlugin in vite.config.js now resolves those specifiers to the CDN URLs
-// declared in index.html, so dev and static builds finally agree.
-
 /**
- * Conway's Game of Life — GPU correctness.
+ * Artificial Life page — Conway + Lenia behind one mode switch.
  *
- * tests/verify-patterns.cjs already proves the RLE strings are right, but it does so with
- * a CPU implementation. That says nothing about whether the FRAGMENT SHADER implements
- * B3/S23 correctly — a wrong neighbour tap, a filtering mistake or an off-by-one texel
- * offset would still produce something that moves and looks like Life.
+ * Two layers of proof, because they cover different failures:
  *
- * So these tests run the real shader and assert measurable physics:
- *   - a glider keeps its shape and moves exactly one cell diagonally per 4 generations
- *   - a blinker has period 2
- *   - switching to Seeds (B2/S) kills a block that is stable under Life
+ *   tests/verify-patterns.cjs   the RLE strings are right (CPU simulation)
+ *   this file                   the SHADER implements B3/S23, and every control on the
+ *                               merged page is actually wired to something
  *
- * Each builds its own renderer and disposes it, so a failure cannot leak a WebGL context
- * into the next test.
+ * A wrong neighbour tap or texel offset would still produce something that moves and looks
+ * convincing, so the shader tests assert measurable physics rather than "it renders".
  */
 
-/** Boot the app and wait for THREE + the Life classes to be republished on window. */
-async function bootConway(page) {
+/** Boot the page and wait for THREE + the Life classes to be republished on window. */
+async function bootLife(page, hash = '#conway') {
     const errors = [];
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.goto('/#conway');
+    await page.goto('/' + hash);
     await page.waitForFunction(
         () => typeof window.THREE !== 'undefined'
             && typeof window.ConwayLife !== 'undefined'
-            && typeof window.LifePatterns !== 'undefined',
+            && typeof window.LifePatterns !== 'undefined'
+            && typeof window.LifeView !== 'undefined',
         null,
         { timeout: 30000 }
     );
+    // Wait for the PAGE too, not just the classes. The classes are defined by deferred
+    // scripts long before PageManager has built the controller, and a test that reads
+    // pm._lifePage right after the class check races it.
+    await page.waitForFunction(() => {
+        const pm = window.pageManager || (window.app && window.app.pageManager);
+        return !!(pm && pm._lifePage && pm._lifePage.view);
+    }, null, { timeout: 30000 });
     return errors;
 }
 
-/**
- * Run a pattern on the GPU and return the live-cell sets before and after `gens` steps.
- * Everything happens inside one page.evaluate so the renderer never escapes the browser.
- */
+/** Run a pattern on the GPU in an isolated renderer and return live cells before/after. */
 async function runOnGpu(page, { pattern, gens, rule, size = 64 }) {
     return page.evaluate(({ pattern, gens, rule, size }) => {
         const canvas = document.createElement('canvas');
@@ -58,8 +50,8 @@ async function runOnGpu(page, { pattern, gens, rule, size = 64 }) {
             sim.setRule(p.birth, p.survive);
         }
         const pat = window.LifePatterns.get(pattern);
-        // Place well away from the edges: the world is a torus, and a pattern straddling
-        // the wrap would still be correct but makes displacement arithmetic ambiguous.
+        // Well away from the edges: the world is a torus, and a pattern straddling the
+        // wrap is still correct but makes displacement arithmetic ambiguous.
         sim.setPattern(pat.cells, 20, 20);
 
         const readSet = () => {
@@ -85,131 +77,190 @@ async function runOnGpu(page, { pattern, gens, rule, size = 64 }) {
     }, { pattern, gens, rule, size });
 }
 
-/** Normalise a list of "x,y" keys to its bounding-box origin. */
 function normalise(keys) {
     if (!keys.length) return { shape: '', minX: 0, minY: 0 };
     const pts = keys.map(k => k.split(',').map(Number));
     const minX = Math.min(...pts.map(p => p[0]));
     const minY = Math.min(...pts.map(p => p[1]));
-    return {
-        shape: pts.map(p => (p[0] - minX) + ',' + (p[1] - minY)).sort().join(' '),
-        minX, minY
-    };
+    return { shape: pts.map(p => (p[0] - minX) + ',' + (p[1] - minY)).sort().join(' '), minX, minY };
 }
 
-test.describe("Conway's Game of Life — GPU shader", () => {
+test.describe('Life — GPU shader correctness', () => {
 
     test('page loads without console errors', async ({ page }) => {
-        const errors = await bootConway(page);
-        await expect(page.locator('#conway-canvas')).toBeVisible();
-        // Only fail on errors from our own code; third-party/network noise is not the
-        // subject of this test.
-        const ours = errors.filter(e => /Conway|LifePatterns|ConwayLife|shader|GLSL/i.test(e));
-        expect(ours, 'Conway-related console errors: ' + ours.join(' | ')).toEqual([]);
+        const errors = await bootLife(page);
+        await expect(page.locator('#life-canvas')).toBeVisible();
+        const ours = errors.filter(e => /Conway|LifePatterns|ConwayLife|LifeView|LifePage|shader|GLSL/i.test(e));
+        expect(ours, 'Life-related console errors: ' + ours.join(' | ')).toEqual([]);
     });
 
     test('glider keeps its shape and moves one cell diagonally per 4 generations', async ({ page }) => {
-        await bootConway(page);
+        await bootLife(page);
         const { before, after } = await runOnGpu(page, { pattern: 'glider', gens: 4 });
+        expect(before.length, 'glider starts with 5 cells').toBe(5);
+        expect(after.length, 'glider still has 5 cells').toBe(5);
 
-        expect(before.length, 'glider should start with 5 cells').toBe(5);
-        expect(after.length, 'glider should still have 5 cells').toBe(5);
-
-        const a = normalise(before);
-        const b = normalise(after);
-        expect(b.shape, 'glider shape must be preserved after a full period').toBe(a.shape);
-
-        // c/4 diagonal: exactly one cell on each axis per 4 generations. The sign of dy
-        // depends on readback row order (WebGL reads bottom-up), so magnitude is the
-        // honest assertion — the physics is "one cell diagonally", not "down-right".
-        const dx = Math.abs(b.minX - a.minX);
-        const dy = Math.abs(b.minY - a.minY);
-        expect({ dx, dy }, 'glider must travel exactly (1,1) per 4 gens').toEqual({ dx: 1, dy: 1 });
+        const a = normalise(before), b = normalise(after);
+        expect(b.shape, 'shape must survive a full period').toBe(a.shape);
+        // c/4 diagonal. Sign of dy depends on readback row order (WebGL reads bottom-up),
+        // so magnitude is the honest assertion: the physics is "one cell diagonally".
+        expect({ dx: Math.abs(b.minX - a.minX), dy: Math.abs(b.minY - a.minY) })
+            .toEqual({ dx: 1, dy: 1 });
     });
 
     test('blinker has period 2', async ({ page }) => {
-        await bootConway(page);
-
+        await bootLife(page);
         const one = await runOnGpu(page, { pattern: 'blinker', gens: 1 });
-        expect(one.after.sort(), 'blinker must CHANGE after 1 generation').not.toEqual(one.before.sort());
-
+        expect(one.after.sort(), 'must change after 1 generation').not.toEqual(one.before.sort());
         const two = await runOnGpu(page, { pattern: 'blinker', gens: 2 });
-        expect(two.after.sort(), 'blinker must return to its start after 2 generations').toEqual(two.before.sort());
+        expect(two.after.sort(), 'must return after 2 generations').toEqual(two.before.sort());
     });
 
     test('switching to Seeds (B2/S) kills a block that is stable under Life', async ({ page }) => {
-        await bootConway(page);
-
+        await bootLife(page);
         const life = await runOnGpu(page, { pattern: 'block', gens: 4 });
         expect(life.after.sort(), 'a block is a still life under B3/S23').toEqual(life.before.sort());
 
-        // Seeds has an empty survival set: every live cell dies every generation, so the
-        // block cannot persist. This proves the rule uniforms actually reach the shader
-        // rather than B3/S23 being baked in.
+        // Seeds has an empty survival set, so the block cannot persist. This proves the
+        // rule uniforms actually reach the shader rather than B3/S23 being baked in.
         const seeds = await runOnGpu(page, { pattern: 'block', gens: 1, rule: 'B2/S' });
-        expect(seeds.before.length, 'block should start with 4 cells').toBe(4);
-        const survivors = seeds.after.filter(k => seeds.before.includes(k));
-        expect(survivors, 'no original block cell may survive under B2/S').toEqual([]);
+        expect(seeds.before.length).toBe(4);
+        expect(seeds.after.filter(k => seeds.before.includes(k)),
+            'no original block cell may survive under B2/S').toEqual([]);
+    });
+});
+
+test.describe('Life — merged page controls', () => {
+
+    test('opens in Conway from #conway and Lenia from #life', async ({ page }) => {
+        await bootLife(page, '#conway');
+        await expect(page.locator('#mode-conway')).toHaveAttribute('aria-selected', 'true');
+        await expect(page.locator('#pick-pattern-wrap')).toBeVisible();
+        await expect(page.locator('#pick-mu-wrap')).toBeHidden();
+
+        await bootLife(page, '#life');
+        await expect(page.locator('#mode-lenia')).toHaveAttribute('aria-selected', 'true');
+        await expect(page.locator('#pick-mu-wrap')).toBeVisible();
+        await expect(page.locator('#pick-pattern-wrap')).toBeHidden();
     });
 
-    test('the page initialises and actually runs', async ({ page }) => {
-        await bootConway(page);
+    test('mode switch swaps the controls and keeps both worlds alive', async ({ page }) => {
+        await bootLife(page, '#conway');
+        await page.click('#mode-lenia');
+        await expect(page.locator('#pick-mu-wrap')).toBeVisible();
+        const bothAlive = await page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const lp = pm && pm._lifePage;
+            return lp ? { conway: !!lp.sims.conway, lenia: !!lp.sims.lenia, mode: lp.mode } : null;
+        });
+        expect(bothAlive, 'both simulations must survive a mode switch')
+            .toEqual({ conway: true, lenia: true, mode: 'lenia' });
+    });
+
+    test('the simulation actually runs and the pickers are populated', async ({ page }) => {
+        await bootLife(page, '#conway');
         await page.waitForFunction(() => {
-            const g = document.getElementById('conway-gen');
+            const g = document.getElementById('life-gen');
             return g && /generation (\d+)/.test(g.textContent) && +RegExp.$1 > 0;
         }, null, { timeout: 20000 });
 
-        const state = await page.evaluate(() => ({
-            gen: (document.getElementById('conway-gen') || {}).textContent,
-            pop: (document.getElementById('conway-pop') || {}).textContent,
-            patterns: (document.getElementById('conway-pattern') || {}).length,
-            rules: (document.getElementById('conway-ruleset') || {}).length
+        const s = await page.evaluate(() => ({
+            patterns: document.getElementById('life-pattern').length,
+            rules: document.getElementById('life-ruleset').length,
+            palettes: document.getElementById('life-palette').length,
+            pop: document.getElementById('life-pop').textContent
         }));
-
-        expect(state.patterns, 'all patterns should be listed').toBe(14);
-        expect(state.rules, 'all universes should be listed').toBe(7);
-        // Opens on the Gosper gun (36 cells) which grows without bound, so a running
-        // simulation must show MORE than it started with.
-        const pop = parseInt((state.pop || '').replace(/\D/g, ''), 10);
-        expect(pop, 'Gosper gun population should exceed its initial 36 cells').toBeGreaterThan(36);
+        expect(s.patterns, 'all patterns listed').toBe(14);
+        expect(s.rules, 'all universes listed').toBe(7);
+        expect(s.palettes, 'all palettes listed').toBeGreaterThan(3);
+        // Opens on the Gosper gun (36 cells), which grows without bound.
+        expect(parseInt(s.pop.replace(/\D/g, ''), 10)).toBeGreaterThan(36);
     });
 
-    test('ConwayPage.cleanup() releases the renderer', async ({ page }) => {
-        await bootConway(page);
-        // Tests what THIS page owns: that cleanup() actually tears the context down.
-        //
-        // Deliberately NOT asserted here: that PageManager calls cleanup on every
-        // navigation path. Measured on this build, navigating away by hash leaves
-        // `_lifePage` set too — the pre-existing Artificial Life page behaves identically,
-        // so that is a router-level issue affecting both WebGL pages and is reported
-        // separately rather than blamed on this one.
-        // Tear down the LIVE instance the page created, not a second copy of it.
-        //
-        // An earlier version of this test did `new ConwayPage(); init()`, which grabs
-        // #conway-canvas — a canvas that already has a WebGL context owned by the page's
-        // own instance. A canvas cannot hand out a second context, so init() returned
-        // false. It only ever passed because the static server was slow enough that the
-        // real instance had not claimed the canvas yet: an order-dependent test that
-        // measured load timing rather than cleanup.
+    test('zoom controls change the view and reset restores it', async ({ page }) => {
+        await bootLife(page, '#conway');
+        const read = () => page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            return pm._lifePage.view.zoom;
+        });
+        const start = await read();
+        await page.click('#life-zoom-in');
+        const zoomed = await read();
+        expect(zoomed, 'zoom in must increase magnification').toBeGreaterThan(start);
+        await expect(page.locator('#life-zoom-out-label')).toContainText('×');
+
+        await page.click('#life-zoom-reset');
+        expect(await read(), 'reset must restore 1x').toBe(1);
+    });
+
+    test('drawing puts live cells on the grid', async ({ page }) => {
+        await bootLife(page, '#conway');
+        await page.click('#life-pause');           // freeze so the rule cannot eat the stroke
+        await page.click('#life-clear');
+        await page.click('#tool-draw');
+
+        const before = await page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const s = pm._lifePage.sims.conway;
+            const b = s.readPixels();
+            let n = 0; for (let i = 0; i < b.length; i += 4) if (b[i] > 127) n++;
+            return n;
+        });
+        expect(before, 'clear must leave an empty world').toBe(0);
+
+        // The tool buttons sit BELOW the canvas, so clicking them scrolls the panel and
+        // can push the canvas centre off-screen — mouse events then land on whatever is
+        // at those coordinates instead. Scroll it back before drawing and re-read the box.
+        await page.locator('#life-canvas').scrollIntoViewIfNeeded();
+        await page.waitForTimeout(200);
+        const box = await page.locator('#life-canvas').boundingBox();
+        expect(box.y, 'canvas must be on screen before drawing').toBeGreaterThan(-1);
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 25, { steps: 8 });
+        await page.mouse.up();
+
+        const after = await page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const s = pm._lifePage.sims.conway;
+            const b = s.readPixels();
+            let n = 0; for (let i = 0; i < b.length; i += 4) if (b[i] > 127) n++;
+            return n;
+        });
+        expect(after, 'dragging with the draw tool must create cells').toBeGreaterThan(0);
+    });
+
+    test('palette selection reaches the shader', async ({ page }) => {
+        await bootLife(page, '#conway');
+        await page.selectOption('#life-palette', 'ice');
+        const applied = await page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const v = pm._lifePage.view;
+            const u = v._quad.material.uniforms;
+            return { name: v.palette, high: [u.uHigh.value.r, u.uHigh.value.g, u.uHigh.value.b] };
+        });
+        expect(applied.name).toBe('ice');
+        // Ice's high stop is a pale blue: blue must dominate red, which is not true of
+        // the default ember palette — so this proves the uniform actually changed.
+        expect(applied.high[2]).toBeGreaterThan(applied.high[0]);
+    });
+
+    test('LifePage.cleanup() releases the renderer and both sims', async ({ page }) => {
+        await bootLife(page, '#conway');
         await page.waitForFunction(() => {
             const pm = window.pageManager || (window.app && window.app.pageManager);
-            return !!(pm && pm._conwayPage && pm._conwayPage.renderer);
+            return !!(pm && pm._lifePage && pm._lifePage.renderer);
         }, null, { timeout: 20000 });
 
-        const released = await page.evaluate(() => {
+        const r = await page.evaluate(() => {
             const pm = window.pageManager || (window.app && window.app.pageManager);
-            const p = pm._conwayPage;
-            const had = { renderer: !!p.renderer, sim: !!p.sim, raf: p.raf !== null };
+            const p = pm._lifePage;
+            const had = { renderer: !!p.renderer, conway: !!p.sims.conway, lenia: !!p.sims.lenia };
             p.cleanup();
-            return {
-                had,
-                after: { renderer: p.renderer, sim: p.sim, raf: p.raf }
-            };
+            return { had, after: { renderer: p.renderer, conway: p.sims.conway, lenia: p.sims.lenia, raf: p.raf, view: p.view } };
         });
-
-        expect(released.had, 'the live page should hold a renderer, sim and rAF before cleanup')
-            .toEqual({ renderer: true, sim: true, raf: true });
-        expect(released.after, 'cleanup must null every handle it owns')
-            .toEqual({ renderer: null, sim: null, raf: null });
+        expect(r.had).toEqual({ renderer: true, conway: true, lenia: true });
+        expect(r.after, 'cleanup must null every handle it owns')
+            .toEqual({ renderer: null, conway: null, lenia: null, raf: null, view: null });
     });
 });

@@ -32,7 +32,6 @@
         <link rel="stylesheet" href="src/components/pages/calendarPage.css">
         <link rel="stylesheet" href="src/components/pages/notesPage.css">
         <link rel="stylesheet" href="src/components/pages/lifePage.css">
-        <link rel="stylesheet" href="src/components/pages/conwayPage.css">
         <link rel="stylesheet" href="src/components/pages/contactPage.css">
         <link rel="stylesheet" href="src/components/footer/footer.css">
         <link rel="stylesheet" href="src/components/simulation/time/timeControls.css">
@@ -125,14 +124,16 @@
     <script src="src/utils/SineAudio.js" defer></script>
     <!-- Lenia: continuous cellular automata, GPU ping-pong. Artificial life. -->
     <script src="src/utils/Lenia.js" defer></script>
-    <script src="src/components/pages/LifePage.js" defer></script>
 
-    <!-- Conway's Game of Life: the discrete ancestor of Lenia above. LifePatterns must
-         load before ConwayPage, which reads it during init() to fill the dropdowns.
-         Both are classic scripts touching THREE only at runtime, per the note below. -->
+    <!-- Conway's Game of Life: the discrete end of the same family as Lenia. Both
+         simulations are driven by ONE page (LifePage) behind a mode switch, sharing
+         LifeView for zoom/pan/palette. Order matters: LifePatterns and both sims must be
+         defined before LifePage reads them during init(). All classic scripts touching
+         THREE only at runtime, per the note below. -->
     <script src="src/utils/LifePatterns.js" defer></script>
     <script src="src/utils/ConwayLife.js" defer></script>
-    <script src="src/components/pages/ConwayPage.js" defer></script>
+    <script src="src/utils/LifeView.js" defer></script>
+    <script src="src/components/pages/LifePage.js" defer></script>
     <script src="src/utils/SafeFetch.js" defer></script>
     <script src="src/utils/GeoLOD.js" defer></script>
     <script src="src/assets/vendor/mvt-decoder.js" defer></script>

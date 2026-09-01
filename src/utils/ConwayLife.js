@@ -200,6 +200,50 @@ class ConwayLife {
         return this._upload(g);
     }
 
+    /**
+     * Paint cells directly into the CURRENT state, without resetting the generation.
+     *
+     * Done as a GPU stamp rather than a CPU round trip: reading 512x512 back, editing one
+     * cell and re-uploading would stall the pipeline on every mouse-move event. Instead a
+     * small quad is rendered straight into the live target with autoClear off, so the rest
+     * of the world is untouched.
+     *
+     * @param {number} cx  cell x
+     * @param {number} cy  cell y
+     * @param {boolean} alive  true to birth, false to erase
+     * @param {number} [radius=0]  brush radius in cells (0 = a single cell)
+     * Rule 5: 2 asserts.
+     */
+    paint(cx, cy, alive, radius) {
+        console.assert(this._targets, 'paint: init first');
+        console.assert(Number.isFinite(cx) && Number.isFinite(cy), 'paint: finite cell coords');
+        const n = this.size;
+        const r = Math.max(0, Math.min(64, radius | 0));      // Rule 2: bounded brush
+        const span = (2 * r + 1) / n;                          // quad size in UV
+        const u = (((cx % n) + n) % n + 0.5) / n;
+        const v = (((cy % n) + n) % n + 0.5) / n;
+
+        if (!this._stamp) {
+            this._stampMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            this._stamp = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this._stampMat);
+            this._stampScene = new THREE.Scene();
+            this._stampScene.add(this._stamp);
+        }
+        this._stampMat.color.setScalar(alive ? 1 : 0);
+        this._stamp.scale.set(span * 2, span * 2, 1);          // UV span -> NDC span
+        this._stamp.position.set(u * 2 - 1, v * 2 - 1, 0);
+
+        const prevTarget = this.renderer.getRenderTarget();
+        const prevAutoClear = this.renderer.autoClear;
+        this.renderer.autoClear = false;                       // keep the existing world
+        this.renderer.setRenderTarget(this._targets[this._cur]);
+        this.renderer.render(this._stampScene, this._simCam);
+        this.renderer.autoClear = prevAutoClear;
+        this.renderer.setRenderTarget(prevTarget);
+        this.outputTexture = this._targets[this._cur].texture;
+        return true;
+    }
+
     /** Advance one generation. Rule 5: 2 asserts. */
     step() {
         console.assert(this._targets, 'step: init first');
@@ -245,6 +289,7 @@ class ConwayLife {
         this._disposed = true;
         if (this._targets) { this._targets.forEach(t => t.dispose()); this._targets = null; }
         if (this._simMat) this._simMat.dispose();
+        if (this._stamp) { this._stamp.geometry.dispose(); this._stampMat.dispose(); this._stamp = null; }
         this._grid = null;
         this.outputTexture = null;
         return true;

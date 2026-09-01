@@ -131,3 +131,164 @@
        forced to animate. The reseed button still steps it on demand. */
     .life-btn { transition: none; }
 }
+
+/* =======================================================================
+   MERGED PAGE (2026-08-31) — mode switch, zoom, tools, palette.
+   Conway and Lenia used to be two separate pages. They are one subject:
+   the discrete and continuous ends of the same family. One page, both
+   simulations, nothing removed.
+   ======================================================================= */
+
+/* --- mode switch ------------------------------------------------------- */
+
+.life-modes {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+}
+
+.life-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 0.45rem 1.1rem;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+    background: var(--card-bg, rgba(40, 40, 40, 0.85));
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.72));
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.life-mode .life-mode-sub {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.life-mode:hover { border-color: var(--primary-color, #ff8500); }
+.life-mode.is-active {
+    background: rgba(255, 133, 0, 0.28);
+    border-color: var(--primary-color, #ff8500);
+    color: var(--text-color, #fff);
+}
+.life-mode:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: 2px; }
+
+/* --- zoom controls, floating over the stage ---------------------------- */
+
+.life-zoom {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.life-icon-btn {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--text-color, #fff);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.life-icon-btn:hover { background: rgba(255, 133, 0, 0.3); border-color: var(--primary-color, #ff8500); }
+.life-icon-btn:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: 2px; }
+
+/* --- tools ------------------------------------------------------------- */
+
+.life-tools,
+.life-pickers {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.life-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+}
+
+.life-picker-label {
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.6));
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    align-self: center;
+}
+
+.life-pickers select,
+.life-pickers input[type="text"] {
+    padding: 0.45rem 0.6rem;
+    min-height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+    background: var(--card-bg, rgba(40, 40, 40, 0.85));
+    color: var(--text-color, #fff);
+    font-size: 0.9rem;
+    min-width: 11rem;
+}
+.life-pickers input[type="text"] {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    min-width: 9rem;
+}
+/* A rule string that will not parse: flag it and KEEP the previous universe, rather
+   than silently doing nothing, which reads as a broken input box. */
+.life-pickers input[type="text"].invalid { border-color: #e0564a; }
+.life-pickers select:focus-visible,
+.life-pickers input:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: 2px; }
+
+.life-hint { font-size: 0.68rem; color: var(--text-color-dim, rgba(255, 255, 255, 0.45)); }
+
+.life-note {
+    text-align: center;
+    min-height: 1.2em;
+    margin: 0 0 1.25rem;
+    font-size: 0.82rem;
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.62));
+}
+
+/* Hidden panels must actually be hidden — [hidden] loses to `display:flex`. */
+.life-picker[hidden],
+.life-pickers [hidden] { display: none !important; }
+
+/* --- drawing --------------------------------------------------------- */
+
+/* While a drawing tool is active the canvas must own the gesture, or a touch-drag
+   scrolls the page instead of painting. Pan mode leaves `pan-y` in place so the page
+   still scrolls normally under a finger. */
+#life-canvas.is-drawing { touch-action: none; cursor: crosshair; }
+#life-canvas.is-panning { touch-action: none; cursor: grab; }
+#life-canvas.is-panning:active { cursor: grabbing; }
+
+.life-notes h2 { margin-top: 1.6rem; }
+.life-notes h2:first-child { margin-top: 0; }
+.life-notes code {
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.9em;
+}
+
+@media (max-width: 600px) {
+    .life-pickers select,
+    .life-pickers input[type="text"] { min-width: 0; width: 100%; }
+    .life-picker { flex: 1 1 46%; }
+    .life-modes .life-mode { flex: 1 1 0; }
+}

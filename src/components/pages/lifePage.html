@@ -3,57 +3,170 @@
         <header class="life-header">
             <h1 class="life-title">Artificial Life</h1>
             <p class="life-sub">
-                Continuous cellular automata — <strong>Lenia</strong>. No sprites, no
-                textures, no audio files. Every pixel and every sound on this page is
-                generated from maths at runtime.
+                Two cellular automata, one lineage. <strong>Conway's Game of Life</strong> is
+                the discrete original: cells are alive or dead. <strong>Lenia</strong> makes
+                everything continuous and organisms appear. No sprites, no textures, no audio
+                files — every pixel and every sound here is generated from maths at runtime.
             </p>
         </header>
 
+        <div class="life-modes" role="tablist" aria-label="Simulation">
+            <button type="button" class="life-mode is-active" id="mode-conway"
+                    role="tab" aria-selected="true" aria-controls="life-canvas">
+                Conway <span class="life-mode-sub">discrete</span>
+            </button>
+            <button type="button" class="life-mode" id="mode-lenia"
+                    role="tab" aria-selected="false" aria-controls="life-canvas">
+                Lenia <span class="life-mode-sub">continuous</span>
+            </button>
+        </div>
+
         <div class="life-stage">
-            <canvas id="life-canvas" width="512" height="512"
-                    aria-label="Lenia artificial life simulation"></canvas>
+            <canvas id="life-canvas" width="640" height="640"
+                    aria-label="Cellular automata simulation"></canvas>
+
+            <div class="life-zoom" role="group" aria-label="Zoom">
+                <button type="button" id="life-zoom-in" class="life-icon-btn" title="Zoom in" aria-label="Zoom in">＋</button>
+                <button type="button" id="life-zoom-out" class="life-icon-btn" title="Zoom out" aria-label="Zoom out">－</button>
+                <button type="button" id="life-zoom-reset" class="life-icon-btn" title="Reset view" aria-label="Reset view">⤢</button>
+            </div>
+
             <div id="life-stats" class="life-stats" aria-live="polite">
                 <span id="life-gen">generation 0</span>
-                <span id="life-pop">population 0%</span>
+                <span id="life-pop">population 0</span>
+                <span id="life-zoom-out-label">1.0×</span>
+                <span id="life-rule">B3/S23</span>
             </div>
         </div>
 
         <div class="life-controls">
-            <button type="button" id="life-reseed" class="life-btn">↻ New world</button>
             <button type="button" id="life-pause" class="life-btn" aria-pressed="false">⏸ Pause</button>
-            <button type="button" id="life-sound" class="life-btn" aria-pressed="false">🔈 Sound</button>
+            <button type="button" id="life-step" class="life-btn">⏭ Step</button>
+            <button type="button" id="life-reseed" class="life-btn">↻ New world</button>
+            <button type="button" id="life-clear" class="life-btn">✕ Clear</button>
             <label class="life-slider">
-                <span>Growth&nbsp;μ</span>
-                <input type="range" id="life-mu" min="0.10" max="0.35" step="0.005" value="0.15">
-                <output id="life-mu-out">0.150</output>
+                <span>Speed</span>
+                <input type="range" id="life-speed" min="1" max="16" step="1" value="1">
+                <output id="life-speed-out">1×</output>
             </label>
         </div>
 
+        <div class="life-tools" role="group" aria-label="Pointer tool">
+            <span class="life-picker-label">Tool</span>
+            <button type="button" id="tool-pan" class="life-btn life-tool is-active" aria-pressed="true">✋ Pan</button>
+            <button type="button" id="tool-draw" class="life-btn life-tool" aria-pressed="false">✏ Draw</button>
+            <button type="button" id="tool-erase" class="life-btn life-tool" aria-pressed="false">🩹 Erase</button>
+            <label class="life-slider">
+                <span>Brush</span>
+                <input type="range" id="life-brush" min="0" max="12" step="1" value="1">
+                <output id="life-brush-out">1</output>
+            </label>
+        </div>
+
+        <div class="life-pickers">
+            <label class="life-picker" id="pick-pattern-wrap">
+                <span class="life-picker-label">Pattern</span>
+                <select id="life-pattern"></select>
+            </label>
+            <label class="life-picker" id="pick-rule-wrap">
+                <span class="life-picker-label">Universe</span>
+                <select id="life-ruleset"></select>
+            </label>
+            <label class="life-picker life-picker-custom" id="pick-custom-wrap">
+                <span class="life-picker-label">Custom rule</span>
+                <input type="text" id="life-rule-input" value="B3/S23" spellcheck="false"
+                       autocomplete="off" aria-describedby="life-rule-help">
+                <span id="life-rule-help" class="life-hint">B&lt;births&gt;/S&lt;survivals&gt;</span>
+            </label>
+            <label class="life-picker" id="pick-mu-wrap" hidden>
+                <span class="life-picker-label">Growth μ</span>
+                <input type="range" id="life-mu" min="0.10" max="0.35" step="0.005" value="0.15">
+                <output id="life-mu-out">0.150</output>
+            </label>
+            <label class="life-picker">
+                <span class="life-picker-label">Colour</span>
+                <select id="life-palette"></select>
+            </label>
+            <div class="life-picker" id="pick-sound-wrap" hidden>
+                <span class="life-picker-label">Audio</span>
+                <button type="button" id="life-sound" class="life-btn" aria-pressed="false">🔈 Sound</button>
+            </div>
+        </div>
+        <p id="life-note" class="life-note" aria-live="polite"></p>
+
         <div class="life-notes">
-            <h2>How it works</h2>
+            <h2>Conway — the discrete original</h2>
             <p>
-                Conway's Game of Life gives each cell two states, alive or dead. Lenia
-                makes everything continuous — cell values, the neighbourhood, time
-                itself. That smoothness is what lets organisms appear: shapes with a
-                boundary that hold themselves together, move, and reproduce.
+                Each cell looks at its eight neighbours. A live cell with <strong>2 or 3</strong>
+                live neighbours survives; a dead cell with <strong>exactly 3</strong> is born;
+                everything else dies. Written <code>B3/S23</code>. Every cell must read the
+                <em>previous</em> generation — updating in place gives a different automaton
+                entirely, and double buffering is part of the rule rather than an optimisation.
             </p>
             <p>
-                Each step convolves the grid with a smooth <strong>ring</strong> kernel,
-                then applies a bell-curve growth function. A ring, not a disc: a
-                creature's centre sees a complete ring and holds steady while its edge
-                sees a partial one and grows or dies. That single detail is the
-                difference between organisms and mush.
+                That is enough to be <strong>Turing complete</strong>. A glider is a packet
+                travelling at a known speed, a glider gun is a clock, and two gliders meeting
+                at the right phase annihilate — which gives NOT, AND and OR. Distance is the
+                wiring: a channel one cell too long shifts the phase and the gate stops working.
+                Nothing was added to the rules to allow this; it took decades to find.
+            </p>
+            <p>
+                <strong>B3/S23 is one point in a space of 262,144 rules.</strong> Switch
+                universes above: <strong>HighLife</strong> (B36/S23) contains a genuine
+                self-replicator, <strong>Seeds</strong> (B2/S) lets nothing survive at all and
+                detonates, <strong>Day &amp; Night</strong> behaves identically on a live
+                background as on a dead one.
+            </p>
+
+            <h2>Lenia — what happens when you make it continuous</h2>
+            <p>
+                Lenia makes everything smooth: cell values, the neighbourhood, and time itself.
+                That smoothness is what lets organisms appear — shapes with a boundary that hold
+                themselves together, move, and reproduce.
+            </p>
+            <p>
+                Each step convolves the grid with a smooth <strong>ring</strong> kernel, then
+                applies a bell-curve growth function. A ring, not a disc: a creature's centre
+                sees a complete ring and holds steady while its edge sees a partial one and
+                grows or dies. That single detail is the difference between organisms and mush.
             </p>
             <p class="life-warn">
-                The habitable band is narrow. Slide <strong>μ</strong> too far and the
-                world goes sterile within a few hundred steps, or floods and saturates.
-                Radius 10 lives; radius 9, with everything else identical, goes extinct.
+                The habitable band is narrow. Slide <strong>μ</strong> too far and the world
+                goes sterile within a few hundred steps, or floods and saturates. Radius 10
+                lives; radius 9, with everything else identical, goes extinct.
             </p>
+
+            <h2>The same family</h2>
+            <p>
+                Conway is the discrete corner of the space Lenia occupies continuously. Between
+                them sit <em>Larger than Life</em> rules, where the neighbourhood grows past a
+                single ring of cells but the states stay binary. Switching modes above moves
+                along that axis — the machinery underneath is the same: a neighbourhood sum, a
+                rule applied to it, and a double buffer.
+            </p>
+
+            <h2>Life inside Life</h2>
+            <p>
+                The OTCA metapixel (Brice Due, 2006) is a Conway pattern that behaves like a
+                single Conway cell — 2048×2048 cells wide, one of its generations taking 35,328
+                of ours. Tile the plane with them and you get Life whose cells are themselves
+                Life, all the way down.
+            </p>
+            <p class="life-warn">
+                Not simulated here, deliberately: a 10×10 metapixel board is about
+                4×10<sup>11</sup> cell updates per meta-generation. That needs Hashlife and a
+                desktop, not a canvas on a portfolio page — and saying so is more useful than
+                shipping something that pretends.
+            </p>
+
             <p class="life-credit">
-                Lenia was devised by Bert Chan. Implemented here as a GPU fragment
-                shader over ping-pong render targets — roughly 300 neighbourhood samples
-                per cell per step, which is hopeless in JavaScript and trivial for a
-                graphics card.
+                Lenia was devised by Bert Chan. Both simulations run as GPU fragment shaders
+                over ping-pong render targets — Lenia takes roughly 300 neighbourhood samples
+                per cell per step, which is hopeless in JavaScript and trivial for a graphics
+                card. Every Conway pattern here is verified by simulation in
+                <code>tests/verify-patterns.cjs</code> rather than trusted: the R-pentomino
+                settles at generation 1103, the acorn at 5206, diehard vanishes at 130 — all
+                measured. Full write-up in <code>CELLULAR_AUTOMATA.md</code>.
             </p>
         </div>
     </div>

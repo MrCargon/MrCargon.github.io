@@ -3818,7 +3818,21 @@ class SpaceEnvironment {
         }
         
         this.backgroundMode = isBackground;
-        
+
+        // Re-evaluate the "Explore Earth" button the moment this flag changes.
+        //
+        // _updateExploreButton()'s own condition already excludes background mode, but
+        // nothing re-ran it on navigation, so the button kept whatever display it was
+        // last given. Reproduced: select Earth on Main, click through to Projects without
+        // ever entering Explore, and the button was still display:block and on screen —
+        // over an unrelated page, with selectedPlanet already back to null.
+        //
+        // Doing it here rather than in the router covers every route into and out of
+        // background mode, which is the same reasoning that puts the exitExploreMode
+        // guard in cleanupCurrentPage. The already-in-explore case was covered by that
+        // guard and verified still working; this is the case that was not.
+        if (typeof this._updateExploreButton === 'function') this._updateExploreButton();
+
         if (isBackground) {
             // Preserve current camera state before transitioning
             this.preserveCameraState();

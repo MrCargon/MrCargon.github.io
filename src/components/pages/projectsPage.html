@@ -71,7 +71,7 @@ PROJECTS PAGE
             </div>
             
             <div class="header-controls">
-                <span class="project-count" id="project-count" aria-live="polite">5 Projects</span>
+                <span class="project-count" id="project-count" aria-live="polite">8 Projects</span>
             </div>
         </header>
 
@@ -426,7 +426,7 @@ PROJECTS PAGE
                                     <span class="project-type">Simulation</span>
                                     <span class="project-date">2026</span>
                                 </div>
-                                <h3 id="life-sim-title">Artificial Life</h3>
+                                <h3 id="life-sim-title">Artificial Life &amp; Conway</h3>
                                 <div class="project-actions">
                                     <a class="project-btn" href="#life"
                                        aria-describedby="life-sim-title"
@@ -445,63 +445,16 @@ PROJECTS PAGE
                                         Organisms with real boundaries emerge from one convolution and a
                                         growth curve, then spread and self-replicate. No images, no
                                         textures, no audio files: every pixel and sound is computed at
-                                        runtime. One page with Conway's discrete Game of Life: zoom,
-                                        pan, draw cells, and swap palettes in either mode.
+                                        runtime. One page, two automata: switch to Conway's discrete
+                                        Game of Life and any of its 262,144 birth/survival rules, or
+                                        stay continuous with Lenia. Zoom, pan, draw cells and edit the
+                                        palette in either mode.
                                     </p>
                                     <div class="project-tags">
                                         <span class="tag">WebGL</span>
                                         <span class="tag">Shaders</span>
                                         <span class="tag">Cellular Automata</span>
                                         <span class="tag">Procedural</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                        <!-- Conway: the discrete ancestor of the Lenia page above. Same
-                             family, opposite end — see CELLULAR_AUTOMATA.md. Also no <img>:
-                             the entire pattern library is RLE text in source. -->
-                        <article class="project-card interactive-game"
-                                id="conway-sim"
-                                tabindex="0"
-                                role="gridcell"
-                                data-featured="true"
-                                data-category="interactive"
-                                aria-labelledby="conway-sim-title">
-                            <div class="project-image project-image--generated" aria-hidden="true"></div>
-                            <div class="project-info">
-                                <div class="project-meta">
-                                    <span class="project-type">Simulation</span>
-                                    <span class="project-date">2026</span>
-                                </div>
-                                <h3 id="conway-sim-title">Conway's Game of Life</h3>
-                                <div class="project-actions">
-                                    <a class="project-btn" href="#conway"
-                                       aria-describedby="conway-sim-title"
-                                       title="Open Conway's Game of Life">
-                                        ⬛ Open Simulation
-                                    </a>
-                                    <button class="project-btn secondary view-details-btn"
-                                            data-project="conway-sim"
-                                            aria-describedby="conway-sim-title">
-                                        View Details
-                                    </button>
-                                </div>
-                                <div class="project-hidden-data hidden-content">
-                                    <p data-description>
-                                        Conway's Game of Life on the GPU, with any of the 262,144
-                                        birth/survival rules switchable live — HighLife, Seeds,
-                                        Day &amp; Night. Fourteen canonical patterns stored as RLE
-                                        text and verified by simulation rather than trusted: the
-                                        R-pentomino settles at generation 1103, the acorn at 5206,
-                                        diehard vanishes at 130. Zero asset bytes. Shares the
-                                        Artificial Life page — same canvas, zoom, drawing tools
-                                        and palettes, switchable to continuous Lenia.
-                                    </p>
-                                    <div class="project-tags">
-                                        <span class="tag">WebGL</span>
-                                        <span class="tag">Shaders</span>
-                                        <span class="tag">Cellular Automata</span>
-                                        <span class="tag">Zero Assets</span>
                                     </div>
                                 </div>
                             </div>

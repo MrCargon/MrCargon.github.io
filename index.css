@@ -389,8 +389,15 @@ body {
      own inert path never engaged either. document.elementFromPoint over the Lenia/Conway
      mode buttons returned #camera-input-layer, not the button, and Playwright clicks
      timed out having passed every actionability check.
-     One rule, every page, and it is exactly what the layer already expected. */
-  z-index: 1;
+
+     The lift is applied to `.main-section` BELOW, not here. Putting z-index on
+     #page-container itself creates a stacking context, and #game-container — the
+     fullscreen game modal, which is a CHILD of this element — was then trapped inside it:
+     its z-index:999999 became meaningless against the header's 300, and the modal's own
+     close button ended up underneath the header. Measured: elementFromPoint over "Close
+     game" returned #header-container, and the click timed out, so the Barista game could
+     not be closed at all. Lifting only the page section leaves the modal free to stack
+     against the document as it was designed to. */
 
   /* Clean viewport system - pages manage their own internal scrolling */
   display: flex;
@@ -422,6 +429,13 @@ body {
   overflow-x: hidden;
   overscroll-behavior: contain;      /* don't chain to the document and rubber-band */
   -webkit-overflow-scrolling: touch; /* momentum scrolling on iOS */
+
+  /* Lift page content above #camera-input-layer (fixed, full-viewport, z-index 0,
+     pointer-events:auto) — see the note on #page-container above. Applied to the SECTION
+     rather than the container so that #game-container, a sibling, keeps stacking against
+     the document and its close button stays above the header. */
+  position: relative;
+  z-index: 1;
 }
 
 /* FOOTER: Always at bottom, never scrolls */

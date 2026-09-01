@@ -24,6 +24,8 @@ class LifePage {
         this.speed = 1;
         this.tool = 'pan';              // pan | draw | erase
         this.brush = 1;
+        this.density = 0.3;             // Conway reseed density
+        this.volume = 0.18;             // Lenia ambient audio
         this._pointer = { down: false, lastX: 0, lastY: 0, id: null };
         this._pinch = null;
         this._lastStatsAt = 0;
@@ -69,6 +71,7 @@ class LifePage {
         // preference means not running it, not running it more gently.
         this.paused = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         this._setMode(this.mode, true);
+        this._syncSwatches();
         this._syncPauseButton();
         this._loop();
         return true;
@@ -137,7 +140,12 @@ class LifePage {
         show('pick-rule-wrap', mode === 'conway');
         show('pick-custom-wrap', mode === 'conway');
         show('pick-mu-wrap', mode === 'lenia');
+        show('pick-sigma-wrap', mode === 'lenia');
+        show('pick-kmu-wrap', mode === 'lenia');
+        show('pick-dt-wrap', mode === 'lenia');
         show('pick-sound-wrap', mode === 'lenia');
+        show('pick-vol-wrap', mode === 'lenia');
+        show('pick-density-wrap', mode === 'conway');
 
         const btnC = document.getElementById('mode-conway');
         const btnL = document.getElementById('mode-lenia');
@@ -169,7 +177,11 @@ class LifePage {
         on('life-clear', 'click', () => { if (this.sim && this.sim.clear) { this.sim.clear(); this._note('Cleared.'); } });
         on('life-reseed', 'click', () => {
             if (!this.sim) return;
-            if (this.mode === 'conway') { this.sim.seed(0.3); this._note('Random soup at 30% density.'); }
+            if (this.mode === 'conway') {
+                const d = this.density || 0.3;
+                this.sim.seed(d);
+                this._note('Random soup at ' + Math.round(d * 100) + '% density.');
+            }
             else { this.sim.seed(); this._note('New Lenia world.'); }
         });
 
@@ -200,9 +212,63 @@ class LifePage {
             this._applyRule(e.target.value);
         });
         on('life-rule-input', 'input', (e) => this._applyRule(e.target.value, e.target));
-        on('life-palette', 'change', (e) => { this.view.setPalette(e.target.value); this._note('Palette: ' + e.target.value + '.'); });
+        on('life-palette', 'change', (e) => {
+            this.view.setPalette(e.target.value);
+            this._syncSwatches();                                 // swatches show the preset
+            this._note('Palette: ' + e.target.value + '.');
+        });
         on('life-mu', 'input', (e) => this._setMu(parseFloat(e.target.value)));
         on('life-sound', 'click', () => this._toggleSound());
+
+        // Lenia's other three parameters. mu alone is the famous one, but sigma decides how
+        // forgiving the growth band is, the kernel ring is what makes organisms rather than
+        // mush, and dt is how hard each step lands. All are live uniforms.
+        on('life-sigma', 'input', (e) => this._setLenia('sigma', parseFloat(e.target.value), 'life-sigma-out', 3));
+        on('life-kmu', 'input', (e) => this._setLenia('kmu', parseFloat(e.target.value), 'life-kmu-out', 2));
+        on('life-dt', 'input', (e) => this._setLenia('dt', parseFloat(e.target.value), 'life-dt-out', 2));
+
+        on('life-density', 'input', (e) => {
+            const v = parseInt(e.target.value, 10);
+            if (!Number.isFinite(v)) return;
+            this.density = v / 100;
+            const o = document.getElementById('life-density-out'); if (o) o.textContent = v + '%';
+        });
+
+        on('life-volume', 'input', (e) => {
+            const v = parseInt(e.target.value, 10);
+            if (!Number.isFinite(v)) return;
+            this.volume = v / 100;
+            if (this.audio && typeof this.audio.setVolume === 'function') this.audio.setVolume(this.volume);
+            else if (this.audio) this.audio.volume = this.volume;
+            const o = document.getElementById('life-volume-out'); if (o) o.textContent = v + '%';
+        });
+
+        // Custom colour: each swatch writes one palette stop straight to the shader.
+        const stops = { 'life-col-low': 'low', 'life-col-mid': 'mid', 'life-col-high': 'high' };
+        for (const id of Object.keys(stops)) {                    // Rule 2: bounded (3)
+            on(id, 'input', (e) => {
+                this.view.setStop(stops[id], e.target.value);
+                const sel = document.getElementById('life-palette');
+                if (sel) sel.value = '';                          // no preset matches an edit
+                this._note('Custom colour.');
+            });
+        }
+        on('life-col-reset', 'click', () => {
+            const sel = document.getElementById('life-palette');
+            const name = (sel && sel.value) || 'ember';
+            this.view.setPalette(name === '' ? 'ember' : name);
+            if (sel) sel.value = this.view.palette;
+            this._syncSwatches();
+            this._note('Back to the ' + this.view.palette + ' preset.');
+        });
+
+        // Escape leaves the page - the same exit the header link offers, for the keyboard.
+        this._onKey = (e) => {
+            if (e.key === 'Escape' && e.target && !e.target.matches('input,select,textarea')) {
+                location.hash = '#projects';
+            }
+        };
+        document.addEventListener('keydown', this._onKey);
 
         this._wirePointer();
 
@@ -309,6 +375,34 @@ class LifePage {
         return true;
     }
 
+    /**
+     * Set one Lenia parameter and echo it. These are live uniforms read every step, so a
+     * drag changes the world in real time rather than needing a reseed. Rule 5: 2 asserts.
+     */
+    _setLenia(key, v, outId, dp) {
+        console.assert(typeof key === 'string', '_setLenia: key required');
+        console.assert(Number.isFinite(v), '_setLenia: finite value');
+        if (!this.sims.lenia || !Number.isFinite(v)) return false;
+        this.sims.lenia[key] = v;
+        const o = document.getElementById(outId);
+        if (o) o.textContent = v.toFixed(dp);
+        return true;
+    }
+
+    /** Point the three swatches at whatever the palette currently is. Rule 5: 2 asserts. */
+    _syncSwatches() {
+        console.assert(this.view, '_syncSwatches: view required');
+        console.assert(typeof document !== 'undefined', '_syncSwatches: document required');
+        if (typeof this.view.getStops !== 'function') return false;
+        const st = this.view.getStops();
+        const map = { 'life-col-low': st.low, 'life-col-mid': st.mid, 'life-col-high': st.high };
+        for (const id of Object.keys(map)) {                      // Rule 2: bounded (3)
+            const el = document.getElementById(id);
+            if (el) el.value = map[id];
+        }
+        return true;
+    }
+
     _setMu(v) {
         console.assert(Number.isFinite(v), '_setMu: finite value');
         console.assert(this.sims.lenia, '_setMu: lenia required');
@@ -325,7 +419,7 @@ class LifePage {
         console.assert(this.mode !== undefined, '_toggleSound: mode set');
         // AudioContext must be created inside a user gesture or the browser leaves it
         // suspended — hence creating it here rather than in init().
-        if (!this.audio && typeof SineAudio !== 'undefined') this.audio = new SineAudio({ volume: 0.18 });
+        if (!this.audio && typeof SineAudio !== 'undefined') this.audio = new SineAudio({ volume: this.volume });
         this.soundOn = !this.soundOn;
         const b = document.getElementById('life-sound');
         if (b) { b.setAttribute('aria-pressed', String(this.soundOn)); b.textContent = this.soundOn ? '🔊 Sound' : '🔈 Sound'; }
@@ -460,6 +554,7 @@ class LifePage {
         console.assert(typeof cancelAnimationFrame === 'function', 'cleanup: rAF required');
         if (this.raf) { cancelAnimationFrame(this.raf); this.raf = null; }
         if (this._onHash) { window.removeEventListener('hashchange', this._onHash); this._onHash = null; }
+        if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
         const c = this._canvas;
         if (c) {
             if (this._onWheel) c.removeEventListener('wheel', this._onWheel);

@@ -292,3 +292,85 @@
     .life-picker { flex: 1 1 46%; }
     .life-modes .life-mode { flex: 1 1 0; }
 }
+
+/* --- exit control ------------------------------------------------------ */
+
+/* The page had no way out at all: opened from Projects, fills the screen, and offered
+   nothing but the browser back button. Sticky so it stays reachable after scrolling
+   down through the prose, which is exactly when you want it. */
+.life-exit {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    float: left;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0.75rem 0.5rem 0;
+    padding: 0.4rem 0.8rem;
+    min-height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+    background: var(--card-bg, rgba(40, 40, 40, 0.92));
+    color: var(--text-color-dim, rgba(255, 255, 255, 0.8));
+    text-decoration: none;
+    font-size: 0.88rem;
+}
+.life-exit:hover {
+    background: rgba(255, 133, 0, 0.2);
+    border-color: var(--primary-color, #ff8500);
+    color: var(--text-color, #fff);
+}
+.life-exit:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: 2px; }
+
+/* --- custom colour editor ---------------------------------------------- */
+
+.life-advanced {
+    max-width: 68ch;
+    margin: 0 auto 1rem;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.life-advanced > summary {
+    padding: 0.6rem 0.9rem;
+    cursor: pointer;
+    color: var(--primary-color, #ff8500);
+    font-size: 0.9rem;
+    list-style: none;
+}
+.life-advanced > summary::-webkit-details-marker { display: none; }
+.life-advanced > summary::before { content: '▸ '; }
+.life-advanced[open] > summary::before { content: '▾ '; }
+.life-advanced > summary:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: -2px; }
+
+.life-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.8rem;
+    padding: 0 0.9rem 0.6rem;
+}
+
+.life-swatch { display: flex; flex-direction: column; gap: 0.25rem; }
+
+/* A native colour input renders as a tiny sunken box by default; give it a real
+   swatch size so it reads as a colour and is a usable tap target. */
+.life-swatch input[type="color"] {
+    width: 64px;
+    height: 40px;
+    padding: 2px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+    border-radius: 8px;
+    background: var(--card-bg, rgba(40, 40, 40, 0.85));
+    cursor: pointer;
+}
+.life-swatch input[type="color"]:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: 2px; }
+
+.life-advanced .life-hint { display: block; padding: 0 0.9rem 0.8rem; line-height: 1.5; }
+
+@media (max-width: 600px) {
+    .life-swatch { flex: 1 1 30%; }
+    .life-swatch input[type="color"] { width: 100%; }
+}

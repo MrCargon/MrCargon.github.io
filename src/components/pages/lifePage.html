@@ -1,6 +1,11 @@
 <section id="life" class="main-section life-section">
     <div class="life-panel">
         <header class="life-header">
+            <!-- There was NO way out of this page. It is opened from Projects, fills the
+                 screen, and offered nothing but the browser back button. Escape works too. -->
+            <a href="#projects" id="life-exit" class="life-exit" aria-label="Back to Projects">
+                <span aria-hidden="true">←</span> Projects
+            </a>
             <h1 class="life-title">Artificial Life</h1>
             <p class="life-sub">
                 Two cellular automata, one lineage. <strong>Conway's Game of Life</strong> is
@@ -83,6 +88,26 @@
                 <input type="range" id="life-mu" min="0.10" max="0.35" step="0.005" value="0.15">
                 <output id="life-mu-out">0.150</output>
             </label>
+            <label class="life-picker" id="pick-sigma-wrap" hidden>
+                <span class="life-picker-label">Width σ</span>
+                <input type="range" id="life-sigma" min="0.005" max="0.060" step="0.001" value="0.017">
+                <output id="life-sigma-out">0.017</output>
+            </label>
+            <label class="life-picker" id="pick-kmu-wrap" hidden>
+                <span class="life-picker-label">Kernel ring</span>
+                <input type="range" id="life-kmu" min="0.20" max="0.80" step="0.01" value="0.50">
+                <output id="life-kmu-out">0.50</output>
+            </label>
+            <label class="life-picker" id="pick-dt-wrap" hidden>
+                <span class="life-picker-label">Time step</span>
+                <input type="range" id="life-dt" min="0.02" max="0.40" step="0.01" value="0.12">
+                <output id="life-dt-out">0.12</output>
+            </label>
+            <label class="life-picker" id="pick-density-wrap">
+                <span class="life-picker-label">Seed density</span>
+                <input type="range" id="life-density" min="5" max="70" step="1" value="30">
+                <output id="life-density-out">30%</output>
+            </label>
             <label class="life-picker">
                 <span class="life-picker-label">Colour</span>
                 <select id="life-palette"></select>
@@ -91,7 +116,35 @@
                 <span class="life-picker-label">Audio</span>
                 <button type="button" id="life-sound" class="life-btn" aria-pressed="false">🔈 Sound</button>
             </div>
+            <label class="life-picker" id="pick-vol-wrap" hidden>
+                <span class="life-picker-label">Volume</span>
+                <input type="range" id="life-volume" min="0" max="100" step="1" value="18">
+                <output id="life-volume-out">18%</output>
+            </label>
         </div>
+        <details class="life-advanced">
+            <summary>Custom colour</summary>
+            <div class="life-swatches">
+                <label class="life-swatch">
+                    <span class="life-picker-label">Background</span>
+                    <input type="color" id="life-col-low" value="#05070f">
+                </label>
+                <label class="life-swatch">
+                    <span class="life-picker-label">Midtone</span>
+                    <input type="color" id="life-col-mid" value="#1aa69e">
+                </label>
+                <label class="life-swatch">
+                    <span class="life-picker-label">Highlight</span>
+                    <input type="color" id="life-col-high" value="#ffb840">
+                </label>
+                <button type="button" id="life-col-reset" class="life-btn">↺ Back to preset</button>
+            </div>
+            <p class="life-hint">
+                Three stops: dead cells, the midtone the value ramps through, and the brightest
+                live cells. Editing any of them switches the preset list to “Custom”.
+            </p>
+        </details>
+
         <p id="life-note" class="life-note" aria-live="polite"></p>
 
         <div class="life-notes">

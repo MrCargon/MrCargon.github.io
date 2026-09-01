@@ -47,6 +47,25 @@ class SineAudio {
     }
 
     /**
+     * Change the output level while playing.
+     *
+     * Needed because `volume` is only read once, inside ensure(), when the master gain node
+     * is created — assigning the property afterwards changes a number nobody looks at again.
+     * A volume slider wired to the property alone would appear to work and do nothing.
+     * Clamped to [0,1]: the gain node accepts more, and above 1 it clips audibly.
+     * Rule 5: 2 asserts.
+     * @param {number} v - 0..1
+     */
+    setVolume(v) {
+        console.assert(Number.isFinite(v), 'setVolume: finite value required');
+        console.assert(this !== undefined, 'setVolume: instance required');
+        if (!Number.isFinite(v)) return false;
+        this.volume = Math.max(0, Math.min(1, v));
+        if (this.master && this.master.gain) this.master.gain.value = this.volume;
+        return true;
+    }
+
+    /**
      * One note. `type` is any oscillator type; layering two detuned oscillators is
      * what stops a raw sine sounding like a hearing test.
      * @param {Object} p - {freq, dur, type, attack, decay, gain, detune, sweepTo, q}

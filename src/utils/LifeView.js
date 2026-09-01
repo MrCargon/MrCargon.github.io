@@ -77,6 +77,33 @@ class LifeView {
         return true;
     }
 
+    /**
+     * Set one palette stop directly from a #rrggbb string, for the custom colour editor.
+     * `which` is 'low' | 'mid' | 'high'. Rule 5: 2 asserts.
+     */
+    setStop(which, hex) {
+        console.assert(typeof hex === 'string', 'setStop: hex string required');
+        console.assert(this._quad, 'setStop: init first');
+        const u = this._quad.material.uniforms;
+        const target = { low: u.uLow, mid: u.uMid, high: u.uHigh }[which];
+        if (!target) return false;
+        // THREE.Color parses "#rrggbb" directly. ColorManagement is disabled site-wide
+        // (see index.html), so the value passes through unconverted — which is what we
+        // want: the swatch the user picked is the colour that reaches the shader.
+        target.value.set(hex);
+        this.palette = 'custom';
+        return true;
+    }
+
+    /** Current stops as #rrggbb, so the editor can show what a preset actually is. */
+    getStops() {
+        console.assert(this._quad, 'getStops: init first');
+        console.assert(LifeView.PALETTES, 'getStops: palettes required');
+        const u = this._quad.material.uniforms;
+        const hex = (c) => '#' + c.getHexString();
+        return { low: hex(u.uLow.value), mid: hex(u.uMid.value), high: hex(u.uHigh.value) };
+    }
+
     /** Conway wants a hard alive/dead edge; Lenia wants the continuous ramp. */
     setContinuous(on) {
         console.assert(typeof on === 'boolean', 'setContinuous: bool required');

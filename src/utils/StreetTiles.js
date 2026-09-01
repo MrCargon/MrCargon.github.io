@@ -31,7 +31,28 @@ class StreetTiles {
         this.rOffset = Number.isFinite(opts.rOffset) ? opts.rOffset : 1.0006;   // COPLANAR with the satellite map (roads IN the map; satellite has polygonOffset)
         // Activate only when the camera is closer than this (in Earth radii).
         this.activateBelow = Number.isFinite(opts.activateBelow) ? opts.activateBelow : 1.3;
-        this.minZoom = 12;
+        // 2026-09-01: was 12, which is why the street map appeared as a small ISLAND in
+        // the middle of a much larger view — the user's "only the edge can be seen".
+        //
+        // The covering set is a fixed ~7x7 of tiles (maxVisibleTiles 49). A z12 tile is
+        // about 9.8 km across, so 7x7 spans ~68 km. Measured against the actual visible
+        // footprint while exploring (globe radius 2 units = 6371 km, FOV narrowed by
+        // updateExploreLOD):
+        //
+        //     rr=1.01   view ~32 km    7x7 @ z14 = ~17 km   covers
+        //     rr=1.05   view ~82 km    7x7 @ z14 = ~17 km   21%
+        //     rr=1.30   view ~750 km   7x7 @ z12 = ~68 km    9%
+        //
+        // So the layer only ever covered the screen at the very bottom of its activation
+        // range, and spent most of it drawing a patch far smaller than what you are
+        // looking at. The comment on maxVisibleTiles claiming 49 tiles "span the whole
+        // view" was only ever true at z14, right at the surface.
+        //
+        // Raising the tile COUNT cannot fix this (it is quadratic — covering 750 km at
+        // z12 needs ~77 tiles across, i.e. ~5900 fetches). Lowering the floor zoom does:
+        // a z9 tile is ~78 km, so the same 49 tiles span ~547 km. Coarse levels also
+        // carry fewer road classes, which is the right amount of detail from 900 km up.
+        this.minZoom = 9;
         // OpenFreeMap line geometry / tiles only exist to z14; fetch clamps to
         // dataMaxZoom and there is no real overzoom, so maxZoom matches reality.
         this.maxZoom = 14;
@@ -127,9 +148,29 @@ class StreetTiles {
     zoomForDistance(distInRadii) {
         console.assert(Number.isFinite(distInRadii), 'zoomForDistance: distance required');
         console.assert(distInRadii > 0, 'zoomForDistance: positive distance');
-        // distInRadii ~1.3 → z12, ~1.02 → z16 (smooth-ish log ramp).
-        var t = Math.max(0, Math.min(1, (this.activateBelow - distInRadii) / (this.activateBelow - 1.01)));
-        var raw = this.minZoom + t * (this.maxZoom - this.minZoom);
+        // Pick the zoom from COVERAGE, not from a distance ramp.
+        //
+        // The old rule was a linear ramp on distance: far → minZoom, near → maxZoom. It
+        // chose a level for DETAIL and never asked whether the resulting tiles actually
+        // reach the edges of the screen — which is why the street layer rendered as an
+        // island in the middle of a much larger view, however many levels it had.
+        //
+        // The covering set is a square of about `span` tiles (maxVisibleTiles ~= span^2).
+        // A tile at zoom z is 40075/2^z km wide, so covering a view V km across needs
+        //
+        //     40075 / 2^z * span >= V     =>     z <= log2(40075 * span / V)
+        //
+        // and the sharpest level that still covers is the floor of that. V comes from the
+        // geometry actually in use: altitude above the surface and the (narrowing) FOV.
+        // Sub-camera view half-width = altitude * tan(fov/2).
+        var EARTH_KM = 40075;                                  // equatorial circumference
+        var span = Math.max(3, Math.sqrt(this.maxVisibleTiles));
+        var altKm = Math.max(1, (distInRadii - 1) * (EARTH_KM / (2 * Math.PI)));
+        var fovDeg = this.viewFovDeg || 45;                    // set by the caller each tick
+        var viewKm = Math.max(1, 2 * altKm * Math.tan((fovDeg * Math.PI / 180) / 2));
+        var raw = Math.log2(EARTH_KM * span / viewKm);
+        // Never sharper than the data, never coarser than the floor.
+        raw = Math.max(this.minZoom, Math.min(this.maxZoom, raw));
         // 2026-08-22 HYSTERESIS. Plain Math.round() has zero deadband at the level
         // boundary, and a zoom step invalidates EVERY key (the z prefix changes, so
         // all maxVisibleTiles keys miss the cache at once). Any camera jitter sitting
@@ -142,7 +183,13 @@ class StreetTiles {
         // before at every distance. 0.25 also works but this layer spans only 3 levels
         // (12-14) over 0.29 radii, so that wide a deadband loses a real detail level at
         // d=1.20 and d=1.05. (SatelliteTiles spans many more levels and does use 0.25.)
-        var HYST = 0.15;
+        // 2026-09-01: widened 0.15 -> 0.25 alongside minZoom 12 -> 9. The 0.15 figure was
+        // chosen because this layer spanned only 3 levels over 0.29 radii, where a wider
+        // deadband genuinely cost a detail level. It now spans 6, so each level occupies
+        // roughly half the distance range it used to and boundaries are crossed twice as
+        // often — the same deadband is effectively half as sticky. 0.25 is the value
+        // SatelliteTiles already uses for exactly this reason (more levels, same problem).
+        var HYST = 0.25;
         var z;
         if (!Number.isFinite(this._lastZoom)) {
             z = Math.round(raw);

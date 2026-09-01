@@ -2104,7 +2104,14 @@ class SpaceEnvironment {
         const local = mesh.worldToLocal(this._scratchCamPos.copy(hits[0].point));
         const ll = GlobeMath.vector3ToLatLng(local, radius);
         if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) {
-            if (earth.streetTiles) earth.streetTiles.update(ll.lat, ll.lng, dist / radius);
+            if (earth.streetTiles) {
+                // The layer now picks its zoom from how much ground is actually on screen,
+                // which needs the LIVE field of view — updateExploreLOD narrows it from 60
+                // to ~26 degrees on approach, and a stale 45 would mis-size the covering
+                // set by nearly a level at both ends of the range.
+                earth.streetTiles.viewFovDeg = (this.camera && this.camera.fov) || 45;
+                earth.streetTiles.update(ll.lat, ll.lng, dist / radius);
+            }
             // Reuse the SAME ll + dist (no re-raycast) to drive the satellite layer,
             // and dim it on the night hemisphere (unlit imagery would otherwise glow).
             if (earth.satelliteTiles) {

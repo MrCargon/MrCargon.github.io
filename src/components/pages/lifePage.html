@@ -140,8 +140,42 @@
                 <button type="button" id="life-col-reset" class="life-btn">↺ Back to preset</button>
             </div>
             <p class="life-hint">
-                Three stops: dead cells, the midtone the value ramps through, and the brightest
-                live cells. Editing any of them switches the preset list to “Custom”.
+                Three stops for the <strong>value ramp</strong>: dead cells, the midtone the value
+                passes through, and the brightest live cells. Editing any of them switches the
+                preset list to “Custom”.
+            </p>
+
+            <div class="life-swatches life-swatches--cell">
+                <label class="life-swatch">
+                    <span class="life-picker-label">Cell inner</span>
+                    <input type="color" id="life-col-inner" value="#ffdb8c">
+                </label>
+                <label class="life-swatch">
+                    <span class="life-picker-label">Cell outer</span>
+                    <input type="color" id="life-col-outer" value="#d9590d">
+                </label>
+                <label class="life-picker">
+                    <span class="life-picker-label">Cell shading</span>
+                    <input type="range" id="life-cellmix" min="0" max="100" step="1" value="0">
+                    <output id="life-cellmix-out">0%</output>
+                </label>
+                <label class="life-picker">
+                    <span class="life-picker-label">Edge</span>
+                    <input type="range" id="life-edge" min="0" max="100" step="1" value="55">
+                    <output id="life-edge-out">0.55</output>
+                </label>
+                <label class="life-picker">
+                    <span class="life-picker-label">Glow</span>
+                    <input type="range" id="life-glow" min="0" max="100" step="1" value="0">
+                    <output id="life-glow-out">0%</output>
+                </label>
+            </div>
+            <p class="life-hint">
+                And a gradient <em>inside every single cell</em>: inner is the centre, outer is the
+                rim, <strong>Edge</strong> is where one becomes the other, and <strong>Glow</strong>
+                bleeds colour into the empty space around living cells. Turn
+                <strong>Cell shading</strong> up and <strong>zoom in</strong> — at 1× a cell is
+                roughly one screen pixel, so this is detail that appears as you magnify.
             </p>
         </details>
 

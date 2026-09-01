@@ -374,3 +374,27 @@
     .life-swatch { flex: 1 1 30%; }
     .life-swatch input[type="color"] { width: 100%; }
 }
+
+/* Range inputs inside .life-picker (seed density, mu, sigma, kernel, dt, volume) were
+   missing the accent, so they rendered in the browser's default blue-green while the
+   Speed and Brush sliders next to them were orange. Visible side by side in a
+   screenshot; one rule brings the whole panel onto the same accent. */
+.life-picker input[type="range"] {
+    width: clamp(90px, 18vw, 150px);
+    accent-color: var(--primary-color, #ff8500);
+}
+.life-picker output {
+    min-width: 3.6ch;
+    font-family: monospace;
+    color: var(--primary-color, #ff8500);
+    font-size: 0.8rem;
+}
+
+/* The per-cell gradient row sits under the value-ramp row, separated so the two colour
+   systems read as distinct: one answers "what does a value look like", the other
+   "what does one cell look like across its own pixels". */
+.life-swatches--cell {
+    border-top: 1px dashed var(--border-color, rgba(255, 255, 255, 0.14));
+    padding-top: 0.7rem;
+    margin-top: 0.2rem;
+}

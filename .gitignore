@@ -39,3 +39,4 @@ playwright/.cache/
 *.log
 .cache
 *.backup
+playthrough/

@@ -155,11 +155,38 @@ class LifePage {
         const ruleEl = document.getElementById('life-rule');
         if (ruleEl) ruleEl.textContent = (mode === 'conway') ? 'B3/S23' : 'Lenia μ=' + this.sims.lenia.mu.toFixed(3);
 
-        // Opening in Conway with an empty grid looks broken, so seed the gun — unbounded
-        // growth is the most legible thing to land on. Only on first entry, never on a
-        // user-initiated mode switch, which must preserve the world they were building.
-        if (force && mode === 'conway') this._loadPattern('gosperGun');
-        else this._note(mode === 'conway' ? 'Conway — discrete, B3/S23.' : 'Lenia — continuous cellular automata.');
+        // Seed Conway with the gun when its world is EMPTY, not merely on first entry.
+        //
+        // The original condition was `force` only, which meant: open the page on #life
+        // (Lenia), press Conway, and you got a black square. Conway had been constructed
+        // and cleared at init but never seeded, so the generation counter ticked up while
+        // population sat at 0 — measured in a playthrough: gen 101, population 0, nothing
+        // on screen. A blank grid is a legitimate state to WANT (Clear exists), so the
+        // test is emptiness at the moment of switching, which leaves a world the user
+        // built or cleared themselves untouched.
+        if (mode === 'conway' && (force || this._isEmpty(this.sims.conway))) {
+            this._loadPattern('gosperGun');
+        } else {
+            this._note(mode === 'conway' ? 'Conway — discrete, B3/S23.' : 'Lenia — continuous cellular automata.');
+        }
+        return true;
+    }
+
+    /**
+     * Is this simulation's world empty? Sampled, not exhaustive: readPixels stalls the
+     * pipeline, and one live cell anywhere in a 512x512 grid is enough to mean "not
+     * empty", so a stride of 64 pixels finds any real pattern while costing a fraction of
+     * a full scan. Rule 5: 2 asserts.
+     */
+    _isEmpty(sim) {
+        console.assert(sim === null || typeof sim === 'object', '_isEmpty: sim or null');
+        console.assert(this.renderer, '_isEmpty: renderer required');
+        if (!sim || typeof sim.readPixels !== 'function') return false;
+        const buf = sim.readPixels();
+        if (!buf) return false;
+        for (let i = 0; i < buf.length; i += 256) {        // Rule 2: bounded
+            if (buf[i] > 127) return false;
+        }
         return true;
     }
 
@@ -253,6 +280,31 @@ class LifePage {
                 this._note('Custom colour.');
             });
         }
+        // Per-cell gradient: two more swatches and three shading amounts.
+        const cellStops = { 'life-col-inner': 'inner', 'life-col-outer': 'outer' };
+        for (const id of Object.keys(cellStops)) {                // Rule 2: bounded (2)
+            on(id, 'input', (e) => {
+                this.view.setCellStop(cellStops[id], e.target.value);
+                const sel = document.getElementById('life-palette');
+                if (sel) sel.value = '';
+                this._note('Custom cell gradient.');
+            });
+        }
+        const shading = [
+            ['life-cellmix', 'mix', 'life-cellmix-out', (v) => Math.round(v * 100) + '%'],
+            ['life-edge', 'edge', 'life-edge-out', (v) => v.toFixed(2)],
+            ['life-glow', 'glow', 'life-glow-out', (v) => Math.round(v * 100) + '%']
+        ];
+        for (const [id, key, outId, fmt] of shading) {            // Rule 2: bounded (3)
+            on(id, 'input', (e) => {
+                const v = parseInt(e.target.value, 10) / 100;
+                if (!Number.isFinite(v)) return;
+                this.view.setShading(key, v);
+                const o = document.getElementById(outId);
+                if (o) o.textContent = fmt(v);
+            });
+        }
+
         on('life-col-reset', 'click', () => {
             const sel = document.getElementById('life-palette');
             const name = (sel && sel.value) || 'ember';
@@ -395,10 +447,12 @@ class LifePage {
         console.assert(typeof document !== 'undefined', '_syncSwatches: document required');
         if (typeof this.view.getStops !== 'function') return false;
         const st = this.view.getStops();
-        const map = { 'life-col-low': st.low, 'life-col-mid': st.mid, 'life-col-high': st.high };
-        for (const id of Object.keys(map)) {                      // Rule 2: bounded (3)
+        const cs = (typeof this.view.getCellStops === 'function') ? this.view.getCellStops() : {};
+        const map = { 'life-col-low': st.low, 'life-col-mid': st.mid, 'life-col-high': st.high,
+                      'life-col-inner': cs.inner, 'life-col-outer': cs.outer };
+        for (const id of Object.keys(map)) {                      // Rule 2: bounded (5)
             const el = document.getElementById(id);
-            if (el) el.value = map[id];
+            if (el && map[id]) el.value = map[id];
         }
         return true;
     }
@@ -494,7 +548,7 @@ class LifePage {
             const n = (this.mode === 'conway') ? this.speed : 1;   // Lenia's dt is its speed
             for (let i = 0; i < n; i++) s.step();                  // Rule 2: bounded (<=16)
         }
-        this.view.render(s.outputTexture);
+        this.view.render(s.outputTexture, s.size);   // grid size drives the per-cell gradient
         const now = performance.now();
         if (now - this._lastStatsAt > 500) { this._lastStatsAt = now; this._reportStats(now); }
     }

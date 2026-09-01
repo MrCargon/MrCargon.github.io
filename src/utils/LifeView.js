@@ -48,12 +48,20 @@ class LifeView {
             new THREE.ShaderMaterial({
                 uniforms: {
                     uTex: { value: null },
+                    uSize: { value: 512 },      // grid resolution, for per-cell maths
                     uZoom: { value: 1 },
                     uPan: { value: new THREE.Vector2(0, 0) },
                     uLow: { value: new THREE.Color(p.low[0], p.low[1], p.low[2]) },
                     uMid: { value: new THREE.Color(p.mid[0], p.mid[1], p.mid[2]) },
                     uHigh: { value: new THREE.Color(p.high[0], p.high[1], p.high[2]) },
-                    uContinuous: { value: 0 }   // 0 = hard threshold (Conway), 1 = smooth (Lenia)
+                    uContinuous: { value: 0 },  // 0 = hard threshold (Conway), 1 = smooth (Lenia)
+                    // Per-cell gradient: every cell is shaded from its own centre outwards,
+                    // so at zoom each cell is a little sphere/tile rather than a flat square.
+                    uInner: { value: new THREE.Color(p.inner ? p.inner[0] : 1, p.inner ? p.inner[1] : 1, p.inner ? p.inner[2] : 1) },
+                    uOuter: { value: new THREE.Color(p.outer ? p.outer[0] : 0.4, p.outer ? p.outer[1] : 0.2, p.outer ? p.outer[2] : 0.0) },
+                    uCellMix: { value: 0.0 },   // 0 = flat value ramp, 1 = full inner/outer
+                    uEdge: { value: 0.55 },     // where inner gives way to outer, 0..1 of the cell
+                    uGlow: { value: 0.0 }       // soft halo bleeding past the cell
                 },
                 vertexShader: LifeView.VERT,
                 fragmentShader: LifeView.FRAG
@@ -74,6 +82,8 @@ class LifeView {
         u.uLow.value.setRGB(p.low[0], p.low[1], p.low[2]);
         u.uMid.value.setRGB(p.mid[0], p.mid[1], p.mid[2]);
         u.uHigh.value.setRGB(p.high[0], p.high[1], p.high[2]);
+        if (p.inner) u.uInner.value.setRGB(p.inner[0], p.inner[1], p.inner[2]);
+        if (p.outer) u.uOuter.value.setRGB(p.outer[0], p.outer[1], p.outer[2]);
         return true;
     }
 
@@ -93,6 +103,42 @@ class LifeView {
         target.value.set(hex);
         this.palette = 'custom';
         return true;
+    }
+
+    /**
+     * Set the per-cell gradient: `which` is 'inner' | 'outer'. Rule 5: 2 asserts.
+     */
+    setCellStop(which, hex) {
+        console.assert(typeof hex === 'string', 'setCellStop: hex required');
+        console.assert(this._quad, 'setCellStop: init first');
+        const u = this._quad.material.uniforms;
+        const t = { inner: u.uInner, outer: u.uOuter }[which];
+        if (!t) return false;
+        t.value.set(hex);
+        this.palette = 'custom';
+        return true;
+    }
+
+    /**
+     * Numeric shading controls. `which` is 'mix' | 'edge' | 'glow', all 0..1.
+     * Rule 5: 2 asserts.
+     */
+    setShading(which, value) {
+        console.assert(Number.isFinite(value), 'setShading: finite value');
+        console.assert(this._quad, 'setShading: init first');
+        const u = this._quad.material.uniforms;
+        const t = { mix: u.uCellMix, edge: u.uEdge, glow: u.uGlow }[which];
+        if (!t) return false;
+        t.value = Math.max(0, Math.min(1, value));
+        return true;
+    }
+
+    /** Current per-cell gradient stops as #rrggbb. */
+    getCellStops() {
+        console.assert(this._quad, 'getCellStops: init first');
+        console.assert(LifeView.PALETTES, 'getCellStops: palettes required');
+        const u = this._quad.material.uniforms;
+        return { inner: '#' + u.uInner.value.getHexString(), outer: '#' + u.uOuter.value.getHexString() };
     }
 
     /** Current stops as #rrggbb, so the editor can show what a preset actually is. */
@@ -194,11 +240,12 @@ class LifeView {
     }
 
     /** Draw the given state texture. Rule 5: 2 asserts. */
-    render(texture) {
+    render(texture, gridSize) {
         console.assert(this._quad, 'render: init first');
         console.assert(this.renderer, 'render: renderer required');
         const u = this._quad.material.uniforms;
         u.uTex.value = texture;
+        if (Number.isFinite(gridSize) && gridSize > 0) u.uSize.value = gridSize;
         u.uZoom.value = this.zoom;
         u.uPan.value.set(this.panX, this.panY);
         this.renderer.setRenderTarget(null);
@@ -227,6 +274,17 @@ void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 
 // Zoom/pan is a UV transform, not a camera move: cheaper, and it keeps the wrap behaviour
 // of RepeatWrapping so panning off an edge shows the torus rather than emptiness.
+// Two independent colour systems, because they answer different questions.
+//
+//   VALUE RAMP  (uLow -> uMid -> uHigh)  what does this cell's VALUE look like?
+//                                        The only one that means anything in Lenia,
+//                                        where state is continuous.
+//   CELL GRADIENT (uInner -> uOuter)     what does a single cell look like ACROSS ITS
+//                                        OWN PIXELS? Only visible once zoomed in far
+//                                        enough that one cell covers many screen pixels.
+//
+// uCellMix crossfades between them, so 0 is exactly the old flat look and 1 is fully
+// shaded cells. Keeping both means Lenia's information is never destroyed by decoration.
 LifeView.FRAG = `
 precision highp float;
 varying vec2 vUv;
@@ -234,18 +292,49 @@ uniform sampler2D uTex;
 uniform float uZoom;
 uniform vec2 uPan;
 uniform vec3 uLow, uMid, uHigh;
-uniform float uContinuous;
+uniform vec3 uInner, uOuter;
+uniform float uContinuous, uCellMix, uEdge, uGlow;
+uniform float uSize;
+
+float valueAt(vec2 uv) {
+    float raw = texture2D(uTex, uv).r;
+    // Conway: a cell is alive or it is not, and a blend would misrepresent the automaton.
+    // Lenia: the value IS continuous and the ramp is the information.
+    return mix(step(0.5, raw), clamp(raw, 0.0, 1.0), uContinuous);
+}
 
 void main() {
     vec2 uv = (vUv - 0.5) / uZoom + 0.5 + uPan;
-    float raw = texture2D(uTex, uv).r;
+    float v = valueAt(uv);
 
-    // Conway: a cell is alive or it is not, and a blend would misrepresent the automaton.
-    // Lenia: the value IS continuous and the ramp is the information.
-    float v = mix(step(0.5, raw), clamp(raw, 0.0, 1.0), uContinuous);
+    // ---- value ramp ----
+    vec3 ramp = mix(uLow, uMid, pow(v, 0.55));
+    ramp = mix(ramp, uHigh, pow(v, 3.0));
 
-    vec3 c = mix(uLow, uMid, pow(v, 0.55));
-    c = mix(c, uHigh, pow(v, 3.0));
+    // ---- per-cell gradient ----
+    // Position within THIS cell, 0..1 on each axis, from the texture coordinate scaled to
+    // grid space. distance from the cell centre gives a radial fill: inner at the middle,
+    // outer at the rim. At 1x zoom a cell is about one screen pixel so this is invisible,
+    // which is correct - it is detail that appears as you zoom in.
+    vec2 cell = fract(uv * uSize) - 0.5;
+    float d = clamp(length(cell) * 2.0, 0.0, 1.0);
+    vec3 shaded = mix(uInner, uOuter, smoothstep(uEdge - 0.35, uEdge + 0.35, d));
+
+    // A dead cell has nothing to shade, so the gradient only applies where there is value.
+    vec3 lit = mix(ramp, shaded * max(v, 0.0001), uCellMix * step(0.001, v));
+    vec3 c = mix(ramp, lit, step(0.001, uCellMix));
+
+    // ---- glow ----
+    // Cheap 4-tap halo: sample the neighbourhood one cell out and let any life there bleed
+    // a little colour into this fragment. Bounded taps, no loop.
+    if (uGlow > 0.001) {
+        float t = 1.0 / uSize;
+        float around = valueAt(uv + vec2(t, 0.0)) + valueAt(uv + vec2(-t, 0.0))
+                     + valueAt(uv + vec2(0.0, t)) + valueAt(uv + vec2(0.0, -t));
+        float halo = clamp(around * 0.25 - v, 0.0, 1.0);
+        c += uOuter * halo * uGlow * 0.9;
+    }
+
     gl_FragColor = vec4(c, 1.0);
 }
 `;
@@ -253,12 +342,18 @@ void main() {
 // Palettes are (low, mid, high) stops. `ember` reproduces the look both pages already had,
 // so switching to the shared view changes nothing visually until the user asks for it.
 LifeView.PALETTES = {
-    ember:     { label: 'Ember',      low: [0.02, 0.03, 0.06], mid: [0.10, 0.65, 0.62], high: [1.00, 0.72, 0.25] },
-    mono:      { label: 'Monochrome', low: [0.03, 0.03, 0.04], mid: [0.55, 0.56, 0.60], high: [1.00, 1.00, 1.00] },
-    ice:       { label: 'Ice',        low: [0.02, 0.04, 0.09], mid: [0.16, 0.44, 0.78], high: [0.78, 0.94, 1.00] },
-    spore:     { label: 'Spore',      low: [0.03, 0.05, 0.03], mid: [0.25, 0.62, 0.24], high: [0.85, 1.00, 0.45] },
-    magma:     { label: 'Magma',      low: [0.05, 0.01, 0.06], mid: [0.62, 0.10, 0.35], high: [1.00, 0.85, 0.40] },
-    blueprint: { label: 'Blueprint',  low: [0.04, 0.08, 0.16], mid: [0.20, 0.42, 0.70], high: [1.00, 1.00, 1.00] }
+    ember:     { label: 'Ember',      low: [0.02, 0.03, 0.06], mid: [0.10, 0.65, 0.62], high: [1.00, 0.72, 0.25],
+                 inner: [1.00, 0.86, 0.55], outer: [0.85, 0.35, 0.05] },
+    mono:      { label: 'Monochrome', low: [0.03, 0.03, 0.04], mid: [0.55, 0.56, 0.60], high: [1.00, 1.00, 1.00],
+                 inner: [1.00, 1.00, 1.00], outer: [0.42, 0.44, 0.48] },
+    ice:       { label: 'Ice',        low: [0.02, 0.04, 0.09], mid: [0.16, 0.44, 0.78], high: [0.78, 0.94, 1.00],
+                 inner: [0.90, 0.98, 1.00], outer: [0.10, 0.35, 0.75] },
+    spore:     { label: 'Spore',      low: [0.03, 0.05, 0.03], mid: [0.25, 0.62, 0.24], high: [0.85, 1.00, 0.45],
+                 inner: [0.92, 1.00, 0.60], outer: [0.14, 0.42, 0.12] },
+    magma:     { label: 'Magma',      low: [0.05, 0.01, 0.06], mid: [0.62, 0.10, 0.35], high: [1.00, 0.85, 0.40],
+                 inner: [1.00, 0.92, 0.60], outer: [0.70, 0.05, 0.20] },
+    blueprint: { label: 'Blueprint',  low: [0.04, 0.08, 0.16], mid: [0.20, 0.42, 0.70], high: [1.00, 1.00, 1.00],
+                 inner: [1.00, 1.00, 1.00], outer: [0.12, 0.30, 0.60] }
 };
 
 if (typeof window !== 'undefined') window.LifeView = LifeView;

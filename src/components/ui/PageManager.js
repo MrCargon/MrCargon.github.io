@@ -732,6 +732,21 @@ class PageManager {
                 await pageConfig.init();
             }
 
+            // Put the 3D scene into background mode for every page that is not Main.
+            //
+            // This used to happen ONLY in cleanupMainPage(), i.e. only if you arrived by
+            // leaving Main. Land directly on /#life, /#projects or /#about — a deep link,
+            // a bookmark, a refresh — and it never ran, so the solar system stayed in full
+            // interactive mode behind the page. Two measured consequences:
+            //   - 7 FPS on the Life page, because two WebGL scenes were rendering at full
+            //     quality at once;
+            //   - #camera-input-layer stayed pointer-events:auto, because its inert path
+            //     is gated on backgroundMode, which is what made page controls unclickable.
+            // Measured on a fresh load of /#life before this: backgroundMode === false.
+            if (pageName !== 'main' && typeof this.showSpaceAsBackground === 'function') {
+                this.showSpaceAsBackground();
+            }
+
             // Update time controls visibility based on current page
             this.updateTimeControlsVisibility();
 

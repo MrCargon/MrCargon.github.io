@@ -3619,9 +3619,28 @@ class SpaceEnvironment {
             this.updateGentleRotation(deltaTime);
         }
         
-        // Render scene
+        // Render scene.
+        //
+        // In BACKGROUND mode the scene is decoration behind a page — it only drifts, via
+        // updateGentleRotation above — so it does not need a frame every vsync. Rendering
+        // it unconditionally was costing the foreground dearly: measured 7 FPS on the Life
+        // page, where a second WebGL scene (the cellular automata) is competing for the
+        // same GPU. Every content page paid this, not just Life.
+        //
+        // Throttled to BACKGROUND_FPS. The rotation is slow enough that the difference is
+        // invisible, and deltaTime accumulates normally, so the drift covers the same
+        // ground per second regardless of how often it is drawn.
         if (this.renderer && this.scene && this.camera) {
-            this.renderer.render(this.scene, this.camera);
+            if (this.backgroundMode) {
+                const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+                const interval = 1000 / SpaceEnvironment.BACKGROUND_FPS;
+                if (now - (this._lastBgRenderAt || 0) >= interval) {
+                    this._lastBgRenderAt = now;
+                    this.renderer.render(this.scene, this.camera);
+                }
+            } else {
+                this.renderer.render(this.scene, this.camera);
+            }
         }
     }
     
@@ -4712,3 +4731,7 @@ class SpaceEnvironment {
 
 // Make globally available
 window.SpaceEnvironment = SpaceEnvironment;
+
+// How often the scene redraws while it is only a backdrop. 20 is comfortably above the
+// threshold where slow drift reads as stutter, and a third of the cost of every-vsync.
+SpaceEnvironment.BACKGROUND_FPS = 20;

@@ -129,6 +129,16 @@ class PageManager {
                 cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
                 preload: false
             },
+            conway: {
+                path: 'src/components/pages/conwayPage.html',
+                title: "Conway's Game of Life - Cellular Automata",
+                // Same WebGL rule as `life` above: this page owns a context of its own, so
+                // cleanup is mandatory rather than optional. Leaked contexts are not GC'd
+                // and the browser caps how many a tab may hold.
+                init: () => { this._conwayPage = new ConwayPage(); this._conwayPage.init(); },
+                cleanup: () => { if (this._conwayPage) { this._conwayPage.cleanup(); this._conwayPage = null; } },
+                preload: false
+            },
             about: {
                 path: 'src/components/pages/aboutPage.html', 
                 title: 'About - Developer Profile',

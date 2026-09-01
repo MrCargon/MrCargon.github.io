@@ -1,0 +1,127 @@
+<section id="conway" class="main-section conway-section">
+    <div class="conway-panel">
+        <header class="conway-header">
+            <h1 class="conway-title">Conway's Game of Life</h1>
+            <p class="conway-sub">
+                Four lines of rules, no randomness after the first frame, and the result is
+                <strong>Turing complete</strong>. Every pattern below is stored as a few
+                dozen characters of text — no images, no data files.
+            </p>
+        </header>
+
+        <div class="conway-stage">
+            <canvas id="conway-canvas" width="512" height="512"
+                    aria-label="Conway's Game of Life simulation"></canvas>
+            <div id="conway-stats" class="conway-stats" aria-live="polite">
+                <span id="conway-gen">generation 0</span>
+                <span id="conway-pop">population 0</span>
+                <span id="conway-rule">B3/S23</span>
+            </div>
+        </div>
+
+        <div class="conway-controls">
+            <button type="button" id="conway-play" class="conway-btn" aria-pressed="false">⏸ Pause</button>
+            <button type="button" id="conway-step" class="conway-btn">⏭ Step</button>
+            <button type="button" id="conway-seed" class="conway-btn">↻ Random soup</button>
+            <button type="button" id="conway-clear" class="conway-btn">✕ Clear</button>
+            <label class="conway-slider">
+                <span>Speed</span>
+                <input type="range" id="conway-speed" min="1" max="16" step="1" value="1">
+                <output id="conway-speed-out">1×</output>
+            </label>
+        </div>
+
+        <div class="conway-pickers">
+            <label class="conway-picker">
+                <span class="conway-picker-label">Pattern</span>
+                <select id="conway-pattern"></select>
+            </label>
+            <label class="conway-picker">
+                <span class="conway-picker-label">Universe</span>
+                <select id="conway-ruleset"></select>
+            </label>
+            <label class="conway-picker conway-picker-custom">
+                <span class="conway-picker-label">Custom rule</span>
+                <input type="text" id="conway-rule-input" value="B3/S23"
+                       spellcheck="false" autocomplete="off" aria-describedby="conway-rule-help">
+                <span id="conway-rule-help" class="conway-hint">B&lt;births&gt;/S&lt;survivals&gt;</span>
+            </label>
+        </div>
+        <p id="conway-note" class="conway-note" aria-live="polite"></p>
+
+        <div class="conway-notes">
+            <h2>The rule</h2>
+            <p>
+                Each cell looks at its eight neighbours. A live cell with <strong>2 or 3</strong>
+                live neighbours survives; a dead cell with <strong>exactly 3</strong> is born;
+                everything else dies. Written <code>B3/S23</code> — born on 3, survives on 2 or 3.
+            </p>
+            <p>
+                Every cell must read the <em>previous</em> generation. Updating in place, so a
+                cell sees neighbours that have already moved, produces a different automaton
+                entirely — it is the most common bug in a first implementation, and double
+                buffering is part of the rule rather than an optimisation.
+            </p>
+
+            <h2>Why it computes</h2>
+            <p>
+                A glider is a packet that travels in a straight line at a known speed: present
+                is 1, absent is 0. A glider gun supplies a clock. Two gliders meeting at the
+                right angle and phase annihilate, and that single fact yields NOT, AND and OR
+                — NAND alone is enough for everything else. Distance <em>is</em> the wiring:
+                a channel one cell too long shifts the collision phase and the gate stops working.
+            </p>
+            <p>
+                Nothing was added to the rules to allow this. Universality was already
+                present in 1970; it simply took decades to find the arrangement.
+            </p>
+
+            <h2>The multiverse</h2>
+            <p>
+                B3/S23 is one point in a space of <strong>262,144</strong> birth/survival rules.
+                Switch universes above: <strong>HighLife</strong> (B36/S23) contains a genuine
+                self-replicator; <strong>Seeds</strong> (B2/S) lets nothing survive at all and
+                explodes; <strong>Day &amp; Night</strong> behaves identically on a live
+                background as on a dead one.
+            </p>
+            <p>
+                Keep going — make the cell values, the neighbourhood and time itself continuous
+                — and you arrive at Lenia, which is running on the
+                <a href="#life">Artificial Life</a> page. Same family, opposite ends.
+            </p>
+
+            <h2>Life inside Life</h2>
+            <p>
+                The OTCA metapixel (Brice Due, 2006) is a Life pattern that behaves like one
+                Life cell. It is 2048×2048 cells wide and one of its generations takes 35,328
+                of ours. Tile the plane with them and you get Life whose cells are themselves
+                Life, all the way down.
+            </p>
+            <p class="conway-warn">
+                Not simulated here, deliberately: a single 10×10 metapixel board would be about
+                4×10<sup>11</sup> cell updates per meta-generation. That needs Hashlife and a
+                desktop, not a canvas on a portfolio page — and saying so is more useful than
+                shipping something that pretends.
+            </p>
+
+            <h2>Scale</h2>
+            <p>
+                This page uses a dense grid on the GPU, where every cell updates independently
+                in a fragment shader and costs zero per-frame JavaScript. The alternative is
+                sparse encoding — store only the live cells — which decouples cost from the
+                size of the universe and is what makes a 2<sup>64</sup> world addressable.
+                Above both sits <strong>Hashlife</strong> (Gosper, 1984): a quadtree with
+                memoised futures that can leap 2<sup>k</sup> generations at once, superlinear
+                on repetitive patterns and unremarkable on noise.
+            </p>
+
+            <p class="conway-credit">
+                Rules and patterns follow the conwaylife.com corpus. Every pattern here is
+                verified by simulation in <code>tests/verify-patterns.cjs</code> rather than
+                trusted — the R-pentomino settles at generation 1103, the acorn at 5206, and
+                diehard vanishes at 130, all measured, not quoted. Full write-up in
+                <code>CELLULAR_AUTOMATA.md</code>.
+            </p>
+        </div>
+    </div>
+</section>

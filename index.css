@@ -375,10 +375,53 @@ body {
   width: 100%;
   height: 100%;         /* Fill available grid space */
   position: relative;
-  
+
+  /* Lift page content above #camera-input-layer.
+     SpaceEnvironment injects a FIXED, full-viewport, transparent div at z-index 0 with
+     pointer-events:auto so OrbitControls has something to hit-test (the WebGL canvas is
+     at -5, behind the page, so it never receives pointer events). Its own comment states
+     the contract: the layer sits "below every piece of UI (>=1)".
+     Page content never held up its end of that contract — #page-container and
+     .main-section both computed to `z-index: auto`, i.e. 0, the same level as the layer.
+     So whether a control worked came down to stacking accident.
+     Measured on #conway, #about and #projects alike: layer z-index 0 with
+     pointer-events "auto", section z-index "auto", backgroundMode false — so the layer's
+     own inert path never engaged either. document.elementFromPoint over the Lenia/Conway
+     mode buttons returned #camera-input-layer, not the button, and Playwright clicks
+     timed out having passed every actionability check.
+     One rule, every page, and it is exactly what the layer already expected. */
+  z-index: 1;
+
   /* Clean viewport system - pages manage their own internal scrolling */
   display: flex;
   flex-direction: column;
+}
+
+/* ...except pages could NOT manage their own scrolling, which is what the line above
+   always intended. #page-container is a flex column, and a flex item defaults to
+   `min-height: auto` — it refuses to shrink below its content, so the item never becomes
+   smaller than what is inside it and `overflow-y` therefore never has anything to scroll.
+   With the container clipped to the viewport, everything past the fold was simply
+   unreachable: no scrollbar, and a mouse wheel moved nothing.
+
+   Measured before this rule (fresh load per page, Chromium):
+
+     iPhone SE 375x667   life    1307px tall ->  640px unreachable
+                         conway  2994px tall -> 2327px unreachable
+     laptop 1280x720     life    1187px tall ->  467px unreachable
+                         conway  2110px tall -> 1390px unreachable
+
+   about / projects / main are all ~500px and fit, which is why this went unnoticed for
+   so long — the bug only appears once a page outgrows the viewport.
+
+   `min-height: 0` is the whole fix; the overflow rule is what the comment above already
+   promised. Document-level scrolling stays off, so the fixed 3D backdrop is untouched. */
+#page-container > .main-section {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;      /* don't chain to the document and rubber-band */
+  -webkit-overflow-scrolling: touch; /* momentum scrolling on iOS */
 }
 
 /* FOOTER: Always at bottom, never scrolls */

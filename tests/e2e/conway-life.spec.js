@@ -1,15 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-// Served STATICALLY (port 3002), not through Vite.
+// Runs against the standard dev server from playwright.config.js.
 //
-// three.js is supplied by the browser <script type="importmap"> pointing at a CDN, and it
-// is deliberately NOT an npm dependency (see the long comment in index.html). Vite's dev
-// server does not honour import maps: it tries to resolve the bare specifier "three" from
-// node_modules, fails, and returns 500 for the inline module — so `npm run dev` serves a
-// page with no THREE at all. That is pre-existing and unrelated to Life; it breaks the
-// solar system too. A plain static server is how the site actually ships (GitHub Pages),
-// so it is also the only honest thing to test against.
-test.use({ baseURL: 'http://localhost:3002' });
+// This used to need a separate static server: three.js comes from the browser import map
+// pointing at a CDN and is deliberately not an npm dependency, and Vite did not honour
+// import maps — it tried to resolve the bare specifier "three" from node_modules, failed,
+// and returned 500 for the inline module, so `npm run dev` served a page with no THREE at
+// all. The importMapPlugin in vite.config.js now resolves those specifiers to the CDN URLs
+// declared in index.html, so dev and static builds finally agree.
 
 /**
  * Conway's Game of Life — GPU correctness.
@@ -185,15 +183,33 @@ test.describe("Conway's Game of Life — GPU shader", () => {
         // `_lifePage` set too — the pre-existing Artificial Life page behaves identically,
         // so that is a router-level issue affecting both WebGL pages and is reported
         // separately rather than blamed on this one.
+        // Tear down the LIVE instance the page created, not a second copy of it.
+        //
+        // An earlier version of this test did `new ConwayPage(); init()`, which grabs
+        // #conway-canvas — a canvas that already has a WebGL context owned by the page's
+        // own instance. A canvas cannot hand out a second context, so init() returned
+        // false. It only ever passed because the static server was slow enough that the
+        // real instance had not claimed the canvas yet: an order-dependent test that
+        // measured load timing rather than cleanup.
+        await page.waitForFunction(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            return !!(pm && pm._conwayPage && pm._conwayPage.renderer);
+        }, null, { timeout: 20000 });
+
         const released = await page.evaluate(() => {
-            const p = new window.ConwayPage();
-            const ok = p.init();
-            if (!ok) return 'init-failed';
-            const hadRenderer = !!p.renderer;
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const p = pm._conwayPage;
+            const had = { renderer: !!p.renderer, sim: !!p.sim, raf: p.raf !== null };
             p.cleanup();
-            return hadRenderer && p.renderer === null && p.sim === null && p.raf === null
-                ? 'released' : 'still-held';
+            return {
+                had,
+                after: { renderer: p.renderer, sim: p.sim, raf: p.raf }
+            };
         });
-        expect(released).toBe('released');
+
+        expect(released.had, 'the live page should hold a renderer, sim and rAF before cleanup')
+            .toEqual({ renderer: true, sim: true, raf: true });
+        expect(released.after, 'cleanup must null every handle it owns')
+            .toEqual({ renderer: null, sim: null, raf: null });
     });
 });

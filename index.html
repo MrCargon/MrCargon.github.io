@@ -143,6 +143,9 @@
     <script src="src/utils/LifeView.js" defer></script>
     <script src="src/utils/ParticleLife.js" defer></script>
     <script src="src/utils/ParticleField3D.js" defer></script>
+    <!-- Hydrogen orbitals: the third backdrop. Loads AFTER ParticleField3D because it
+         reuses that file's generated dot sprite rather than making a second one. -->
+    <script src="src/utils/OrbitalCloud.js" defer></script>
     <script src="src/components/pages/LifePage.js" defer></script>
     <script src="src/utils/SafeFetch.js" defer></script>
     <script src="src/utils/GeoLOD.js" defer></script>

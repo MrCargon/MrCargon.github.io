@@ -1095,8 +1095,32 @@ body.scene-particles .planet-selector-wrapper,
 body.scene-particles .selection-progress,
 body.scene-particles #planet-info-popup,
 body.scene-particles #time-panel-inline,
-body.scene-particles .explore-panel {
+body.scene-particles .explore-panel,
+body.scene-orbitals .solar-only,
+body.scene-orbitals .planet-selector-wrapper,
+body.scene-orbitals .selection-progress,
+body.scene-orbitals #planet-info-popup,
+body.scene-orbitals #time-panel-inline,
+body.scene-orbitals .explore-panel {
     display: none !important;
+}
+
+/* The orbital's own chrome: a heading that names the state, and a short note. */
+.scene-orbital-name {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--primary-color, #FFA500);
+    letter-spacing: 0.5px;
+    padding: 0.2rem 2px 0;
+}
+
+.scene-note {
+    font-size: 0.74rem;
+    line-height: 1.45;
+    opacity: 0.8;
+    margin: 0;
+    padding: 0 2px;
 }
 
 /* Of the quick-action row, only "Ctrl" survives — it is the handle that opens the
@@ -1104,7 +1128,10 @@ body.scene-particles .explore-panel {
    popup closed with no way back to the solar system. */
 body.scene-particles .action-btn[data-action="info"],
 body.scene-particles .action-btn[data-action="time"],
-body.scene-particles .action-btn[data-action="reset"] {
+body.scene-particles .action-btn[data-action="reset"],
+body.scene-orbitals .action-btn[data-action="info"],
+body.scene-orbitals .action-btn[data-action="time"],
+body.scene-orbitals .action-btn[data-action="reset"] {
     display: none !important;
 }
 

@@ -227,6 +227,14 @@
                                 <span class="icon" aria-hidden="true">✦</span>
                                 <span class="btn-label">Particle Space</span>
                             </button>
+                            <button id="scene-orbitals"
+                                    class="control-btn"
+                                    title="Show a hydrogen electron orbital — every dot is one possible position of the same electron"
+                                    aria-label="Backdrop: hydrogen orbital"
+                                    aria-pressed="false">
+                                <span class="icon" aria-hidden="true">⚛</span>
+                                <span class="btn-label">Atom</span>
+                            </button>
                         </div>
 
                         <div id="scene-particle-options" class="scene-options" hidden>
@@ -258,6 +266,53 @@
                                        min="2" max="6" step="1" value="5">
                                 <output id="scene-species-value">5</output>
                             </label>
+                        </div>
+
+                        <!-- Hydrogen orbital controls. The three quantum numbers are NOT
+                             independent — l must be below n and |m| at most l — so
+                             OrbitalCloud.setState clamps the combination and
+                             _syncOrbitalUI writes the accepted values back, adjusting
+                             each slider's own min/max as it goes. -->
+                        <div id="scene-orbital-options" class="scene-options" hidden>
+                            <p class="scene-note">
+                                Every dot is one <em>possible</em> position of the same
+                                electron. It does not orbit — until measured it is in all
+                                of these places at once, and this shape is the electron.
+                                Colour is the phase of the wave; when
+                                <strong>m</strong> is not zero it shears round the axis,
+                                which is the probability current.
+                            </p>
+                            <div class="scene-orbital-name" id="orb-label" aria-live="polite">3d m=+1</div>
+                            <label class="scene-slider" for="orb-n">
+                                <span title="Energy level — the shell, and its size">n · level</span>
+                                <input type="range" id="orb-n" min="1" max="6" step="1" value="3">
+                                <output id="orb-n-value">3</output>
+                            </label>
+                            <label class="scene-slider" for="orb-l">
+                                <span title="Orbital shape: s, p, d, f, g, h. Must be below n">l · shape</span>
+                                <input type="range" id="orb-l" min="0" max="2" step="1" value="2">
+                                <output id="orb-l-value">2</output>
+                            </label>
+                            <label class="scene-slider" for="orb-m">
+                                <span title="Orientation, and the direction of the probability current. Between -l and +l">m · spin</span>
+                                <input type="range" id="orb-m" min="-2" max="2" step="1" value="1">
+                                <output id="orb-m-value">1</output>
+                            </label>
+                            <label class="scene-slider" for="orb-points">
+                                <span>Samples</span>
+                                <input type="range" id="orb-points"
+                                       min="2000" max="40000" step="2000" value="14000">
+                                <output id="orb-points-value">14000</output>
+                            </label>
+                            <div class="control-buttons">
+                                <button id="orb-resample"
+                                        class="control-btn"
+                                        title="Draw a new set of points from the same probability cloud"
+                                        aria-label="Resample the orbital">
+                                    <span class="icon" aria-hidden="true">⟳</span>
+                                    <span class="btn-label">Resample</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 

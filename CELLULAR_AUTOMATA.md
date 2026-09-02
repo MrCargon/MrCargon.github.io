@@ -2,13 +2,39 @@
 
 **Purpose:** Reference for the three artificial-life simulations on this site, and the body of knowledge behind them — rules, patterns, computation, rule-space, recursion, particle dynamics, and the algorithms that make large simulations possible.
 
-**Audience:** Anyone reading the source of `ConwayLife.js`, `Lenia.js`, `ParticleLife.js`, `LifeView.js` or `LifePatterns.js` — or curious how a four-line rule ends up being Turing complete.
+**Audience:** Anyone reading the source of `ConwayLife.js`, `Lenia.js`, `ParticleLife.js`, `ParticleField3D.js`, `OrbitalCloud.js`, `ForceMatrix.js`, `LifeView.js` or `LifePatterns.js` — or curious how a four-line rule ends up being Turing complete.
 
 ---
 
 ## Sourcing Note — read this before trusting anything below
 
-This document was assembled from six sources supplied as links. **None of their transcripts or descriptions could be retrieved** — YouTube served only page chrome, and Reddit refused the request outright. Only the titles were readable:
+> ### CORRECTION, 2026-09-02
+>
+> The paragraph below claimed the videos' transcripts "could not be retrieved". **That was
+> wrong, and it cost something real.** YouTube watch pages are JS-rendered, so a plain
+> fetch returns only the page footer — that is a fact about the fetch, not about the data.
+> Full transcripts come back from `youtube-transcript-api`:
+>
+> ```python
+> YouTubeTranscriptApi().fetch(video_id, languages=['en', 'ru'])
+> ```
+>
+> The consequence: Particle Life was built from titles alone and shipped **without density
+> regulation**, which its source video calls "the most important component to making
+> complex particle life". It collapsed into single-colour blobs exactly as that video
+> warns. Now implemented — see the section above.
+>
+> Four transcripts have since been read in full and are archived verbatim in the vault
+> under `Knowledge/YouTube_Intake/transcripts/`: CodeNoodles (particle life), Krafer
+> (quark simulation), Zanzlanz (no assets — source #4 in the table below), and kavan
+> (atoms). **The five remaining sources below have still not been read**, and the same
+> method would work on them.
+>
+> The factual content below is unaffected: it comes from the literature, not the videos,
+> for the reason given in the next paragraph. What was wrong was the claim about what
+> could be retrieved.
+
+This document was assembled from six sources supplied as links. Their transcripts were **not** retrieved at the time — YouTube served only page chrome, and Reddit refused the request outright. Only the titles were read:
 
 | # | Title as shown | Topic it fixes |
 |:--|:--|:--|
@@ -35,6 +61,8 @@ Where a figure is one I am confident of, it is stated plainly. Where it is not, 
 6. [Life Inside Life](#6-life-inside-life)
 7. [Making It Fast](#7-making-it-fast)
 7b. [Off the Grid — Particle Life](#7b-off-the-grid--particle-life)
+7c. [The Same Rule in Three Dimensions](#7c-the-same-rule-in-three-dimensions--the-sites-backdrop)
+7d. [A Hydrogen Atom](#7d-off-the-grid-entirely--a-hydrogen-atom)
 8. [Zero Assets](#8-zero-assets)
 9. [How This Site Implements It](#9-how-this-site-implements-it)
 
@@ -344,6 +372,66 @@ Two rendering decisions were forced by looking at it rather than by counting:
   misled the first diagnosis: that flag governs conversion of *inputs*, not the output
   encoding, and the output encoding is what does the damage.
 
+### 7d. Off the grid entirely — a hydrogen atom
+
+The third backdrop is not a cellular automaton or a particle system at all. It is a single
+electron, drawn as a cloud of its **possible positions**: sample |ψ|² for the state
+(n, l, m) and put a dot at each sample. Nothing orbits. Until it is measured the electron
+is in all of those places at once, and the shape *is* the electron.
+
+The chain of reasoning behind it is the interesting part, because each step exists to break
+the one before:
+
+| model | what it adds | what breaks it |
+|:--|:--|:--|
+| circular orbit | Coulomb attraction, an electron going round | an accelerating charge radiates, so it should spiral in |
+| Bohr's levels | fixes that by decree — the electron can't drop below the ground state | if the level is fixed, how does it accelerate at all? |
+| standing wave | it doesn't. The electron is a wave wrapped round the proton | it's 2D and still drawn as a path |
+| probability cloud | sample where that wave is dense; draw those points | — |
+
+The good part is that **the energy levels are not an extra rule**. Tune the energy
+continuously and the wave only closes on itself at particular values — and those values are
+exactly Bohr's.
+
+**How it is computed.** The wavefunction separates, because the atom is spherically
+symmetric: `ψ = R_nl(r) · Θ_lm(θ) · e^(imφ)`. `R` comes from the associated **Laguerre**
+polynomials, `Θ` from the associated **Legendre** polynomials, and `φ` is *uniform* — it
+carries no positional information at all. Points are drawn by **inverse-transform (CDF)
+sampling**: build a cumulative table once per state, draw a uniform number, binary-search
+where it lands. No rejection loop, fixed cost per point, and it reproduces any tabulated
+density exactly.
+
+The radial probability is `|R|² r²`, and that `r²` — the volume of the shell — is why the
+1s cloud peaks at r = 1 rather than at the nucleus, where `|R|²` is largest.
+
+**Colour is phase, motion is the probability current.** `|ψ|` does not vary with φ, so
+colouring by density would give one flat colour and waste the channel. Phase is the
+information that is actually present. And for m ≠ 0 there is a real circulating current
+whose angular velocity goes like `m / (r sinθ)²`, so points near the axis race and points
+far out crawl: the cloud **shears** rather than rotating rigidly. At m = 0 there is no
+current and the orbital is genuinely static — and it looks it.
+
+That formula diverges on the axis where sinθ → 0. That is a real feature of the physics,
+not a bug, but it has to be bounded for a fixed timestep; it is, and a test puts 500 points
+exactly on the axis and 500 at r = 0 for 300 steps to prove nothing goes non-finite.
+
+**This is the one simulation on the site with exact answers to check against**, so none of
+it is judged by eye:
+
+| check | result |
+|:--|:--|
+| radial density integrates to 1 | worst error **1.79e-13** over 9 states |
+| ⟨r⟩ = (3n² − l(l+1))/2 | matches to **2e-11 %** |
+| ⟨1/r⟩ = 1/n², independent of l | matches for every l |
+| radial nodes n−l−1, angular nodes l−\|m\| | exact, 15 states |
+| 1s most probable radius | **1.00000 a₀** — the Bohr radius, recovered, not hardcoded |
+| CDF sampler vs analytic density | worst bin **1.7 σ** over 60k samples |
+
+The quantum numbers are exposed as three sliders. They are not independent — `l < n` and
+`|m| ≤ l` — so the cloud *clamps* the combination and the UI writes back what was actually
+accepted, adjusting each slider's own range. Dragging n down to 1 forces l and m to 0 in
+front of you rather than leaving the sliders lying about what is drawn.
+
 ---
 
 ## 8. Zero Assets
@@ -374,6 +462,7 @@ Files:
 - `src/utils/Lenia.js` — the continuous simulation
 - `src/utils/ParticleLife.js` — the grid-free simulation, 2D, on the Life page
 - `src/utils/ParticleField3D.js` — the grid-free simulation in a wrapped cube, as the site's backdrop
+- `src/utils/OrbitalCloud.js` — hydrogen orbitals: |psi|^2 sampled into a point cloud, the third backdrop
 - `src/utils/LifeView.js` — shared zoom, pan, palette and per-cell gradient
 - `src/utils/LifePatterns.js` — RLE decoder and pattern library
 - `src/components/pages/LifePage.js` — page controller for all three modes, owns the WebGL context
@@ -385,6 +474,7 @@ Tests:
 - `tests/verify-patterns.cjs` — RLE round-trips, 14 patterns and 7 rule presets
 - `tests/verify-particles.cjs` — the 2D force law, two particles at a time
 - `tests/verify-field3d.cjs` — the 3D field, and proof that all three copies of the force curve still agree
+- `tests/verify-orbitals.cjs` — the orbitals against their exact analytic answers
 - `tests/e2e/life-full.spec.js` — every control on the Life page
 - `tests/e2e/scene-select.spec.js` — the backdrop switch, driven through the actual buttons
 - `tests/e2e/scene-look.spec.js` — samples the rendered pixels: coverage, hue count, saturation, motion
@@ -402,7 +492,7 @@ Tests:
 - CodeNoodles — *I Created Realistic Life With Particles* ([2vt4MBxcOhs](https://www.youtube.com/watch?v=2vt4MBxcOhs)). Source of density regulation, which it calls the most important component
 - Krafer — *I made a Molecular Simulation using Quarks* ([njaBPMuiX3I](https://www.youtube.com/watch?v=njaBPMuiX3I))
 - Zanzlanz — *How I released a game that has no assets* ([Qr3VsZYQy4s](https://www.youtube.com/watch?v=Qr3VsZYQy4s)). Source of the Fourier-series shape engine in `src/utils/SineShape.js` and of §8's zero-asset rule
-- kavan — *Simulating Atoms in C++* ([OSAOh4L41Wg](https://www.youtube.com/watch?v=OSAOh4L41Wg)). Hydrogen orbitals by CDF-sampling the Schrödinger wavefunction — not yet implemented here; see the note below
+- kavan — *Simulating Atoms in C++* ([OSAOh4L41Wg](https://www.youtube.com/watch?v=OSAOh4L41Wg)). Hydrogen orbitals by CDF-sampling the Schrödinger wavefunction — implemented in `src/utils/OrbitalCloud.js`, see §7d
 
 > **A note on reading these.** YouTube watch pages are JS-rendered, so a plain fetch
 > returns only the page footer. That is not evidence the content is unavailable — full

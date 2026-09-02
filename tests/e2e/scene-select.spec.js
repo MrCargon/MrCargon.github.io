@@ -221,3 +221,130 @@ test('the solar system stops costing anything while particles are showing', asyn
     // Sanity: it really was moving before, or the assertion above proves nothing.
     expect(b).not.toBe(a);
 });
+
+// ── the third backdrop: hydrogen orbitals ──────────────────────────────────────
+
+test('the orbital scene is reachable and the quantum numbers drive it', async ({ page }) => {
+    await bootMain(page);
+    await openControls(page);
+    await pickScene(page, 'scene-orbitals');
+
+    expect(await mode(page), 'switches to orbitals').toBe('orbitals');
+
+    const read = () => page.evaluate(() => {
+        const c = window.spaceEnvironment.orbitalCloud;
+        return c ? { n: c.n, l: c.l, m: c.m, count: c.count, label: c.label() } : null;
+    });
+    const start = await read();
+    expect(start, 'the cloud was built').not.toBeNull();
+    expect(start.count).toBeGreaterThan(2000);
+
+    // Ranges need a real input event; fill() does not dispatch one for stepped ranges.
+    const set = (id, v) => page.evaluate(([id, v]) => {
+        const el = document.getElementById(id);
+        el.value = String(v);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, [id, v]);
+
+    await set('orb-n', 2);
+    await set('orb-l', 1);
+    await set('orb-m', 0);
+    expect(await read()).toMatchObject({ n: 2, l: 1, m: 0, label: '2p' });
+    expect(await page.locator('#orb-label').textContent()).toBe('2p');
+});
+
+test('impossible quantum numbers are clamped, and the sliders say so', async ({ page }) => {
+    await bootMain(page);
+    await openControls(page);
+    await pickScene(page, 'scene-orbitals');
+
+    const state = () => page.evaluate(() => {
+        const c = window.spaceEnvironment.orbitalCloud;
+        const el = (id) => document.getElementById(id);
+        return {
+            n: c.n, l: c.l, m: c.m,
+            lMax: Number(el('orb-l').max), mMax: Number(el('orb-m').max), mMin: Number(el('orb-m').min),
+            lShown: el('orb-l-value').textContent, mShown: el('orb-m-value').textContent
+        };
+    });
+    const set = (id, v) => page.evaluate(([id, v]) => {
+        const el = document.getElementById(id);
+        el.value = String(v);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, [id, v]);
+
+    // Climb to a state with room, then collapse n underneath it. l and m have nowhere
+    // legal to stay, so they must be dragged down with it — and the sliders must show
+    // the values that were actually taken, not the ones that were asked for.
+    await set('orb-n', 5);
+    await set('orb-l', 4);
+    await set('orb-m', 4);
+    expect(await state()).toMatchObject({ n: 5, l: 4, m: 4 });
+
+    await set('orb-n', 1);
+    const after = await state();
+    expect(after.n, 'n took the new value').toBe(1);
+    expect(after.l, 'l < n forced l to 0').toBe(0);
+    expect(after.m, '|m| <= l forced m to 0').toBe(0);
+    expect(after.lMax, 'l slider ceiling followed n').toBe(0);
+    expect(after.mMax, 'm slider ceiling followed l').toBe(0);
+    expect(after.mMin, 'm slider floor followed l').toBe(0);
+    expect(after.lShown, 'l readout agrees with the simulation').toBe('0');
+    expect(after.mShown, 'm readout agrees with the simulation').toBe('0');
+});
+
+test('the probability current turns only when m is not zero', async ({ page }) => {
+    await bootMain(page);
+    await openControls(page);
+    await pickScene(page, 'scene-orbitals');
+
+    // Sample the same point's phase twice, a second apart.
+    const drift = (n, l, m) => page.evaluate(async ([n, l, m]) => {
+        const se = window.spaceEnvironment;
+        se.setOrbital(n, l, m);
+        const c = se.orbitalCloud;
+        const before = Array.from(c._phi.slice(0, 400));
+        await new Promise((r) => setTimeout(r, 1200));
+        let moved = 0, spread = new Set();
+        for (let i = 0; i < 400; i++) {
+            const d = c._phi[i] - before[i];
+            if (d !== 0) moved++;
+            spread.add(d.toFixed(3));
+        }
+        return { moved, rates: spread.size };
+    }, [n, l, m]);
+
+    const still = await drift(3, 1, 0);
+    expect(still.moved, 'm=0 is genuinely static').toBe(0);
+
+    const turning = await drift(3, 1, 1);
+    expect(turning.moved, 'm=1 moves the phase').toBeGreaterThan(380);
+    // It must SHEAR, not rotate rigidly — the angular velocity depends on r and theta.
+    expect(turning.rates, 'and at many different rates').toBeGreaterThan(50);
+});
+
+test('all three scenes are reachable in sequence and only one runs at a time', async ({ page }) => {
+    await bootMain(page);
+    await openControls(page);
+
+    const running = () => page.evaluate(() => {
+        const se = window.spaceEnvironment;
+        return {
+            mode: se.sceneMode,
+            particles: se.particleField ? se.particleField.generation : null,
+            orbitals: se.orbitalCloud ? se.orbitalCloud.generation : null
+        };
+    });
+
+    await pickScene(page, 'scene-particles');
+    await pickScene(page, 'scene-orbitals');
+    const a = await running();
+    await page.waitForTimeout(1200);
+    const b = await running();
+
+    expect(b.orbitals, 'the orbital cloud is stepping').toBeGreaterThan(a.orbitals);
+    expect(b.particles, 'the particle field is NOT stepping behind it').toBe(a.particles);
+
+    await pickScene(page, 'scene-solar');
+    expect(await mode(page), 'and back to the solar system').toBe('solar');
+});

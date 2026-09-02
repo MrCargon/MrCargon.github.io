@@ -116,8 +116,10 @@ class SpaceEnvironment {
         // or the other and skips the other's per-frame work entirely, so the unselected
         // scene costs nothing. That is the point — running the planets invisibly behind
         // a particle field would be paying for a simulation nobody can see.
+        // 'solar' | 'particles' | 'orbitals'
         this.sceneMode = 'solar';
         this.particleField = null;
+        this.orbitalCloud = null;
         this._sceneSwitching = false;
         this._lastParticleAt = 0;
         this._sceneFadeEl = null;
@@ -1061,6 +1063,9 @@ class SpaceEnvironment {
      * go with them and nothing stacks. Rule 6: every element optional.
      */
     connectSceneControls() {
+        console.assert(typeof document !== 'undefined', 'connectSceneControls: DOM available');
+        console.assert(SpaceEnvironment.SCENE_MODES.length >= 2,
+            'connectSceneControls: more than one scene to choose between');
         const on = (id, ev, fn) => {
             const el = document.getElementById(id);
             if (el) el.addEventListener(ev, fn);
@@ -1072,6 +1077,12 @@ class SpaceEnvironment {
         on('scene-rematrix', 'click', () => this.rerollParticleMatrix());
         on('scene-density', 'input', (e) => this.setParticleCount(parseInt(e.target.value, 10)));
         on('scene-species', 'input', (e) => this.setParticleSpecies(parseInt(e.target.value, 10)));
+        on('scene-orbitals', 'click', () => this.setSceneMode('orbitals'));
+        on('orb-n', 'input', (e) => this.setOrbital(parseInt(e.target.value, 10), null, null));
+        on('orb-l', 'input', (e) => this.setOrbital(null, parseInt(e.target.value, 10), null));
+        on('orb-m', 'input', (e) => this.setOrbital(null, null, parseInt(e.target.value, 10)));
+        on('orb-points', 'input', (e) => this.resampleOrbital(parseInt(e.target.value, 10)));
+        on('orb-resample', 'click', () => this.resampleOrbital());
         this._syncSceneUI();
         return true;
     }
@@ -1083,9 +1094,9 @@ class SpaceEnvironment {
      * @param {boolean} [instant] skip the fade (used on first load and by tests)
      */
     setSceneMode(mode, instant) {
-        console.assert(mode === 'solar' || mode === 'particles', 'setSceneMode: known mode');
+        console.assert(SpaceEnvironment.SCENE_MODES.indexOf(mode) !== -1, 'setSceneMode: known mode');
         console.assert(!this._sceneSwitching || instant, 'setSceneMode: not already switching');
-        if (mode !== 'solar' && mode !== 'particles') return false;
+        if (SpaceEnvironment.SCENE_MODES.indexOf(mode) === -1) return false;
         if (this._sceneSwitching) return false;
         if (mode === this.sceneMode) { this._syncSceneUI(); return true; }
 
@@ -1134,15 +1145,16 @@ class SpaceEnvironment {
      * Rule 5: 2 asserts.
      */
     _applySceneMode(mode) {
-        console.assert(mode === 'solar' || mode === 'particles', '_applySceneMode: known mode');
+        console.assert(SpaceEnvironment.SCENE_MODES.indexOf(mode) !== -1, '_applySceneMode: known mode');
         console.assert(this.renderer, '_applySceneMode: renderer exists');
         // Explore mode is a solar-system state: leaving it visible over a particle field
         // would strand its panel, its button and its frozen globe. Same reasoning as the
         // exitExploreMode guard on page navigation.
-        if (mode === 'particles' && this.exploreMode) this.exitExploreMode(true);
+        if (mode !== 'solar' && this.exploreMode) this.exitExploreMode(true);
 
         this.sceneMode = mode;
         if (mode === 'particles') this._ensureParticleField();
+        if (mode === 'orbitals') this._ensureOrbitalCloud();
         this._lastParticleAt = 0;                 // so the first frame gets a sane delta
         this._syncSceneUI();
 
@@ -1182,32 +1194,122 @@ class SpaceEnvironment {
     }
 
     /**
+     * Build the orbital cloud on first use, like the particle field. Reuses that class's
+     * generated dot sprite rather than making a second identical texture, which is why
+     * index.html loads it second. Rule 5: 2 asserts | Rule 6: falls back to solar.
+     */
+    _ensureOrbitalCloud() {
+        console.assert(this.renderer, '_ensureOrbitalCloud: renderer required');
+        console.assert(!this._disposed, '_ensureOrbitalCloud: not disposed');
+        if (this.orbitalCloud) return true;
+        if (typeof OrbitalCloud === 'undefined' || !this.renderer) {
+            console.warn('OrbitalCloud unavailable - staying on the solar system');
+            this.sceneMode = 'solar';
+            return false;
+        }
+        this.orbitalCloud = new OrbitalCloud(this.renderer, { count: 14000 });
+        this.orbitalCloud.init();
+        // Reduced motion stops the camera circling. The probability current is left
+        // running: it is the content, not decoration, and it is a slow shear rather than
+        // whole-frame movement.
+        if (this.prefersReducedMotion()) this.orbitalCloud.spin = 0;
+        return true;
+    }
+
+    /**
      * Put the controls in the state the current scene calls for: the right button
-     * pressed, solar-only chrome hidden, particle-only options shown.
+     * pressed, solar-only chrome hidden, and only the active scene's own options shown.
      * Rule 5: 2 asserts | Rule 6: every element optional.
      */
     _syncSceneUI() {
         console.assert(typeof document !== 'undefined', '_syncSceneUI: DOM available');
         console.assert(this.sceneMode, '_syncSceneUI: mode set');
-        const particles = this.sceneMode === 'particles';
+        const mode = this.sceneMode;
         const press = (id, on) => {
             const el = document.getElementById(id);
             if (!el) return;
             el.classList.toggle('active', on);
             el.setAttribute('aria-pressed', on ? 'true' : 'false');
         };
-        press('scene-solar', !particles);
-        press('scene-particles', particles);
+        press('scene-solar', mode === 'solar');
+        press('scene-particles', mode === 'particles');
+        press('scene-orbitals', mode === 'orbitals');
 
-        const opts = document.getElementById('scene-particle-options');
-        if (opts) opts.hidden = !particles;
+        const show = (id, on) => { const e = document.getElementById(id); if (e) e.hidden = !on; };
+        show('scene-particle-options', mode === 'particles');
+        show('scene-orbital-options', mode === 'orbitals');
 
         // One class on <body> drives every solar-only panel's visibility from CSS, rather
         // than this method knowing the id of each one. New solar chrome then only has to
         // opt in from the stylesheet.
-        if (document.body) document.body.classList.toggle('scene-particles', particles);
+        if (document.body) {
+            document.body.classList.toggle('scene-particles', mode === 'particles');
+            document.body.classList.toggle('scene-orbitals', mode === 'orbitals');
+        }
+        if (mode === 'orbitals') this._syncOrbitalUI();
 
         if (typeof this._updateExploreButton === 'function') this._updateExploreButton();
+        return true;
+    }
+
+    /**
+     * Reflect the cloud's state back into the sliders and the label.
+     *
+     * Necessary because the quantum numbers are not independent: l must be below n and
+     * |m| at most l, so setState CLAMPS. Dragging n down to 1 silently forces l and m to
+     * 0, and sliders left showing their old values would be lying about what is drawn.
+     * Rule 5: 2 asserts | Rule 6: every element optional.
+     */
+    _syncOrbitalUI() {
+        console.assert(typeof document !== 'undefined', '_syncOrbitalUI: DOM available');
+        console.assert(this.sceneMode === 'orbitals', '_syncOrbitalUI: right mode');
+        const c = this.orbitalCloud;
+        if (!c) return false;
+        const set = (id, value, max, min) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (Number.isFinite(max)) el.max = String(max);
+            if (Number.isFinite(min)) el.min = String(min);
+            el.value = String(value);
+            const out = document.getElementById(id + '-value');
+            if (out) out.textContent = String(value);
+        };
+        set('orb-n', c.n);
+        set('orb-l', c.l, c.n - 1);          // l < n
+        set('orb-m', c.m, c.l, -c.l);        // |m| <= l
+        const label = document.getElementById('orb-label');
+        if (label) label.textContent = c.label();
+        return true;
+    }
+
+    /**
+     * Change the orbital. Any of n, l, m may be null to leave it alone; the cloud clamps
+     * the combination to a legal one and the UI is re-synced from what it actually took.
+     * Rule 5: 2 asserts.
+     */
+    setOrbital(n, l, m) {
+        console.assert(!this._disposed, 'setOrbital: not disposed');
+        console.assert(this.sceneMode === 'orbitals', 'setOrbital: only in the orbital scene');
+        const c = this.orbitalCloud;
+        if (!c) return false;
+        c.setState(Number.isFinite(n) ? n : c.n,
+                   Number.isFinite(l) ? l : c.l,
+                   Number.isFinite(m) ? m : c.m);
+        this._syncOrbitalUI();
+        this.announceExplore('Orbital ' + c.label());
+        return true;
+    }
+
+    /** Draw a fresh set of points from the same distribution. Rule 5: 2 asserts. */
+    resampleOrbital(count) {
+        console.assert(!this._disposed, 'resampleOrbital: not disposed');
+        console.assert(this.sceneMode === 'orbitals', 'resampleOrbital: only in the orbital scene');
+        if (!this.orbitalCloud) return false;
+        this.orbitalCloud.resample(count);
+        if (Number.isFinite(count)) {
+            const out = document.getElementById('orb-points-value');
+            if (out) out.textContent = String(this.orbitalCloud.count);
+        }
         return true;
     }
 
@@ -1272,7 +1374,9 @@ class SpaceEnvironment {
         } catch (e) {
             stored = null;
         }
-        if (stored === 'particles') return this.setSceneMode('particles', true);
+        if (stored && stored !== 'solar' && SpaceEnvironment.SCENE_MODES.indexOf(stored) !== -1) {
+            return this.setSceneMode(stored, true);
+        }
         this._syncSceneUI();
         return true;
     }
@@ -1300,7 +1404,14 @@ class SpaceEnvironment {
             this.particleField.dispose();
             this.particleField = null;
         }
-        if (document.body) document.body.classList.remove('scene-particles');
+        if (this.orbitalCloud && typeof this.orbitalCloud.dispose === 'function') {
+            this.orbitalCloud.dispose();
+            this.orbitalCloud = null;
+        }
+        if (document.body) {
+            document.body.classList.remove('scene-particles');
+            document.body.classList.remove('scene-orbitals');
+        }
         return true;
     }
 
@@ -1308,10 +1419,11 @@ class SpaceEnvironment {
      * One frame of the particle scene. Returns true if it drew.
      * Rule 5: 2 asserts | Rule 6: silent no-op if the field failed to build.
      */
-    _animateParticleScene() {
-        console.assert(this.sceneMode === 'particles', '_animateParticleScene: right mode');
-        console.assert(!this._disposed, '_animateParticleScene: not disposed');
-        if (!this.particleField || !this.renderer) return false;
+    _animateAltScene() {
+        console.assert(this.sceneMode !== 'solar', '_animateAltScene: not the solar mode');
+        console.assert(!this._disposed, '_animateAltScene: not disposed');
+        const sim = this.sceneMode === 'orbitals' ? this.orbitalCloud : this.particleField;
+        if (!sim || !this.renderer) return false;
         const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
         // Behind a content page this is decoration, so it gets BACKGROUND_FPS like the
@@ -1327,8 +1439,11 @@ class SpaceEnvironment {
         const dt = this._lastParticleAt ? Math.min(0.1, (now - this._lastParticleAt) / 1000) : 0;
         this._lastParticleAt = now;
 
-        this.particleField.step();
-        this.particleField.render(dt, this.width, this.height);
+        // ParticleField3D.step() takes no argument (its timestep is fixed for stability);
+        // OrbitalCloud.step(dt) advances the probability current in real time. Passing dt
+        // to both is harmless and keeps this one call site.
+        sim.step(dt);
+        sim.render(dt, this.width, this.height);
         return true;
     }
 
@@ -3859,8 +3974,8 @@ class SpaceEnvironment {
         // cosmology features — is work whose result nobody can see. So take the whole
         // branch and return. This is the difference between the two scenes costing one
         // frame budget and costing two.
-        if (this.sceneMode === 'particles') {
-            this._animateParticleScene();
+        if (this.sceneMode !== 'solar') {
+            this._animateAltScene();
             return;
         }
 
@@ -5081,3 +5196,8 @@ SpaceEnvironment.SCENE_FADE_MS = 260;
 
 // Where the chosen backdrop is remembered between visits.
 SpaceEnvironment.SCENE_KEY = 'mrcargon-scene-mode';
+
+// Every backdrop this class can draw. 'solar' is the one it was built for and is the only
+// mode that runs the orbital mechanics; the others replace it entirely rather than
+// layering over it, so animate() takes one branch and returns.
+SpaceEnvironment.SCENE_MODES = ['solar', 'particles', 'orbitals'];

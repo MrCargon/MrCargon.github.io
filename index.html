@@ -7,8 +7,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
         <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes) used by Explore mode. -->
         <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov; font-src 'self'; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'">
-        <meta name="description" content="MrCargo - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
-        <title>MrCargo - Portfolio</title>
+        <meta name="description" content="MrCargon - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
+        <!-- Shown before the router runs, and by anything that reads the raw HTML.
+             Was "MrCargo" — a typo for the name on the domain, the GitHub handle and
+             every page of the site. -->
+        <title>MrCargon - Portfolio</title>
 
         <!-- Favicon - Space themed star -->
         <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3CradialGradient id='g' cx='30%25' cy='30%25'%3E%3Cstop offset='0%25' stop-color='%23fff'/%3E%3Cstop offset='100%25' stop-color='%234a90d9'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Ccircle cx='35' cy='40' r='8' fill='%23ffffff40'/%3E%3C/svg%3E">
@@ -73,7 +76,7 @@
                 <span class="boot-orb"></span>
             </div>
             <div class="boot-brand">
-                <h1 class="boot-name">MRCARGO</h1>
+                <h1 class="boot-name">MRCARGON</h1>
                 <p class="boot-tagline">Creative Developer · 3D Designer</p>
             </div>
             <ul id="boot-log" class="boot-log" aria-hidden="true"></ul>
@@ -129,11 +132,17 @@
          simulations are driven by ONE page (LifePage) behind a mode switch, sharing
          LifeView for zoom/pan/palette. Order matters: LifePatterns and both sims must be
          defined before LifePage reads them during init(). All classic scripts touching
-         THREE only at runtime, per the note below. -->
+         THREE only at runtime, per the note below.
+
+         ForceMatrix is FIRST and is not optional: it holds the Particle Life model shared
+         by the 2D page sim and the 3D main-page scene, and both read its constants at
+         load time, not at construction. -->
+    <script src="src/utils/ForceMatrix.js" defer></script>
     <script src="src/utils/LifePatterns.js" defer></script>
     <script src="src/utils/ConwayLife.js" defer></script>
     <script src="src/utils/LifeView.js" defer></script>
     <script src="src/utils/ParticleLife.js" defer></script>
+    <script src="src/utils/ParticleField3D.js" defer></script>
     <script src="src/components/pages/LifePage.js" defer></script>
     <script src="src/utils/SafeFetch.js" defer></script>
     <script src="src/utils/GeoLOD.js" defer></script>

@@ -33,6 +33,8 @@ Thumbs.db
 # Test results
 test-results/
 playwright-report/
+# Screenshots and pixel reports written by tests/e2e/scene-look.spec.js
+scratch/
 playwright/.cache/
 
 # Misc

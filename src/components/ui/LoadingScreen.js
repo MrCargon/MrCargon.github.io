@@ -71,7 +71,7 @@ class LoadingScreen {
         const log = document.getElementById('boot-log');
         if (!log) return;
         const lines = [
-            'Booting MRCARGO engine',
+            'Booting MRCARGON engine',
             'Initializing WebGL renderer',
             'Loading solar system assets',
             'Calibrating planetary orbits',

@@ -602,8 +602,23 @@ class PageManager {
         
         try {
  // Determine initial page
+            //
+            // 'main', not 'about'. Arriving at the bare URL — from a link, a search
+            // result, or by typing the domain — landed on About, with the document title
+            // reading "About - Developer Profile". The front door of a portfolio built
+            // around an interactive solar system was a text page, and the solar system
+            // was only reachable by clicking a nav link.
+            //
+            // Two things in this file already say 'main' was meant to be the landing
+            // page: it is titled "Home - Interactive Space Experience", and it is the
+            // only route carrying preload: true — so the app was preloading the page it
+            // then declined to show. This has been here since the initial import, i.e.
+            // it was never a decision, it was the fallback below copied one line up.
+            //
+            // 'about' remains the FALLBACK when the initial navigation fails, which is a
+            // different question and still the right answer for it.
             const hash = window.location.hash.substring(1);
-            const initialPage = (hash && this.pages[hash]) ? hash : 'about';
+            const initialPage = (hash && this.pages[hash]) ? hash : 'main';
             
             // Loading initial page
             
@@ -1330,7 +1345,12 @@ class PageManager {
     
     updateUIState(pageName) {
         if (this.pages[pageName] && this.pages[pageName].title) {
-            document.title = this.pages[pageName].title;
+            // Suffix the site name. Every route title described the PAGE and named nobody
+            // — "About - Developer Profile", "Projects - Portfolio & Games" — so a browser
+            // tab, a bookmark or a search result carried no clue whose site it was. The
+            // static <title> in index.html is the only place the name appeared, and it is
+            // overwritten the moment the router runs.
+            document.title = `${this.pages[pageName].title} · ${PageManager.SITE_NAME}`;
         }
     }
     
@@ -1615,7 +1635,10 @@ class PageManager {
             this.setupQuickActionBar();
             this.setupKeyboardShortcuts();
             this.setupPopupPositionValidation();
-            // Note: showKeyboardHints() removed - shortcuts now visible in action buttons
+            // Keyboard shortcuts are shown on the action buttons themselves (I / C / T
+            // / R), so there is no separate hints overlay. The showKeyboardHints method
+            // that used to live here went with it: it was left behind uncalled, keyed to
+            // an element id that exists nowhere in the markup.
             
  // Initial position validation
             setTimeout(() => {
@@ -2120,41 +2143,6 @@ class PageManager {
         }
         
         return this.togglePopup(popup);
-    }
-
-    /**
-     * Show keyboard hints temporarily
-     * Purpose: Display keyboard shortcuts on page load
-     * Rule 4: ≤60 lines | Rule 5: 2+ assertions | Rule 2: Bounded timeout
-     */
-    showKeyboardHints() {
- // Rule 5: Validate hints element
-        const hintsElement = document.getElementById('keyboard-hints');
-        if (!hintsElement) {
-            console.warn('Keyboard hints element not found');
-            return false;
-        }
-        
-        if (!hintsElement.classList) {
-            console.error('Hints element missing classList');
-            return false;
-        }
-        
- // Show hints for 4 seconds, then hide
-        hintsElement.classList.add('show');
-        
- // Rule 2: Bounded timeout (4000ms)
-        const timeoutId = setTimeout(() => {
-            hintsElement.classList.remove('show');
-        }, 4000);
-        
- // Track timeout for cleanup
-        if (this.activeTimeouts) {
-            this.activeTimeouts.add(timeoutId);
-        }
-        
-        // Keyboard hints displayed
-        return true;
     }
 
     /**
@@ -3334,6 +3322,10 @@ if (document.readyState === 'loading') {
         // PageManager auto-initialized immediately
     }
 }
+
+// The one place the site is named. Route titles say what the PAGE is; this says whose it
+// is, and updateUIState joins them.
+PageManager.SITE_NAME = 'MrCargon';
 
 // Export for different module systems
 if (typeof module !== 'undefined' && module.exports) {

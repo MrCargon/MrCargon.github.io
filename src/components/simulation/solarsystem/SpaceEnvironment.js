@@ -107,6 +107,21 @@ class SpaceEnvironment {
         this.preservedCameraState = null;
         this.shouldPreserveCameraPosition = true; // Enable camera preservation by default
 
+        // ── Scene selection ─────────────────────────────────────────────────
+        // What fills the backdrop behind the entire site. 'solar' is the solar system
+        // this class was built for; 'particles' is ParticleField3D, a wrapped cube of
+        // typed particles running the same model as the Life page's 2D sim.
+        //
+        // They share the renderer and the canvas but NOT the scene: animate() draws one
+        // or the other and skips the other's per-frame work entirely, so the unselected
+        // scene costs nothing. That is the point — running the planets invisibly behind
+        // a particle field would be paying for a simulation nobody can see.
+        this.sceneMode = 'solar';
+        this.particleField = null;
+        this._sceneSwitching = false;
+        this._lastParticleAt = 0;
+        this._sceneFadeEl = null;
+
         // ── Explore Earth mode ──────────────────────────────────────────────
         // Free-look mode: focusing Earth flies in then FREEZES the globe and hands
         // control to the user (drag to rotate, zoom in close). See enter/exit below.
@@ -464,6 +479,10 @@ class SpaceEnvironment {
             }
 
             this.connectUIControls();
+
+            // Whatever backdrop the visitor last chose, restored without a fade — on a
+            // cold load a fade just reads as the page still loading.
+            this.restoreSceneMode();
 
             this.animate();
 
@@ -1028,8 +1047,292 @@ class SpaceEnvironment {
                 console.log(`Auto-orbiting ${this.orbitingPlanet ? 'enabled' : 'disabled'}`);
             });
         }
+
+        this.connectSceneControls();
     }
-    
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  SCENE SELECTION — solar system, or the 3D particle field
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Wire the Scene control group. Called from connectUIControls, so it re-runs every
+     * time the main page is rendered; the elements are new each time, so the listeners
+     * go with them and nothing stacks. Rule 6: every element optional.
+     */
+    connectSceneControls() {
+        const on = (id, ev, fn) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener(ev, fn);
+            return !!el;
+        };
+        on('scene-solar', 'click', () => this.setSceneMode('solar'));
+        on('scene-particles', 'click', () => this.setSceneMode('particles'));
+        on('scene-reseed', 'click', () => this.reseedParticleField());
+        on('scene-rematrix', 'click', () => this.rerollParticleMatrix());
+        on('scene-density', 'input', (e) => this.setParticleCount(parseInt(e.target.value, 10)));
+        on('scene-species', 'input', (e) => this.setParticleSpecies(parseInt(e.target.value, 10)));
+        this._syncSceneUI();
+        return true;
+    }
+
+    /**
+     * Switch what fills the backdrop, fading through black so the swap does not read as a
+     * glitch. Rule 5: 2 asserts | Rule 6: refuses unknown modes rather than half-applying.
+     * @param {'solar'|'particles'} mode
+     * @param {boolean} [instant] skip the fade (used on first load and by tests)
+     */
+    setSceneMode(mode, instant) {
+        console.assert(mode === 'solar' || mode === 'particles', 'setSceneMode: known mode');
+        console.assert(!this._sceneSwitching || instant, 'setSceneMode: not already switching');
+        if (mode !== 'solar' && mode !== 'particles') return false;
+        if (this._sceneSwitching) return false;
+        if (mode === this.sceneMode) { this._syncSceneUI(); return true; }
+
+        const straight = instant === true || this.prefersReducedMotion();
+        if (straight) { this._applySceneMode(mode); return true; }
+
+        this._sceneSwitching = true;
+        const veil = this._sceneVeil();
+        veil.style.opacity = '1';
+        // Swap at full black, so neither scene is ever seen mid-transition. The second
+        // timer is the fade back in; both are cleared by dispose().
+        this._sceneTimerA = setTimeout(() => {
+            this._applySceneMode(mode);
+            veil.style.opacity = '0';
+            this._sceneTimerB = setTimeout(() => { this._sceneSwitching = false; },
+                SpaceEnvironment.SCENE_FADE_MS);
+        }, SpaceEnvironment.SCENE_FADE_MS);
+        return true;
+    }
+
+    /**
+     * The black sheet the scene swap hides behind. It sits BETWEEN the canvas (z -5) and
+     * the page content (z >= 0), so it masks the 3D backdrop without ever dimming the
+     * text on top of it. Rule 5: 2 asserts.
+     */
+    _sceneVeil() {
+        console.assert(typeof document !== 'undefined', '_sceneVeil: DOM available');
+        console.assert(SpaceEnvironment.SCENE_FADE_MS > 0, '_sceneVeil: fade duration set');
+        if (this._sceneFadeEl && this._sceneFadeEl.isConnected) return this._sceneFadeEl;
+        let el = document.getElementById('scene-transition-veil');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'scene-transition-veil';
+            el.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(el);
+        }
+        el.style.cssText = `position:fixed;inset:0;z-index:-4;pointer-events:none;` +
+            `background:#05070d;opacity:0;transition:opacity ${SpaceEnvironment.SCENE_FADE_MS}ms ease;`;
+        this._sceneFadeEl = el;
+        return el;
+    }
+
+    /**
+     * Do the swap itself. Separated from setSceneMode so the fade owns the timing and
+     * this owns the state — and so tests can switch instantly.
+     * Rule 5: 2 asserts.
+     */
+    _applySceneMode(mode) {
+        console.assert(mode === 'solar' || mode === 'particles', '_applySceneMode: known mode');
+        console.assert(this.renderer, '_applySceneMode: renderer exists');
+        // Explore mode is a solar-system state: leaving it visible over a particle field
+        // would strand its panel, its button and its frozen globe. Same reasoning as the
+        // exitExploreMode guard on page navigation.
+        if (mode === 'particles' && this.exploreMode) this.exitExploreMode(true);
+
+        this.sceneMode = mode;
+        if (mode === 'particles') this._ensureParticleField();
+        this._lastParticleAt = 0;                 // so the first frame gets a sane delta
+        this._syncSceneUI();
+
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(SpaceEnvironment.SCENE_KEY, mode);
+            }
+        } catch (e) {
+            // Private mode / blocked storage. The scene still switches; it just will not
+            // be remembered. Not worth failing the swap over.
+        }
+        this.handleResize();
+        console.log(`Scene mode: ${mode}`);
+        return true;
+    }
+
+    /**
+     * Build the particle field on first use. Not built in init() because most visitors
+     * never switch scenes, and this allocates ~4000 particles of buffers plus a point
+     * cloud. Rule 5: 2 asserts | Rule 6: returns false instead of throwing.
+     */
+    _ensureParticleField() {
+        console.assert(this.renderer, '_ensureParticleField: renderer required');
+        console.assert(!this._disposed, '_ensureParticleField: not disposed');
+        if (this.particleField) return true;
+        if (typeof ParticleField3D === 'undefined' || !this.renderer) {
+            console.warn('ParticleField3D unavailable - staying on the solar system');
+            this.sceneMode = 'solar';
+            return false;
+        }
+        this.particleField = new ParticleField3D(this.renderer, { count: 2200, types: 5 });
+        this.particleField.init();
+        // Reduced motion: the particles still evolve (that is the content), but the
+        // camera stops circling, which is the part that moves the whole frame.
+        if (this.prefersReducedMotion()) this.particleField.spin = 0;
+        return true;
+    }
+
+    /**
+     * Put the controls in the state the current scene calls for: the right button
+     * pressed, solar-only chrome hidden, particle-only options shown.
+     * Rule 5: 2 asserts | Rule 6: every element optional.
+     */
+    _syncSceneUI() {
+        console.assert(typeof document !== 'undefined', '_syncSceneUI: DOM available');
+        console.assert(this.sceneMode, '_syncSceneUI: mode set');
+        const particles = this.sceneMode === 'particles';
+        const press = (id, on) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('active', on);
+            el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        };
+        press('scene-solar', !particles);
+        press('scene-particles', particles);
+
+        const opts = document.getElementById('scene-particle-options');
+        if (opts) opts.hidden = !particles;
+
+        // One class on <body> drives every solar-only panel's visibility from CSS, rather
+        // than this method knowing the id of each one. New solar chrome then only has to
+        // opt in from the stylesheet.
+        if (document.body) document.body.classList.toggle('scene-particles', particles);
+
+        if (typeof this._updateExploreButton === 'function') this._updateExploreButton();
+        return true;
+    }
+
+    /** Scatter the particles afresh, keeping the current relationships. Rule 5: 2 asserts. */
+    reseedParticleField() {
+        console.assert(this.sceneMode === 'particles', 'reseed: only in particle scene');
+        console.assert(!this._disposed, 'reseed: not disposed');
+        if (!this.particleField) return false;
+        this.particleField.seed();
+        this.announceExplore('Particle field reseeded');
+        return true;
+    }
+
+    /** New random relationships between the species — a different world. Rule 5: 2 asserts. */
+    rerollParticleMatrix() {
+        console.assert(this.sceneMode === 'particles', 'reroll: only in particle scene');
+        console.assert(!this._disposed, 'reroll: not disposed');
+        if (!this.particleField) return false;
+        this.particleField.randomiseMatrix();
+        this.particleField.seed();
+        this.announceExplore('New relationships between the species');
+        return true;
+    }
+
+    /** Change how many particles are simulated. Rule 5: 2 asserts | Rule 2: clamped. */
+    setParticleCount(n) {
+        console.assert(Number.isFinite(n), 'setParticleCount: finite count');
+        console.assert(!this._disposed, 'setParticleCount: not disposed');
+        if (!this.particleField) return false;
+        const clamped = Math.max(200, Math.min(ParticleField3D.MAX_PARTICLES, n | 0));
+        this.particleField.seed(clamped, this.particleField.types);
+        const out = document.getElementById('scene-density-value');
+        if (out) out.textContent = String(clamped);
+        return true;
+    }
+
+    /** Change how many species share the cube. Rule 5: 2 asserts | Rule 2: clamped. */
+    setParticleSpecies(n) {
+        console.assert(Number.isFinite(n), 'setParticleSpecies: finite count');
+        console.assert(!this._disposed, 'setParticleSpecies: not disposed');
+        if (!this.particleField) return false;
+        const clamped = Math.max(2, Math.min(ForceMatrix.MAX_TYPES, n | 0));
+        this.particleField.seed(this.particleField.count, clamped);
+        const out = document.getElementById('scene-species-value');
+        if (out) out.textContent = String(clamped);
+        return true;
+    }
+
+    /**
+     * Restore the scene the visitor last chose. Called once from init(), instantly — a
+     * fade on page load would just look like the page was still loading.
+     * Rule 5: 2 asserts | Rule 6: any storage failure leaves the default.
+     */
+    restoreSceneMode() {
+        console.assert(this.sceneMode, 'restoreSceneMode: default mode set');
+        console.assert(!this._disposed, 'restoreSceneMode: not disposed');
+        let stored = null;
+        try {
+            if (typeof localStorage !== 'undefined') {
+                stored = localStorage.getItem(SpaceEnvironment.SCENE_KEY);
+            }
+        } catch (e) {
+            stored = null;
+        }
+        if (stored === 'particles') return this.setSceneMode('particles', true);
+        this._syncSceneUI();
+        return true;
+    }
+
+    /**
+     * Tear down everything scene selection owns. Called from dispose().
+     *
+     * A method rather than a block inside dispose() because dispose() is already 89
+     * lines against this project's 60-line rule, and adding to it would make an existing
+     * violation worse. Rule 5: 2 asserts | Rule 6: every step optional.
+     */
+    disposeSceneSelection() {
+        console.assert(typeof document !== 'undefined', 'disposeSceneSelection: DOM available');
+        console.assert(this.sceneMode, 'disposeSceneSelection: mode was set');
+        // The two fade timers would otherwise fire against a disposed instance, and the
+        // veil would be left sitting over a dead canvas.
+        if (this._sceneTimerA) { clearTimeout(this._sceneTimerA); this._sceneTimerA = null; }
+        if (this._sceneTimerB) { clearTimeout(this._sceneTimerB); this._sceneTimerB = null; }
+        this._sceneSwitching = false;
+        if (this._sceneFadeEl && this._sceneFadeEl.parentElement) {
+            this._sceneFadeEl.parentElement.removeChild(this._sceneFadeEl);
+        }
+        this._sceneFadeEl = null;
+        if (this.particleField && typeof this.particleField.dispose === 'function') {
+            this.particleField.dispose();
+            this.particleField = null;
+        }
+        if (document.body) document.body.classList.remove('scene-particles');
+        return true;
+    }
+
+    /**
+     * One frame of the particle scene. Returns true if it drew.
+     * Rule 5: 2 asserts | Rule 6: silent no-op if the field failed to build.
+     */
+    _animateParticleScene() {
+        console.assert(this.sceneMode === 'particles', '_animateParticleScene: right mode');
+        console.assert(!this._disposed, '_animateParticleScene: not disposed');
+        if (!this.particleField || !this.renderer) return false;
+        const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+
+        // Behind a content page this is decoration, so it gets BACKGROUND_FPS like the
+        // solar system does — and unlike the solar system it also skips the SIMULATION
+        // step, not just the draw, because stepping is the expensive half here.
+        if (this.backgroundMode) {
+            const interval = 1000 / SpaceEnvironment.BACKGROUND_FPS;
+            if (now - (this._lastBgRenderAt || 0) < interval) return false;
+            this._lastBgRenderAt = now;
+        }
+        // Delta measured between frames we actually DRAW, so the camera drifts at the
+        // same rate per second whether we are running at 20fps or 60.
+        const dt = this._lastParticleAt ? Math.min(0.1, (now - this._lastParticleAt) / 1000) : 0;
+        this._lastParticleAt = now;
+
+        this.particleField.step();
+        this.particleField.render(dt, this.width, this.height);
+        return true;
+    }
+
+
     resetCamera() {
         // Reset camera to default position
         if (this.camera) {
@@ -1555,7 +1858,6 @@ class SpaceEnvironment {
         if (content) { this._prevContentPE = content.style.pointerEvents; content.style.pointerEvents = 'none'; }
         // Hide the solar-system side panels (meaningless over a single frozen globe).
         document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = 'none'; });
-        const hints = document.getElementById('keyboard-hints'); if (hints) hints.style.display = 'none';
 
         this._restoreExploreLayers(earth);
         // Click a marker → detail card; hover the surface → cascade region highlight +
@@ -1691,7 +1993,12 @@ class SpaceEnvironment {
         // backgroundMode is true on every page except Main. Without that check the
         // Explore Earth button stayed on screen after navigating away — clicking it
         // from Projects or About started Explore behind an unrelated page.
-        const show = (this.selectedPlanet === 'Earth') && !this.exploreMode && !this.backgroundMode;
+        //
+        // The sceneMode check is the same fault in a different disguise: selectedPlanet
+        // survives a scene switch, so with Earth selected the button would sit over the
+        // particle field offering to explore a planet that is not being drawn.
+        const show = (this.selectedPlanet === 'Earth') && !this.exploreMode
+            && !this.backgroundMode && this.sceneMode === 'solar';
         btn.hidden = !show;
         btn.style.display = show ? 'block' : 'none';
         return show;
@@ -1796,7 +2103,6 @@ class SpaceEnvironment {
         const content = document.getElementById('content');
         if (content) content.style.pointerEvents = (this._prevContentPE || '');
         document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = ''; });
-        const hints = document.getElementById('keyboard-hints'); if (hints) hints.style.display = '';
         if (this._detailEl) this._detailEl.hidden = true;
         if (earth && typeof earth.highlightRegion === 'function') earth.highlightRegion(null, null);
         if (earth && typeof earth.highlightCountry === 'function') earth.highlightCountry(null);
@@ -3548,6 +3854,16 @@ class SpaceEnvironment {
             this.fpsMonitor.update(currentTime);
         }
 
+        // The particle field is an ALTERNATIVE backdrop, not an overlay: when it is
+        // showing, every line below — orbital mechanics, planet tracking, lighting,
+        // cosmology features — is work whose result nobody can see. So take the whole
+        // branch and return. This is the difference between the two scenes costing one
+        // frame budget and costing two.
+        if (this.sceneMode === 'particles') {
+            this._animateParticleScene();
+            return;
+        }
+
         // Update controls if available and not auto-orbiting
         if (this.controls && !this.isAutoOrbiting) {
             this.controls.update();
@@ -4707,6 +5023,8 @@ class SpaceEnvironment {
         // Clean up event listeners (FIX #4: using bound reference)
         window.removeEventListener('resize', this.boundHandleResize);
 
+        this.disposeSceneSelection();
+
         // Clean up solar system resources
         if (this.solarSystem) {
             // Assuming SolarSystem has a dispose method
@@ -4756,3 +5074,10 @@ window.SpaceEnvironment = SpaceEnvironment;
 // How often the scene redraws while it is only a backdrop. 20 is comfortably above the
 // threshold where slow drift reads as stutter, and a third of the cost of every-vsync.
 SpaceEnvironment.BACKGROUND_FPS = 20;
+
+// Half of one scene swap: fade to black over this, switch, fade back over the same. Long
+// enough to read as deliberate, short enough that nobody waits for it.
+SpaceEnvironment.SCENE_FADE_MS = 260;
+
+// Where the chosen backdrop is remembered between visits.
+SpaceEnvironment.SCENE_KEY = 'mrcargon-scene-mode';

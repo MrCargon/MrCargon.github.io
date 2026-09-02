@@ -202,7 +202,66 @@
                 </div>
                 
                 <div class="popup-body">
-                    <div class="control-group">
+                    <!-- Which simulation fills the backdrop behind the whole site.
+                         Solar System is the default; Particle Space is ParticleField3D,
+                         the same model as the 2D sim on the Life page but in a wrapped
+                         cube you are looking into. SpaceEnvironment.connectSceneControls
+                         wires these; body.scene-particles hides the solar-only groups
+                         below while the particle field is showing. -->
+                    <div class="control-group scene-group">
+                        <label class="group-label">Scene</label>
+                        <div class="control-buttons">
+                            <button id="scene-solar"
+                                    class="control-btn active"
+                                    title="Show the solar system"
+                                    aria-label="Backdrop: solar system"
+                                    aria-pressed="true">
+                                <span class="icon" aria-hidden="true">🪐</span>
+                                <span class="btn-label">Solar System</span>
+                            </button>
+                            <button id="scene-particles"
+                                    class="control-btn"
+                                    title="Show a 3D particle life field — species that chase, flee and clump"
+                                    aria-label="Backdrop: particle life"
+                                    aria-pressed="false">
+                                <span class="icon" aria-hidden="true">✦</span>
+                                <span class="btn-label">Particle Space</span>
+                            </button>
+                        </div>
+
+                        <div id="scene-particle-options" class="scene-options" hidden>
+                            <div class="control-buttons">
+                                <button id="scene-reseed"
+                                        class="control-btn"
+                                        title="Scatter the particles again, keeping the same relationships"
+                                        aria-label="Reseed the particle field">
+                                    <span class="icon" aria-hidden="true">⟳</span>
+                                    <span class="btn-label">Reseed</span>
+                                </button>
+                                <button id="scene-rematrix"
+                                        class="control-btn"
+                                        title="Roll new relationships between the species — a different world"
+                                        aria-label="New relationships between species">
+                                    <span class="icon" aria-hidden="true">⇄</span>
+                                    <span class="btn-label">New Rules</span>
+                                </button>
+                            </div>
+                            <label class="scene-slider" for="scene-density">
+                                <span>Particles</span>
+                                <input type="range" id="scene-density"
+                                       min="400" max="4000" step="200" value="2200">
+                                <output id="scene-density-value">2200</output>
+                            </label>
+                            <label class="scene-slider" for="scene-species">
+                                <span>Species</span>
+                                <input type="range" id="scene-species"
+                                       min="2" max="6" step="1" value="5">
+                                <output id="scene-species-value">5</output>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="control-group solar-only">
                         <label class="group-label">View Controls</label>
                         <div class="control-buttons">
                             <button id="reset-camera" 
@@ -229,7 +288,7 @@
                         </div>
                     </div>
                     
-                    <div class="control-group">
+                    <div class="control-group solar-only">
                         <label class="group-label">Animation Controls</label>
                         <div class="control-buttons">
                             <button id="toggle-rotation" 
@@ -249,7 +308,7 @@
                         </div>
                     </div>
                     
-                    <div class="control-group">
+                    <div class="control-group solar-only">
                         <label class="group-label">Display Options</label>
                         <div class="control-buttons">
                             <button id="toggle-orbit"

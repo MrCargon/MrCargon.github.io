@@ -257,6 +257,47 @@ to testing every pair — worst delta 0.00e+0.
 
 An unverifiable GPU version would have been the worse engineering trade.
 
+### 7c. The same rule in three dimensions — the site's backdrop
+
+The main page's backdrop is a scene selector: the solar system by default, or **Particle
+Space** — the same model again, with the world a wrapped *cube* instead of a wrapped
+square. Because you are looking into a volume rather than at a plane, structures pass in
+front of and behind each other, and that depth is the only reason to have a 3D version at
+all.
+
+What differs from the 2D sim is confined to the innermost loop: **27 buckets instead of
+9**, three coordinates instead of two. What does *not* differ is the model, and that now
+lives in one file — `ForceMatrix.js` — holding the palette, the interaction matrix and the
+force curve, shared by both. Both sims *inline* the curve into their hot loop rather than
+calling it a few hundred thousand times a step, so `tests/verify-field3d.cjs` recovers each
+sim's force **empirically** (two particles, one step, divide the velocity change by
+`forceScale · dt`) and sweeps the whole radius comparing against the reference. 120 samples,
+worst disagreement 7.4e-6.
+
+The third dimension is not free: with density held constant, 27 buckets means about **3×
+the neighbours per particle**, and cost scales with radius *cubed*. Hence 2200 particles
+here against 1800 on the Life page. Measured: 2000 particles step in **4.93 ms hashed
+versus 67.67 ms brute force (13.7×)**, inside a 16.7 ms budget.
+
+Two rendering decisions were forced by looking at it rather than by counting:
+
+- **Not additive blending.** Additive *sums* colours, and a cluster is exactly where
+  particles overlap — so every interesting structure saturated to white and the species
+  became unreadable at precisely the moment they mattered. Sampled from the rendered
+  frame: 4% of lit pixels carried any hue.
+- **Colours must be written in linear light.** three.js renders with
+  `outputColorSpace = 'srgb'`, so the final shader encodes linear → sRGB on the way out.
+  Material colours are converted on the way *in* to match; **vertex colour attributes
+  never are**. Feeding the sRGB palette straight into the attribute got it encoded twice
+  and pushed every channel towards white — coral (255, 107, 71) arrived as (224, 192, 176).
+  After converting the palette to linear: **95%** of lit pixels carry a species colour, up
+  from 4%. This affected the 2D sim too, and is why `ForceMatrix` exports both
+  `TYPE_COLOURS` (sRGB, for CSS swatches) and `TYPE_COLOURS_LINEAR` (for the GPU).
+
+  Note this is independent of `THREE.ColorManagement.enabled`, which is `false` here and
+  misled the first diagnosis: that flag governs conversion of *inputs*, not the output
+  encoding, and the output encoding is what does the damage.
+
 ---
 
 ## 8. Zero Assets
@@ -282,13 +323,25 @@ Patterns here are stored as **RLE strings in source**, the standard interchange 
 
 Files:
 
+- `src/utils/ForceMatrix.js` — the Particle Life *model*: palette, interaction matrix, force curve. Shared by the 2D and 3D sims so the rule cannot drift between them
 - `src/utils/ConwayLife.js` — the discrete simulation
 - `src/utils/Lenia.js` — the continuous simulation
-- `src/utils/ParticleLife.js` — the grid-free simulation
+- `src/utils/ParticleLife.js` — the grid-free simulation, 2D, on the Life page
+- `src/utils/ParticleField3D.js` — the grid-free simulation in a wrapped cube, as the site's backdrop
 - `src/utils/LifeView.js` — shared zoom, pan, palette and per-cell gradient
 - `src/utils/LifePatterns.js` — RLE decoder and pattern library
-- `src/components/pages/ConwayPage.js` — page controller, owns the WebGL context
-- `src/components/pages/conwayPage.html` / `.css` — markup and styling
+- `src/components/pages/LifePage.js` — page controller for all three modes, owns the WebGL context
+- `src/components/pages/lifePage.html` / `.css` — markup and styling
+- `src/components/simulation/solarsystem/SpaceEnvironment.js` — hosts the scene selector (`setSceneMode`) that swaps the solar system for the particle field
+
+Tests:
+
+- `tests/verify-patterns.cjs` — RLE round-trips, 14 patterns and 7 rule presets
+- `tests/verify-particles.cjs` — the 2D force law, two particles at a time
+- `tests/verify-field3d.cjs` — the 3D field, and proof that all three copies of the force curve still agree
+- `tests/e2e/life-full.spec.js` — every control on the Life page
+- `tests/e2e/scene-select.spec.js` — the backdrop switch, driven through the actual buttons
+- `tests/e2e/scene-look.spec.js` — samples the rendered pixels: coverage, hue count, saturation, motion
 
 ---
 

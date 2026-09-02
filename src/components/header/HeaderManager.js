@@ -25,7 +25,9 @@ class HeaderManager {
         
         
  // Store original logo text
-        this.originalLogoText = 'MrCargo';
+        // Matches the logo in header.html, the domain, the GitHub handle and the repo
+        // name. Both this and the markup said 'MrCargo'.
+        this.originalLogoText = 'MrCargon';
         
  // Event handler bindings to ensure proper 'this' context
         this._handleDocumentClick = this._handleDocumentClick.bind(this);

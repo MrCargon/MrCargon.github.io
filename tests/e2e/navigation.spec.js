@@ -4,6 +4,13 @@ import { test, expect } from '@playwright/test';
  * Navigation E2E Tests
  * Purpose: Verify page navigation functionality works correctly
  * Rule 5: Test critical user flows
+ *
+ * A NOTE ON waitForURL. These waits used to be written as glob patterns —
+ * waitForURL('**\/about'). A glob matches the PATH, and this is a hash router: the URL
+ * is http://host/#about, whose path is "/". So the pattern could never match and all
+ * four navigation tests sat there until the 30-second timeout, every run. They were not
+ * reporting a broken site; they were reporting a test that could not pass. Regexes match
+ * the whole URL including the fragment, so they work.
  */
 
 test.describe('Page Navigation', () => {
@@ -29,7 +36,7 @@ test.describe('Page Navigation', () => {
     await page.click('a[href="#about"]');
 
     // Wait for navigation
-    await page.waitForURL('**/about');
+    await page.waitForURL(/#about$/);
 
     // Verify About page content loaded
     const aboutContent = page.locator('#page-container');
@@ -44,7 +51,7 @@ test.describe('Page Navigation', () => {
     await page.click('a[href="#projects"]');
 
     // Wait for navigation
-    await page.waitForURL('**/projects');
+    await page.waitForURL(/#projects$/);
 
     // Verify Projects page content
     const projectsContent = page.locator('#page-container');
@@ -58,7 +65,7 @@ test.describe('Page Navigation', () => {
     await page.click('a[href="#contact"]');
 
     // Wait for navigation
-    await page.waitForURL('**/contact');
+    await page.waitForURL(/#contact$/);
 
     // Verify Contact page content
     const contactContent = page.locator('#page-container');
@@ -70,11 +77,11 @@ test.describe('Page Navigation', () => {
   test('should handle browser back button', async ({ page }) => {
     // Navigate to About
     await page.click('a[href="#about"]');
-    await page.waitForURL('**/about');
+    await page.waitForURL(/#about$/);
 
     // Navigate to Projects
     await page.click('a[href="#projects"]');
-    await page.waitForURL('**/projects');
+    await page.waitForURL(/#projects$/);
 
     // Go back
     await page.goBack();

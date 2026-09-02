@@ -52,16 +52,7 @@ class Planet {
             const tiltRadians = THREE.MathUtils.degToRad(this.data.axialTilt || 0);
             this.mesh.rotation.x = tiltRadians;
 
-            // Precompute orbital constants for performance optimization
-            if (this.data.orbitalElements) {
-                const e = this.data.orbitalElements.eccentricity;
-                this.sqrtFactor = Math.sqrt(1 - (e * e));
-
-                // Precompute argument of periapsis rotation matrix components
-                const omega = THREE.MathUtils.degToRad(this.data.orbitalElements.argumentOfPeriapsis || 0);
-                this.cosOmega = Math.cos(omega);
-                this.sinOmega = Math.sin(omega);
-            }
+            this.precomputeOrbitalConstants();
 
             // Position the planet based on its distance from the sun
             this.updatePosition();
@@ -136,6 +127,36 @@ class Planet {
         this.mesh.add(this.ringsMesh);
     }
     
+    /**
+     * Cache the constants updatePosition needs every frame.
+     *
+     * THIS WAS INLINE IN init(), AND EARTH NEVER RAN IT. Earth overrides init() to build
+     * its own day/night surface and only calls super.init() on the texture-failure
+     * fallback, so on the normal path Earth got no cosOmega/sinOmega at all.
+     * updatePosition defaults those to 1 and 0 — an argument of periapsis of ZERO — so
+     * Earth's orbital ellipse was drawn pointing along +x instead of at its real 288.1
+     * degrees. Every other planet was correctly oriented; Earth, the one the whole
+     * Explore feature is built around, was not. Measured: perihelion at 0.0 degrees
+     * where NASA JPL gives 288.1.
+     *
+     * Pulled out as a method so a subclass that takes over init() can call this one
+     * thing without inheriting the entire base init.
+     *
+     * Rule 5: 2 asserts | Rule 6: safe on planets with no orbital elements.
+     */
+    precomputeOrbitalConstants() {
+        console.assert(this.data, 'precomputeOrbitalConstants: planet data required');
+        console.assert(typeof THREE !== 'undefined', 'precomputeOrbitalConstants: THREE required');
+        const oe = this.data.orbitalElements;
+        if (!oe) return false;
+        const e = oe.eccentricity;
+        this.sqrtFactor = Math.sqrt(1 - (e * e));
+        const omega = THREE.MathUtils.degToRad(oe.argumentOfPeriapsis || 0);
+        this.cosOmega = Math.cos(omega);
+        this.sinOmega = Math.sin(omega);
+        return true;
+    }
+
     updatePosition() {
         // === ERROR HANDLING: Validate orbital elements ===
         const orbitalElements = this.data.orbitalElements;

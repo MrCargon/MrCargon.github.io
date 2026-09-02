@@ -371,8 +371,7 @@ class LifePage {
         });
         on('matrix-zero', 'click', () => {
             if (!this.sims.particles) return;
-            for (let a = 0; a < ParticleLife.MAX_TYPES; a++)
-                for (let b = 0; b < ParticleLife.MAX_TYPES; b++) this.sims.particles.setForce(a, b, 0);
+            this.sims.particles.clearMatrix();
             this._drawMatrix();
             this._note('Cleared — only short-range repulsion remains, so it will spread out evenly.');
         });

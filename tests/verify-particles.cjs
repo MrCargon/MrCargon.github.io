@@ -36,10 +36,18 @@ const THREE = {
 };
 global.THREE = THREE;
 
-const SRC = path.join(__dirname, '..', 'src', 'utils', 'ParticleLife.js');
-const shim = { exports: {} };
-new Function('module', 'window', 'THREE', fs.readFileSync(SRC, 'utf8'))(shim, undefined, THREE);
-const ParticleLife = shim.exports;
+// ForceMatrix holds the shared model and must be a global before ParticleLife runs — the
+// browser gets that from index.html's script order, so the test reproduces it here rather
+// than papering over it with a require() the browser would never take.
+function load(file, name) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'utils', file), 'utf8');
+    const shim = { exports: {} };
+    new Function('module', 'window', 'THREE', src)(shim, undefined, THREE);
+    global[name] = shim.exports;
+    return shim.exports;
+}
+load('ForceMatrix.js', 'ForceMatrix');
+const ParticleLife = load('ParticleLife.js', 'ParticleLife');
 
 const renderer = { domElement: {}, setRenderTarget() {}, render() {} };
 

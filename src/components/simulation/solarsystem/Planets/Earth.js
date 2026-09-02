@@ -132,6 +132,13 @@ class Earth extends Planet {
         // planet.init() with no per-planet guard, so an unguarded throw from
         // buildSurface/createMoon/createAtmosphere/createMarker would reject the
         // whole SolarSystem.init() and kill the entire simulation.
+        // This override does NOT call super.init() on the happy path, so it has to do the
+        // orbital precompute itself. Without it cosOmega/sinOmega stay undefined and
+        // Planet.updatePosition falls back to an argument of periapsis of zero — Earth's
+        // ellipse pointed the wrong way while every other planet was correct. See
+        // Planet.precomputeOrbitalConstants for the measurement.
+        this.precomputeOrbitalConstants();
+
         try {
             const dayMap = await this.resourceLoader.loadTexture(this.data.texturePath);
             let nightMap = null;

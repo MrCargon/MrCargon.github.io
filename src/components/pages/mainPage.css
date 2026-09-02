@@ -1043,6 +1043,71 @@
     font-weight: 500;
 }
 
+/* ── Scene selection ───────────────────────────────────────────────────────────
+   Which simulation fills the backdrop: the solar system, or the 3D particle field.
+   SpaceEnvironment._syncSceneUI puts `scene-particles` on <body>; everything that
+   only makes sense over the solar system carries `.solar-only` and hides itself.
+   Doing it from one body class rather than from JS means new solar-only chrome
+   opts in HERE, and no method has to learn its id. */
+.scene-group {
+    padding-bottom: var(--spacing-sm, 0.5rem);
+    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+.scene-options {
+    margin-top: var(--spacing-sm, 0.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs, 0.25rem);
+}
+
+/* hidden is an attribute, not a class: without this the flex display wins over it
+   and the options stay visible in the solar scene. */
+.scene-options[hidden] {
+    display: none;
+}
+
+.scene-slider {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 1.4fr) auto;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+    font-size: 0.78rem;
+    color: var(--text-color, #ffffff);
+    padding: 0 2px;
+}
+
+.scene-slider input[type="range"] {
+    width: 100%;
+    min-width: 0;          /* or the range refuses to shrink inside the grid track */
+    accent-color: var(--primary-color, #FFA500);
+}
+
+.scene-slider output {
+    font-variant-numeric: tabular-nums;   /* the number stops jittering as it changes */
+    min-width: 3ch;
+    text-align: right;
+    opacity: 0.85;
+}
+
+body.scene-particles .solar-only,
+body.scene-particles .planet-selector-wrapper,
+body.scene-particles .selection-progress,
+body.scene-particles #planet-info-popup,
+body.scene-particles #time-panel-inline,
+body.scene-particles .explore-panel {
+    display: none !important;
+}
+
+/* Of the quick-action row, only "Ctrl" survives — it is the handle that opens the
+   popup holding the scene switch, so hiding it would strand anyone who had the
+   popup closed with no way back to the solar system. */
+body.scene-particles .action-btn[data-action="info"],
+body.scene-particles .action-btn[data-action="time"],
+body.scene-particles .action-btn[data-action="reset"] {
+    display: none !important;
+}
+
 /* Responsive Design for Popups */
 @media (max-width: 768px) {
     .side-popup {

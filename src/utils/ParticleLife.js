@@ -1,25 +1,18 @@
-// ParticleLife.js — lifelike structure from typed particles and one matrix of forces.
+// ParticleLife.js — the 2D Particle Life on the Life page. Requires ForceMatrix.js.
 //
 // The third axis on this page. Conway is a discrete grid of binary cells; Lenia is a
 // discrete grid of continuous values; this has NO GRID AT ALL — particles move freely in
 // continuous space, and the only rule is how each type feels about every other type.
 //
-// THE RULE
-// Every particle has a type (a colour). For a pair (a, b) at distance d, within uRadius:
+// THE RULE, the type palette and the interaction matrix all live in ForceMatrix.js, which
+// this shares with ParticleField3D (the main-page scene) so the model cannot drift apart
+// between the two. Read that file for what the force curve is and why the matrix is
+// asymmetric. What is specific to THIS file is everything below: the 2D spatial index,
+// the integrator, and the orthographic point rendering.
 //
-//     d < BETA          strong universal REPULSION, ramping to zero at BETA
-//     BETA <= d < 1     attraction of strength M[a][b], peaking midway and tapering to 0
-//
-// M is asymmetric on purpose: red may chase green while green flees red. That asymmetry
-// is where chasing, orbiting and self-propelling clusters come from — a symmetric matrix
-// gives you crystals and blobs, which is pretty and much less alive.
-//
-// The short-range repulsion is not decoration either: without it every attracting pair
-// collapses to a point and the simulation dies as a handful of infinitely dense dots.
-// It is scaled by REPULSION so it OUTWEIGHS attraction close in. At parity it merely ties
-// with a maximal attraction of 1.0 and then loses to the accumulated pull of many
-// neighbours at once: measured, an all-attract matrix drove the closest pair to 0.00117,
-// twenty times inside the repulsion radius — merged.
+// The short-range repulsion is not decoration: without it every attracting pair collapses
+// to a point and the simulation dies as a handful of infinitely dense dots. It is scaled
+// by ForceMatrix.REPULSION so it OUTWEIGHS attraction close in.
 //
 // THE SPEED LIMIT
 // A step never moves a particle further than the repulsion zone is wide. Without that
@@ -51,7 +44,7 @@ class ParticleLife {
      */
     constructor(renderer, opts) {
         console.assert(renderer && renderer.domElement, 'ParticleLife: renderer required');
-        console.assert(typeof THREE !== 'undefined', 'ParticleLife: THREE required');
+        console.assert(typeof ForceMatrix !== 'undefined', 'ParticleLife: ForceMatrix must load first');
         const o = opts || {};
         this.renderer = renderer;
         this.size = 1;                       // world is the unit square, wrapped
@@ -70,65 +63,62 @@ class ParticleLife {
         this.dt = o.dt || 0.012;
         this.generation = 0;
 
-        this.matrix = new Float32Array(ParticleLife.MAX_TYPES * ParticleLife.MAX_TYPES);
+        // The model lives in ForceMatrix; `matrix` is the SAME Float32Array, exposed
+        // directly because the inner loop indexes it and a property hop per pair test is
+        // not free at ~150,000 tests a step.
+        this._fm = new ForceMatrix(this.types);
+        this.matrix = this._fm.m;
         this._px = null; this._py = null; this._vx = null; this._vy = null; this._type = null;
         this._points = null; this._geom = null; this._mat = null;
         this._scene = null; this._cam = null;
         this._cellCount = 0; this._cellHead = null; this._cellNext = null;
         this._disposed = false;
-        this.randomiseMatrix();
     }
 
-    /** Read one matrix entry: how type a feels about type b. */
+    // --- matrix API: thin passes through to the shared model -----------------------------
+    // Kept as methods on the sim (rather than making callers reach for sim._fm) because the
+    // page's matrix editor talks to the simulation, not to its internals.
+
+    /** Read one matrix entry: how type a feels about type b. Rule 5: 2 asserts. */
     getForce(a, b) {
-        console.assert(a >= 0 && a < ParticleLife.MAX_TYPES, 'getForce: type a in range');
-        console.assert(b >= 0 && b < ParticleLife.MAX_TYPES, 'getForce: type b in range');
-        return this.matrix[a * ParticleLife.MAX_TYPES + b];
+        console.assert(this._fm, 'getForce: model built');
+        console.assert(a >= 0 && b >= 0, 'getForce: non-negative types');
+        return this._fm.get(a, b);
     }
 
     /** Write one matrix entry, clamped to [-1, 1]. Rule 5: 2 asserts. */
     setForce(a, b, v) {
+        console.assert(this._fm, 'setForce: model built');
         console.assert(Number.isFinite(v), 'setForce: finite value');
-        console.assert(a >= 0 && b >= 0, 'setForce: non-negative types');
-        if (a >= ParticleLife.MAX_TYPES || b >= ParticleLife.MAX_TYPES) return false;
-        this.matrix[a * ParticleLife.MAX_TYPES + b] = Math.max(-1, Math.min(1, v));
-        return true;
+        return this._fm.set(a, b, v);
     }
 
-    /**
-     * Fill the matrix with random asymmetric values.
-     * Asymmetric because symmetry kills the interesting behaviour — see the header.
-     * Rule 5: 2 asserts.
-     */
+    /** Fill the matrix with random asymmetric values. Rule 5: 2 asserts. */
     randomiseMatrix() {
-        console.assert(this.matrix, 'randomiseMatrix: matrix allocated');
-        console.assert(ParticleLife.MAX_TYPES > 0, 'randomiseMatrix: types defined');
-        const N = ParticleLife.MAX_TYPES;
-        for (let a = 0; a < N; a++) {                       // Rule 2: bounded
-            for (let b = 0; b < N; b++) {                   // Rule 2: bounded
-                this.matrix[a * N + b] = Math.random() * 2 - 1;
-            }
-        }
-        return true;
+        console.assert(this._fm, 'randomiseMatrix: model built');
+        console.assert(this.matrix === this._fm.m, 'randomiseMatrix: buffer still shared');
+        return this._fm.randomise();
     }
 
     /** Mirror the upper triangle onto the lower, making every relationship mutual. */
     symmetriseMatrix() {
-        console.assert(this.matrix, 'symmetriseMatrix: matrix allocated');
-        console.assert(ParticleLife.MAX_TYPES > 0, 'symmetriseMatrix: types defined');
-        const N = ParticleLife.MAX_TYPES;
-        for (let a = 0; a < N; a++) {                       // Rule 2: bounded
-            for (let b = a + 1; b < N; b++) {               // Rule 2: bounded
-                this.matrix[b * N + a] = this.matrix[a * N + b];
-            }
-        }
-        return true;
+        console.assert(this._fm, 'symmetriseMatrix: model built');
+        console.assert(this.matrix === this._fm.m, 'symmetriseMatrix: buffer still shared');
+        return this._fm.symmetrise();
+    }
+
+    /** Zero every entry: particles then only ever push apart. Rule 5: 2 asserts. */
+    clearMatrix() {
+        console.assert(this._fm, 'clearMatrix: model built');
+        console.assert(this.matrix === this._fm.m, 'clearMatrix: buffer still shared');
+        return this._fm.clear();
     }
 
     /** Build buffers and the point cloud. Rule 5: 2 asserts. */
     init() {
         console.assert(!this._disposed, 'init: not disposed');
         console.assert(this.count > 0, 'init: positive count');
+        console.assert(typeof THREE !== 'undefined', 'init: THREE required');
         const n = ParticleLife.MAX_PARTICLES;               // Rule 3: allocate the ceiling once
         this._px = new Float32Array(n); this._py = new Float32Array(n);
         this._vx = new Float32Array(n); this._vy = new Float32Array(n);
@@ -190,8 +180,17 @@ class ParticleLife {
         console.assert(this._geom, '_writeColours: init first');
         console.assert(this.types > 0, '_writeColours: types set');
         const col = this._geom.getAttribute('color');
+        // LINEAR, not the sRGB palette. PointsMaterial is a built-in material, so its
+        // output goes through the renderer's sRGB encoding; vertex-colour attributes are
+        // never converted on input, so sRGB numbers here get encoded twice and every
+        // species washes out to cream. Measured on the 3D field before the fix:
+        // saturation 0.08 against 0.92 for a forced flat colour through the same
+        // pipeline. Conway and Lenia are unaffected because a raw ShaderMaterial without
+        // <colorspace_fragment> skips that encoding entirely — which is why the palette
+        // in LifeView is NOT converted. See ForceMatrix.TYPE_COLOURS_LINEAR.
+        const PAL = ForceMatrix.TYPE_COLOURS_LINEAR;
         for (let i = 0; i < this.count; i++) {              // Rule 2: bounded
-            const c = ParticleLife.TYPE_COLOURS[this._type[i] % ParticleLife.TYPE_COLOURS.length];
+            const c = PAL[this._type[i] % PAL.length];
             col.array[i * 3] = c[0]; col.array[i * 3 + 1] = c[1]; col.array[i * 3 + 2] = c[2];
         }
         col.needsUpdate = true;
@@ -258,6 +257,9 @@ class ParticleLife {
                             if (dy > 0.5) dy -= 1; else if (dy < -0.5) dy += 1;
                             const d2 = dx * dx + dy * dy;
                             if (d2 > 1e-12 && d2 < R2) {
+                                // INLINED ForceMatrix.curve — see that file on why, and
+                                // verify-field3d.cjs, which proves this copy still agrees
+                                // with the reference across the whole range of q.
                                 const d = Math.sqrt(d2), q = d / R;
                                 let f;
                                 if (q < beta) f = (q / beta - 1) * ParticleLife.REPULSION;
@@ -340,25 +342,16 @@ class ParticleLife {
     }
 }
 
-// How much stronger close-range repulsion is than the strongest attraction. Must be
-// well above 1: a particle can be pulled by many neighbours at once but is pushed by
-// only the few that are truly close, so parity is not enough to keep them apart.
-ParticleLife.REPULSION = 6;
+// The model's constants are ForceMatrix's. Re-exported here rather than copied so the
+// existing call sites (the page, the tests) keep reading ParticleLife.MAX_TYPES and get
+// the one true value — there is no second definition that can fall out of step.
+ParticleLife.REPULSION = ForceMatrix.REPULSION;
+ParticleLife.MAX_TYPES = ForceMatrix.MAX_TYPES;
+ParticleLife.TYPE_COLOURS = ForceMatrix.TYPE_COLOURS;
+ParticleLife.TYPE_NAMES = ForceMatrix.TYPE_NAMES;
 
-ParticleLife.MAX_TYPES = 6;
+// Specific to the 2D page sim: the ceiling it allocates for. The 3D scene has its own.
 ParticleLife.MAX_PARTICLES = 6000;
-
-// Distinct hues that stay legible as 8px dots on a dark ground, and read as different
-// SPECIES rather than as a gradient — the type is categorical, not a value.
-ParticleLife.TYPE_COLOURS = [
-    [1.00, 0.42, 0.28],   // coral
-    [0.36, 0.86, 0.62],   // mint
-    [0.44, 0.68, 1.00],   // sky
-    [1.00, 0.82, 0.35],   // amber
-    [0.80, 0.52, 1.00],   // violet
-    [0.98, 0.98, 0.98]    // white
-];
-ParticleLife.TYPE_NAMES = ['Coral', 'Mint', 'Sky', 'Amber', 'Violet', 'White'];
 
 if (typeof window !== 'undefined') window.ParticleLife = ParticleLife;
 if (typeof module !== 'undefined' && module.exports) module.exports = ParticleLife;

@@ -143,6 +143,17 @@ class PageManager {
                 cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
                 preload: false
             },
+            // Third alias onto the same page. LifePage reads the hash to choose its
+            // opening mode, so #particles has to be a route the router recognises or the
+            // URL simply loads nothing — which is exactly what happened: the mode switch
+            // worked, but a direct link or refresh on #particles left a blank page.
+            particles: {
+                path: 'src/components/pages/lifePage.html',
+                title: 'Particle Life - Emergent Structure',
+                init: () => { this._lifePage = new LifePage(); this._lifePage.init(); },
+                cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
+                preload: false
+            },
             about: {
                 path: 'src/components/pages/aboutPage.html', 
                 title: 'About - Developer Profile',

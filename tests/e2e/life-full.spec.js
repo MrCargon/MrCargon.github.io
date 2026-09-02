@@ -175,7 +175,7 @@ test.describe('Life page — every control', () => {
 
     test('custom colour swatches reach the shader and reset restores the preset', async ({ page }) => {
         await boot(page, '#conway');
-        await page.locator('.life-advanced > summary').click();
+        await page.locator('#colour-wrap > summary').click();
 
         await page.evaluate(() => { const e = document.getElementById('life-col-high'); e.value = '#00ff00'; e.dispatchEvent(new Event('input', { bubbles: true })); });
         const custom = await state(page);
@@ -308,5 +308,109 @@ test.describe('Projects surface', () => {
             return getComputedStyle(g).display === 'none';
         });
         expect(closed, 'game must actually close').toBe(true);
+    });
+});
+
+test.describe('Particle Life — the third mode', () => {
+
+    test('particle mode runs and reports its population', async ({ page }) => {
+        await boot(page, '#particles');
+        const s = await state(page);
+        expect(s.mode, '#particles should open the particle sim').toBe('particles');
+
+        await page.waitForFunction(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const p = pm._lifePage.sims.particles;
+            return p && p.generation > 3;
+        }, null, { timeout: 20000 });
+
+        await expect(page.locator('#life-pop')).toContainText('particles');
+        await expect(page.locator('#life-gen')).toContainText('step');
+    });
+
+    test('particle controls change the simulation', async ({ page }) => {
+        await boot(page, '#particles');
+        const sim = () => page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const p = pm._lifePage.sims.particles;
+            return { count: p.count, types: p.types, radius: +p.radius.toFixed(4),
+                     friction: +p.friction.toFixed(3), forceScale: +p.forceScale.toFixed(3) };
+        });
+
+        await setRange(page, 'life-pcount', 3200);
+        expect((await sim()).count, 'particle count').toBe(3200);
+
+        await setRange(page, 'life-ptypes', 3);
+        expect((await sim()).types, 'species count').toBe(3);
+
+        await setRange(page, 'life-prange', 120);
+        expect((await sim()).radius, 'interaction range').toBeCloseTo(0.12, 4);
+
+        await setRange(page, 'life-pfriction', 70);
+        expect((await sim()).friction, 'friction').toBeCloseTo(0.70, 3);
+
+        await setRange(page, 'life-pforce', 60);
+        expect((await sim()).forceScale, 'force scale').toBeCloseTo(0.60, 3);
+    });
+
+    test('the interaction matrix is editable and asymmetric', async ({ page }) => {
+        await boot(page, '#particles');
+        await expect(page.locator('#matrix-wrap')).toBeVisible();
+        await page.locator('#matrix-wrap > summary').click();
+
+        // One cell per ORDERED pair, so N species give N*N cells plus N+1 headers.
+        const cells = await page.locator('#life-matrix .lm-cell').count();
+        const types = (await state(page)).mode === 'particles'
+            ? await page.evaluate(() => {
+                const pm = window.pageManager || (window.app && window.app.pageManager);
+                return pm._lifePage.sims.particles.types;
+            }) : 0;
+        expect(cells, 'a cell for every ordered species pair').toBe(types * types);
+
+        // Editing one cell must reach the matrix, and must NOT change its mirror.
+        const read = (a, b) => page.evaluate(({ a, b }) => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            return +pm._lifePage.sims.particles.getForce(a, b).toFixed(3);
+        }, { a, b });
+        const mirrorBefore = await read(1, 0);
+        await page.evaluate(() => {
+            const c = document.querySelectorAll('#life-matrix .lm-cell')[1];   // row 0, col 1
+            c.value = '85';
+            c.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        expect(await read(0, 1), 'edit reaches the matrix').toBeCloseTo(0.85, 2);
+        expect(await read(1, 0), 'the mirror must be untouched — the matrix is asymmetric')
+            .toBeCloseTo(mirrorBefore, 3);
+
+        // Make mutual must then mirror it.
+        await page.locator('#matrix-symmetric').click();
+        expect(await read(1, 0), 'symmetrise mirrors the upper triangle').toBeCloseTo(0.85, 2);
+    });
+
+    test('switching modes keeps all three simulations alive', async ({ page }) => {
+        await boot(page, '#conway');
+        await page.locator('#mode-particles').click();
+        await page.waitForTimeout(800);
+        await page.locator('#mode-lenia').click();
+        await page.waitForTimeout(800);
+        const alive = await page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const p = pm._lifePage;
+            return { conway: !!p.sims.conway, lenia: !!p.sims.lenia, particles: !!p.sims.particles, mode: p.mode };
+        });
+        expect(alive).toEqual({ conway: true, lenia: true, particles: true, mode: 'lenia' });
+    });
+
+    test('cleanup disposes all three', async ({ page }) => {
+        await boot(page, '#particles');
+        const r = await page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const p = pm._lifePage;
+            const had = { c: !!p.sims.conway, l: !!p.sims.lenia, p: !!p.sims.particles };
+            p.cleanup();
+            return { had, after: { c: p.sims.conway, l: p.sims.lenia, p: p.sims.particles, r: p.renderer } };
+        });
+        expect(r.had).toEqual({ c: true, l: true, p: true });
+        expect(r.after).toEqual({ c: null, l: null, p: null, r: null });
     });
 });

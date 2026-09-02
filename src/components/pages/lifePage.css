@@ -398,3 +398,59 @@
     padding-top: 0.7rem;
     margin-top: 0.2rem;
 }
+
+/* --- interaction matrix ------------------------------------------------- */
+
+/* One cell per ORDERED species pair, so the grid is deliberately not symmetric: row is
+   who is feeling, column is who they feel it about. Headers are the species colours
+   themselves — naming them would be six more words to read and no clearer. */
+.life-matrix {
+    display: grid;
+    gap: 3px;
+    padding: 0 0.9rem 0.6rem;
+    max-width: 420px;
+}
+
+.life-matrix .lm-corner { width: 22px; height: 22px; }
+
+.life-matrix .lm-head {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    align-self: center;
+    justify-self: center;
+    border: 1px solid rgba(0, 0, 0, 0.45);
+}
+
+/* A range input turned into a coloured tile: drag up/down to change the value, which is
+   a far better fit than a number box when what matters is the SHAPE of the whole matrix
+   rather than any single figure. Track and thumb are hidden; the tile IS the readout. */
+.life-matrix .lm-cell {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    min-width: 26px;
+    height: 26px;
+    margin: 0;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    cursor: ns-resize;
+    outline: none;
+}
+.life-matrix .lm-cell::-webkit-slider-runnable-track { height: 100%; background: transparent; }
+.life-matrix .lm-cell::-webkit-slider-thumb { -webkit-appearance: none; width: 0; height: 0; }
+.life-matrix .lm-cell::-moz-range-track { height: 100%; background: transparent; }
+.life-matrix .lm-cell::-moz-range-thumb { width: 0; height: 0; border: 0; }
+.life-matrix .lm-cell:focus-visible { outline: 2px solid var(--primary-color, #ff8500); outline-offset: 1px; }
+
+.life-matrix-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 0.9rem 0.9rem;
+}
+
+@media (max-width: 600px) {
+    .life-matrix { max-width: 100%; }
+    .life-matrix .lm-cell { min-width: 0; height: 30px; }
+}

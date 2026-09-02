@@ -24,6 +24,10 @@
                     role="tab" aria-selected="false" aria-controls="life-canvas">
                 Lenia <span class="life-mode-sub">continuous</span>
             </button>
+            <button type="button" class="life-mode" id="mode-particles"
+                    role="tab" aria-selected="false" aria-controls="life-canvas">
+                Particles <span class="life-mode-sub">no grid</span>
+            </button>
         </div>
 
         <div class="life-stage">
@@ -103,6 +107,31 @@
                 <input type="range" id="life-dt" min="0.02" max="0.40" step="0.01" value="0.12">
                 <output id="life-dt-out">0.12</output>
             </label>
+            <label class="life-picker" id="pick-count-wrap" hidden>
+                <span class="life-picker-label">Particles</span>
+                <input type="range" id="life-pcount" min="200" max="6000" step="100" value="1800">
+                <output id="life-pcount-out">1800</output>
+            </label>
+            <label class="life-picker" id="pick-ptypes-wrap" hidden>
+                <span class="life-picker-label">Species</span>
+                <input type="range" id="life-ptypes" min="2" max="6" step="1" value="5">
+                <output id="life-ptypes-out">5</output>
+            </label>
+            <label class="life-picker" id="pick-prange-wrap" hidden>
+                <span class="life-picker-label">Range</span>
+                <input type="range" id="life-prange" min="20" max="160" step="5" value="75">
+                <output id="life-prange-out">0.075</output>
+            </label>
+            <label class="life-picker" id="pick-pfriction-wrap" hidden>
+                <span class="life-picker-label">Friction</span>
+                <input type="range" id="life-pfriction" min="50" max="99" step="1" value="86">
+                <output id="life-pfriction-out">0.86</output>
+            </label>
+            <label class="life-picker" id="pick-pforce-wrap" hidden>
+                <span class="life-picker-label">Force</span>
+                <input type="range" id="life-pforce" min="5" max="120" step="5" value="30">
+                <output id="life-pforce-out">0.30</output>
+            </label>
             <label class="life-picker" id="pick-density-wrap">
                 <span class="life-picker-label">Seed density</span>
                 <input type="range" id="life-density" min="5" max="70" step="1" value="30">
@@ -122,7 +151,25 @@
                 <output id="life-volume-out">18%</output>
             </label>
         </div>
-        <details class="life-advanced">
+        <details class="life-advanced" id="matrix-wrap" hidden>
+            <summary>Interaction matrix — who chases whom</summary>
+            <p class="life-hint">
+                One number per pair of species: how the species in the <strong>row</strong> feels
+                about the species in the <strong>column</strong>. Green pulls, red pushes.
+                It is <strong>asymmetric on purpose</strong> — coral can chase mint while mint
+                flees coral, and that one-sidedness is where chasing, orbiting and
+                self-propelling clusters come from. Make it symmetric and you get crystals.
+                Drag a cell up or down, or click to type a value.
+            </p>
+            <div id="life-matrix" class="life-matrix" role="group" aria-label="Interaction matrix"></div>
+            <div class="life-matrix-actions">
+                <button type="button" id="matrix-random" class="life-btn">🎲 Randomise</button>
+                <button type="button" id="matrix-symmetric" class="life-btn">↔ Make mutual</button>
+                <button type="button" id="matrix-zero" class="life-btn">○ Clear</button>
+            </div>
+        </details>
+
+        <details class="life-advanced" id="colour-wrap">
             <summary>Custom colour</summary>
             <div class="life-swatches">
                 <label class="life-swatch">

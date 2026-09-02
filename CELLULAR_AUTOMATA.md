@@ -1,8 +1,8 @@
 # Cellular Automata - Conway's Game of Life
 
-**Purpose:** Reference for the Life implementation on this site, and the body of knowledge behind it — rules, patterns, computation, rule-space, recursion, and the algorithms that make large simulations possible.
+**Purpose:** Reference for the three artificial-life simulations on this site, and the body of knowledge behind them — rules, patterns, computation, rule-space, recursion, particle dynamics, and the algorithms that make large simulations possible.
 
-**Audience:** Anyone reading the source of `ConwayLife.js`, `LifePatterns.js` and `ConwayPage.js`, or curious how a four-line rule ends up being Turing complete.
+**Audience:** Anyone reading the source of `ConwayLife.js`, `Lenia.js`, `ParticleLife.js`, `LifeView.js` or `LifePatterns.js` — or curious how a four-line rule ends up being Turing complete.
 
 ---
 
@@ -34,6 +34,7 @@ Where a figure is one I am confident of, it is stated plainly. Where it is not, 
 5. [The Multiverse of Rules](#5-the-multiverse-of-rules)
 6. [Life Inside Life](#6-life-inside-life)
 7. [Making It Fast](#7-making-it-fast)
+7b. [Off the Grid — Particle Life](#7b-off-the-grid--particle-life)
 8. [Zero Assets](#8-zero-assets)
 9. [How This Site Implements It](#9-how-this-site-implements-it)
 
@@ -202,6 +203,62 @@ The catch: memory grows with pattern *diversity*, and truly chaotic patterns def
 
 ---
 
+## 7b. Off the Grid — Particle Life
+
+Conway is a discrete grid of binary cells. Lenia is a discrete grid of continuous values.
+**Particle Life has no grid at all**: typed particles move in continuous space, and the
+only rule is how each type feels about every other.
+
+For a pair (a, b) at distance d within the interaction radius R, with q = d/R:
+
+| q | force |
+|:--|:--|
+| q < β | universal **repulsion**, ramping from −REPULSION at q=0 to 0 at β |
+| β ≤ q < 1 | attraction of strength **M[a][b]**, peaking midway and tapering to 0 |
+
+Two details carry the whole thing:
+
+**M is asymmetric on purpose.** Coral may chase mint while mint flees coral. That
+one-sidedness is where chasing, orbiting and self-propelling clusters come from. Symmetrise
+the matrix and you get crystals and blobs — pretty, and much less alive.
+
+**The repulsion is not decoration.** Without it every attracting pair collapses to a point
+and the simulation dies as a handful of infinitely dense dots. It is scaled well above the
+maximum attraction, because a particle is pulled by many neighbours at once but pushed by
+only the few that are truly close — parity is not enough.
+
+### Two things measurement forced
+
+*Both were found by tests, not by looking.*
+
+- **A speed limit.** A step must never move a particle further than the repulsion zone is
+  wide, or a particle deep inside that zone is thrown clean past its neighbour in one step
+  and the pair swap places instead of separating. Measured before the cap: an all-attract
+  matrix left the closest pair at 2.7e-3 with repulsion versus 1.5e-3 without — a mere
+  1.8×, when it should be an order of magnitude. This is the standard stability condition
+  for explicit integration: the step must not skip the feature it is resolving.
+- **Terminal speed is `forceScale · dt / (1 − friction)`.** At the first constants that
+  was 0.086 world-units per step — a particle crossing 8% of the world every tick, which
+  mixes everything instead of letting structure form.
+
+### Why this one is on the CPU
+
+Conway and Lenia are stencil operations: every cell reads a fixed neighbourhood at a fixed
+offset, which is exactly what a fragment shader does well. This is not — each particle must
+*find* its neighbours, which on the WebGL1-style `ShaderMaterial` this site uses would mean
+encoding a spatial structure into textures and reading it back.
+
+A uniform-grid spatial hash on the CPU sizes each bucket to one interaction radius, so
+every neighbour in range is in this bucket or one of the eight around it. Measured at 3000
+particles: **6.31 ms per step versus 97.02 ms brute force, 15.4× faster**, and 2000
+particles step in 2.93 ms against a 16.7 ms frame budget. It is also testable without a
+GPU, and `tests/verify-particles.cjs` proves the hashed path produces velocities identical
+to testing every pair — worst delta 0.00e+0.
+
+An unverifiable GPU version would have been the worse engineering trade.
+
+---
+
 ## 8. Zero Assets
 
 The *Artificial Life* page on this site already states its rule: no sprites, no textures, no audio files — every pixel and every sound generated from maths at runtime.
@@ -225,7 +282,10 @@ Patterns here are stored as **RLE strings in source**, the standard interchange 
 
 Files:
 
-- `src/utils/ConwayLife.js` — the simulation
+- `src/utils/ConwayLife.js` — the discrete simulation
+- `src/utils/Lenia.js` — the continuous simulation
+- `src/utils/ParticleLife.js` — the grid-free simulation
+- `src/utils/LifeView.js` — shared zoom, pan, palette and per-cell gradient
 - `src/utils/LifePatterns.js` — RLE decoder and pattern library
 - `src/components/pages/ConwayPage.js` — page controller, owns the WebGL context
 - `src/components/pages/conwayPage.html` / `.css` — markup and styling

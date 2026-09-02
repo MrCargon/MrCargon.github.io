@@ -15,7 +15,7 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-v44';
+const CACHE_NAME = 'mrcargon-hub-v45';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 
 self.addEventListener('install', (event) => {

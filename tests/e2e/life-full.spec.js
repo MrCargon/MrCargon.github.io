@@ -414,3 +414,69 @@ test.describe('Particle Life — the third mode', () => {
         expect(r.after).toEqual({ c: null, l: null, p: null, r: null });
     });
 });
+
+test.describe('Density regulation — the control CodeNoodles calls the most important', () => {
+    test('the toggle and both sliders reach the simulation', async ({ page }) => {
+        await boot(page, '#particles');
+
+        const read = () => page.evaluate(() => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const s = pm._lifePage.sims.particles;
+            return { on: s.densityRegulation, target: s.densityTarget, strength: s.densityStrength };
+        });
+
+        // Defaults come from measurement, not taste — see verify-particles.cjs.
+        expect(await read()).toEqual({ on: true, target: 4, strength: 0.25 });
+
+        // The matrix section is a <details>; its contents are not interactable closed.
+        await page.evaluate(() => {
+            const d = document.getElementById('matrix-wrap');
+            if (d) d.open = true;
+        });
+
+        await page.locator('#pl-density').uncheck();
+        expect((await read()).on, 'toggle switches it off').toBe(false);
+        await page.locator('#pl-density').check();
+        expect((await read()).on, 'and back on').toBe(true);
+
+        // Ranges need a real input event; fill() does not dispatch one for stepped ranges.
+        await page.evaluate(() => {
+            const set = (id, v) => {
+                const el = document.getElementById(id);
+                el.value = String(v);
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            };
+            set('pl-dens-target', 12);
+            set('pl-dens-strength', 1.5);
+        });
+        const after = await read();
+        expect(after.target, 'tolerance slider').toBe(12);
+        expect(after.strength, 'firmness slider').toBe(1.5);
+        expect(await page.locator('#pl-dens-target-val').textContent()).toBe('12');
+        expect(await page.locator('#pl-dens-strength-val').textContent()).toBe('1.50');
+    });
+
+    test('turning it off measurably changes how the field settles', async ({ page }) => {
+        await boot(page, '#particles');
+
+        // Same seed, same matrix, 400 steps each way. Self-attraction only, which is the
+        // case that segregates into single-colour balls — the failure the rule prevents.
+        const run = (regulation) => page.evaluate((reg) => {
+            const pm = window.pageManager || (window.app && window.app.pageManager);
+            const s = pm._lifePage.sims.particles;
+            s.densityRegulation = reg;
+            s.seed(1200, 3);
+            for (let a = 0; a < 6; a++)
+                for (let b = 0; b < 6; b++) s.setForce(a, b, a === b ? 1 : 0);
+            for (let i = 0; i < 400; i++) s.step();
+            let peak = -Infinity;
+            for (let i = 0; i < s.count; i++) if (s._density[i] > peak) peak = s._density[i];
+            return peak;
+        }, regulation);
+
+        const off = await run(false);
+        const on = await run(true);
+        expect(off, 'unregulated field piles up past the threshold').toBeGreaterThan(10);
+        expect(on, 'regulated field stays lower').toBeLessThan(off);
+    });
+});

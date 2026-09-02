@@ -257,6 +257,52 @@ to testing every pair — worst delta 0.00e+0.
 
 An unverifiable GPU version would have been the worse engineering trade.
 
+### Density regulation — the part that was missing
+
+CodeNoodles calls this *"the most important component to making complex particle life"*,
+and the first implementation here did not have it. Without it, any pair of mutually
+attracting types collapses into an ever-denser knot and the field ends as a few tight blobs
+that never change again. Short-range repulsion does **not** prevent this: repulsion stops
+particles *overlapping*, but a clump keeps recruiting from outside indefinitely, because
+attraction is summed over every neighbour in range while repulsion only acts on the few
+that are truly close.
+
+The rule is that attraction is conditional on **not already being surrounded by your own
+kind**. Crucially it is same-type crowding that matters, not crowding as such — a dense
+nucleus wrapped in a membrane of another species is a structure worth keeping; a dense ball
+of one colour is the failure mode.
+
+Getting the measure right took two wrong attempts, both worth recording:
+
+| attempt | why it failed |
+|:--|:--|
+| `same / (1 + other)` | Cancels. When everything attracts, `other` grows in proportion to `same`, so the ratio sat near 0.5 however dense it got. Measured effect on the field: occupancy 255 vs 246 — nothing. |
+| threshold `2.5`, picked by eye | The measure's actual range was 0 to 0.95, so the threshold was never reached and the regulation was inert. An invented number, which is the exact mistake this document's own testing notes warn about. |
+
+The measure that works is the signed **excess**, `same − other`, both weighted by `1 − d/R`
+so a neighbour at the edge of the radius counts for nothing. Measured:
+
+| field | at t=0 | after 600 steps |
+|:--|--:|--:|
+| self-attracting (segregates into single-colour balls) | −2.9 | **+19.9** |
+| all-attracting (stays thoroughly mixed) | −3.0 | **−14.1** |
+
+Negative is the healthy case — it means a particle is outnumbered by other types. So the
+threshold engages on exactly the configuration the rule is about and never on the other.
+With regulation on, the segregating field's 95th-percentile excess falls from 30.6 to 22.3
+and it spreads over **421 → 650** of 1600 occupancy cells; the mixed field is untouched
+(224 vs 226). Applied to attraction only — damping repulsion as well would let crowded
+particles merge, which is the thing being prevented.
+
+It costs nothing extra: the crowding is accumulated during the neighbour sweep that is
+already happening, and the scale it produces is used on the *next* step. That one-frame lag
+avoids a second pass over every neighbour, and is invisible — a particle moves at most
+`beta · radius` per step, so its neighbourhood barely changes between frames.
+
+`Density regulation` is exposed on the page with tolerance and firmness sliders, because
+turning it off and watching the field collapse into blobs is the clearest demonstration of
+why it is there.
+
 ### 7c. The same rule in three dimensions — the site's backdrop
 
 The main page's backdrop is a scene selector: the solar system by default, or **Particle
@@ -353,6 +399,17 @@ Tests:
 - Due, B. — OTCA metapixel (2006)
 - Rendell, P. — Turing machine in Conway's Life (2000; universal 2010)
 - Chan, B. — *Lenia: Biology of Artificial Creatures in Continuous Cellular Automata* (see `src/utils/Lenia.js`)
+- CodeNoodles — *I Created Realistic Life With Particles* ([2vt4MBxcOhs](https://www.youtube.com/watch?v=2vt4MBxcOhs)). Source of density regulation, which it calls the most important component
+- Krafer — *I made a Molecular Simulation using Quarks* ([njaBPMuiX3I](https://www.youtube.com/watch?v=njaBPMuiX3I))
+- Zanzlanz — *How I released a game that has no assets* ([Qr3VsZYQy4s](https://www.youtube.com/watch?v=Qr3VsZYQy4s)). Source of the Fourier-series shape engine in `src/utils/SineShape.js` and of §8's zero-asset rule
+- kavan — *Simulating Atoms in C++* ([OSAOh4L41Wg](https://www.youtube.com/watch?v=OSAOh4L41Wg)). Hydrogen orbitals by CDF-sampling the Schrödinger wavefunction — not yet implemented here; see the note below
+
+> **A note on reading these.** YouTube watch pages are JS-rendered, so a plain fetch
+> returns only the page footer. That is not evidence the content is unavailable — full
+> transcripts come back from `youtube-transcript-api`. An earlier pass here concluded from
+> a footer-only fetch that "neither transcript nor description was retrievable", built
+> Particle Life from the titles alone, and consequently shipped it without the one
+> component its source video singles out as most important. Fetch the transcript.
 
 ---
 

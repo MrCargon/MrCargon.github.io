@@ -217,5 +217,122 @@ function bruteForceVelocities(sim) {
     sim.dispose();
 }
 
+// --- 9. density regulation ---------------------------------------------------------------
+// CodeNoodles calls this "the most important component to making complex particle life":
+// same-type particles must not pile up unboundedly UNLESS other types are mixed in with
+// them. Getting the measure right took two wrong tries, both recorded here so nobody
+// repeats them:
+//
+//   1. same / (1 + other). Cancels out — when everything attracts, `other` grows in
+//      proportion to `same`, so the ratio sat at ~0.5 no matter how dense it got, and the
+//      regulation provably did nothing (occupancy 255 vs 246, i.e. noise).
+//   2. A target of 2.5 picked out of the air. The measure's actual range was 0 to 0.95, so
+//      the threshold was never reached. Exactly the invented-threshold mistake this file's
+//      header already warns about.
+//
+// The measure that works is the signed EXCESS, same - other, and the thresholds below come
+// from measuring it: -2.9 at t=0, +19.9 after 600 steps when types segregate, -14.1 when
+// they stay mixed.
+const ForceMatrix = global.ForceMatrix;
+
+{
+    const T = 4, S = 0.25;
+    const below = ForceMatrix.densityScale(-14, T, S);
+    const at = ForceMatrix.densityScale(T, T, S);
+    const above = ForceMatrix.densityScale(20, T, S);
+    const far = ForceMatrix.densityScale(200, T, S);
+    const monotone = below >= at && at > above && above > far;
+    const bounded = far > 0 && below <= 1;
+    if (below === 1 && at === 1 && monotone && bounded)
+        pass('densityScale shape', `1.0 below target, ${above.toFixed(2)} at excess 20, ${far.toFixed(3)} at 200`);
+    else
+        fail('densityScale shape', `below=${below} at=${at} above=${above} far=${far}`);
+}
+
+/** Run a field to `steps` and report peak crowding and how much space it occupies. */
+function field(mode, regulation, steps) {
+    const sim = new ParticleLife(renderer, { count: 1200, types: 3, densityRegulation: regulation });
+    sim.init(); sim.seed(1200, 3);
+    for (let a = 0; a < ParticleLife.MAX_TYPES; a++)                 // Rule 2: bounded
+        for (let b = 0; b < ParticleLife.MAX_TYPES; b++)             // Rule 2: bounded
+            sim.setForce(a, b, mode === 'self' ? (a === b ? 1 : 0) : 1);
+    for (let s = 0; s < steps; s++) sim.step();                      // Rule 2: bounded
+    // 95th percentile, not the maximum. The max over 1200 particles is one extreme
+    // sample and swings run to run even at median-of-3 (measured 40.0, 35.0 and 33.2 for
+    // the same unregulated configuration), which makes any threshold on it a coin flip.
+    // p95 moves with the whole distribution, which is what "the field is less crowded"
+    // actually means. Same correction as the frame-time assertion in
+    // phase2-elliptical-orbits.spec.js.
+    const ds = [];
+    const G = 40, occ = new Set();
+    for (let i = 0; i < sim.count; i++) {                            // Rule 2: bounded
+        ds.push(sim._density[i]);
+        occ.add(((sim._py[i] * G) | 0) * G + ((sim._px[i] * G) | 0));
+    }
+    ds.sort((a, b) => a - b);
+    sim.dispose();
+    return { peak: ds[Math.floor(ds.length * 0.95)], occupancy: occ.size };
+}
+
+/** Median of several trials — the seed is random, so one run proves nothing. */
+function trials(mode, regulation, n) {
+    const peaks = [], occs = [];
+    for (let k = 0; k < n; k++) {                                    // Rule 2: bounded
+        const r = field(mode, regulation, 500);
+        peaks.push(r.peak); occs.push(r.occupancy);
+    }
+    const mid = (a) => a.slice().sort((x, y) => x - y)[a.length >> 1];
+    return { peak: mid(peaks), occupancy: mid(occs) };
+}
+
+{
+    // The failure case: every type attracts only itself, so each segregates into a ball
+    // of one colour with nothing mixed in — precisely what the rule is meant to prevent.
+    const off = trials('self', false, 3);
+    const on = trials('self', true, 3);
+    if (on.peak < off.peak * 0.8)
+        pass('regulation caps crowding', `peak excess ${off.peak.toFixed(1)} -> ${on.peak.toFixed(1)} (median of 3)`);
+    else
+        fail('regulation caps crowding', `peak ${off.peak.toFixed(1)} -> ${on.peak.toFixed(1)}, not meaningfully lower`);
+
+    if (on.occupancy > off.occupancy * 1.15)
+        pass('regulation spreads the field', `${off.occupancy} -> ${on.occupancy} of 1600 cells occupied`);
+    else
+        fail('regulation spreads the field', `${off.occupancy} -> ${on.occupancy} cells, no real spread`);
+}
+
+{
+    // The case it must NOT touch: everything attracts everything, so clumps are dense but
+    // thoroughly MIXED. The video's rule is about same-type crowding specifically, so a
+    // mixed clump is a structure worth keeping and must be left alone.
+    const off = trials('all', false, 3);
+    const on = trials('all', true, 3);
+    const delta = Math.abs(on.occupancy - off.occupancy) / off.occupancy;
+    // Compared against the TARGET, not against zero. The first version of this asserted
+    // peak < 0, reasoning from the mean (-15.3) — but this is the maximum over 1200
+    // particles, and in a mixed field one of them transiently reaches +1.3. That is a
+    // third invented threshold; the claim being tested is "regulation never engages
+    // here", and the test of that is whether the excess reaches the point where
+    // densityScale starts to bite.
+    const target = new ParticleLife(renderer, { count: 1, types: 2 }).densityTarget;
+    if (off.peak < target && delta < 0.20)
+        pass('mixed clumps left alone', `peak excess ${off.peak.toFixed(1)} never reaches the ${target} threshold; occupancy ${off.occupancy} vs ${on.occupancy}`);
+    else
+        fail('mixed clumps left alone', `peak ${off.peak.toFixed(1)} vs target ${target}, occupancy ${off.occupancy} vs ${on.occupancy} (${(delta * 100).toFixed(0)}% apart)`);
+}
+
+{
+    // Regression guard: an isolated pair is not crowded, so regulation must not alter the
+    // force between them at all. This is what the two-particle tests above measure, and
+    // they would silently drift if regulation leaked into the uncrowded case.
+    const a = pair(0.05, 1.0, { densityRegulation: false });
+    const b = pair(0.05, 1.0, { densityRegulation: true });
+    a.step(); b.step();
+    if (Math.abs(a._vx[0] - b._vx[0]) < 1e-12)
+        pass('isolated pair unaffected', `identical velocity ${a._vx[0].toExponential(3)}`);
+    else
+        fail('isolated pair unaffected', `${a._vx[0]} vs ${b._vx[0]} — regulation is damping an uncrowded pair`);
+}
+
 console.log('\n' + (failures === 0 ? 'ALL CHECKS PASSED' : failures + ' FAILURE(S)'));
 process.exit(failures === 0 ? 0 : 1);

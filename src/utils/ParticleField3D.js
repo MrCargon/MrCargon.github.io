@@ -44,6 +44,10 @@ class ParticleField3D {
         this.friction = (o.friction !== undefined) ? o.friction : 0.86;
         this.dt = o.dt || 0.012;
         this.generation = 0;
+        // Density regulation — see ForceMatrix.densityScale.
+        this.densityRegulation = (o.densityRegulation !== undefined) ? o.densityRegulation : true;
+        this.densityTarget = (o.densityTarget !== undefined) ? o.densityTarget : 4.0;
+        this.densityStrength = (o.densityStrength !== undefined) ? o.densityStrength : 0.25;
         this.spin = (o.spin !== undefined) ? o.spin : 0.035;   // radians/sec camera drift
 
         this._fm = new ForceMatrix(this.types);
@@ -53,6 +57,7 @@ class ParticleField3D {
         this._points = null; this._geom = null; this._mat = null;
         this.scene = null; this.camera = null;
         this._cells = 0; this._cellCount = 0; this._cellHead = null; this._cellNext = null;
+        this._density = null; this._dscale = null;
         this._angle = 0;
         this._disposed = false;
     }
@@ -86,6 +91,8 @@ class ParticleField3D {
         this._px = new Float32Array(n); this._py = new Float32Array(n); this._pz = new Float32Array(n);
         this._vx = new Float32Array(n); this._vy = new Float32Array(n); this._vz = new Float32Array(n);
         this._type = new Uint8Array(n);
+        this._density = new Float32Array(n);
+        this._dscale = new Float32Array(n).fill(1);         // full attraction until measured
 
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(55, 1, 0.01, 20);
@@ -142,6 +149,7 @@ class ParticleField3D {
         for (let i = 0; i < this.count; i++) {              // Rule 2: bounded
             this._px[i] = Math.random(); this._py[i] = Math.random(); this._pz[i] = Math.random();
             this._vx[i] = 0; this._vy[i] = 0; this._vz[i] = 0;
+            this._density[i] = 0; this._dscale[i] = 1;
             this._type[i] = (Math.random() * this.types) | 0;
         }
         this.generation = 0;
@@ -203,9 +211,14 @@ class ParticleField3D {
         console.assert(this.count >= 0, '_accumulate: count valid');
         const g = this._cells, R = this.radius, R2 = R * R, N = ForceMatrix.MAX_TYPES;
         const beta = this.beta, REP = ForceMatrix.REPULSION;
+        const dReg = this.densityRegulation;
 
         for (let i = 0; i < this.count; i++) {              // Rule 2: bounded
             let fx = 0, fy = 0, fz = 0;
+            let same = 0, other = 0;                        // crowding, this step
+            // Previous step's scale — see the note in ParticleLife._accumulate on why a
+            // one-frame lag is preferable to a second pass over every neighbour.
+            const ds = dReg ? this._dscale[i] : 1;
             const xi = this._px[i], yi = this._py[i], zi = this._pz[i], ti = this._type[i];
             const cx = Math.min(g - 1, (xi * g) | 0);
             const cy = Math.min(g - 1, (yi * g) | 0);
@@ -231,10 +244,13 @@ class ParticleField3D {
                                     // INLINED ForceMatrix.curve — verify-field3d.cjs proves
                                     // this copy still agrees with the reference.
                                     const d = Math.sqrt(d2), q = d / R;
+                                    const tj = this._type[j];
+                                    if (tj === ti) same += 1 - q; else other += 1 - q;
                                     let f;
                                     if (q < beta) f = (q / beta - 1) * REP;
-                                    else f = this.matrix[ti * N + this._type[j]] *
-                                             (1 - Math.abs(2 * q - 1 - beta) / (1 - beta));
+                                    // ds damps ATTRACTION only.
+                                    else f = this.matrix[ti * N + tj] *
+                                             (1 - Math.abs(2 * q - 1 - beta) / (1 - beta)) * ds;
                                     const s = f / d;
                                     fx += dx * s; fy += dy * s; fz += dz * s;
                                 }
@@ -244,7 +260,7 @@ class ParticleField3D {
                     }
                 }
             }
-            this._applyForce(i, fx, fy, fz);
+            this._applyForce(i, fx, fy, fz, same, other);
         }
         return true;
     }
@@ -256,9 +272,14 @@ class ParticleField3D {
      * neighbour it is being pushed away from and the pair swap places instead of
      * separating. Rule 5: 2 asserts.
      */
-    _applyForce(i, fx, fy, fz) {
+    _applyForce(i, fx, fy, fz, same, other) {
         console.assert(i >= 0 && i < ParticleField3D.MAX_PARTICLES, '_applyForce: index in range');
         console.assert(Number.isFinite(fx + fy + fz), '_applyForce: finite force');
+        // Crowding for the NEXT step: the excess of own kind over mixed neighbours.
+        this._density[i] = same - other;
+        this._dscale[i] = this.densityRegulation
+            ? ForceMatrix.densityScale(this._density[i], this.densityTarget, this.densityStrength)
+            : 1;
         const k = this.forceScale * this.dt;
         let nvx = this._vx[i] * this.friction + fx * k;
         let nvy = this._vy[i] * this.friction + fy * k;
@@ -345,6 +366,7 @@ class ParticleField3D {
         this._px = this._py = this._pz = null;
         this._vx = this._vy = this._vz = null;
         this._type = null; this._cellHead = null; this._cellNext = null;
+        this._density = null; this._dscale = null;
         return true;
     }
 }

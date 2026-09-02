@@ -62,6 +62,11 @@ class ParticleLife {
         this.friction = (o.friction !== undefined) ? o.friction : 0.86;  // per-step velocity retained
         this.dt = o.dt || 0.012;
         this.generation = 0;
+        // Density regulation — see ForceMatrix.densityScale. Defaults chosen by
+        // measurement, not taste: see tests/verify-particles.cjs.
+        this.densityRegulation = (o.densityRegulation !== undefined) ? o.densityRegulation : true;
+        this.densityTarget = (o.densityTarget !== undefined) ? o.densityTarget : 4.0;
+        this.densityStrength = (o.densityStrength !== undefined) ? o.densityStrength : 0.25;
 
         // The model lives in ForceMatrix; `matrix` is the SAME Float32Array, exposed
         // directly because the inner loop indexes it and a property hop per pair test is
@@ -72,6 +77,7 @@ class ParticleLife {
         this._points = null; this._geom = null; this._mat = null;
         this._scene = null; this._cam = null;
         this._cellCount = 0; this._cellHead = null; this._cellNext = null;
+        this._density = null; this._dscale = null;
         this._disposed = false;
     }
 
@@ -123,6 +129,8 @@ class ParticleLife {
         this._px = new Float32Array(n); this._py = new Float32Array(n);
         this._vx = new Float32Array(n); this._vy = new Float32Array(n);
         this._type = new Uint8Array(n);
+        this._density = new Float32Array(n);
+        this._dscale = new Float32Array(n).fill(1);         // full attraction until measured
 
         this._cam = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 1);
         this._scene = new THREE.Scene();
@@ -168,6 +176,7 @@ class ParticleLife {
             this._px[i] = Math.random();
             this._py[i] = Math.random();
             this._vx[i] = 0; this._vy[i] = 0;
+            this._density[i] = 0; this._dscale[i] = 1;
             this._type[i] = (Math.random() * this.types) | 0;
         }
         this.generation = 0;
@@ -238,9 +247,17 @@ class ParticleLife {
         console.assert(this.count >= 0, '_accumulate: count valid');
         const g = this._cells, R = this.radius, R2 = R * R, N = ParticleLife.MAX_TYPES;
         const beta = this.beta;
+        const dReg = this.densityRegulation;
 
         for (let i = 0; i < this.count; i++) {              // Rule 2: bounded
             let fx = 0, fy = 0;
+            let same = 0, other = 0;                        // crowding, this step
+            // Density scale from the PREVIOUS step. Using this step's own value would
+            // need a second pass over every neighbour — the crowding is not known until
+            // the sweep finishes — for a one-frame lag nobody can see: a particle moves
+            // at most beta*radius per step, so its neighbourhood barely changes between
+            // frames. One pass, same answer.
+            const ds = dReg ? this._dscale[i] : 1;
             const xi = this._px[i], yi = this._py[i], ti = this._type[i];
             const cx = Math.min(g - 1, (xi * g) | 0), cy = Math.min(g - 1, (yi * g) | 0);
 
@@ -261,10 +278,15 @@ class ParticleLife {
                                 // verify-field3d.cjs, which proves this copy still agrees
                                 // with the reference across the whole range of q.
                                 const d = Math.sqrt(d2), q = d / R;
+                                const tj = this._type[j];
+                                // Crowding for the NEXT step: linear falloff so a
+                                // neighbour at the edge of the radius counts for nothing.
+                                if (tj === ti) same += 1 - q; else other += 1 - q;
                                 let f;
                                 if (q < beta) f = (q / beta - 1) * ParticleLife.REPULSION;
-                                else f = this.matrix[ti * N + this._type[j]] *
-                                         (1 - Math.abs(2 * q - 1 - beta) / (1 - beta));
+                                // ds damps ATTRACTION only — see ForceMatrix.densityScale.
+                                else f = this.matrix[ti * N + tj] *
+                                         (1 - Math.abs(2 * q - 1 - beta) / (1 - beta)) * ds;
                                 fx += (dx / d) * f; fy += (dy / d) * f;
                             }
                         }
@@ -272,19 +294,39 @@ class ParticleLife {
                     }
                 }
             }
-            let nvx = this._vx[i] * this.friction + fx * this.forceScale * this.dt;
-            let nvy = this._vy[i] * this.friction + fy * this.forceScale * this.dt;
-
-            // Speed limit — see THE SPEED LIMIT in the header.
-            const sp2 = nvx * nvx + nvy * nvy;
-            const lim = this.beta * this.radius;
-            if (sp2 > lim * lim) {
-                const s = lim / Math.sqrt(sp2);
-                nvx *= s; nvy *= s;
-            }
-            this._vx[i] = nvx;
-            this._vy[i] = nvy;
+            this._applyForce(i, fx, fy, same, other);
         }
+        return true;
+    }
+
+    /**
+     * Turn accumulated force into a capped velocity for one particle, and record its
+     * crowding for the next step. Split out of _accumulate to stay inside Rule 4's 60
+     * lines, and named to match ParticleField3D._applyForce so the two files read the
+     * same way. Rule 5: 2 asserts.
+     */
+    _applyForce(i, fx, fy, same, other) {
+        console.assert(i >= 0 && i < ParticleLife.MAX_PARTICLES, '_applyForce: index in range');
+        console.assert(Number.isFinite(fx + fy), '_applyForce: finite force');
+        // Crowding for the next step: the EXCESS of same-type neighbours over mixed
+        // ones. A difference, not a ratio — see ForceMatrix.densityScale.
+        this._density[i] = same - other;
+        this._dscale[i] = this.densityRegulation
+            ? ForceMatrix.densityScale(this._density[i], this.densityTarget, this.densityStrength)
+            : 1;
+
+        let nvx = this._vx[i] * this.friction + fx * this.forceScale * this.dt;
+        let nvy = this._vy[i] * this.friction + fy * this.forceScale * this.dt;
+
+        // Speed limit — see THE SPEED LIMIT in the header.
+        const sp2 = nvx * nvx + nvy * nvy;
+        const lim = this.beta * this.radius;
+        if (sp2 > lim * lim) {
+            const s = lim / Math.sqrt(sp2);
+            nvx *= s; nvy *= s;
+        }
+        this._vx[i] = nvx;
+        this._vy[i] = nvy;
         return true;
     }
 
@@ -338,6 +380,7 @@ class ParticleLife {
         this._geom = null; this._mat = null; this._points = null; this._scene = null;
         this._px = this._py = this._vx = this._vy = null;
         this._type = null; this._cellHead = null; this._cellNext = null;
+        this._density = null; this._dscale = null;
         return true;
     }
 }

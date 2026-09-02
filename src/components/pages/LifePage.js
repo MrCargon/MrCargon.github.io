@@ -227,6 +227,7 @@ class LifePage {
         this._wireModesAndTransport();
         this._wireViewAndRules();
         this._wireParticles();
+        this._wireDensity();
         this._wireLeniaExtras();
         this._wireColour();
         this._wireKeys();
@@ -374,6 +375,40 @@ class LifePage {
             this.sims.particles.clearMatrix();
             this._drawMatrix();
             this._note('Cleared — only short-range repulsion remains, so it will spread out evenly.');
+        });
+        return true;
+    }
+
+    /**
+     * Density regulation controls. Its own method rather than more lines in
+     * _wireParticles, which is already close to the 60-line rule.
+     * Rule 5: 2 asserts | Rule 6: every element optional.
+     */
+    _wireDensity() {
+        console.assert(typeof document !== 'undefined', '_wireDensity: document required');
+        console.assert(this.sims, '_wireDensity: sims container exists');
+        const on = (a, b, c) => this._on(a, b, c);
+        on('pl-density', 'change', (e) => {
+            const sim = this.sims.particles;
+            if (!sim) return;
+            sim.densityRegulation = !!e.target.checked;
+            this._note(sim.densityRegulation
+                ? 'Density regulation on — a species will stop pulling in more of its own kind once crowded.'
+                : 'Density regulation off — watch same-colour groups collapse into ever-denser balls.');
+        });
+        on('pl-dens-target', 'input', (e) => {
+            const v = parseFloat(e.target.value);
+            if (!Number.isFinite(v) || !this.sims.particles) return;
+            this.sims.particles.densityTarget = v;
+            const o = document.getElementById('pl-dens-target-val');
+            if (o) o.textContent = String(v);
+        });
+        on('pl-dens-strength', 'input', (e) => {
+            const v = parseFloat(e.target.value);
+            if (!Number.isFinite(v) || !this.sims.particles) return;
+            this.sims.particles.densityStrength = v;
+            const o = document.getElementById('pl-dens-strength-val');
+            if (o) o.textContent = v.toFixed(2);
         });
         return true;
     }

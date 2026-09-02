@@ -103,6 +103,45 @@ class ForceMatrix {
         if (q < beta) return (q / beta - 1) * ForceMatrix.REPULSION;
         return m * (1 - Math.abs(2 * q - 1 - beta) / (1 - beta));
     }
+
+    /**
+     * DENSITY REGULATION — how much of its attraction a crowded particle keeps.
+     *
+     * Without this, any pair of mutually-attracting types collapses into an ever-denser
+     * knot and the whole field ends up as a few tight blobs that never change. Short-range
+     * repulsion does not prevent it: repulsion stops particles OVERLAPPING, but a clump
+     * can keep recruiting from outside indefinitely, because attraction is summed over
+     * every neighbour in range while repulsion only acts on the few that are truly close.
+     *
+     * The fix is to make attraction conditional on not already being surrounded by your
+     * own kind. `d` is a local crowding measure: the weight of same-type neighbours
+     * divided by one plus the weight of different-type neighbours — high only when a
+     * particle is packed among its OWN type with nothing else mixed in. That distinction
+     * is the point: a dense nucleus wrapped in a membrane of another type is a structure
+     * worth keeping, a dense ball of one colour is the failure mode.
+     *
+     * Returns 1 below the target and falls off smoothly above it, so there is no
+     * discontinuity for the integrator to chatter on. Applied to ATTRACTION ONLY —
+     * damping repulsion as well would let crowded particles merge, which is the very
+     * thing being prevented.
+     *
+     * Source: CodeNoodles, "I Created Realistic Life With Particles", which calls this
+     * "the most important component to making complex particle life". Rule 5: 2 asserts.
+     *
+     * @param {number} d SIGNED crowding excess: weighted same-type neighbours minus
+     *        different-type ones. Negative is the normal, healthy case — it means a
+     *        particle is outnumbered by other types, i.e. well mixed — so this must not
+     *        be asserted non-negative. Measured on a well-mixed field: -14.1.
+     * @param {number} target excess tolerated before attraction is reduced
+     * @param {number} strength how sharply attraction falls off past the target
+     */
+    static densityScale(d, target, strength) {
+        console.assert(Number.isFinite(d), 'densityScale: finite density');
+        console.assert(target >= 0 && strength >= 0, 'densityScale: non-negative tuning');
+        const over = d - target;
+        if (over <= 0) return 1;
+        return 1 / (1 + strength * over);
+    }
 }
 
 // How much stronger close-range repulsion is than the strongest attraction. Must be well

@@ -450,7 +450,31 @@
     padding: 0 0.9rem 0.9rem;
 }
 
+/* Density regulation — sits under the matrix but is not part of it: it limits how much
+   of its OWN kind a particle keeps recruiting, rather than describing a pair. */
+.life-density {
+    padding: 0 0.9rem 0.9rem;
+    border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+    padding-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.life-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.life-check input { accent-color: var(--primary-color, #ff8500); }
+
+.life-density .life-slider { justify-content: flex-start; }
+
 @media (max-width: 600px) {
     .life-matrix { max-width: 100%; }
     .life-matrix .lm-cell { min-width: 0; height: 30px; }
+    .life-density .life-slider { width: 100%; }
 }

@@ -64,6 +64,13 @@ class Galaxy {
         
         // Create particle system
         this.particles = new THREE.Points(geometry, material);
+        // NAMED, like SolarWind, CosmicDust and KuiperBelt. This was the only point cloud
+        // in the scene without a name, which meant nothing could ask for it by identity —
+        // and anything hunting for "the stars" had to guess. A validation test guessed
+        // "the first Points object in the scene", got CosmicDust (3000 dull brown motes)
+        // and concluded the starfield had no spectral diversity at all. It has had the
+        // full Gaia distribution above the whole time; the object was simply unfindable.
+        this.particles.name = 'Galaxy';
         
         // Add to scene
         this.scene.add(this.particles);

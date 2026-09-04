@@ -194,18 +194,17 @@ test.describe('Phase 1: Space Environment Validation', () => {
     }
   });
 
-  // KNOWN GAP, not a broken test. Measured against the live starfield: the single Points
-  // object holds 3000 stars whose colours are all the SAME HUE at varying brightness —
-  // eight random samples came back as (0.607,0.480,0.363), (0.594,0.470,0.355),
-  // (0.616,0.488,0.368) and so on, a constant r:g:b of about 1 : 0.79 : 0.60. There is no
-  // spectral distribution to measure: no M-type reds, no A-type whites, no O/B blues.
-  // Red-dwarf share is therefore 0%, not the 70% this test asserts.
+  // THIS WAS MARKED fixme ON A BAD MEASUREMENT, and the note is kept because the mistake
+  // is more instructive than the fix. The probe took "the first Points object in the
+  // scene" as the starfield. The scene has three: SolarWind (1500, flat orange),
+  // CosmicDust (3000, brown motes at a constant r:g:b of about 1 : 0.79 : 0.60) and the
+  // Galaxy (5000). It found CosmicDust, saw one hue, and reported that the starfield had
+  // no spectral diversity — while Galaxy.js had the full Gaia EDR3 distribution in it
+  // the entire time, 70/15/8/7 with a citation.
   //
-  // The test is right about what the starfield SHOULD look like; the starfield does not
-  // do it yet. Left as fixme rather than deleted (that would lose the requirement) or
-  // weakened to pass (that would hide it). Implementing it means giving the galaxy
-  // generator a real spectral-class distribution, which is a feature, not a fix.
-  test.fixme('should verify star spectral diversity (70% red dwarfs)', async ({ page }) => {
+  // The real defect was that the Galaxy was the only unnamed point cloud in the scene, so
+  // nothing could ask for it by identity. It is named now and this asks for it by name.
+  test('should verify star spectral diversity (70% red dwarfs)', async ({ page }) => {
     const starDistribution = await page.evaluate(() => {
       const scene = window.scene;
 
@@ -213,14 +212,11 @@ test.describe('Phase 1: Space Environment Validation', () => {
         return { success: false, reason: 'Scene not found' };
       }
 
-      // Find Galaxy object (stars).
-      //
-      // This matched c.constructor.name === 'Points'. three.js is loaded minified from
-      // the CDN, so its class names are mangled to short identifiers — the same trap that
-      // made the asteroid-belt test read InstancedMesh as "no". three publishes isPoints
-      // for exactly this reason: a flag survives minification, a class name does not.
-      const galaxy = scene.children.find(c => c.isPoints && c.geometry
-        && c.geometry.attributes && c.geometry.attributes.color);
+      // BY NAME. Two earlier versions of this line were wrong in different ways: one
+      // matched c.constructor.name === 'Points', which a minified three.js mangles; the
+      // other took the first isPoints child, which is CosmicDust. Identity beats
+      // guesswork — Galaxy.js sets this name.
+      const galaxy = scene.getObjectByName('Galaxy');
 
       if (!galaxy || !galaxy.geometry) {
         return { success: false, reason: 'Galaxy particle system not found' };
@@ -247,10 +243,10 @@ test.describe('Phase 1: Space Environment Validation', () => {
           redCount++; // M-type red dwarf
         } else if (r > 0.9 && g > 0.7 && b < 0.7) {
           yellowOrangeCount++; // K/G-type
+        } else if (b > 0.95) {
+          blueCount++; // O/B-type: blue is the only class with b at full
         } else if (r > 0.9 && g > 0.9 && b > 0.7) {
           whiteCount++; // F/A-type
-        } else if (b > 0.9) {
-          blueCount++; // O/B-type
         }
       }
 

@@ -221,6 +221,15 @@ class SpaceEnvironment {
         // Store bound handler references for proper removal (FIX #4)
         this.boundHandleResize = this.handleResize.bind(this);
         this.boundAnimate = this.animate.bind(this);
+        // Resets the clock when the tab returns, so the first visible frame starts from
+        // now rather than from whenever it was last read. The clamp in animate() is the
+        // safety net; this is the correct behaviour.
+        this.boundVisibilityChange = () => {
+            if (!document.hidden && this.clock) {
+                if (this._usingTimer && this.clock.update) this.clock.update();
+                if (this.clock.getDelta) this.clock.getDelta();   // discard the gap
+            }
+        };
     }
 
     /**
@@ -721,6 +730,7 @@ class SpaceEnvironment {
         
         // Add resize handler (FIX #4: using bound reference)
         window.addEventListener('resize', this.boundHandleResize);
+        document.addEventListener('visibilitychange', this.boundVisibilityChange);
         
         // Add memory manager with fallback handling
         if (typeof MemoryManager !== 'undefined') {
@@ -4114,6 +4124,21 @@ class SpaceEnvironment {
             if (this._usingTimer) this.clock.update();
             deltaTime = this.clock.getDelta();
 
+            // CLAMPED. animate() returns early while document.hidden, but the clock keeps
+            // running, so the first frame after the tab comes back receives the entire
+            // absence as ONE step. Measured: normal frames are 0.112s; after four seconds
+            // in another tab the next delta was 4.117s, 37x a frame. A minute away would
+            // hand the simulation sixty seconds at once — planets lurch, the camera lerp
+            // overshoots its target, and virtual time jumps by a minute times the time
+            // scale. The same applies to a laptop waking from sleep or a long stall.
+            //
+            // A frame longer than this did not happen; pretending otherwise is what
+            // breaks. The alternative scenes already clamp their own delta; this is the
+            // solar path, which did not.
+            if (deltaTime > SpaceEnvironment.MAX_FRAME_DELTA) {
+                deltaTime = SpaceEnvironment.MAX_FRAME_DELTA;
+            }
+
             // Phase 2: Update virtual time and pass to solar system
             // NASA Rule 7: Check if timeManager exists before using
             let j2000Days = null;
@@ -5255,6 +5280,7 @@ class SpaceEnvironment {
 
         // Clean up event listeners (FIX #4: using bound reference)
         window.removeEventListener('resize', this.boundHandleResize);
+        document.removeEventListener('visibilitychange', this.boundVisibilityChange);
 
         this.disposeSceneSelection();
 
@@ -5313,6 +5339,11 @@ SpaceEnvironment.BACKGROUND_FPS = 20;
 // and planet tracking that must feel immediate. Nothing in the other three responds to
 // input, so half the frames buys back half the cost.
 SpaceEnvironment.SCENE_FPS = 30;
+
+// The longest step the simulation will accept, in seconds. Anything larger did not
+// happen as a frame — it is a tab switch, a sleep, or a stall — and feeding it in as one
+// step makes everything time-based lurch. 0.1s is a 10fps floor: slow, but continuous.
+SpaceEnvironment.MAX_FRAME_DELTA = 0.1;
 
 // Half of one scene swap: fade to black over this, switch, fade back over the same. Long
 // enough to read as deliberate, short enough that nobody waits for it.

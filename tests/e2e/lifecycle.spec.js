@@ -183,3 +183,46 @@ test('a failed start-up says so instead of leaving a blank page', async ({ page 
     expect(shown, 'the visitor is told something went wrong').toContain('could not start');
     expect(shown).toContain('simulated start-up failure');
 });
+
+test('coming back from another tab does not lurch the simulation', async ({ page }) => {
+    // animate() returns early while document.hidden, but the clock keeps running — so the
+    // first frame after the tab regains focus used to receive the WHOLE absence as one
+    // step. Measured before the fix: normal frames 0.112s, first frame back after four
+    // seconds away 4.117s. A minute in another tab handed the solar system sixty seconds
+    // in a single tick.
+    await page.goto('/#main');
+    await page.waitForFunction(() => !!(window.spaceEnvironment && window.spaceEnvironment.solarSystem),
+        null, { timeout: 40000 });
+    await page.waitForTimeout(5500);
+
+    const r = await page.evaluate(async () => {
+        const se = window.spaceEnvironment;
+        const deltas = [];
+        const orig = se.solarSystem.update.bind(se.solarSystem);
+        se.solarSystem.update = (dt, j) => { deltas.push(dt); return orig(dt, j); };
+
+        await new Promise((res) => setTimeout(res, 400));
+
+        // Go away for four seconds.
+        Object.defineProperty(document, 'hidden', { get: () => true, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+        const before = deltas.length;
+        await new Promise((res) => setTimeout(res, 4000));
+        const whileHidden = deltas.length - before;
+
+        // Come back.
+        Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+        await new Promise((res) => setTimeout(res, 400));
+        const firstBack = deltas[before + whileHidden];
+
+        se.solarSystem.update = orig;
+        return { whileHidden, firstBack, cap: window.SpaceEnvironment.MAX_FRAME_DELTA };
+    });
+
+    expect(r.whileHidden, 'nothing is simulated while the tab is hidden').toBe(0);
+    expect(r.firstBack, 'and the frame that follows is a frame, not four seconds')
+        .toBeLessThanOrEqual(r.cap);
+    // Four seconds away must not arrive as four seconds of simulation.
+    expect(r.firstBack).toBeLessThan(0.5);
+});

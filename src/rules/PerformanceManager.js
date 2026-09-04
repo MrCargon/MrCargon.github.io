@@ -374,7 +374,8 @@ class PerformanceManager {
 
 // Export for global access
 window.PerformanceManager = PerformanceManager;
-window.CircularBuffer = CircularBuffer;
-window.PerformanceBatch = PerformanceBatch;
+// CircularBuffer and PerformanceBatch are NOT exported. Both are used only by
+// PerformanceManager in this same file, and putting internals on window for no reason
+// makes them look like public API that other code may depend on.
 
 console.log('✅ PerformanceManager module loaded');

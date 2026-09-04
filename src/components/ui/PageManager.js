@@ -1254,6 +1254,10 @@ class PageManager {
     }
     
     async cleanupAboutPage() {
+        // Nothing to clean up, deliberately: initAboutPage only calls
+        // showSpaceAsBackground(), which allocates nothing and registers no listeners.
+        // Said out loud because an empty body cannot otherwise be told apart from one
+        // that was never written.
         return true;
     }
     
@@ -1271,6 +1275,9 @@ class PageManager {
     }
     
     async cleanupContactPage() {
+        // Nothing to clean up, deliberately: the only listener is the submit handler on
+        // #contact-form, and contactPage.html is re-fetched on every visit, so the old
+        // form and its listener are discarded with the old DOM. See _setupContactForm.
         return true;
     }
 

@@ -37,8 +37,10 @@ class PageManager {
         
  // Rule 3: Pre-allocated collections with size limits
         this.pageCache = new Map();
+        // Bounded history of uncaught errors, filled by handleGlobalError. Inspect with
+        // pageManager.recentErrors on a live page.
+        this.recentErrors = [];
         this.activeTimeouts = new Set();
-        this.activeIntervals = new Set();
         this.gameInstances = new Map();
         this.eventListeners = [];
         this.lastPopupInteractionAt = 0;
@@ -47,8 +49,6 @@ class PageManager {
         this._boundHandlers = {
             navigationClick: this.handleNavigationClick.bind(this),
             popState: this.handlePopState.bind(this),
-            resize: null,
-            beforeUnload: this.handleBeforeUnload.bind(this),
             globalError: this.handleGlobalError.bind(this),
             unhandledRejection: this.handleUnhandledRejection.bind(this),
             gameClose: this.handleGameClose.bind(this),
@@ -296,7 +296,6 @@ class PageManager {
             
  // Start background processes
             this.startPreloading();
-            this.setupPerformanceTracking();
             
             // PageManager initialization complete
             return true;
@@ -522,10 +521,6 @@ class PageManager {
         
         try {
  // Use pre-bound handler
-            if (!this._boundHandlers.resize) {
-                this._boundHandlers.resize = this.debounce(this.handleResize.bind(this), 250);
-            }
-
  // Navigation events
             this.addEventListener(document, 'click', this._boundHandlers.navigationClick);
             this.addEventListener(window, 'popstate', this._boundHandlers.popState);
@@ -541,9 +536,10 @@ class PageManager {
             // a do-nothing listener on EVERY keydown on the document, including every
             // character typed into the contact form.
 
- // Window events
-            this.addEventListener(window, 'resize', this._boundHandlers.resize);
-            this.addEventListener(window, 'beforeunload', this._boundHandlers.beforeUnload);
+            // No 'resize' listener here: setupPopupPositionValidation already registers
+            // a debounced resize handler, a ResizeObserver on <body> and an
+            // orientationchange listener, and this one called an empty stub. No
+            // 'beforeunload' either — nothing on this site needs saving before you leave.
 
  // Error handling
             this.addEventListener(window, 'error', this._boundHandlers.globalError);
@@ -909,8 +905,10 @@ class PageManager {
             }
             
  // Rule 3: Cleanup bounded resources
+            // clearIntervals() used to be called here and was a stub; the set it would
+            // have cleared has no producer anywhere in this class, so both are gone.
+            // clearTimeouts() is now real work, because trackedTimeout populates its set.
             this.clearTimeouts();
-            this.clearIntervals();
             this.stopActiveGame();
             
             return true;
@@ -1648,7 +1646,7 @@ class PageManager {
             // an element id that exists nowhere in the markup.
             
  // Initial position validation
-            setTimeout(() => {
+            this.trackedTimeout(() => {
                 this.validateAllPopupPositions();
             }, 100);
             
@@ -2434,7 +2432,7 @@ class PageManager {
             }
             
  // Validate position after opening animation
-            setTimeout(() => {
+            this.trackedTimeout(() => {
                 this.validateAndCorrectPopupPosition(popup, 0);
                 
  // Debug positioning if issues detected
@@ -2733,7 +2731,7 @@ class PageManager {
         if (this.gameAssets[gameType].external) {
             const launched = this.launchExternalGame(gameType);
             if (button) {
-                setTimeout(() => {
+                this.trackedTimeout(() => {
                     button.textContent = button.dataset.originalText || '🎮 Play Game';
                     button.disabled = false;
                 }, 800);
@@ -2771,7 +2769,7 @@ class PageManager {
         } finally {
  // Reset button state
             if (button) {
-                setTimeout(() => {
+                this.trackedTimeout(() => {
                     button.textContent = button.dataset.originalText || '🎮 Play Game';
                     button.disabled = false;
                 }, 1000);
@@ -3046,7 +3044,7 @@ class PageManager {
                 gameContainer.classList.remove('active');
 
                 // Wait for animation then hide
-                setTimeout(() => {
+                this.trackedTimeout(() => {
                     gameContainer.style.display = 'none';
                     if (gameContent) {
                         gameContent.innerHTML = '';
@@ -3128,18 +3126,91 @@ class PageManager {
         });
     }
     
- // Additional stub methods to prevent errors
-    clearIntervals() { return true; }
     stopActiveGame() { 
         if (this.activeGame) {
             this.handleGameClose();
         }
         return true; 
     }
-    setupGameHandlers() { return true; }
-    startPreloading() { return true; }
-    setupPerformanceTracking() { return true; }
-    handleInitializationError() { return true; }
+
+    /**
+     * Warm the page cache for routes marked preload: true.
+     *
+     * This was startPreloading() { return true; }, under a comment reading "Additional
+     * stub methods to prevent errors" — it existed so the call in init would not throw.
+     * Three routes carry preload: true and none of them was ever preloaded, so the flag
+     * described an intention rather than a behaviour.
+     *
+     * Runs in idle time so it never competes with the page the visitor is looking at, and
+     * respects the same 10-entry cap navigateToPage uses. A warm-up that fails is dropped
+     * silently: the page is simply fetched normally when it is asked for.
+     * Rule 2: bounded by the route table | Rule 5: 2 asserts.
+     */
+    startPreloading() {
+        console.assert(this.pages, 'startPreloading: routes defined');
+        console.assert(this.pageCache, 'startPreloading: cache exists');
+        const names = Object.keys(this.pages).filter((n) =>
+            this.pages[n].preload && n !== this.currentPage
+            && !this.disabledPages.has(n) && !this.pageCache.has(n));
+        if (names.length === 0) return true;
+
+        const warm = () => {
+            names.forEach(async (n) => {                 // Rule 2: bounded by the routes
+                try {
+                    if (this.pageCache.size >= 10 || this.pageCache.has(n)) return;
+                    const html = await this.fetchPageContent(this.pages[n].path);
+                    if (html && this.pageCache.size < 10) this.pageCache.set(n, html);
+                } catch (e) {
+                    // Preloading is an optimisation. Failing at it must never be visible.
+                }
+            });
+        };
+        if (window.requestIdleCallback) window.requestIdleCallback(warm, { timeout: 4000 });
+        else this.trackedTimeout(warm, 1500);
+        return true;
+    }
+
+    /**
+     * A timeout that page cleanup can cancel.
+     *
+     * The bare setTimeout calls this replaces held references to page elements — a popup
+     * to reposition, a game button to re-enable, a container to hide — and fired 100ms to
+     * a second later whether or not the visitor had navigated away, at which point those
+     * elements are detached and the work is pointless at best.
+     *
+     * Self-deregisters when it fires, so the set cannot grow without bound.
+     * Rule 3: the set is the bound | Rule 5: 2 asserts.
+     */
+    trackedTimeout(fn, ms) {
+        console.assert(typeof fn === 'function', 'trackedTimeout: callback required');
+        console.assert(Number.isFinite(ms) && ms >= 0, 'trackedTimeout: non-negative delay');
+        const id = setTimeout(() => {
+            this.activeTimeouts.delete(id);
+            fn();
+        }, ms);
+        this.activeTimeouts.add(id);
+        return id;
+    }
+
+    /**
+     * Show the visitor something when start-up fails.
+     *
+     * Also a stub before this. init() catches its own failure, logs it and returns false
+     * — which left the page BLANK, because nothing had rendered yet and nothing said so.
+     * showErrorPage already existed for exactly this and was not being called.
+     * Rule 5: 2 asserts | Rule 6: an error handler must not throw.
+     */
+    handleInitializationError(error) {
+        console.assert(this.errorCount !== undefined, 'handleInitializationError: counter exists');
+        console.assert(typeof this.showErrorPage === 'function', 'handleInitializationError: can render');
+        try {
+            const msg = (error && error.message) ? error.message : 'Unknown start-up failure';
+            this.showErrorPage('The page could not start: ' + msg);
+        } catch (e) {
+            // An error handler that throws is worse than one that does nothing.
+        }
+        return true;
+    }
     /**
      * Route to whatever the URL now says. Fires on back/forward (popstate) and on any
      * hash change the click handler did not originate (hashchange).
@@ -3186,10 +3257,56 @@ class PageManager {
         return true;
     }
 
-    handleResize() { return true; }
-    handleBeforeUnload() { return true; }
-    handleGlobalError() { return true; }
-    handleUnhandledRejection() { return true; }
+    /**
+     * Record an uncaught error.
+     *
+     * This and handleUnhandledRejection were empty stubs registered against real window
+     * events, so every uncaught error and rejected promise on the site was captured and
+     * thrown away.
+     *
+     * It deliberately does NOT re-log — the browser already prints these and doubling it
+     * helps nobody — and does NOT show the error page, because a failed decorative image
+     * must not blank a working site. What it adds is a bounded, inspectable history at
+     * pageManager.recentErrors, which is the thing actually missing when diagnosing a
+     * live page you cannot attach a debugger to.
+     * Rule 3: fixed-size history | Rule 5: 2 asserts.
+     */
+    handleGlobalError(event) {
+        console.assert(Array.isArray(this.recentErrors), 'handleGlobalError: history exists');
+        console.assert(PageManager.MAX_RECENT_ERRORS > 0, 'handleGlobalError: history bounded');
+        this.recordError('error', event && (event.message || event.type),
+            event && event.filename, event && event.lineno);
+        return true;
+    }
+
+    /** As handleGlobalError, for promises nobody caught. Rule 5: 2 asserts. */
+    handleUnhandledRejection(event) {
+        console.assert(Array.isArray(this.recentErrors), 'handleUnhandledRejection: history exists');
+        console.assert(PageManager.MAX_RECENT_ERRORS > 0, 'handleUnhandledRejection: history bounded');
+        const reason = event && event.reason;
+        const msg = (reason && reason.message) ? reason.message : String(reason);
+        this.recordError('unhandledrejection', msg, null, null);
+        return true;
+    }
+
+    /** Push onto the bounded history, oldest out. Rule 2: fixed cap | Rule 5: 2 asserts. */
+    recordError(kind, message, file, line) {
+        console.assert(typeof kind === 'string', 'recordError: kind required');
+        console.assert(Array.isArray(this.recentErrors), 'recordError: history exists');
+        this.recentErrors.push({
+            kind: kind,
+            message: String(message === undefined ? '' : message).slice(0, 300),
+            file: file || null,
+            line: line || null,
+            page: this.currentPage,
+            at: Date.now()
+        });
+        while (this.recentErrors.length > PageManager.MAX_RECENT_ERRORS) {
+            this.recentErrors.shift();                   // Rule 2: bounded
+        }
+        if (window.MRCARGON_DEBUG) console.warn('[recorded ' + kind + ']', message);
+        return true;
+    }
     waitForGlobal(globalName, timeout = 5000) {
         return new Promise((resolve) => {
             if (window[globalName]) {
@@ -3280,12 +3397,9 @@ class PageManager {
                 window.removeEventListener('popstate', this._boundHandlers.popState);
                 window.removeEventListener('hashchange', this._boundHandlers.popState);
             }
-            if (this._boundHandlers.resize) {
-                window.removeEventListener('resize', this._boundHandlers.resize);
-            }
-            if (this._boundHandlers.beforeUnload) {
-                window.removeEventListener('beforeunload', this._boundHandlers.beforeUnload);
-            }
+            // No resize or beforeunload teardown: neither is registered any more. See
+            // setupEventHandlers — resize is owned by setupPopupPositionValidation, and
+            // nothing here needs saving before the page unloads.
             if (this._boundHandlers.globalError) {
                 window.removeEventListener('error', this._boundHandlers.globalError);
             }
@@ -3341,9 +3455,7 @@ class PageManager {
 
         // Clear timeouts and intervals
         this.activeTimeouts.forEach(id => clearTimeout(id));
-        this.activeIntervals.forEach(id => clearInterval(id));
         this.activeTimeouts.clear();
-        this.activeIntervals.clear();
 
         // Clear caches
         this.pageCache.clear();
@@ -3371,6 +3483,10 @@ if (document.readyState === 'loading') {
         // PageManager auto-initialized immediately
     }
 }
+
+// How many uncaught errors to keep. Enough to see a pattern, small enough that a page
+// throwing in a loop cannot grow it without bound.
+PageManager.MAX_RECENT_ERRORS = 20;
 
 // The one place the site is named. Route titles say what the PAGE is; this says whose it
 // is, and updateUIState joins them.

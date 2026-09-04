@@ -151,6 +151,13 @@
     transition: var(--transition);
     white-space: nowrap;
     font-weight: 500;
+    /* Do NOT let these compress. The strip is a horizontal scroller with arrow buttons,
+       but flex-shrink defaults to 1, so on a narrow screen the browser squeezed each
+       button below its content instead of scrolling — and since the content is nowrap it
+       spilled out and overlapped the neighbour. Measured at 375px: tab-Venus occupied
+       x 106-138 while tab-Earth's icon sat at x 121-139, so the right half of Venus
+       actually hit Earth. Natural width plus scrolling is what the arrows are for. */
+    flex-shrink: 0;
 }
 
 .planet-btn:hover {
@@ -758,7 +765,17 @@
     .planet-name {
         display: none; /* Show only icons on very small screens */
     }
-    
+
+    /* The badge has to go with the name. Fixing the buttons at 32px while leaving
+       Earth's "EXPLORE" badge visible gave that one button 57px of content in a 32px
+       box, and with justify-content:center it spilled out BOTH sides and sat on top of
+       its neighbours. Measured at 375px: Earth's icon rendered at x 121-139 while
+       tab-Venus occupied x 106-138, so the right half of Venus actually activated Earth.
+       At icon-only size there is no room for a text badge on any button. */
+    .explore-badge {
+        display: none;
+    }
+
     .planet-btn {
         width: 32px;
         justify-content: center;
@@ -873,6 +890,11 @@
 .popup-tab .tab-text {
     writing-mode: vertical-lr;
     text-orientation: mixed;
+    /* No min-width here on purpose. The audit flagged this as 15px of content in a 10px
+       box, and the first fix was min-width:max-content — which applies but resolves to
+       the LINE THICKNESS in a vertical writing mode, so it changed nothing. It was also
+       fixing a non-problem: overflow is visible, so the glyphs paint outside the box and
+       nothing is clipped. The audit now only flags content that is actually cut off. */
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-color, #ffffff);
@@ -1090,6 +1112,9 @@
     opacity: 0.85;
 }
 
+/* Anything that only makes sense over the solar system. Listed once per non-solar
+   scene because CSS has no "body has any of these classes" selector; adding a scene
+   means adding its class here, which is a deliberate opt-in. */
 body.scene-particles .solar-only,
 body.scene-particles .planet-selector-wrapper,
 body.scene-particles .selection-progress,
@@ -1101,7 +1126,13 @@ body.scene-orbitals .planet-selector-wrapper,
 body.scene-orbitals .selection-progress,
 body.scene-orbitals #planet-info-popup,
 body.scene-orbitals #time-panel-inline,
-body.scene-orbitals .explore-panel {
+body.scene-orbitals .explore-panel,
+body.scene-shapes .solar-only,
+body.scene-shapes .planet-selector-wrapper,
+body.scene-shapes .selection-progress,
+body.scene-shapes #planet-info-popup,
+body.scene-shapes #time-panel-inline,
+body.scene-shapes .explore-panel {
     display: none !important;
 }
 
@@ -1131,8 +1162,29 @@ body.scene-particles .action-btn[data-action="time"],
 body.scene-particles .action-btn[data-action="reset"],
 body.scene-orbitals .action-btn[data-action="info"],
 body.scene-orbitals .action-btn[data-action="time"],
-body.scene-orbitals .action-btn[data-action="reset"] {
+body.scene-orbitals .action-btn[data-action="reset"],
+body.scene-shapes .action-btn[data-action="info"],
+body.scene-shapes .action-btn[data-action="time"],
+body.scene-shapes .action-btn[data-action="reset"] {
     display: none !important;
+}
+
+/* SHORT VIEWPORTS (a phone held sideways). The tab handle is vertically centred and
+   120px tall, which at 375px of height put it straight through the planet selector:
+   measured, tab-Sun was unclickable because the Planet Info handle sat on top of it.
+   
+   Moving the handle does not help — its containing block is the popup panel, not the
+   viewport, so anchoring it to "the bottom" just moves it within a box that is itself
+   centred. Tried: height 84px + bottom 16px landed it at y 88-172, still on the planet
+   row at y 123-152.
+   
+   So it is hidden instead, which costs nothing: the action row directly above offers
+   the same two panels as labelled Info and Ctrl buttons, and those are unobstructed at
+   this size. The vertical tabs are a second affordance for the same thing. */
+@media (max-height: 520px) {
+    .popup-tab {
+        display: none;
+    }
 }
 
 /* Responsive Design for Popups */

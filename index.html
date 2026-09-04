@@ -5,8 +5,16 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-        <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes) used by Explore mode. -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov; font-src 'self'; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'">
+        <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes) used by Explore mode.
+             frame-src is set EXPLICITLY. The games are separate repos deployed to their own
+             GitHub Pages URLs and embedded here in an iframe, and with no frame-src the
+             browser falls back to default-src 'self'. That happens to pass on the live site,
+             where those URLs are same-origin, and blocks them on every local dev server:
+             "Framing 'https://mrcargon.github.io/' violates the following Content Security
+             Policy directive: default-src 'self'". So the games could not be opened while
+             developing, only in production. Naming the origin fixes that and documents what
+             is actually allowed to be framed. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov; font-src 'self'; frame-src 'self' https://mrcargon.github.io; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'">
         <meta name="description" content="MrCargon - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
         <!-- Shown before the router runs, and by anything that reads the raw HTML.
              Was "MrCargo" — a typo for the name on the domain, the GitHub handle and
@@ -146,6 +154,9 @@
     <!-- Hydrogen orbitals: the third backdrop. Loads AFTER ParticleField3D because it
          reuses that file's generated dot sprite rather than making a second one. -->
     <script src="src/utils/OrbitalCloud.js" defer></script>
+    <!-- Fourier-series creatures. Needs SineShape for the maths, OrbitalCloud for its
+         hue helper and ForceMatrix for the linear-light conversion, so it loads last. -->
+    <script src="src/utils/SineField.js" defer></script>
     <script src="src/components/pages/LifePage.js" defer></script>
     <script src="src/utils/SafeFetch.js" defer></script>
     <script src="src/utils/GeoLOD.js" defer></script>

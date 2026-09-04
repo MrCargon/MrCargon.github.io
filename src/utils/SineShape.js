@@ -140,20 +140,59 @@ class SineShape {
         console.assert(a instanceof SineShape && b instanceof SineShape, 'morph: two shapes required');
         console.assert(Number.isFinite(t), 'morph: t required');
         const k = Math.max(0, Math.min(1, t));
-        const n = Math.max(a.terms.length, b.terms.length);
+
+        // PAIRED BY FREQUENCY, NOT BY INDEX.
+        //
+        // This used to walk the two term lists in parallel and take `freq: ta.freq` — A's
+        // frequency — for every pair. But terms are stored sorted by DESCENDING AMPLITUDE
+        // (so truncation drops the least significant detail first), and two different
+        // shapes have different harmonics in that order: A's third-strongest might be
+        // freq 5 while B's third-strongest is freq -2. Interpolating those as a pair
+        // welds B's amplitude and phase onto A's frequency, and the result is not B at
+        // t=1. It is not any recognisable blend in between either.
+        //
+        // Measured before the fix: morph(a, b, 1) differed from b by 0.455 in a shape of
+        // radius ~1 — nearly half the figure. It went unnoticed because nothing had ever
+        // called this: the file was loaded on every page of the site and used nowhere.
+        //
+        // A frequency present in only one shape interpolates its amplitude to or from
+        // zero, which is exactly right — that harmonic fades in or out.
+        const freqs = [];
+        const A = {}, B = {};
+        for (let i = 0; i < a.terms.length; i++) {          // Rule 2: bounded
+            const f = a.terms[i].freq;
+            if (A[f] === undefined) { A[f] = a.terms[i]; freqs.push(f); }
+        }
+        for (let i = 0; i < b.terms.length; i++) {          // Rule 2: bounded
+            const f = b.terms[i].freq;
+            if (B[f] === undefined) {
+                B[f] = b.terms[i];
+                if (A[f] === undefined) freqs.push(f);
+            }
+        }
+
         const terms = [];
-        for (let i = 0; i < n; i++) {                       // Rule 2: bounded
-            const ta = a.terms[i] || { freq: (b.terms[i] || {}).freq || 0, amp: 0, phase: 0 };
-            const tb = b.terms[i] || { freq: ta.freq, amp: 0, phase: ta.phase };
-            let dPhase = tb.phase - ta.phase;
+        for (let i = 0; i < freqs.length; i++) {            // Rule 2: bounded
+            const f = freqs[i];
+            const ta = A[f], tb = B[f];
+            const ampA = ta ? ta.amp : 0;
+            const ampB = tb ? tb.amp : 0;
+            // A harmonic that only one side has keeps that side's phase throughout;
+            // rotating a term whose amplitude is zero would be meaningless.
+            const phA = ta ? ta.phase : (tb ? tb.phase : 0);
+            const phB = tb ? tb.phase : phA;
+            let dPhase = phB - phA;
             while (dPhase > Math.PI) dPhase -= 2 * Math.PI;  // shortest arc
             while (dPhase < -Math.PI) dPhase += 2 * Math.PI;
             terms.push({
-                freq: ta.freq,
-                amp: ta.amp + (tb.amp - ta.amp) * k,
-                phase: ta.phase + dPhase * k
+                freq: f,
+                amp: ampA + (ampB - ampA) * k,
+                phase: phA + dPhase * k
             });
         }
+        // Re-sort so the morphed shape keeps the amplitude ordering that detailFor and
+        // LOD truncation depend on — the strongest terms of the BLEND, not of either end.
+        terms.sort((x, y) => y.amp - x.amp);
         return new SineShape(terms);
     }
 

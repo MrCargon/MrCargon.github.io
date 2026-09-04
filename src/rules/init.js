@@ -240,6 +240,18 @@ function addOptimizedStatusIndicator() {
         return;
     }
 
+    // DEVELOPMENT ONLY. This is a fixed-position badge at z-index 9999 reading
+    // "Rules v2.0 (development)", and it shipped to every visitor. Two problems, not one:
+    // it tells a stranger about the project's internal rules engine, and at 9999 it sits
+    // above everything and BLOCKS real controls. A layout sweep caught it covering the
+    // contact form's message field and the Toggle Orbit Lines button.
+    //
+    // Gated on the same flag DebugLog already defines, so it comes back with ?debug or
+    // localStorage 'mrcargon.debug'. Nothing else about the rules engine changes.
+    if (!window.MRCARGON_DEBUG) {
+        return;
+    }
+
     try {
         // Create optimized status indicator
         const indicator = document.createElement('div');

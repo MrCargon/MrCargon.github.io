@@ -116,10 +116,11 @@ class SpaceEnvironment {
         // or the other and skips the other's per-frame work entirely, so the unselected
         // scene costs nothing. That is the point — running the planets invisibly behind
         // a particle field would be paying for a simulation nobody can see.
-        // 'solar' | 'particles' | 'orbitals'
+        // 'solar' | 'particles' | 'orbitals' | 'shapes'
         this.sceneMode = 'solar';
         this.particleField = null;
         this.orbitalCloud = null;
+        this.sineField = null;
         this._sceneSwitching = false;
         this._lastParticleAt = 0;
         this._sceneFadeEl = null;
@@ -462,10 +463,19 @@ class SpaceEnvironment {
             // Initialize FPS monitor with display element (Roaster Fix #2)
             if (typeof FPSMonitor !== 'undefined') {
                 this.fpsMonitor = new FPSMonitor();
-                const fpsDisplay = document.createElement('div');
-                fpsDisplay.id = 'fps-monitor';
-                document.body.appendChild(fpsDisplay);
-                this.fpsMonitor.init(fpsDisplay);
+                // The MONITOR always runs — TimeControlUI reads it, and it is how the
+                // scene knows how it is performing. The on-screen READOUT is development
+                // instrumentation and was shipping to visitors: a live
+                // "FPS: 36 (avg: 18, min: 6, max: 48)" pinned to the corner of a
+                // portfolio. Same ?debug flag as the rest of the dev overlays.
+                if (window.MRCARGON_DEBUG) {
+                    const fpsDisplay = document.createElement('div');
+                    fpsDisplay.id = 'fps-monitor';
+                    document.body.appendChild(fpsDisplay);
+                    this.fpsMonitor.init(fpsDisplay);
+                } else {
+                    this.fpsMonitor.init(null);
+                }
                 console.log('FPS monitor initialized');
             } else {
                 console.warn('FPSMonitor not available - FPS tracking disabled');
@@ -1083,6 +1093,11 @@ class SpaceEnvironment {
         on('orb-m', 'input', (e) => this.setOrbital(null, null, parseInt(e.target.value, 10)));
         on('orb-points', 'input', (e) => this.resampleOrbital(parseInt(e.target.value, 10)));
         on('orb-resample', 'click', () => this.resampleOrbital());
+        on('scene-shapes', 'click', () => this.setSceneMode('shapes'));
+        on('sf-detail', 'input', (e) => this.setShapeDetail(parseInt(e.target.value, 10) / 100));
+        on('sf-count', 'input', (e) => this.setShapeCount(parseInt(e.target.value, 10)));
+        on('sf-morph', 'input', (e) => this.setShapeMorphSpeed(parseInt(e.target.value, 10) / 100));
+        on('sf-reseed', 'click', () => this.reseedShapes());
         this._syncSceneUI();
         return true;
     }
@@ -1155,6 +1170,7 @@ class SpaceEnvironment {
         this.sceneMode = mode;
         if (mode === 'particles') this._ensureParticleField();
         if (mode === 'orbitals') this._ensureOrbitalCloud();
+        if (mode === 'shapes') this._ensureSineField();
         this._lastParticleAt = 0;                 // so the first frame gets a sane delta
         this._syncSceneUI();
 
@@ -1185,7 +1201,7 @@ class SpaceEnvironment {
             this.sceneMode = 'solar';
             return false;
         }
-        this.particleField = new ParticleField3D(this.renderer, { count: 2200, types: 5 });
+        this.particleField = new ParticleField3D(this.renderer, { count: 1500, types: 5 });
         this.particleField.init();
         // Reduced motion: the particles still evolve (that is the content), but the
         // camera stops circling, which is the part that moves the whole frame.
@@ -1217,6 +1233,95 @@ class SpaceEnvironment {
     }
 
     /**
+     * Build the Fourier shape field on first use. Rule 5: 2 asserts | Rule 6: falls back.
+     */
+    _ensureSineField() {
+        console.assert(this.renderer, '_ensureSineField: renderer required');
+        console.assert(!this._disposed, '_ensureSineField: not disposed');
+        if (this.sineField) return true;
+        if (typeof SineField === 'undefined' || typeof SineShape === 'undefined' || !this.renderer) {
+            console.warn('SineField unavailable - staying on the solar system');
+            this.sceneMode = 'solar';
+            return false;
+        }
+        this.sineField = new SineField(this.renderer, { count: 26 });
+        this.sineField.init();
+        if (this.prefersReducedMotion()) this.sineField.spin = 0;
+        return true;
+    }
+
+    /**
+     * The simulation the current mode draws, or null in the solar mode. One place that
+     * knows the mapping, so animate() and the option handlers do not each repeat it.
+     * Rule 5: 2 asserts.
+     */
+    _activeScene() {
+        console.assert(this.sceneMode, '_activeScene: mode set');
+        console.assert(SpaceEnvironment.SCENE_MODES.indexOf(this.sceneMode) !== -1, '_activeScene: known mode');
+        if (this.sceneMode === 'orbitals') return this.orbitalCloud;
+        if (this.sceneMode === 'shapes') return this.sineField;
+        if (this.sceneMode === 'particles') return this.particleField;
+        return null;
+    }
+
+    /** Reflect the shape field's state into its readouts. Rule 5: 2 asserts. */
+    _syncShapeUI() {
+        console.assert(typeof document !== 'undefined', '_syncShapeUI: DOM available');
+        console.assert(this.sceneMode === 'shapes', '_syncShapeUI: right mode');
+        const f = this.sineField;
+        if (!f) return false;
+        const put = (id, text) => { const e = document.getElementById(id); if (e) e.textContent = text; };
+        put('sf-detail-value', Math.round(f.detail * 100) + '%');
+        put('sf-count-value', String(f.count));
+        put('sf-morph-value', f.morphSpeed.toFixed(2));
+        // The headline: the whole shape library, counted rather than estimated.
+        put('sf-bytes', f.byteSize() + ' bytes');
+        return true;
+    }
+
+    /** How much of each outline's detail to keep, 0..1. Rule 5: 2 asserts | Rule 2: clamped. */
+    setShapeDetail(fraction) {
+        console.assert(Number.isFinite(fraction), 'setShapeDetail: finite fraction');
+        console.assert(!this._disposed, 'setShapeDetail: not disposed');
+        if (!this.sineField) return false;
+        this.sineField.detail = Math.max(0.02, Math.min(1, fraction));
+        this._syncShapeUI();
+        return true;
+    }
+
+    /** How many creatures are in the shoal. Rule 5: 2 asserts | Rule 2: clamped. */
+    setShapeCount(n) {
+        console.assert(Number.isFinite(n), 'setShapeCount: finite count');
+        console.assert(!this._disposed, 'setShapeCount: not disposed');
+        if (!this.sineField) return false;
+        // setCount, not a bare assignment: it also updates which line loops are visible,
+        // so the change lands on the slider release rather than on the next drawn frame.
+        this.sineField.setCount(n);
+        this._syncShapeUI();
+        return true;
+    }
+
+    /** How fast each outline crossfades into the next. Rule 5: 2 asserts | Rule 2: clamped. */
+    setShapeMorphSpeed(v) {
+        console.assert(Number.isFinite(v), 'setShapeMorphSpeed: finite speed');
+        console.assert(!this._disposed, 'setShapeMorphSpeed: not disposed');
+        if (!this.sineField) return false;
+        this.sineField.morphSpeed = Math.max(0, Math.min(2, v));
+        this._syncShapeUI();
+        return true;
+    }
+
+    /** New positions, drifts and shape pairings. Rule 5: 2 asserts. */
+    reseedShapes() {
+        console.assert(!this._disposed, 'reseedShapes: not disposed');
+        console.assert(this.sceneMode === 'shapes', 'reseedShapes: only in the shape scene');
+        if (!this.sineField) return false;
+        this.sineField.seed();
+        this.announceExplore('Shapes reseeded');
+        return true;
+    }
+
+    /**
      * Put the controls in the state the current scene calls for: the right button
      * pressed, solar-only chrome hidden, and only the active scene's own options shown.
      * Rule 5: 2 asserts | Rule 6: every element optional.
@@ -1234,10 +1339,12 @@ class SpaceEnvironment {
         press('scene-solar', mode === 'solar');
         press('scene-particles', mode === 'particles');
         press('scene-orbitals', mode === 'orbitals');
+        press('scene-shapes', mode === 'shapes');
 
         const show = (id, on) => { const e = document.getElementById(id); if (e) e.hidden = !on; };
         show('scene-particle-options', mode === 'particles');
         show('scene-orbital-options', mode === 'orbitals');
+        show('scene-shape-options', mode === 'shapes');
 
         // One class on <body> drives every solar-only panel's visibility from CSS, rather
         // than this method knowing the id of each one. New solar chrome then only has to
@@ -1245,8 +1352,10 @@ class SpaceEnvironment {
         if (document.body) {
             document.body.classList.toggle('scene-particles', mode === 'particles');
             document.body.classList.toggle('scene-orbitals', mode === 'orbitals');
+            document.body.classList.toggle('scene-shapes', mode === 'shapes');
         }
         if (mode === 'orbitals') this._syncOrbitalUI();
+        if (mode === 'shapes') this._syncShapeUI();
 
         if (typeof this._updateExploreButton === 'function') this._updateExploreButton();
         return true;
@@ -1408,9 +1517,14 @@ class SpaceEnvironment {
             this.orbitalCloud.dispose();
             this.orbitalCloud = null;
         }
+        if (this.sineField && typeof this.sineField.dispose === 'function') {
+            this.sineField.dispose();
+            this.sineField = null;
+        }
         if (document.body) {
             document.body.classList.remove('scene-particles');
             document.body.classList.remove('scene-orbitals');
+            document.body.classList.remove('scene-shapes');
         }
         return true;
     }
@@ -1422,18 +1536,22 @@ class SpaceEnvironment {
     _animateAltScene() {
         console.assert(this.sceneMode !== 'solar', '_animateAltScene: not the solar mode');
         console.assert(!this._disposed, '_animateAltScene: not disposed');
-        const sim = this.sceneMode === 'orbitals' ? this.orbitalCloud : this.particleField;
+        const sim = this._activeScene();
         if (!sim || !this.renderer) return false;
         const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
 
         // Behind a content page this is decoration, so it gets BACKGROUND_FPS like the
         // solar system does — and unlike the solar system it also skips the SIMULATION
         // step, not just the draw, because stepping is the expensive half here.
-        if (this.backgroundMode) {
-            const interval = 1000 / SpaceEnvironment.BACKGROUND_FPS;
-            if (now - (this._lastBgRenderAt || 0) < interval) return false;
-            this._lastBgRenderAt = now;
-        }
+        // Frame cap. These scenes are AMBIENT — a shoal morphing over seconds, a
+        // particle field drifting, an electron cloud shearing. None of it is
+        // interactive and none of it moves fast enough for 60fps to be
+        // distinguishable from 30, but the cost difference is exactly half.
+        // Behind a content page they get BACKGROUND_FPS, as the solar system does.
+        const interval = 1000 / (this.backgroundMode
+            ? SpaceEnvironment.BACKGROUND_FPS : SpaceEnvironment.SCENE_FPS);
+        if (now - (this._lastBgRenderAt || 0) < interval) return false;
+        this._lastBgRenderAt = now;
         // Delta measured between frames we actually DRAW, so the camera drifts at the
         // same rate per second whether we are running at 20fps or 60.
         const dt = this._lastParticleAt ? Math.min(0.1, (now - this._lastParticleAt) / 1000) : 0;
@@ -5190,6 +5308,12 @@ window.SpaceEnvironment = SpaceEnvironment;
 // threshold where slow drift reads as stutter, and a third of the cost of every-vsync.
 SpaceEnvironment.BACKGROUND_FPS = 20;
 
+// Foreground cap for the ambient backdrops (particles, orbitals, shapes). The solar
+// system is deliberately NOT capped: it is the interactive scene, with camera controls
+// and planet tracking that must feel immediate. Nothing in the other three responds to
+// input, so half the frames buys back half the cost.
+SpaceEnvironment.SCENE_FPS = 30;
+
 // Half of one scene swap: fade to black over this, switch, fade back over the same. Long
 // enough to read as deliberate, short enough that nobody waits for it.
 SpaceEnvironment.SCENE_FADE_MS = 260;
@@ -5200,4 +5324,4 @@ SpaceEnvironment.SCENE_KEY = 'mrcargon-scene-mode';
 // Every backdrop this class can draw. 'solar' is the one it was built for and is the only
 // mode that runs the orbital mechanics; the others replace it entirely rather than
 // layering over it, so animate() takes one branch and returns.
-SpaceEnvironment.SCENE_MODES = ['solar', 'particles', 'orbitals'];
+SpaceEnvironment.SCENE_MODES = ['solar', 'particles', 'orbitals', 'shapes'];

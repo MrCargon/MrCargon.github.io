@@ -36,7 +36,13 @@ class ParticleField3D {
         console.assert(typeof ForceMatrix !== 'undefined', 'ParticleField3D: ForceMatrix must load first');
         const o = opts || {};
         this.renderer = renderer;
-        this.count = Math.max(1, Math.min(ParticleField3D.MAX_PARTICLES, o.count || 2200));
+        // 1500, not 2200. Measured on the step loop alone: 2200 costs 8.77 ms/frame,
+        // 1800 costs 6.12, 1500 costs 4.65, 1200 costs 3.74. A BACKDROP taking half a
+        // 60fps budget before the page has drawn anything is why this felt heavy.
+        // Radius is not the lever — at 1800, dropping it from 0.110 to 0.085 only moved
+        // 6.12 to 5.37, because the cost is the 27-bucket sweep, not the sphere.
+        // The slider still reaches 4000 for anyone who wants it.
+        this.count = Math.max(1, Math.min(ParticleField3D.MAX_PARTICLES, o.count || 1500));
         this.types = Math.max(2, Math.min(ForceMatrix.MAX_TYPES, o.types || 5));
         this.radius = o.radius || 0.11;      // interaction range in world units (cube is 1)
         this.beta = o.beta || 0.3;

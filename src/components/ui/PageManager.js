@@ -47,7 +47,6 @@ class PageManager {
         this._boundHandlers = {
             navigationClick: this.handleNavigationClick.bind(this),
             popState: this.handlePopState.bind(this),
-            keyboardNav: this.handleKeyboardNav.bind(this),
             resize: null,
             beforeUnload: this.handleBeforeUnload.bind(this),
             globalError: this.handleGlobalError.bind(this),
@@ -530,9 +529,17 @@ class PageManager {
  // Navigation events
             this.addEventListener(document, 'click', this._boundHandlers.navigationClick);
             this.addEventListener(window, 'popstate', this._boundHandlers.popState);
+            // hashchange as well as popstate: pushState does not fire hashchange, and a
+            // user editing the address bar does not fire popstate. Neither event alone
+            // covers both ways the URL can change. handlePopState no-ops when the target
+            // is already current, so the two cannot double-navigate.
+            this.addEventListener(window, 'hashchange', this._boundHandlers.popState);
 
- // Keyboard navigation
-            this.addEventListener(document, 'keydown', this._boundHandlers.keyboardNav);
+            // NOT registering handleKeyboardNav. It is an empty stub — the real keyboard
+            // shortcuts (I/C/T/R and Escape) are bound in setupKeyboardShortcuts, which
+            // also correctly ignores keystrokes aimed at inputs. Registering the stub put
+            // a do-nothing listener on EVERY keydown on the document, including every
+            // character typed into the contact form.
 
  // Window events
             this.addEventListener(window, 'resize', this._boundHandlers.resize);
@@ -3133,8 +3140,52 @@ class PageManager {
     startPreloading() { return true; }
     setupPerformanceTracking() { return true; }
     handleInitializationError() { return true; }
-    handlePopState() { return true; }
-    handleKeyboardNav() { return true; }
+    /**
+     * Route to whatever the URL now says. Fires on back/forward (popstate) and on any
+     * hash change the click handler did not originate (hashchange).
+     *
+     * THIS WAS `handlePopState() { return true; }` — an empty stub, registered against
+     * window popstate and doing nothing. So the BROWSER BACK BUTTON did not work:
+     * measured main -> projects -> back, and the URL returned to #main while the page
+     * still showed Projects. Forward navigation pushes history entries, so every visitor
+     * who pressed Back got a URL that disagreed with what they were looking at.
+     *
+     * The same stub is why editing the hash in the address bar, or any hash link the
+     * click handler does not intercept, changed the URL and nothing else.
+     *
+     * hashchange is a SEPARATE listener on purpose: pushState (which
+     * updateBrowserHistory uses) does not fire hashchange, so there is no navigation
+     * loop, but a user-driven hash change does not fire popstate either. Both are needed
+     * to cover the ways a URL can change.
+     *
+     * updateHistory is false: this is a REACTION to a history change, and pushing a new
+     * entry here would make Back append rather than go back.
+     * Rule 5: 2 asserts | Rule 6: unknown routes fall back rather than blanking the page.
+     */
+    handlePopState() {
+        console.assert(typeof location !== 'undefined', 'handlePopState: location required');
+        console.assert(this.pages, 'handlePopState: routes defined');
+        const hash = (location.hash || '').substring(1);
+
+        // A hash that is not a route is NOT a navigation. It is almost always an in-page
+        // anchor — the About page has a "Skip to bio" accessibility link pointing at
+        // #bio-section — and treating it as an unknown route would yank the visitor to
+        // the home page for using a skip link. Adding the hashchange listener introduced
+        // exactly that regression before this guard was added; the audit caught it.
+        //
+        // Doing nothing is right for junk hashes too: the page stays where it is instead
+        // of being reset. A cold load with an unrecognised hash is a different question
+        // and is handled in handleInitialRoute, which does fall back to 'main'.
+        if (!hash || !this.pages[hash]) return true;
+
+        // Already showing it — a hashchange fired by our own click handler, or a hash
+        // that maps to the page we are on. Re-rendering would discard live state (a
+        // running simulation, a form the visitor was filling in) for no visible gain.
+        if (hash === this.currentPage) return true;
+        this.navigateToPage(hash, false);
+        return true;
+    }
+
     handleResize() { return true; }
     handleBeforeUnload() { return true; }
     handleGlobalError() { return true; }
@@ -3227,9 +3278,7 @@ class PageManager {
             }
             if (this._boundHandlers.popState) {
                 window.removeEventListener('popstate', this._boundHandlers.popState);
-            }
-            if (this._boundHandlers.keyboardNav) {
-                document.removeEventListener('keydown', this._boundHandlers.keyboardNav);
+                window.removeEventListener('hashchange', this._boundHandlers.popState);
             }
             if (this._boundHandlers.resize) {
                 window.removeEventListener('resize', this._boundHandlers.resize);

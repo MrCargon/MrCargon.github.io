@@ -348,3 +348,97 @@ test('all three scenes are reachable in sequence and only one runs at a time', a
     await pickScene(page, 'scene-solar');
     expect(await mode(page), 'and back to the solar system').toBe('solar');
 });
+
+// ── the fourth backdrop: Fourier shapes ────────────────────────────────────────
+
+test('the sine-shape scene runs and reports its own size', async ({ page }) => {
+    await bootMain(page);
+    await openControls(page);
+    await pickScene(page, 'scene-shapes');
+
+    expect(await mode(page), 'switches to shapes').toBe('shapes');
+
+    const read = () => page.evaluate(() => {
+        const f = window.spaceEnvironment.sineField;
+        return f ? {
+            count: f.count, detail: f.detail, shapes: f.shapes.length,
+            bytes: f.byteSize(), gen: f.generation,
+            shown: document.getElementById('sf-bytes').textContent
+        } : null;
+    });
+    const a = await read();
+    expect(a, 'the field was built').not.toBeNull();
+    expect(a.shapes, 'the whole shape library was transformed').toBe(6);
+    // The claim the scene exists to make: the entire library is smaller than a small PNG.
+    expect(a.bytes).toBeLessThan(2048);
+    expect(a.shown).toBe(a.bytes + ' bytes');
+
+    await page.waitForTimeout(1000);
+    const b = await read();
+    expect(b.gen, 'it is morphing').toBeGreaterThan(a.gen);
+});
+
+test('the Detail control degrades the outlines towards circles', async ({ page }) => {
+    await bootMain(page);
+    await openControls(page);
+    await pickScene(page, 'scene-shapes');
+
+    // Measure roundness directly from the traced geometry: at full detail the outlines
+    // have real structure, so the radius varies around each loop; at minimum detail a
+    // Fourier series IS a circle, so it must not vary at all.
+    const roundness = (pct) => page.evaluate(async (pct) => {
+        const el = document.getElementById('sf-detail');
+        el.value = String(pct);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 400));
+        const f = window.spaceEnvironment.sineField;
+        const c = f._creatures[0];
+        const arr = c.geom.getAttribute('position').array;
+        const N = 144;
+        let cx = 0, cy = 0, cz = 0;
+        for (let i = 0; i < N; i++) { cx += arr[i * 3]; cy += arr[i * 3 + 1]; cz += arr[i * 3 + 2]; }
+        cx /= N; cy /= N; cz /= N;
+        let min = Infinity, max = 0;
+        for (let i = 0; i < N; i++) {
+            const r = Math.hypot(arr[i * 3] - cx, arr[i * 3 + 1] - cy, arr[i * 3 + 2] - cz);
+            min = Math.min(min, r); max = Math.max(max, r);
+        }
+        return max > 0 ? (max - min) / max : 0;     // 0 = perfect circle
+    }, pct);
+
+    const full = await roundness(100);
+    const bare = await roundness(2);
+    expect(full, 'at full detail the outline has structure').toBeGreaterThan(0.1);
+    expect(bare, 'at minimum detail it is a circle').toBeLessThan(0.02);
+});
+
+test('shape controls reach the field', async ({ page }) => {
+    await bootMain(page);
+    await openControls(page);
+    await pickScene(page, 'scene-shapes');
+
+    const set = (id, v) => page.evaluate(([id, v]) => {
+        const el = document.getElementById(id);
+        el.value = String(v);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, [id, v]);
+    const read = () => page.evaluate(() => {
+        const f = window.spaceEnvironment.sineField;
+        return { count: f.count, morph: f.morphSpeed,
+                 countShown: document.getElementById('sf-count-value').textContent,
+                 morphShown: document.getElementById('sf-morph-value').textContent };
+    });
+
+    await set('sf-count', 8);
+    await set('sf-morph', 90);
+    expect(await read()).toEqual({ count: 8, morph: 0.9, countShown: '8', morphShown: '0.90' });
+
+    // Only the requested creatures may be drawn; the rest are hidden, not stale.
+    const visible = await page.evaluate(() =>
+        window.spaceEnvironment.sineField._creatures.filter((c) => c.loop.visible).length);
+    expect(visible, 'hidden creatures stay hidden').toBe(8);
+
+    await page.locator('#sf-reseed').click({ force: true });
+    await page.waitForTimeout(200);
+    expect((await read()).count, 'reseed keeps the count').toBe(8);
+});

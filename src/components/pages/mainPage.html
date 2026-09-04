@@ -235,6 +235,14 @@
                                 <span class="icon" aria-hidden="true">⚛</span>
                                 <span class="btn-label">Atom</span>
                             </button>
+                            <button id="scene-shapes"
+                                    class="control-btn"
+                                    title="Show creatures whose outlines are Fourier series — no vertices, no images, a few hundred bytes of numbers"
+                                    aria-label="Backdrop: sine-wave shapes"
+                                    aria-pressed="false">
+                                <span class="icon" aria-hidden="true">∿</span>
+                                <span class="btn-label">Sine Shapes</span>
+                            </button>
                         </div>
 
                         <div id="scene-particle-options" class="scene-options" hidden>
@@ -257,8 +265,8 @@
                             <label class="scene-slider" for="scene-density">
                                 <span>Particles</span>
                                 <input type="range" id="scene-density"
-                                       min="400" max="4000" step="200" value="2200">
-                                <output id="scene-density-value">2200</output>
+                                       min="400" max="4000" step="200" value="1500">
+                                <output id="scene-density-value">1500</output>
                             </label>
                             <label class="scene-slider" for="scene-species">
                                 <span>Species</span>
@@ -311,6 +319,44 @@
                                         aria-label="Resample the orbital">
                                     <span class="icon" aria-hidden="true">⟳</span>
                                     <span class="btn-label">Resample</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Fourier shape field. Detail is the interesting control: it
+                             drops the high-frequency terms, so the outlines visibly relax
+                             towards circles. That IS what a Fourier series is. -->
+                        <div id="scene-shape-options" class="scene-options" hidden>
+                            <p class="scene-note">
+                                Every outline is a chain of rotating circles — a Fourier
+                                series. Store the chain and you have stored the shape.
+                                Morphing is a crossfade between two lists of numbers, so it
+                                can never turn inside out, and detail is just how many
+                                circles you keep.
+                            </p>
+                            <div class="scene-orbital-name" id="sf-bytes" aria-live="polite">— bytes</div>
+                            <label class="scene-slider" for="sf-detail">
+                                <span title="Fraction of each shape's amplitude kept. Wind it down and the outlines relax into circles.">Detail</span>
+                                <input type="range" id="sf-detail" min="2" max="100" step="1" value="100">
+                                <output id="sf-detail-value">100%</output>
+                            </label>
+                            <label class="scene-slider" for="sf-count">
+                                <span>Creatures</span>
+                                <input type="range" id="sf-count" min="1" max="48" step="1" value="26">
+                                <output id="sf-count-value">26</output>
+                            </label>
+                            <label class="scene-slider" for="sf-morph">
+                                <span>Morph speed</span>
+                                <input type="range" id="sf-morph" min="0" max="100" step="1" value="22">
+                                <output id="sf-morph-value">0.22</output>
+                            </label>
+                            <div class="control-buttons">
+                                <button id="sf-reseed"
+                                        class="control-btn"
+                                        title="New positions, drifts and shape pairings"
+                                        aria-label="Reseed the shapes">
+                                    <span class="icon" aria-hidden="true">⟳</span>
+                                    <span class="btn-label">Reseed</span>
                                 </button>
                             </div>
                         </div>

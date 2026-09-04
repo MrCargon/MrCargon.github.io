@@ -66,6 +66,14 @@
     transform: translateX(-50%);
     display: flex;
     gap: 1rem;
+    /* Wraps and is capped to the stage. It is centred with translateX(-50%) and its
+       content is nowrap, so on a narrow screen the pill grew WIDER than the canvas it
+       sits on and overhung both edges — measured 338px of pill on a 334px canvas at
+       375px wide, and 345px in particle mode, where the readout is longer. */
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 2px;
+    max-width: calc(100% - 16px);
     padding: 4px 12px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.55);

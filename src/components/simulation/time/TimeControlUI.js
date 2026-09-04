@@ -553,13 +553,19 @@ class TimeControlUI {
     // Access fpsMonitor from SpaceEnvironment
     if (window.spaceEnvironment && window.spaceEnvironment.fpsMonitor) {
       const monitor = window.spaceEnvironment.fpsMonitor;
-      const newState = !monitor.isEnabled;
-      monitor.setEnabled(newState);
-      console.log(`TimeControlUI: FPS monitor ${newState ? 'enabled' : 'disabled'}`);
+      // toggleDisplay, not setEnabled. setEnabled controls MEASUREMENT, and update()
+      // returns early when it is off — so the old code stopped collecting statistics
+      // rather than hiding a readout. Worse, once the always-on overlay moved behind
+      // the ?debug flag there was no element for it to show, so a visitor clicking a
+      // button labelled "Toggle FPS Monitor" saw nothing happen at all. Verified dead
+      // by driving it. toggleDisplay creates the readout on demand.
+      const visible = monitor.toggleDisplay();
+      console.log(`TimeControlUI: FPS readout ${visible ? 'shown' : 'hidden'}`);
 
       // Update button appearance
       if (this.controls.fpsToggleBtn) {
-        this.controls.fpsToggleBtn.classList.toggle('active', newState);
+        this.controls.fpsToggleBtn.classList.toggle('active', visible);
+        this.controls.fpsToggleBtn.setAttribute('aria-pressed', visible ? 'true' : 'false');
       }
     } else {
       console.warn('TimeControlUI.toggleFPSMonitor: FPS monitor not available');

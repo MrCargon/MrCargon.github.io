@@ -254,6 +254,46 @@ class FPSMonitor {
     }
 
     /**
+     * Show or hide the on-screen readout, creating it if it does not exist.
+     *
+     * SEPARATE FROM setEnabled ON PURPOSE. setEnabled controls MEASUREMENT — update()
+     * returns early when disabled — while the "FPS" button in the time panel means
+     * "show me the readout". Conflating them made that button do the wrong thing in two
+     * ways at once: it silently stopped collecting statistics, and once the always-on
+     * overlay was moved behind the ?debug flag there was no displayElement to show, so
+     * the button did nothing observable at all for a normal visitor.
+     *
+     * Creating on demand is what keeps both true: nothing is on screen by default, and
+     * the button that offers an FPS readout actually produces one.
+     * Rule 5: 2 asserts | Rule 6: no-ops without a DOM rather than throwing.
+     * @returns {boolean} whether the readout is now visible
+     */
+    toggleDisplay(force) {
+        console.assert(force === undefined || typeof force === 'boolean',
+            'FPSMonitor.toggleDisplay: force must be boolean or omitted');
+        console.assert(typeof document !== 'undefined' || true,
+            'FPSMonitor.toggleDisplay: DOM optional, handled below');
+        if (typeof document === 'undefined' || !document.body) return false;
+
+        if (!this.displayElement) {
+            const el = document.createElement('div');
+            el.id = 'fps-monitor';
+            el.className = 'fps-monitor-display';
+            el.textContent = 'FPS: --';
+            document.body.appendChild(el);
+            this.displayElement = el;
+            this.isEnabled = true;              // start measuring again if it was off
+            return true;                        // freshly created means freshly shown
+        }
+
+        const showing = this.displayElement.style.display !== 'none';
+        const next = (force === undefined) ? !showing : force;
+        this.displayElement.style.display = next ? 'block' : 'none';
+        if (next) this.isEnabled = true;        // a visible readout must be measuring
+        return next;
+    }
+
+    /**
      * Dispose resources
      *
      * NASA Rule 7: Check before cleanup

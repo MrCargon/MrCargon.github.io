@@ -79,7 +79,10 @@ def fingerprint():
 
 
 def current():
-    s = io.open(SW, encoding="utf-8").read()
+    # newline="" keeps sw.js's own line endings in `s`. The old read translated CRLF to
+    # LF and --write then saved LF, so on a Windows (autocrlf) checkout the write itself
+    # changed sw.js's bytes, and with them the hash: one --write never settled.
+    s = io.open(SW, encoding="utf-8", newline="").read()
     m = PATTERN.search(s)
     return (m.group(1) if m else None), s
 
@@ -105,7 +108,9 @@ def main():
         return 1
 
     if "--write" in sys.argv:
-        io.open(SW, "w", encoding="utf-8", newline="\n").write(
+        # newline="" = no translation: the file keeps its existing newline style and
+        # only the CACHE_NAME line changes.
+        io.open(SW, "w", encoding="utf-8", newline="").write(
             PATTERN.sub("const CACHE_NAME = '%s';" % want, src, count=1))
         print("\nstamped. Every old cache is deleted by the activate handler,")
         print("and skipWaiting + clients.claim mean it takes effect on the")

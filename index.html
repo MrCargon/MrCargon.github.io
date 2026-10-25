@@ -13,8 +13,12 @@
              "Framing 'https://mrcargon.github.io/' violates the following Content Security
              Policy directive: default-src 'self'". So the games could not be opened while
              developing, only in production. Naming the origin fixes that and documents what
-             is actually allowed to be framed. -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov; font-src 'self'; frame-src 'self' https://mrcargon.github.io; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'">
+             is actually allowed to be framed.
+             #studio adds: player.twitch.tv (player), www.twitch.tv (chat embed lives there),
+             www.youtube-nocookie.com (live player) to frame-src, and i.ytimg.com /
+             static-cdn.jtvnw.net (video thumbnails) to img-src. Nothing loads from them until
+             the visitor clicks Load on the Studio page or real items exist in content.json. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://i.ytimg.com https://static-cdn.jtvnw.net; font-src 'self'; frame-src 'self' https://mrcargon.github.io https://player.twitch.tv https://www.twitch.tv https://www.youtube-nocookie.com; connect-src 'self' https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'">
         <meta name="description" content="MrCargon - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
         <!-- Shown before the router runs, and by anything that reads the raw HTML.
              Was "MrCargo" — a typo for the name on the domain, the GitHub handle and
@@ -44,6 +48,7 @@
         <link rel="stylesheet" href="src/components/pages/notesPage.css">
         <link rel="stylesheet" href="src/components/pages/lifePage.css">
         <link rel="stylesheet" href="src/components/pages/contactPage.css">
+        <link rel="stylesheet" href="src/components/pages/studioPage.css">
         <link rel="stylesheet" href="src/components/footer/footer.css">
         <link rel="stylesheet" href="src/components/simulation/time/timeControls.css">
 
@@ -158,6 +163,7 @@
          hue helper and ForceMatrix for the linear-light conversion, so it loads last. -->
     <script src="src/utils/SineField.js" defer></script>
     <script src="src/components/pages/LifePage.js" defer></script>
+    <script src="src/components/pages/StudioPage.js" defer></script>
     <script src="src/utils/SafeFetch.js" defer></script>
     <script src="src/utils/GeoLOD.js" defer></script>
     <script src="src/assets/vendor/mvt-decoder.js" defer></script>

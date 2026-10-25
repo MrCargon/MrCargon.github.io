@@ -1,0 +1,261 @@
+/* studioPage.css — #studio. Same panel language as About/Contact (translucent dark
+   panels, orange accent), but this page scrolls: it holds more than one viewport. */
+
+.main-section.studio-section {
+    max-width: var(--content-width-wide, 1200px);
+    width: 92%;
+    margin: 0 auto;
+    padding: var(--spacing-md) 0;
+    height: calc(100vh - 110px);
+    height: calc(var(--viewport-height, 100vh) - 110px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.studio-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 2px var(--spacing-lg);
+    scroll-behavior: smooth;
+}
+
+.studio-section .visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0);
+    white-space: nowrap; border: 0;
+}
+
+.studio-head { margin-bottom: var(--spacing-md); }
+.studio-sub { color: var(--text-color-muted); margin: var(--spacing-md) 0 var(--spacing-sm); line-height: 1.5; }
+
+.studio-jump { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
+
+.studio-jump-btn,
+.studio-chip {
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    background: rgba(30, 30, 30, 0.6);
+    border: 1px solid rgba(255, 165, 0, 0.25);
+    border-radius: 999px;
+    padding: 0.4rem 0.9rem;
+    min-height: 36px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.studio-jump-btn:hover,
+.studio-chip:hover { background: var(--hover-bg); border-color: var(--primary-color); color: var(--primary-color); }
+.studio-chip[aria-pressed="true"] {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #111;
+    font-weight: 600;
+}
+
+.studio-section :focus-visible {
+    outline: 3px solid var(--primary-color-light, #FFB84D);
+    outline-offset: 2px;
+}
+
+.studio-block {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.3));
+    border-radius: 20px;
+    box-shadow: var(--shadow-medium, none);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    scroll-margin-top: var(--spacing-sm);
+}
+.studio-block:focus { outline: none; }
+.studio-block h3 {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    margin: 0 0 var(--spacing-sm);
+}
+.studio-block h4 {
+    color: var(--text-color);
+    font-size: 1rem;
+    margin: var(--spacing-md) 0 var(--spacing-sm);
+}
+.studio-note { color: var(--text-color-dim); font-size: 0.9rem; margin: 0 0 var(--spacing-sm); line-height: 1.5; }
+
+.studio-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    font-weight: 600;
+    color: #111;
+    background: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius-sm, 8px);
+    padding: 0.55rem 1rem;
+    min-height: 44px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+.studio-btn:hover { background: var(--primary-color-light, #FFB84D); transform: translateY(-1px); }
+
+.studio-link { color: var(--primary-color); font-size: 0.9rem; }
+
+/* ---- Live ---- */
+.studio-live-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-md); }
+
+.studio-facade {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 165, 0, 0.2);
+    background:
+        radial-gradient(circle at 25% 20%, rgba(255, 165, 0, 0.18), transparent 55%),
+        radial-gradient(circle at 80% 85%, rgba(100, 65, 165, 0.25), transparent 60%),
+        rgba(10, 10, 14, 0.85);
+    /* Phones: a height floor only. aspect-ratio + min-height together forced a 356px
+       minimum WIDTH (200 x 16/9) and pushed the card past the panel edge at 390px. */
+    min-height: 220px;
+}
+.studio-facade[data-live="youtube"] {
+    background:
+        radial-gradient(circle at 25% 20%, rgba(255, 165, 0, 0.18), transparent 55%),
+        radial-gradient(circle at 80% 85%, rgba(200, 30, 30, 0.22), transparent 60%),
+        rgba(10, 10, 14, 0.85);
+}
+.studio-facade-body {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    text-align: center;
+}
+.studio-facade-body[hidden] { display: none; }
+.studio-facade-title { margin: 0; font-weight: 600; word-break: break-word; }
+.studio-facade-badge {
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 0.2rem 0.6rem; border-radius: 999px; color: #fff;
+}
+.studio-badge-twitch { background: #6441a5; }
+.studio-badge-youtube { background: #c4302b; }
+
+.studio-facade.is-loaded { aspect-ratio: auto; min-height: 0; background: #000; }
+.studio-embed { display: grid; grid-template-columns: 1fr; gap: 2px; }
+.studio-embed iframe { display: block; width: 100%; border: 0; background: #000; }
+.studio-embed .studio-frame-player { aspect-ratio: 16 / 9; height: auto; }
+.studio-embed .studio-frame-chat { height: 420px; }
+
+/* ---- Videos & Shorts ---- */
+.studio-topics { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
+.studio-count { color: var(--text-color-dim); font-size: 0.85rem; margin: 0; }
+.studio-empty { color: var(--text-color-muted); margin: var(--spacing-sm) 0 0; }
+
+.studio-grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: var(--spacing-md);
+}
+.studio-grid-shorts { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+.studio-card {
+    display: flex; flex-direction: column;
+    height: 100%;
+    color: var(--text-color);
+    text-decoration: none;
+    background: var(--card-bg, rgba(30, 30, 30, 0.5));
+    border: 1px solid rgba(255, 165, 0, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+.studio-card:hover { border-color: var(--primary-color); background: var(--card-bg-hover, rgba(30, 30, 30, 0.7)); transform: translateY(-2px); }
+.studio-thumb {
+    display: block; width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: rgba(255, 165, 0, 0.08);
+}
+.studio-grid-shorts .studio-thumb { aspect-ratio: 9 / 16; }
+.studio-card-body { padding: 0.6rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.studio-card-title { font-weight: 600; font-size: 0.95rem; line-height: 1.35; }
+.studio-card-meta { color: var(--text-color-dim); font-size: 0.8rem; }
+
+/* ---- Community ---- */
+.studio-discord {
+    display: flex; flex-direction: column; gap: var(--spacing-sm);
+    align-items: flex-start;
+    padding: var(--spacing-md);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(88, 101, 242, 0.28), rgba(30, 30, 30, 0.5));
+    border: 1px solid rgba(88, 101, 242, 0.45);
+    margin-bottom: var(--spacing-md);
+}
+.studio-discord-title { font-weight: 700; font-size: 1.05rem; margin: 0 0 0.2rem; }
+
+.studio-channels {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    gap: var(--spacing-sm);
+}
+.studio-channel {
+    display: flex; flex-direction: column; gap: 0.15rem;
+    padding: 0.6rem 0.8rem;
+    min-height: 44px;
+    border-radius: var(--border-radius-sm, 8px);
+    background: rgba(30, 30, 30, 0.6);
+    border: 1px solid rgba(255, 165, 0, 0.12);
+    color: var(--text-color);
+    text-decoration: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+a.studio-channel:hover { border-color: var(--primary-color); background: var(--hover-bg); }
+.studio-channel-name { font-weight: 600; }
+.studio-channel-handle { color: var(--text-color-dim); font-size: 0.85rem; word-break: break-all; }
+.studio-channel.is-soon { opacity: 0.6; }
+
+/* ---- Schedule ---- */
+.studio-schedule { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--spacing-sm); }
+.studio-slot {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 0.2rem var(--spacing-sm);
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--border-radius-sm, 8px);
+    background: rgba(30, 30, 30, 0.6);
+    border-left: 3px solid var(--primary-color);
+}
+.studio-slot-when { color: var(--primary-color); font-weight: 600; }
+.studio-slot-what { color: var(--text-color); }
+.studio-slot-where { grid-column: 2; color: var(--text-color-dim); font-size: 0.85rem; }
+.studio-updated { color: var(--text-color-dim); font-size: 0.8rem; margin: var(--spacing-md) 0 0; }
+
+/* ---- Wider screens ---- */
+@media (min-width: 720px) {
+    .studio-facade { aspect-ratio: 16 / 9; min-height: 0; }
+    .studio-block { padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg); }
+    .studio-discord { flex-direction: row; align-items: center; justify-content: space-between; }
+}
+@media (min-width: 1000px) {
+    .studio-live-grid { grid-template-columns: 1fr 1fr; }
+    .studio-facade.is-loaded[data-live="twitch"] { grid-column: 1 / -1; }
+    .studio-facade.is-loaded[data-live="twitch"] .studio-embed { grid-template-columns: 1fr 340px; }
+    .studio-facade.is-loaded[data-live="twitch"] .studio-frame-chat { height: 100%; min-height: 360px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .studio-scroll { scroll-behavior: auto; }
+    .studio-section *,
+    .studio-section *::before,
+    .studio-section *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+    .studio-card:hover,
+    .studio-btn:hover { transform: none; }
+}

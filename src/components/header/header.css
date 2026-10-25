@@ -160,7 +160,9 @@
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: var(--spacing-xl);
+    /* Was --spacing-xl (3rem). With Studio added (7 links) 3rem wrapped Contact onto a
+       second row inside the 900px header at every desktop width; 2rem keeps one row. */
+    gap: var(--spacing-lg);
     margin: 0;
     padding: 0;
 }

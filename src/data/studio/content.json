@@ -1,0 +1,14 @@
+{
+  "$comment": "Studio page data. Helm's Studio tab writes this file; it can also be edited by hand. items[] stays EMPTY until real posts are approved. Schema: items[] = {platform: youtube|twitch|tiktok|instagram|odysee|discord, id, title, topic: uu-devlog|ai-helm-owls|gaming-modding|drone-hardware, date: YYYY-MM-DD, thumb: https URL or empty (YouTube derives it from id), url: https link, kind: video|short|post}. channels[]: one row per account (many per platform are fine); an empty url renders as 'coming soon'. schedule[]: {day, time (24h), tz (IANA, e.g. Europe/Riga), title, platform}. Example item: {\"platform\":\"youtube\",\"id\":\"VIDEO_ID_11\",\"title\":\"UU devlog #1\",\"topic\":\"uu-devlog\",\"date\":\"2026-10-25\",\"thumb\":\"\",\"url\":\"https://www.youtube.com/watch?v=VIDEO_ID_11\",\"kind\":\"video\"}",
+  "updated": "2026-10-25",
+  "channels": [
+    { "platform": "youtube", "label": "YouTube", "handle": "@hoot_works_entertainment", "url": "https://www.youtube.com/@hoot_works_entertainment", "channelId": "UC0hmWKIk87Ml9mZmmBATL6A" },
+    { "platform": "twitch", "label": "Twitch", "handle": "hoot_works_entertainment", "url": "https://www.twitch.tv/hoot_works_entertainment" },
+    { "platform": "discord", "label": "Discord", "handle": "Hoot Works", "url": "https://discord.gg/UaWrbXkfTK" },
+    { "platform": "tiktok", "label": "TikTok", "handle": "", "url": "" },
+    { "platform": "instagram", "label": "Instagram", "handle": "", "url": "" },
+    { "platform": "odysee", "label": "Odysee", "handle": "", "url": "" }
+  ],
+  "schedule": [],
+  "items": []
+}

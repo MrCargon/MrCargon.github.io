@@ -15,7 +15,7 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-b093da12cc29';
+const CACHE_NAME = 'mrcargon-hub-ccbb880c0f50';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 
 self.addEventListener('install', (event) => {
@@ -59,7 +59,11 @@ self.addEventListener('fetch', (event) => {
     // Code is small and correctness matters, so it goes to the network first and falls
     // back to cache offline. Textures and images are large and effectively immutable,
     // so they stay cache-first and the load budget is unaffected.
-    const isCode = /\.(?:js|css|html)$/i.test(url.pathname) || req.mode === 'navigate';
+    // src/data/ holds small DATA files rewritten between deploys (studio/content.json is
+    // written by Helm), so they are treated like code: network first, cache offline.
+    // Large immutable JSON (src/assets/geo) stays cache-first.
+    const isCode = /\.(?:js|css|html)$/i.test(url.pathname) || req.mode === 'navigate' ||
+        url.pathname.includes('/src/data/');
 
     if (isCode) {
         event.respondWith(

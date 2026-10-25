@@ -195,6 +195,19 @@ class PageManager {
                 cleanup: () => this.cleanupNotesPage(),
                 preload: false
             },
+            // Hoot Works creator studio. Content comes from src/data/studio/content.json
+            // (written by Helm); live players load only on click (privacy facade).
+            studio: {
+                path: 'src/components/pages/studioPage.html',
+                title: 'Studio - Live, Videos & Community',
+                init: () => {
+                    if (typeof StudioPage !== 'function') { console.warn('StudioPage controller missing'); return; }
+                    this._studioPage = new StudioPage();
+                    return this._studioPage.init();
+                },
+                cleanup: () => { if (this._studioPage) { this._studioPage.cleanup(); this._studioPage = null; } },
+                preload: false
+            },
             contact: {
                 path: 'src/components/pages/contactPage.html',
                 title: 'Contact - Get In Touch', 

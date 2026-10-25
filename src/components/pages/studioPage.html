@@ -1,0 +1,92 @@
+<!-- studioPage.html — Hoot Works creator studio: live, videos & shorts, community, schedule.
+     Controller: StudioPage.js. Data: src/data/studio/content.json (written by Helm).
+     PRIVACY: no third-party iframe or image loads until the visitor clicks a "Load" button
+     (the live facades below). Video thumbnails load only once items exist in content.json. -->
+<section class="main-section studio-section" id="studio-section" aria-labelledby="studio-title">
+    <div class="studio-scroll">
+        <header class="studio-head">
+            <h2 id="studio-title" class="section-title">Studio</h2>
+            <p class="studio-sub">Hoot Works Entertainment — devlogs for Unknown Underworld, AI tools, modding and hardware.</p>
+            <nav class="studio-jump" aria-label="Studio sections">
+                <button type="button" class="studio-jump-btn" data-jump="studio-live">Live</button>
+                <button type="button" class="studio-jump-btn" data-jump="studio-videos">Videos</button>
+                <button type="button" class="studio-jump-btn" data-jump="studio-community">Community</button>
+                <button type="button" class="studio-jump-btn" data-jump="studio-schedule">Schedule</button>
+            </nav>
+        </header>
+
+        <!-- LIVE -->
+        <section class="studio-block" id="studio-live" aria-labelledby="studio-live-title" tabindex="-1">
+            <h3 id="studio-live-title">Live</h3>
+            <p class="studio-note">Players load only when you press a button, so Twitch and YouTube see nothing until then.</p>
+            <div class="studio-live-grid">
+                <div class="studio-facade" data-live="twitch">
+                    <div class="studio-facade-body">
+                        <span class="studio-facade-badge studio-badge-twitch">Twitch</span>
+                        <p class="studio-facade-title">hoot_works_entertainment</p>
+                        <button type="button" class="studio-btn" data-load="twitch">Load Twitch player and chat</button>
+                        <a class="studio-link" href="https://www.twitch.tv/hoot_works_entertainment" target="_blank" rel="noopener noreferrer">Open on Twitch<span class="visually-hidden"> (opens in a new tab)</span></a>
+                    </div>
+                </div>
+                <div class="studio-facade" data-live="youtube">
+                    <div class="studio-facade-body">
+                        <span class="studio-facade-badge studio-badge-youtube">YouTube</span>
+                        <p class="studio-facade-title">@hoot_works_entertainment</p>
+                        <button type="button" class="studio-btn" data-load="youtube">Load YouTube live player</button>
+                        <a class="studio-link" href="https://www.youtube.com/@hoot_works_entertainment/live" target="_blank" rel="noopener noreferrer">Open on YouTube<span class="visually-hidden"> (opens in a new tab)</span></a>
+                    </div>
+                </div>
+            </div>
+            <p class="visually-hidden" id="studio-live-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <!-- VIDEOS & SHORTS -->
+        <section class="studio-block" id="studio-videos" aria-labelledby="studio-videos-title" tabindex="-1">
+            <h3 id="studio-videos-title">Videos &amp; Shorts</h3>
+            <div class="studio-topics" role="group" aria-label="Filter by topic">
+                <button type="button" class="studio-chip" data-topic="all" aria-pressed="true">All</button>
+                <button type="button" class="studio-chip" data-topic="uu-devlog" aria-pressed="false">UU devlog</button>
+                <button type="button" class="studio-chip" data-topic="ai-helm-owls" aria-pressed="false">AI · Helm · Owls</button>
+                <button type="button" class="studio-chip" data-topic="gaming-modding" aria-pressed="false">Gaming &amp; modding</button>
+                <button type="button" class="studio-chip" data-topic="drone-hardware" aria-pressed="false">Drone &amp; hardware</button>
+            </div>
+            <p class="studio-count" id="studio-count" role="status" aria-live="polite">Loading…</p>
+            <div id="studio-groups">
+                <div class="studio-group" data-kind="video" hidden>
+                    <h4>Videos</h4>
+                    <ul class="studio-grid" role="list"></ul>
+                </div>
+                <div class="studio-group" data-kind="short" hidden>
+                    <h4>Shorts</h4>
+                    <ul class="studio-grid studio-grid-shorts" role="list"></ul>
+                </div>
+                <div class="studio-group" data-kind="post" hidden>
+                    <h4>Posts</h4>
+                    <ul class="studio-grid" role="list"></ul>
+                </div>
+            </div>
+            <p class="studio-empty" id="studio-empty" hidden>Nothing here yet — the first uploads are on the way. Join the Discord to hear first.</p>
+        </section>
+
+        <!-- COMMUNITY -->
+        <section class="studio-block" id="studio-community" aria-labelledby="studio-community-title" tabindex="-1">
+            <h3 id="studio-community-title">Community</h3>
+            <div class="studio-discord">
+                <div>
+                    <p class="studio-discord-title">Hoot Works on Discord</p>
+                    <p class="studio-note">Devlog drops, playtests, voice nights and the owls.</p>
+                </div>
+                <a class="studio-btn" href="https://discord.gg/UaWrbXkfTK" target="_blank" rel="noopener noreferrer">Join the Discord<span class="visually-hidden"> (opens in a new tab)</span></a>
+            </div>
+            <ul class="studio-channels" id="studio-channels" role="list" aria-label="All platforms"></ul>
+        </section>
+
+        <!-- SCHEDULE -->
+        <section class="studio-block" id="studio-schedule" aria-labelledby="studio-schedule-title" tabindex="-1">
+            <h3 id="studio-schedule-title">Schedule</h3>
+            <ul class="studio-schedule" id="studio-schedule-list" role="list"></ul>
+            <p class="studio-empty" id="studio-schedule-empty" hidden>No streams scheduled right now. Follow on Twitch or Discord to get notified.</p>
+            <p class="studio-updated" id="studio-updated"></p>
+        </section>
+    </div>
+</section>

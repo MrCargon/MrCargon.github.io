@@ -1,7 +1,7 @@
 <!-- studioPage.html — Hoot Works creator studio: live, videos & shorts, community, schedule.
      Controller: StudioPage.js. Data: src/data/studio/content.json (written by Helm).
-     PRIVACY: no third-party iframe or image loads until the visitor clicks a "Load" button
-     (the live facades below). Video thumbnails load only once items exist in content.json. -->
+     PRIVACY: no third-party iframe or image loads until the visitor presses a button:
+     "Load ..." for the live players, "Show thumbnails" for video thumbnails. -->
 <section class="main-section studio-section" id="studio-section" aria-labelledby="studio-title">
     <div class="studio-scroll">
         <header class="studio-head">
@@ -18,7 +18,7 @@
         <!-- LIVE -->
         <section class="studio-block" id="studio-live" aria-labelledby="studio-live-title" tabindex="-1">
             <h3 id="studio-live-title">Live</h3>
-            <p class="studio-note">Players load only when you press a button, so Twitch and YouTube see nothing until then.</p>
+            <p class="studio-note">Nothing from Twitch or YouTube loads until you press a button — players, chat and thumbnails alike. Once loaded, those players run their own cookies, ads and trackers.</p>
             <div class="studio-live-grid">
                 <div class="studio-facade" data-live="twitch">
                     <div class="studio-facade-body">
@@ -50,7 +50,10 @@
                 <button type="button" class="studio-chip" data-topic="gaming-modding" aria-pressed="false">Gaming &amp; modding</button>
                 <button type="button" class="studio-chip" data-topic="drone-hardware" aria-pressed="false">Drone &amp; hardware</button>
             </div>
-            <p class="studio-count" id="studio-count" role="status" aria-live="polite">Loading…</p>
+            <div class="studio-videos-bar">
+                <p class="studio-count" id="studio-count" role="status" aria-live="polite">Loading…</p>
+                <button type="button" class="studio-chip" id="studio-thumbs-toggle" aria-pressed="false" hidden>Show thumbnails</button>
+            </div>
             <div id="studio-groups">
                 <div class="studio-group" data-kind="video" hidden>
                     <h4>Videos</h4>

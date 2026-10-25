@@ -30,7 +30,15 @@
     white-space: nowrap; border: 0;
 }
 
-.studio-head { margin-bottom: var(--spacing-md); }
+/* Text never sits straight on the 3D scene: the sun passes behind this page and took
+   the dim note text to ~3.1:1. Every text container gets the near-opaque panel colour. */
+.studio-head {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--panel-bg-solid, rgba(20, 20, 20, 0.95));
+    border: 1px solid var(--border-color, rgba(255, 165, 0, 0.3));
+    border-radius: 20px;
+}
 .studio-sub { color: var(--text-color-muted); margin: var(--spacing-md) 0 var(--spacing-sm); line-height: 1.5; }
 
 .studio-jump { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
@@ -63,7 +71,7 @@
 }
 
 .studio-block {
-    background-color: var(--panel-bg);
+    background-color: var(--panel-bg-solid, rgba(20, 20, 20, 0.95));
     border: 1px solid var(--border-color, rgba(255, 165, 0, 0.3));
     border-radius: 20px;
     box-shadow: var(--shadow-medium, none);
@@ -151,7 +159,8 @@
 
 /* ---- Videos & Shorts ---- */
 .studio-topics { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
-.studio-count { color: var(--text-color-dim); font-size: 0.85rem; margin: 0; }
+.studio-videos-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-sm); }
+.studio-count { color: var(--text-color-muted); font-size: 0.85rem; margin: 0; }
 .studio-empty { color: var(--text-color-muted); margin: var(--spacing-sm) 0 0; }
 
 .studio-grid {
@@ -181,6 +190,15 @@
     background: rgba(255, 165, 0, 0.08);
 }
 .studio-grid-shorts .studio-thumb { aspect-ratio: 9 / 16; }
+.studio-thumb-ph {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-color-muted);
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.16), rgba(30, 30, 30, 0.9));
+}
+.studio-ph-youtube { background: linear-gradient(135deg, rgba(196, 48, 43, 0.35), rgba(30, 30, 30, 0.9)); }
+.studio-ph-twitch { background: linear-gradient(135deg, rgba(100, 65, 165, 0.4), rgba(30, 30, 30, 0.9)); }
+.studio-embed-link { display: inline-block; padding: 0.5rem 0.75rem; background: var(--panel-bg-solid, #141414); }
 .studio-card-body { padding: 0.6rem 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .studio-card-title { font-weight: 600; font-size: 0.95rem; line-height: 1.35; }
 .studio-card-meta { color: var(--text-color-dim); font-size: 0.8rem; }
@@ -217,7 +235,10 @@
 a.studio-channel:hover { border-color: var(--primary-color); background: var(--hover-bg); }
 .studio-channel-name { font-weight: 600; }
 .studio-channel-handle { color: var(--text-color-dim); font-size: 0.85rem; word-break: break-all; }
-.studio-channel.is-soon { opacity: 0.6; }
+/* Not-yet-public channels: dashed outline instead of opacity, so the text keeps full
+   contrast (opacity 0.6 on dim text measured ~3.3:1). */
+.studio-channel.is-soon { border-style: dashed; border-color: rgba(255, 255, 255, 0.35); background: transparent; }
+.studio-channel.is-soon .studio-channel-handle { color: var(--text-color-muted); font-style: italic; }
 
 /* ---- Schedule ---- */
 .studio-schedule { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--spacing-sm); }

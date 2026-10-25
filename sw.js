@@ -15,8 +15,10 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-8666313da33c';
+const CACHE_NAME = 'mrcargon-hub-f239792bb9db';
 const CORE_SHELL = ['./', './index.html', './index.css'];
+// How long a /src/data/ request waits on the network before a cached copy answers.
+const DATA_WAIT_MS = 3500;
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -62,8 +64,29 @@ self.addEventListener('fetch', (event) => {
     // src/data/ holds small DATA files rewritten between deploys (studio/content.json is
     // written by Helm), so they are treated like code: network first, cache offline.
     // Large immutable JSON (src/assets/geo) stays cache-first.
-    const isCode = /\.(?:js|css|html)$/i.test(url.pathname) || req.mode === 'navigate' ||
-        url.pathname.includes('/src/data/');
+    const isData = url.pathname.includes('/src/data/');
+    const isCode = /\.(?:js|css|html)$/i.test(url.pathname) || req.mode === 'navigate' || isData;
+
+    // DATA races the network against a timer. Plain network-first waits out the whole
+    // TCP timeout on a bad connection ("lie-fi"), so the page sat on "Loading" for 15 s+.
+    // After DATA_WAIT_MS a cached copy (if any) answers; the network response still lands
+    // in the cache for next time. With no cached copy we keep waiting for the network.
+    if (isData) {
+        event.respondWith(
+            caches.open(CACHE_NAME).then((cache) => {
+                const network = fetch(req).then((res) => {
+                    if (res && res.status === 200) cache.put(req, res.clone());
+                    return res;
+                });
+                const timed = new Promise((resolve) => setTimeout(resolve, DATA_WAIT_MS))
+                    .then(() => cache.match(req))
+                    .then((cached) => cached || network);
+                return Promise.race([network, timed])
+                    .catch(() => cache.match(req).then((cached) => cached || Response.error()));
+            })
+        );
+        return;
+    }
 
     if (isCode) {
         event.respondWith(

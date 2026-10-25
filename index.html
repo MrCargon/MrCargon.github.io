@@ -4,7 +4,8 @@
     <!-- Base html head -->
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <!-- No maximum-scale: pinch-zoom must stay available (WCAG 1.4.4). -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes) used by Explore mode.
              frame-src is set EXPLICITLY. The games are separate repos deployed to their own
              GitHub Pages URLs and embedded here in an iframe, and with no frame-src the
@@ -24,6 +25,16 @@
              Was "MrCargo" — a typo for the name on the domain, the GitHub handle and
              every page of the site. -->
         <title>MrCargon - Portfolio</title>
+
+        <!-- Link previews (Discord, social apps, chat clients). -->
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="MrCargon">
+        <meta property="og:title" content="MrCargon - Portfolio">
+        <meta property="og:description" content="Portfolio of Andrejs K (MrCargon): web development, 3D, game design, and the Hoot Works studio.">
+        <meta property="og:url" content="https://mrcargon.github.io/">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="MrCargon - Portfolio">
+        <meta name="twitter:description" content="Portfolio of Andrejs K (MrCargon): web development, 3D, game design, and the Hoot Works studio.">
 
         <!-- Favicon - Space themed star -->
         <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3CradialGradient id='g' cx='30%25' cy='30%25'%3E%3Cstop offset='0%25' stop-color='%23fff'/%3E%3Cstop offset='100%25' stop-color='%234a90d9'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Ccircle cx='35' cy='40' r='8' fill='%23ffffff40'/%3E%3C/svg%3E">

@@ -69,6 +69,11 @@ def fingerprint():
         h.update(rel.encode("utf-8"))
         with open(p, "rb") as fh:
             body = fh.read()
+        # Line endings are not content: a Windows checkout (core.autocrlf=true)
+        # has CRLF on disk, GitHub and any Linux/CI clone have LF, and Helm's
+        # publish clone writes LF. Hash CRLF as LF so every copy of the same
+        # commit agrees - otherwise each side restamps and sw.js conflicts.
+        body = body.replace(b"\r\n", b"\n")
         # sw.js contains the hash itself, so hashing it whole would never
         # settle. Hash it with the cache-name line removed.
         if rel == "sw.js":

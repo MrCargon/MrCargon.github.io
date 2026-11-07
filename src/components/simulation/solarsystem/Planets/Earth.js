@@ -104,6 +104,11 @@ class Earth extends Planet {
         this.atmosphereLayers = null;
         // Living objects inside the Troposphere shell (hot-air/weather balloons, jets).
         this.troposphereObjects = null;
+        // Real satellites (src/utils/Satellites.js): even the class loads only in Explore.
+        this.satellites = null;
+        this.satsWanted = false;        // saved on/off state; a failed start keeps it
+        this._satsActive = false;       // inside Explore with the layer on
+        this._satsScript = null;
         // User-managed saved map pins (dot/area), persisted to localStorage.
         this.explorePins = null;
     }
@@ -671,6 +676,56 @@ class Earth extends Planet {
     }
 
     /**
+     * Show the satellites, loading their code on first use. Never rejects.
+     * @returns {Promise<boolean>} true when the layer is drawn
+     */
+    async startSatellites() {
+        console.assert(this.mesh, 'Earth.startSatellites: mesh required');
+        console.assert(this.data.radius > 0, 'Earth.startSatellites: bad radius');
+        this.satsWanted = true;
+        this._satsActive = true;
+        try {
+            await this._loadSatellitesScript();
+            // Explore may have ended, or the layer been turned off, during the load.
+            if (!this._satsActive || !this.mesh) return false;
+            if (!this.satellites) this.satellites = new Satellites(this.mesh, this.data.radius);
+            return await this.satellites.start();
+        } catch (err) {
+            console.warn('Earth: satellites unavailable:', err && err.message);
+            return false;
+        }
+    }
+
+    /** @param {boolean} remember - also save the layer as off (the user's button) */
+    hideSatellites(remember) {
+        console.assert(typeof remember === 'boolean', 'Earth.hideSatellites: boolean required');
+        console.assert(this.layers, 'Earth.hideSatellites: earth state required');
+        if (remember) this.satsWanted = false;
+        this._satsActive = false;
+        if (this.satellites) this.satellites.setVisible(false);
+    }
+
+    // Same origin, so CSP script-src 'self' covers it. A failed load may be retried.
+    _loadSatellitesScript() {
+        console.assert(typeof document !== 'undefined', 'Earth._loadSatellitesScript: document required');
+        console.assert(this.data, 'Earth._loadSatellitesScript: data required');
+        if (typeof Satellites !== 'undefined') return Promise.resolve(true);
+        if (!this._satsScript) {
+            this._satsScript = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'src/utils/Satellites.js';
+                s.onload = () => resolve(true);
+                s.onerror = () => {
+                    this._satsScript = null;
+                    reject(new Error('Satellites.js failed to load'));
+                };
+                document.head.appendChild(s);
+            });
+        }
+        return this._satsScript;
+    }
+
+    /**
      * Freeze/unfreeze Earth for explore mode. Frozen => no solar orbit / axis
      * spin (update() skips the motion block), but the day/night shader + marker
      * pulse still refresh so the globe stays lit and the marker findable.
@@ -1191,6 +1246,7 @@ class Earth extends Planet {
         if (this.satelliteTiles) { this.satelliteTiles.dispose(); this.satelliteTiles = null; }
         if (this.atmosphereLayers) { this.atmosphereLayers.dispose(); this.atmosphereLayers = null; }
         if (this.troposphereObjects) { this.troposphereObjects.dispose(); this.troposphereObjects = null; }
+        if (this.satellites) { this.satellites.dispose(); this.satellites = null; }
         if (this.explorePins) { this.explorePins.dispose(); this.explorePins = null; }
         if (this.presencePins) { this.presencePins.dispose(); this.presencePins = null; }
         // clouds.map and moon.map/bumpMap are ResourceLoader-cached — skip

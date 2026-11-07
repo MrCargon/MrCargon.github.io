@@ -2020,6 +2020,7 @@ class SpaceEnvironment {
             iss: !!(L.iss && L.iss.visible),
             quakes: !!(L.quakes && L.quakes.visible),
             pois: !!(L.pois && L.pois.visible),
+            sats: !!earth.satsWanted,
             lod: !!this._lodEnabled,
             detail: Object.assign({}, this._detailLayers)   // sub-layer flags
         };
@@ -2195,6 +2196,15 @@ class SpaceEnvironment {
             earth.startISS();
             earth.setLayerVisible('iss', true);
         }
+        // Satellites: on by default, except low-end, phones and data-saver users, who can
+        // still turn the layer on from the panel. The tier alone rates most phones MEDIUM.
+        const conn = navigator.connection;
+        const touchOnly = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        const satsDefault = this.determinePerformanceTier() !== 'LOW' && !touchOnly
+            && !(conn && conn.saveData) && !(navigator.deviceMemory < 4);
+        if (saved.sats === undefined ? satsDefault : saved.sats) {
+            earth.startSatellites().then(() => this._syncExploreToggleButtons());
+        }
         // Zoom level-of-detail auto-reveal: default ON; if persisted off, suppress.
         this._lodEnabled = want('lod');
         this._applyLodState(earth, this._lodEnabled);
@@ -2311,6 +2321,8 @@ class SpaceEnvironment {
             if (earth.atmosphereLayers && typeof earth.atmosphereLayers.cascadeOut === 'function') {
                 earth.atmosphereLayers.cascadeOut();   // retract the shells (outer→inner)
             }
+            // Satellites stop with their layer; update() only runs inside Explore.
+            earth.hideSatellites(false);
             // Hide the living troposphere objects — their update() (which owns their
             // band-driven visibility) stops on exit, so without this they'd freeze
             // visible and ride the globe back into solar-system view.
@@ -2543,7 +2555,7 @@ class SpaceEnvironment {
         // precision so the hugging overlays don't z-fight. Restored on exit.
         const surfDist = Math.max(dist - radius, 0.0008);
         const near = Math.max(0.0006, surfDist * 0.3);   // 0.3 (not 0.5) so close streets aren't clipped
-        const far = dist + radius * 6;
+        const far = dist + radius * 7;      // past the geostationary shell (6.6R)
         // Narrow the FOV as the camera approaches the surface (60° far → ~26° at street
         // level). Wide-FOV perspective up close projects the tangent tile-patch with a
         // strong vertical bias (the map slid to the bottom of the screen); a telephoto,
@@ -2634,6 +2646,7 @@ class SpaceEnvironment {
         if (earth.troposphereObjects && typeof earth.troposphereObjects.update === 'function') {
             earth.troposphereObjects.update(rr);
         }
+        if (earth.satellites) earth.satellites.update();
         // Distance-scale the user pin markers so they hold ~constant screen size.
         if (earth.explorePins && typeof earth.explorePins.update === 'function') {
             earth.explorePins.update(rr);
@@ -2927,6 +2940,8 @@ class SpaceEnvironment {
             if (iss) iss.addEventListener('click', () => this._toggleDataLayer('iss', iss));
             if (quakes) quakes.addEventListener('click', () => this._toggleDataLayer('quakes', quakes));
             if (places) places.addEventListener('click', () => this._toggleDataLayer('pois', places));
+            const sats = document.getElementById('explore-toggle-sats');
+            if (sats) sats.addEventListener('click', () => this._toggleSatellites(sats));
             if (lod) lod.addEventListener('click', () => this._toggleLodLayer(lod));
             const presenceToggle = document.getElementById('explore-toggle-presence');
             const shareLoc = document.getElementById('explore-share-location');
@@ -3597,6 +3612,25 @@ class SpaceEnvironment {
     }
 
     /**
+     * Toggle the satellite layer. Separate from _toggleDataLayer: this layer may not be
+     * loaded yet (its default is off on some devices), so turning it on has to start it.
+     * Rule 5: 2 asserts.
+     * @param {HTMLElement} btn
+     * @returns {boolean}
+     */
+    _toggleSatellites(btn) {
+        console.assert(btn === null || btn.nodeType === 1, '_toggleSatellites: bad btn');
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_toggleSatellites: bad earth');
+        if (!earth) return false;
+        if (earth.satellites && earth.satellites.visible) earth.hideSatellites(true);
+        else earth.startSatellites().then(() => this._syncExploreToggleButtons());
+        this._syncExploreToggleButtons();
+        this._writeExploreLayerState();
+        return true;
+    }
+
+    /**
      * Toggle zoom level-of-detail auto-reveal (states/cities/districts). When turned
      * off, stops auto-reveal and hides all tiers; when on, resumes auto-reveal.
      * No-ops if geoLOD is absent. Rule 5: 2 asserts.
@@ -3827,6 +3861,7 @@ class SpaceEnvironment {
         set('explore-toggle-iss', L.iss && L.iss.visible);
         set('explore-toggle-quakes', L.quakes && L.quakes.visible);
         set('explore-toggle-places', L.pois && L.pois.visible);
+        set('explore-toggle-sats', earth.satellites && earth.satellites.visible);
         set('explore-toggle-lod', this._lodEnabled);
         return true;
     }

@@ -57,6 +57,14 @@ class Earth extends Planet {
 
         this.atmosphereMesh = null;
         this.cloudsMesh = null;
+        // Explore-only surface detail (see setExploreDetail). Nothing loads before that.
+        this._exploreDetailOn = false;
+        this._cloudShadowsAllowed = false;
+        this._cloudCut = { value: 0 };      // 0 = shell as it always was, 1 = real clouds
+        this._dayLow = null;
+        this._dayHigh = null;
+        this._sunLocal = new THREE.Vector3(1, 0, 0);
+        this._invRotation = new THREE.Matrix3();
         // Orbit state (also set in buildSurface; Planet.updatePosition reads .angle).
         this.orbit = { angle: Math.random() * Math.PI * 2 };
 
@@ -236,6 +244,13 @@ class Earth extends Planet {
                 bumpTexture: { value: bumpMap || dayMap },
                 hasBump: { value: useBump ? 1.0 : 0.0 },
                 sunDirection: { value: this._sunDir },
+                // Cloud shadows: strength 0 skips the whole block in the shader, so the
+                // solar-system view pays nothing until Explore turns them on.
+                cloudMap: { value: null },
+                uCloudShadow: { value: 0.0 },
+                uCloudU: { value: 0.0 },
+                uCloudHeight: { value: 0.05 / this.data.radius },
+                uSunLocal: { value: this._sunLocal },
                 uSurfaceDim: { value: 1.0 }   // dimmed at close zoom so the low-res base
                                               // doesn't show as a blurry "old picture"
                                               // around the satellite tiles
@@ -249,6 +264,7 @@ class Earth extends Planet {
             material.extensions.derivatives = true;
         }
 
+        this._dayLow = dayMap;
         this.mesh = new THREE.Mesh(geometry, material);
         // Preserve axial tilt + orbit phase from the Vite migration.
         this.mesh.rotation.x = THREE.MathUtils.degToRad(this.data.axialTilt || 0);
@@ -311,6 +327,11 @@ class Earth extends Planet {
             'uniform float hasBump;',
             'uniform vec3 sunDirection;',
             'uniform float uSurfaceDim;',
+            'uniform sampler2D cloudMap;',
+            'uniform float uCloudShadow;',
+            'uniform float uCloudU;',
+            'uniform float uCloudHeight;',
+            'uniform vec3 uSunLocal;',
             'varying vec2 vUv;',
             'varying vec3 vWorldNormal;',
             'varying vec3 vPosition;',
@@ -322,7 +343,8 @@ class Earth extends Planet {
             // Lighting uses the bumped normal so relief shades; terminator/spec use
             // the geometric sunFactor so the day/night split stays clean.
             '  float bumpDiffuse = max(dot(bumpNormal, sunDir), 0.0);',
-            '  float dayMix = smoothstep(-0.08, 0.08, sunFactor);',
+            '  float dayMix = smoothstep(-0.08, 0.08, sunFactor);'
+        ]).concat(this.getCloudShadowBlock()).concat([
             '  vec3 dayColor = texture2D(dayTexture, vUv).rgb;',
             '  vec3 nightColor = texture2D(nightTexture, vUv).rgb;',
             // G4: tone-mapped city lights + small bluish earthshine floor.
@@ -330,7 +352,7 @@ class Earth extends Planet {
             '  cityLights = cityLights / (cityLights + vec3(0.5));',
             '  vec3 nightSide = cityLights + vec3(0.005, 0.008, 0.015);',
             '  float diffuse = max(sunFactor, 0.0);',
-            '  vec3 litDay = dayColor * (0.35 + 0.75 * bumpDiffuse);',
+            '  vec3 litDay = dayColor * (0.35 + 0.75 * bumpDiffuse * cloudShade);',
             '  vec3 baseColor = mix(nightSide, litDay, dayMix);',
             // G3: specular only where the sun actually hits, only with a spec map.
             '  vec3 viewDir = normalize(cameraPosition - vPosition);',
@@ -338,13 +360,130 @@ class Earth extends Planet {
             '  float spec = pow(max(dot(viewDir, reflectDir), 0.0), 20.0);',
             '  float specMask = mix(0.0, texture2D(specularMap, vUv).r, hasSpecular);',
             '  float sunGate = step(0.0, sunFactor) * diffuse;',
-            '  vec3 specColor = vec3(1.0) * spec * specMask * sunGate * 0.6;',
+            '  vec3 specColor = vec3(1.0) * spec * specMask * sunGate * 0.6 * cloudShade;',
             // uSurfaceDim darkens the base globe at close zoom (1.0 far → ~0.22 close)
             // so where the satellite tiles have not loaded/reached, the low-res base
             // reads as a neutral dark surface instead of a blurry "old picture".
             '  gl_FragColor = vec4((baseColor + specColor) * uSurfaceDim, 1.0);',
             '}'
         ]).join('\n');
+    }
+
+    // Cloud shadows. A surface point is shaded by the cloud that sits between it and the
+    // sun: walk along the sun direction up to the cloud shell, in this point's east/north
+    // frame (globe-local, the same space as the UVs), and read the cloud map there. The
+    // shift is added to vUv rather than solved with atan, so there is no seam at the
+    // date line. The cloud map is white cloud on blue, so its red channel is the cover.
+    // Only the direct sun term is dimmed: ambient stays, as in a real shadow.
+    getCloudShadowBlock() {
+        return [
+            '  float cloudShade = 1.0;',
+            '  if (uCloudShadow > 0.001) {',
+            '    float phi = vUv.x * 6.2831853;',
+            '    float theta = (1.0 - vUv.y) * 3.1415927;',
+            '    float sP = sin(phi);',
+            '    float cP = cos(phi);',
+            '    float sT = sin(theta);',
+            '    float cT = cos(theta);',
+            '    vec3 up = vec3(-cP * sT, cT, sP * sT);',
+            '    vec3 east = vec3(sP, 0.0, cP);',
+            '    vec3 north = vec3(cP * cT, sT, -sP * cT);',
+            '    float climb = uCloudHeight / max(dot(up, uSunLocal), 0.2);',
+            '    vec2 shift = climb * vec2(dot(uSunLocal, east) / (6.2831853 * max(sT, 0.15)),',
+            '                              dot(uSunLocal, north) / 3.1415927);',
+            '    float cover = texture2D(cloudMap, vUv + shift + vec2(uCloudU, 0.0), 1.5).r;',
+            '    cloudShade = 1.0 - uCloudShadow * 0.6 * smoothstep(0.35, 0.9, cover);',
+            '  }'
+        ];
+    }
+
+    // The cloud map has no alpha: it is white cloud on a blue sheet, so at opacity 0.8 the
+    // shell paints the whole globe turquoise and hides the day map. With the cut on, the
+    // blue goes clear and only white cloud remains, which is what lets the 4k map and the
+    // shadows show. Off by default, so the solar-system view looks exactly as before.
+    _addCloudCut(material) {
+        console.assert(material && material.isMaterial, 'Earth._addCloudCut: material required');
+        console.assert(this._cloudCut, 'Earth._addCloudCut: uniform required');
+        material.onBeforeCompile = (shader) => {
+            shader.uniforms.uCloudCut = this._cloudCut;
+            shader.fragmentShader = shader.fragmentShader
+                .replace('#include <common>', 'uniform float uCloudCut;\n#include <common>')
+                .replace('#include <map_fragment>', [
+                    '#include <map_fragment>',
+                    'float cloudCover = smoothstep(0.35, 0.9, diffuseColor.r);',
+                    'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.97), uCloudCut);',
+                    'diffuseColor.a *= mix(1.0, cloudCover, uCloudCut);'
+                ].join('\n'));
+        };
+    }
+
+    /**
+     * Turn the Explore-only surface detail on or off. On: cloud shadows are allowed and the
+     * 4k day map starts loading in the background; the 1k map keeps showing until it lands,
+     * and stays if it fails. Off: back to the 1k map, and the 4k copy leaves the GPU (it
+     * re-uploads from the kept image on the next Explore).
+     * @param {boolean} on
+     * @param {{cloudShadows:boolean, highRes:boolean}} [allow] - device gates, from the caller
+     * @returns {boolean} the new state
+     */
+    setExploreDetail(on, allow) {
+        console.assert(typeof on === 'boolean', 'Earth.setExploreDetail: boolean required');
+        console.assert(this.mesh, 'Earth.setExploreDetail: mesh required');
+        const uniforms = this.mesh && this.mesh.material && this.mesh.material.uniforms;
+        if (!uniforms) return false;
+        this._exploreDetailOn = on;
+        this._cloudShadowsAllowed = !!(on && allow && allow.cloudShadows);
+        if (!this._cloudShadowsAllowed) uniforms.uCloudShadow.value = 0;
+        this._cloudCut.value = on ? 1 : 0;       // costs nothing, so every device gets it
+        if (on) {
+            if (allow && allow.highRes) this._useHighResDay();
+        } else {
+            uniforms.dayTexture.value = this._dayLow;
+            if (this._dayHigh) this._dayHigh.dispose();
+        }
+        return on;
+    }
+
+    // Load (once) and swap in the 4k day map. Never throws: failure leaves the 1k map on.
+    async _useHighResDay() {
+        console.assert(this.resourceLoader, 'Earth._useHighResDay: loader required');
+        console.assert(this._dayLow, 'Earth._useHighResDay: low-res map required');
+        if (!this.data.dayHighResPath) return false;
+        try {
+            const tex = await this.resourceLoader.loadTexture(this.data.dayHighResPath);
+            tex.anisotropy = 8;
+            tex.wrapS = THREE.RepeatWrapping;
+            this._dayHigh = tex;
+            const uniforms = this.mesh && this.mesh.material && this.mesh.material.uniforms;
+            // The user may have left Explore while this was loading.
+            if (uniforms && this._exploreDetailOn) uniforms.dayTexture.value = tex;
+            return true;
+        } catch (err) {
+            console.warn('Earth: 4k day map unavailable, keeping 1k:', err);
+            return false;
+        }
+    }
+
+    /**
+     * Set the cloud shadow strength for this frame (0..1) and refresh what the shader needs:
+     * the sun in globe-local space, and the drift of the cloud shell over the surface.
+     * @param {number} strength
+     * @returns {boolean} true when shadows are drawn
+     */
+    setCloudShadow(strength) {
+        console.assert(Number.isFinite(strength), 'Earth.setCloudShadow: strength required');
+        console.assert(this.mesh, 'Earth.setCloudShadow: mesh required');
+        const uniforms = this.mesh && this.mesh.material && this.mesh.material.uniforms;
+        if (!uniforms || !this.cloudsMesh || !uniforms.cloudMap.value) return false;
+        const value = this._cloudShadowsAllowed ? Math.max(0, Math.min(1, strength)) : 0;
+        uniforms.uCloudShadow.value = value;
+        if (value <= 0) return false;
+        // The globe's matrix is pure rotation here, so its transpose is the inverse.
+        this.mesh.updateWorldMatrix(false, false);
+        this._invRotation.setFromMatrix4(this.mesh.matrixWorld).transpose();
+        this._sunLocal.copy(this._sunDir).applyMatrix3(this._invRotation).normalize();
+        uniforms.uCloudU.value = -this.cloudsMesh.rotation.y / (Math.PI * 2);
+        return true;
     }
 
     async createClouds() {
@@ -362,8 +501,14 @@ class Earth extends Planet {
             opacity: 0.8,
             depthWrite: false
         });
+        this._addCloudCut(cloudsMaterial);
         this.cloudsMesh = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
         this.mesh.add(this.cloudsMesh);
+        // The surface shader reads this map for cloud shadows; the drift offset takes u
+        // past 0..1, so it has to repeat. Harmless for the shell's own 0..1 UVs.
+        cloudsTexture.wrapS = THREE.RepeatWrapping;
+        cloudsTexture.needsUpdate = true;
+        this.mesh.material.uniforms.cloudMap.value = cloudsTexture;
     }
 
     // Glowing additive marker fixed to SF, parented to the Earth mesh so it
@@ -1040,6 +1185,7 @@ class Earth extends Planet {
         if (this.regionHighlight) { Earth.disposeMesh(this.regionHighlight); this.regionHighlight = null; }
         this.regionTiers = {};
         this._hoverRegionKey = null;
+        if (this._dayHigh) { this._dayHigh.dispose(); this._dayHigh = null; }
         if (this.geoLOD) { this.geoLOD.dispose(); this.geoLOD = null; }
         if (this.streetTiles) { this.streetTiles.dispose(); this.streetTiles = null; }
         if (this.satelliteTiles) { this.satelliteTiles.dispose(); this.satelliteTiles = null; }

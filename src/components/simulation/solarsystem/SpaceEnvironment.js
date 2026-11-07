@@ -2107,6 +2107,10 @@ class SpaceEnvironment {
         // name (country→state→county→district→zip, finest loaded tier for the zoom).
         if (typeof earth.buildRegionTiers === 'function') earth.buildRegionTiers();
         if (typeof earth.buildCountryHover === 'function') earth.buildCountryHover();
+        // Cloud shadows + 4k day map: first use is here, never before Explore.
+        if (typeof earth.setExploreDetail === 'function') {
+            earth.setExploreDetail(true, this._exploreDetailAllowed());
+        }
         // Cascade the five atmospheric shells in (Troposphere→Exosphere, staggered).
         if (earth.atmosphereLayers && typeof earth.atmosphereLayers.cascadeIn === 'function') {
             earth.atmosphereLayers.cascadeIn();
@@ -2127,6 +2131,26 @@ class SpaceEnvironment {
         this._updateExploreButton();   // hides the opt-in button while exploring
         console.log('Entered Explore Earth mode');
         return true;
+    }
+
+    /**
+     * Which Explore surface upgrades this device gets. determinePerformanceTier rates most
+     * phones MEDIUM, so touch-only and low-memory devices are excluded here by name. The
+     * 4k map (43 MB on the GPU, ~1 MB to download) also skips data-saver users.
+     * Rule 5: 2 asserts.
+     * @returns {{cloudShadows:boolean, highRes:boolean}}
+     */
+    _exploreDetailAllowed() {
+        console.assert(this.renderer, '_exploreDetailAllowed: renderer required');
+        const tier = this.determinePerformanceTier();
+        console.assert(typeof tier === 'string', '_exploreDetailAllowed: tier required');
+        const conn = navigator.connection;
+        const memory = navigator.deviceMemory;
+        const touchOnly = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        const capable = tier !== 'LOW' && !touchOnly && !(memory && memory < 4);
+        const highRes = capable && !(conn && conn.saveData)
+            && this.renderer.capabilities.maxTextureSize >= 4096;
+        return { cloudShadows: capable, highRes: highRes };
     }
 
     /**
@@ -2266,6 +2290,7 @@ class SpaceEnvironment {
         const earth = this.getEarthObject();
         if (earth) {
             if (typeof earth.setFrozen === 'function') earth.setFrozen(false);
+            if (typeof earth.setExploreDetail === 'function') earth.setExploreDetail(false);
             // Hide overlays + restore clouds that the fly-through may have faded.
             if (earth.graticule) earth.graticule.visible = false;
             if (earth.borders) earth.borders.visible = false;
@@ -2445,6 +2470,7 @@ class SpaceEnvironment {
         const clouds = earth.cloudsMesh;
         if (dist <= hideBelow) {
             clouds.visible = false;
+            earth.setCloudShadow(0);
             return true;
         }
         clouds.visible = true;
@@ -2452,6 +2478,7 @@ class SpaceEnvironment {
         const span = Math.max(fadeStart - hideBelow, 1e-3);
         const k = Math.max(0, Math.min(1, (dist - hideBelow) / span));
         clouds.material.opacity = 0.8 * k;
+        earth.setCloudShadow(k);        // shadows follow the clouds that cast them
         return true;
     }
 

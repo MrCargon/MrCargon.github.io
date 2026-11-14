@@ -2,6 +2,42 @@
 
 > **🚀 An interactive portfolio website featuring a 3D solar system simulation, built with performance optimization following web-adapted "Rules" for reliable development.**
 
+## Engineering case study
+
+What is actually in the code, with the file and function for each point, so any of it can be opened and checked.
+
+### 1. Custom GLSL shaders
+
+- **Earth day/night** - `Earth.getFragmentShader()` in `src/components/simulation/solarsystem/Planets/Earth.js`. Blends a day texture and a night city-lights texture across the terminator with `smoothstep` on the sun angle, tone-maps the city lights, limits specular glint to the sunlit side, and shades bump-map relief using screen-space derivatives (`dFdx`/`dFdy`). The derivative block is left out of the shader when the device can't support it, because on some mobile browsers its mere presence fails the compile and the Earth renders black.
+- **Atmosphere glow** - `Earth.createAtmosphere()`: a slightly larger shell with a rim-glow fragment shader, additive blending, brighter on the sun side.
+- **Sun** - corona and heliosphere `ShaderMaterial`s in `Sun.createCorona()` and `Sun.createHeliosphere()` (`src/components/simulation/solarsystem/Sun.js`).
+- **Artificial life on the GPU** - `src/utils/Lenia.js` runs the Lenia cellular automaton in a fragment shader (`Lenia.FRAG`) over two float render targets in ping-pong (read one, write the other, swap).
+
+### 2. Level of detail and a map-tile engine on the globe
+
+- **`GeoLOD`** (`src/utils/GeoLOD.js`) - states, cities and districts each fade in inside a camera-distance band, with hysteresis (`showBelow` < `hideAbove`) so a tier does not flicker at its edge. One draw call per tier; `update()` walks a pre-built list, so there is no per-frame allocation.
+- **`StreetTiles`** (vector, OpenFreeMap) and **`SatelliteTiles`** (Esri imagery) in `src/utils/`. `zoomForDistance()` picks the zoom from how much ground the camera sees (altitude and field of view), then holds the level inside a 0.25-level deadband. Before that deadband, a camera parked on a level boundary flipped levels 116 times in 200 ticks and re-downloaded the whole tile set each time (measured during development; the numbers are in the code comment).
+- `StreetTiles.update()` does no work when the covering set of tiles has not changed, keeps the old tiles visible until the new set has fully loaded (no blank flash while zooming), and `_abortStale()` cancels in-flight downloads with `AbortController` when the camera has already moved on.
+- Tile memory is bounded: `_evict()` drops the least recently used tiles past a cap and `_disposeMesh()` frees their GPU geometry, material and texture. Failed tiles retry with exponential backoff and full jitter, 30 s up to 5 min (`_scheduleRetry()`).
+
+### 3. Circuit breaker for live data - `SafeFetch`
+
+`SafeFetch.json(url, { ttl, timeout })` in `src/utils/SafeFetch.js`: a per-URL cache with a time-to-live, a request timeout via `AbortController`, and a circuit breaker that stops calling a URL for 60 s after 3 failures in a row. It never throws - it returns the last good value or `null`, so one dead feed cannot blank the globe. Used by `Earth.js` (live ISS position, USGS earthquakes, country shapes) and `GeoLOD.js`.
+
+### 4. A service-worker cache that cannot go stale by mistake
+
+- `sw.js`: code (JS, CSS, HTML, page loads) is network-first with a cache fallback for offline; textures and images are cache-first. The earlier stale-while-revalidate setup served the previous deploy's code on the first reload after every push, which produced bug reports for bugs that were already fixed.
+- `deploy/stamp.py` derives `CACHE_NAME` from a hash of every deployed file (`--write` stamps it into `sw.js`, `--check` exits 1 if it is out of date). Any change gets a new cache name automatically, and a deploy that changes nothing keeps the old one, so visitors' caches are not thrown away for no reason.
+
+### 5. Orbits and frame budget
+
+- `Planet.updatePosition()` in `src/components/simulation/solarsystem/Planets/Planet.js` solves Kepler's equation with Newton-Raphson (up to 4 iterations) and falls back to a circular orbit if the result is not finite.
+- The ambient background scenes are capped at 30 fps, and 20 fps when a content page covers them (`SpaceEnvironment.SCENE_FPS` / `BACKGROUND_FPS` in `SpaceEnvironment.js`), because the difference is not visible and the cost halves.
+
+### Limits, stated plainly
+
+This is an educational visualisation, not a research tool - see [Technical Limitations](src/components/simulation/time/LIMITATIONS.md). three.js r184 is loaded from a CDN through an import map, so the site needs a network connection on first load.
+
 ## ⚡ Quick Start
 
 ```bash

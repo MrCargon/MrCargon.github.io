@@ -314,12 +314,23 @@ PROJECTS PAGE
                                 <!-- Hidden data for modal -->
                                 <div class="project-hidden-data hidden-content">
                                     <p data-description>
-                                        Immersive 3D solar system with accurate planetary orbits, realistic textures, 
-                                        and interactive controls. Features dynamic lighting and camera controls.
+                                        3D solar system in Three.js with hand-written GLSL shaders: an Earth that blends
+                                        daylight and night-side city lights across the terminator, an atmosphere glow and a
+                                        Sun corona. Zoom into Earth and a level-of-detail system fades in states, cities and
+                                        districts, while a tile engine streams street and satellite maps. It picks the zoom
+                                        from what the camera sees, holds it inside a deadband so it does not re-download at
+                                        level edges, keeps its caches bounded and cancels downloads the camera no longer needs.
+                                        Live ISS and earthquake data go through a small fetch wrapper with a cache, a timeout
+                                        and a circuit breaker, so one dead feed cannot break the globe. Orbits solve Kepler's
+                                        equation. The service-worker cache name is a hash of the deployed files, so a new
+                                        deploy reaches returning visitors. Code references: README, Engineering case study.
                                     </p>
                                     <div class="project-tags">
                                         <span class="tag">Three.js</span>
                                         <span class="tag">WebGL</span>
+                                        <span class="tag">GLSL Shaders</span>
+                                        <span class="tag">Level of Detail</span>
+                                        <span class="tag">Circuit Breaker</span>
                                         <span class="tag">3D Graphics</span>
                                         <span class="tag">Physics</span>
                                         <span class="tag">Astronomy</span>

@@ -105,9 +105,11 @@ class PageManager {
  // click there does NOT stop direct hash navigation (mrcargon.github.io/#store,
  // bookmarks, shared links), since routing only checked `this.pages[name]`
  // exists, not whether it's meant to be reachable. Checked in navigateToPage().
- // 'contact' re-enabled 2026-08-16 - the form now actually sends somewhere
+ // 'contact' closed again 2026-11-13 (user): no proxyUrl is set, so the form only
+ // opened a mail client - the user wants it closed until a real sender exists.
+ // History: re-enabled 2026-08-16 - the form now actually sends somewhere
  // (see _setupContactForm / DiscordNotify), so the page has real function again.
-        this.disabledPages = new Set(['store']);
+        this.disabledPages = new Set(['store', 'contact']);
 
  // Rule 3: Pre-allocated page configurations
         this.pages = {

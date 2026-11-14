@@ -31,7 +31,7 @@ const SIZES = [
     { name: 'wide', width: 1920, height: 1080 }
 ];
 
-const ROUTES = ['#main', '#projects', '#about', '#contact', '#launcher', '#life', '#particles'];
+const ROUTES = ['#main', '#projects', '#about', '#launcher', '#life', '#particles'];
 
 test.describe.configure({ timeout: 300000 });
 

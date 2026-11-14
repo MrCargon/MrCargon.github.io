@@ -31,7 +31,7 @@ import fs from 'fs';
 test.use({ viewport: { width: 1280, height: 900 } });
 test.describe.configure({ timeout: 300000 });
 
-const PAGES = ['#main', '#projects', '#about', '#contact', '#launcher', '#life', '#particles'];
+const PAGES = ['#main', '#projects', '#about', '#launcher', '#life', '#particles'];
 const SEL = 'button, a[href], input, select, [role="button"], [role="tab"], summary, textarea';
 
 async function instrument(page) {
@@ -312,9 +312,9 @@ test('the back button, hash edits and deep links all navigate', async ({ page })
     expect((await state()).current, 'FORWARD works too').toBe('projects');
 
     // An address-bar edit: same document, new hash.
-    await page.goto('/#contact');
+    await page.goto('/#about');
     await page.waitForTimeout(2500);
-    expect((await state()).current, 'editing the hash navigates').toBe('contact');
+    expect((await state()).current, 'editing the hash navigates').toBe('about');
 
     // A hash set from script, which is what an un-intercepted in-page link does.
     await page.evaluate(() => { location.hash = '#life'; });

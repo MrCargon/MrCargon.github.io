@@ -16,10 +16,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Page Navigation', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to home page before each test
-    await page.goto('/');
-
-    // Wait for page to be ready
-    await page.waitForLoadState('networkidle');
+    // 'load' and 'networkidle' never settle here (the scene keeps streaming tiles/feeds),
+    // so every test timed out in this hook, on clean origin/main too (measured 2026-11-13).
+    // Wait for the header links instead: they are what these tests use.
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('header nav a', { timeout: 60000 });
   });
 
   test('should load the home page successfully', async ({ page }) => {
@@ -60,18 +61,16 @@ test.describe('Page Navigation', () => {
     expect(page.url()).toContain('#projects');
   });
 
-  test('should navigate to Contact page', async ({ page }) => {
-    // Click Contact link
-    await page.click('a[href="#contact"]');
-
-    // Wait for navigation
-    await page.waitForURL(/#contact$/);
-
-    // Verify Contact page content
-    const contactContent = page.locator('#page-container');
-    await expect(contactContent).toBeVisible();
-
-    expect(page.url()).toContain('#contact');
+  test('closed pages (store, contact) are not in the nav and redirect to About', async ({ page }) => {
+    // Closed 2026-11-13 (user): the shop is closed and the contact form has no sender.
+    await expect(page.locator('.main-nav a[href="#store"]')).toHaveCount(0);
+    await expect(page.locator('.main-nav a[href="#contact"]')).toHaveCount(0);
+    // The router shows About but leaves the typed hash in the address bar, so check the page shown.
+    for (const h of ['#store', '#contact']) {
+      await page.goto('/' + h, { waitUntil: 'domcontentloaded' });
+      await expect.poll(() => page.evaluate(() => window.pageManager?.currentPage), { timeout: 30000 }).toBe('about');
+      await expect(page.locator('#contact-form, .contact-form')).toHaveCount(0);
+    }
   });
 
   test('should handle browser back button', async ({ page }) => {
@@ -106,7 +105,7 @@ test.describe('Page Navigation', () => {
     await expect(homeLink).toBeVisible();
     await expect(aboutLink).toBeVisible();
     await expect(projectsLink).toBeVisible();
-    await expect(contactLink).toBeVisible();
+    await expect(contactLink).toHaveCount(0); // closed 2026-11-13 (user)
   });
 });
 

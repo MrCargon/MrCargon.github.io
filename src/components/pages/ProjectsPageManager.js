@@ -1139,8 +1139,7 @@ class ProjectsPageManager {
             'barista-game': '#', // Game launches in modal, no separate demo
             'portfolio-site': window.location.origin, // Current portfolio site
             'solar-system': '#', // Solar system is part of main page
-            'space-explorer': '#', // Would be external game
-            'data-viz': '#' // Would be external demo
+            'unknown-underworld': '#' // private repo while in development, no public demo
         };
         
         const demoUrl = demoUrls[project];
@@ -1183,8 +1182,7 @@ class ProjectsPageManager {
             'barista-game': 'https://github.com/MrCargon/game-barista',
             'portfolio-site': 'https://github.com/MrCargon/MrCargon.github.io',
             'solar-system': 'https://github.com/MrCargon/MrCargon.github.io/tree/main/src/components/simulation',
-            'space-explorer': 'https://github.com/MrCargon/MrCargon.github.io', // Would be separate repo
-            'data-viz': 'https://github.com/MrCargon/MrCargon.github.io' // Would be separate repo
+            'unknown-underworld': 'https://github.com/MrCargon/MrCargon.github.io' // game repo is private; falls back to this site
         };
         
         const repoUrl = repoUrls[project] || 'https://github.com/MrCargon/MrCargon.github.io';

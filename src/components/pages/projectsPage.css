@@ -2404,3 +2404,14 @@ body.game-modal-open {
         linear-gradient(160deg, #0a1420 0%, #05060a 100%);
     min-height: 160px;
 }
+
+/* Unknown Underworld card: a lit cave mouth in CSS, not a stock photo of
+   somebody else's game. Overrides the Life card's colony blobs. */
+.project-image--underworld {
+    background:
+        radial-gradient(ellipse at 50% 85%, rgba(255,183,77,0.55) 0 10%, transparent 30%),
+        radial-gradient(circle at 25% 40%, rgba(120,220,160,0.35) 0 3%, transparent 5%),
+        radial-gradient(circle at 78% 34%, rgba(120,220,160,0.30) 0 2%, transparent 4%),
+        radial-gradient(ellipse at 50% 100%, #2a1d14 0 45%, transparent 46%),
+        linear-gradient(180deg, #05060a 0%, #141018 60%, #1d1510 100%);
+}

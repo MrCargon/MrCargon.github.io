@@ -328,83 +328,49 @@ PROJECTS PAGE
                             </div>
                         </article>
 
-                        <!-- Space Explorer Game -->
-                        <article class="project-card" 
-                                id="space-explorer" 
-                                tabindex="0" 
+                        <!-- Unknown Underworld - the real Godot game (replaced the placeholder
+                             "Space Explorer" and "Interactive Dashboard" cards 2026-11-13: neither
+                             project existed). Private repo, so no code/demo link; no stock photo,
+                             the preview is drawn in CSS like the Life card. -->
+                        <article class="project-card"
+                                id="unknown-underworld"
+                                tabindex="0"
                                 role="gridcell"
                                 data-category="game"
-                                aria-labelledby="space-title">
-                            <div class="project-image">
-                                <img src="https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=200&fit=crop&crop=center" 
-                                    alt="Space exploration game with spacecraft and planets">
-                            </div>
+                                data-featured="true"
+                                aria-labelledby="uu-title">
+                            <div class="project-image project-image--generated project-image--underworld" aria-hidden="true"></div>
                             <div class="project-info">
                                 <div class="project-meta">
-                                    <span class="project-type">Game Development</span>
+                                    <span class="project-type">Multiplayer Game &middot; in development</span>
                                     <span class="project-date">2026</span>
                                 </div>
-                                <h3 id="space-title">Space Explorer</h3>
+                                <h3 id="uu-title">Unknown Underworld</h3>
                                 <div class="project-actions">
-                                    <button class="project-btn primary view-details-btn" 
-                                            data-project="space-explorer"
-                                            aria-describedby="space-title">
+                                    <button class="project-btn primary view-details-btn"
+                                            data-project="unknown-underworld"
+                                            aria-describedby="uu-title">
                                         View Details
                                     </button>
                                 </div>
-                                <!-- Hidden data for modal -->
                                 <div class="project-hidden-data hidden-content">
                                     <p data-description>
-                                        An adventure game where players navigate through space, discover planets, 
-                                        and collect resources. Built with Godot engine and custom physics.
+                                        An online co-op dungeon game in Godot, built server-first: the client never
+                                        decides anything, it talks through a gateway to separate auth and game servers,
+                                        and the game server owns every hit, pickup and enemy move. Enemies do not use an
+                                        aggro radius; each one has a leaky-integrator awareness that builds while it
+                                        senses you and fades when you leave, so it can be calm, hunting or searching the
+                                        last place it saw you, and a pack wakes up one by one instead of in unison.
+                                        Floors are dressed by seeded generator code. Playtest builds run with test bots;
+                                        the source is private while it is in development.
                                     </p>
                                     <div class="project-tags">
                                         <span class="tag">Godot</span>
                                         <span class="tag">GDScript</span>
-                                        <span class="tag">Game Design</span>
-                                        <span class="tag">Physics</span>
+                                        <span class="tag">Authoritative Server</span>
+                                        <span class="tag">Networking</span>
+                                        <span class="tag">Game AI</span>
                                         <span class="tag">Procedural</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-
-                        <!-- Data Visualization Project -->
-                        <article class="project-card" 
-                                id="data-viz" 
-                                tabindex="0" 
-                                role="gridcell"
-                                data-category="web"
-                                aria-labelledby="data-title">
-                            <div class="project-image">
-                                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop&crop=center" 
-                                    alt="Interactive data visualization dashboard with charts and graphs">
-                            </div>
-                            <div class="project-info">
-                                <div class="project-meta">
-                                    <span class="project-type">Data Visualization</span>
-                                    <span class="project-date">2026</span>
-                                </div>
-                                <h3 id="data-title">Interactive Dashboard</h3>
-                                <div class="project-actions">
-                                    <button class="project-btn primary view-details-btn" 
-                                            data-project="data-viz"
-                                            aria-describedby="data-title">
-                                        View Details
-                                    </button>
-                                </div>
-                                <!-- Hidden data for modal -->
-                                <div class="project-hidden-data hidden-content">
-                                    <p data-description>
-                                        Dynamic data visualization platform with real-time charts, filtering capabilities, 
-                                        and responsive design. Processes large datasets efficiently.
-                                    </p>
-                                    <div class="project-tags">
-                                        <span class="tag">D3.js</span>
-                                        <span class="tag">Chart.js</span>
-                                        <span class="tag">Data Analysis</span>
-                                        <span class="tag">Real-time</span>
-                                        <span class="tag">Responsive</span>
                                     </div>
                                 </div>
                             </div>
@@ -426,11 +392,11 @@ PROJECTS PAGE
                                     <span class="project-type">Simulation</span>
                                     <span class="project-date">2026</span>
                                 </div>
-                                <h3 id="life-sim-title">Artificial Life &amp; Conway</h3>
+                                <h3 id="life-sim-title">Artificial Life: Lenia, Conway &amp; Particles</h3>
                                 <div class="project-actions">
                                     <a class="project-btn" href="#life"
                                        aria-describedby="life-sim-title"
-                                       title="Open the Lenia artificial life simulation">
+                                       title="Open the artificial life simulations">
                                         🧬 Open Simulation
                                     </a>
                                     <button class="project-btn secondary view-details-btn"
@@ -441,14 +407,14 @@ PROJECTS PAGE
                                 </div>
                                 <div class="project-hidden-data hidden-content">
                                     <p data-description>
-                                        Lenia — continuous cellular automata running as a GPU shader.
-                                        Organisms with real boundaries emerge from one convolution and a
-                                        growth curve, then spread and self-replicate. No images, no
-                                        textures, no audio files: every pixel and sound is computed at
-                                        runtime. One page, two automata: switch to Conway's discrete
-                                        Game of Life and any of its 262,144 birth/survival rules, or
-                                        stay continuous with Lenia. Zoom, pan, draw cells and edit the
-                                        palette in either mode.
+                                        Three artificial-life simulations on one page, all computed at runtime with
+                                        no images, textures or audio files. Lenia: continuous cellular automata as a
+                                        GPU shader, where organisms with real boundaries emerge from one convolution
+                                        and a growth curve. Conway: the discrete Game of Life and any of its 262,144
+                                        birth/survival rules. Particle Life: no grid at all, just particles that pull
+                                        and push each other by an interaction matrix you can edit, with density
+                                        regulation so clusters stay alive instead of collapsing. Zoom, pan, draw and
+                                        edit the palette in every mode.
                                     </p>
                                     <div class="project-tags">
                                         <span class="tag">WebGL</span>

@@ -559,7 +559,9 @@ class ComponentLoader {
      * Update navigation active state
      */
     static _updateNavigationState() {
-        const currentPage = window.location.hash.substring(1) || 'about';
+        // Bare URL = Home, same default as PageManager's first navigation; 'about'
+        // here lit the About tab while the main page was showing (fixed 2026-11-13).
+        const currentPage = window.location.hash.substring(1) || 'main';
         const navLinks = document.querySelectorAll('.main-nav a, .nav-button');
         
         navLinks.forEach(link => {

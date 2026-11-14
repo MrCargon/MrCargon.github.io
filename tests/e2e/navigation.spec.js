@@ -109,6 +109,14 @@ test.describe('Page Navigation', () => {
   });
 });
 
+test('bare URL highlights Home, not About, in the top bar', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('header nav a');
+  await page.waitForTimeout(3000); // let the header and the router both settle
+  await expect(page.locator('.main-nav a[href="#main"]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.main-nav a[href="#about"]')).not.toHaveAttribute('aria-current', 'page');
+});
+
 test.describe('Page Loading', () => {
   test('should have no console errors on page load', async ({ page }) => {
     const errors = [];

@@ -2304,6 +2304,7 @@ class SpaceEnvironment {
             // Hide overlays + restore clouds that the fly-through may have faded.
             if (earth.graticule) earth.graticule.visible = false;
             if (earth.borders) earth.borders.visible = false;
+            this._exploreZoomDeclutter(earth, Infinity);   // grid opacity, Moon, orbit lines back
             if (earth.cloudsMesh) {
                 earth.cloudsMesh.visible = true;
                 if (earth.cloudsMesh.material) earth.cloudsMesh.material.opacity = 0.8;
@@ -2461,6 +2462,33 @@ class SpaceEnvironment {
     }
 
     /**
+     * Zoom declutter for Explore (audit F10). The graticule is a far/mid-view aid: it
+     * fades out as the camera nears the surface (full at 2R and above, gone by 1.35R).
+     * Only its MATERIAL fades; graticule.visible stays the user's Grid toggle (layer
+     * state and the toggle button read it). The Moon and the planet orbit lines clutter
+     * Earth close-ups, so they are hidden below 4R and restored above it; exit calls this
+     * with rr = Infinity to restore them (orbit lines follow the user's orbit toggle).
+     * Rule 4: <=60 lines | Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _exploreZoomDeclutter(earth, rr) {
+        console.assert(earth && typeof earth === 'object', '_exploreZoomDeclutter: Earth required');
+        console.assert(typeof rr === 'number' && !Number.isNaN(rr), '_exploreZoomDeclutter: distance required');
+        if (!earth) return false;
+        const g = earth.graticule;
+        if (g && g.material) {
+            const k = Math.max(0, Math.min(1, (rr - 1.35) / (2.0 - 1.35)));
+            g.material.opacity = 0.55 * k;
+            g.material.visible = k > 0.01;
+        }
+        const near = rr < 4;
+        if (earth.moonGroup) earth.moonGroup.visible = !near;
+        const ss = this.solarSystem;
+        if (ss && ss.orbitLines) ss.orbitLines.visible = !!ss.showOrbits && !near;
+        return true;
+    }
+
+    /**
      * Cloud fly-through: as the camera nears Earth, fade clouds out so the camera
      * never sits inside an opaque shell; restore on zoom-out. Called per-frame
      * only while exploreMode. Reuses scratch vectors (no per-frame alloc).
@@ -2569,12 +2597,14 @@ class SpaceEnvironment {
             this.camera.near = near; this.camera.far = far; this.camera.fov = fov;
             this.camera.updateProjectionMatrix();
         }
-        // Dim the base globe as the camera approaches (1.0 above 2R → ~0.22 at surface)
+        // Dim the base globe as the camera approaches (1.0 above 2R → 0.5 near the surface)
         // so where the satellite tiles have not loaded/reached, the low-res base reads
-        // as a neutral dark surface instead of a blurry "old picture" on the sides.
+        // as a quieter surface instead of a blurry "old picture" on the sides. Floor 0.5,
+        // not 0.22 (audit F9): the deep dim made the imagery patch edge a hard seam; the
+        // patch edge is now feathered (SatelliteTiles) and blends into this softer base.
         const bm = earth.mesh && earth.mesh.material && earth.mesh.material.uniforms;
         if (bm && bm.uSurfaceDim) {
-            bm.uSurfaceDim.value = Math.max(0.22, Math.min(1.0, (rr - 1.05) / (2.0 - 1.05)));
+            bm.uSurfaceDim.value = Math.max(0.5, Math.min(1.0, (rr - 1.05) / (2.0 - 1.05)));
         }
         // CENTRE-ORBIT (the comfortable, familiar model): a drag SPINS THE GLOBE around
         // its centre — like Google Earth's globe view — rather than tilting the camera
@@ -2633,6 +2663,7 @@ class SpaceEnvironment {
             earth.borders.material.opacity = 0.15 + 0.55 * k;
         }
         if (earth.geoLOD) earth.geoLOD.update(dist / radius);
+        this._exploreZoomDeclutter(earth, rr);
         // Atmosphere shells fade out as the camera zooms close (far/mid-view feature),
         // and their named labels track the limb.
         if (earth.atmosphereLayers && typeof earth.atmosphereLayers.update === 'function') {

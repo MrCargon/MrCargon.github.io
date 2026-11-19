@@ -115,6 +115,18 @@ class SatelliteTiles {
         // Per-frame scratch (Rule: no per-frame allocation in update()).
         this._scratchKeys = [];          // reused covering-tile key list
         this._scratchCands = [];         // reused candidate {key,d} list for sorting
+
+        // FEATHERED PATCH EDGE (audit F9). The covering set is a square of tiles, so its
+        // border was a hard rotated rectangle against the base globe (a visible seam at
+        // 1.8R and a diagonal cut at 1.3R). Every patch material fades its alpha to 0 over
+        // the outer band of the covering square. Shared uniforms (one write per covering-
+        // set change, no per-frame work): uSatFeather = (centre x, centre y, half-width,
+        // feather width) in fetch-zoom tile units; uSatGrid = (columns, fetch zoom). A huge
+        // half-width means "no fade" until the first update() sets it.
+        var hasVec = (typeof THREE !== 'undefined' && THREE.Vector4 && THREE.Vector2);
+        this._feather = hasVec ? { value: new THREE.Vector4(0, 0, 1e9, 0) } : null;
+        this._featherGrid = hasVec ? { value: new THREE.Vector2(1, 0) } : null;
+        this._coverHalf = 0;             // guaranteed covered half-width (tile units), set by _buildCoveringKeys
     }
 
     // ---- Slippy-map helpers: reuse StreetTiles' web-mercator math -----------
@@ -331,6 +343,7 @@ class SatelliteTiles {
         this._lastZ = fetchZ; this._lastCx = cx; this._lastCy = cy; this._lastEffMax = effMax;
         this._effMax = effMax;
         var keys = this._buildCoveringKeys(cx, cy, n, fetchZ, c.x, c.y);
+        this._setFeather(c.x, c.y, n, fetchZ);
         this._desiredKeys.clear();
         for (var dk = 0; dk < keys.length; dk++) this._desiredKeys.add(keys[dk]);
         var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
@@ -389,6 +402,11 @@ class SatelliteTiles {
         var budget = Number.isFinite(this._effMax) ? this._effMax : this.maxVisibleTiles;
         var max = Math.min(count, budget);                        // Rule 2 bounded
         for (var i = 0; i < max; i++) keys.push(cands[i].key);
+        // Guaranteed covered half-width around the look-at: every tile whose centre is
+        // nearer than the first DROPPED candidate is kept, so the square of half-width
+        // (dropD - 0.5) is fully covered. Nothing dropped -> the whole ring is kept.
+        var dropD = (count > max) ? cands[max].d : (ring + 0.5);
+        this._coverHalf = Math.max(0.5, dropD - 0.5);
         return keys;
     }
 
@@ -503,6 +521,7 @@ class SatelliteTiles {
                 // factor so patches on the night hemisphere don't glow over the dark
                 // globe (the base Earth uses a day/night shader). New tiles match.
                 if (material.color) material.color.setScalar(self._lightFactor);
+                self._applyFeather(material, z, x, y);
                 var mesh = new THREE.Mesh(geometry, material);
                 // Start hidden: update()/_touchOrBuild shows it next frame IF the layer
                 // is active and this tile is still covering. Without this, a build that
@@ -574,6 +593,45 @@ class SatelliteTiles {
         texture.generateMipmaps = false;
         if (THREE.LinearFilter) texture.minFilter = THREE.LinearFilter;
         texture.needsUpdate = true;
+        return true;
+    }
+
+    // ---- feathered patch edge (audit F9) ------------------------------------
+
+    // Point the shared feather uniforms at the current covering square: centre = the
+    // (lead-adjusted) look-at the set was chosen around, half = its guaranteed covered
+    // half-width, fade band = about a third of it (0.5..1.5 tiles). No allocation.
+    // Rule 5: 2 asserts.
+    _setFeather(fx, fy, cols, fetchZ) {
+        console.assert(Number.isFinite(fx) && Number.isFinite(fy), '_setFeather: centre required');
+        console.assert(Number.isFinite(cols) && cols > 0, '_setFeather: column count required');
+        if (!this._feather || !this._featherGrid) return false;
+        var half = this._coverHalf;
+        var band = Math.max(0.5, Math.min(1.5, half * 0.35));
+        this._feather.value.set(fx, fy, half, band);
+        this._featherGrid.value.set(cols, fetchZ);
+        return true;
+    }
+
+    // Patch one tile material so its alpha fades over the outer band of the covering
+    // square. The tile's own (x, y, z) is a per-material uniform; a tile from another
+    // zoom (the fallback set while a new level loads) is rescaled by 2^(fetchZ - z) in
+    // the shader, so both levels fade along the same square. One shared program
+    // (customProgramCacheKey). Rule 5: 2 asserts.
+    _applyFeather(material, z, x, y) {
+        console.assert(material && typeof material === 'object', '_applyFeather: material required');
+        console.assert(Number.isFinite(z) && Number.isFinite(x) && Number.isFinite(y), '_applyFeather: zxy required');
+        if (!this._feather || !THREE.Vector3) return false;
+        var feather = this._feather, grid = this._featherGrid;
+        var tile = { value: new THREE.Vector3(x, y, z) };
+        material.onBeforeCompile = function (shader) {
+            shader.uniforms.uSatTile = tile;
+            shader.uniforms.uSatFeather = feather;
+            shader.uniforms.uSatGrid = grid;
+            shader.fragmentShader = 'uniform vec3 uSatTile;\nuniform vec4 uSatFeather;\nuniform vec2 uSatGrid;\n' +
+                shader.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n' + SatelliteTiles.FEATHER_GLSL);
+        };
+        material.customProgramCacheKey = function () { return 'satFeather1'; };
         return true;
     }
 
@@ -738,6 +796,21 @@ class SatelliteTiles {
         return true;
     }
 }
+
+// Fragment snippet for the feathered patch edge: this fragment's position in fetch-zoom
+// tile units (u across, v flipped back to rows N->S), Chebyshev distance to the covering
+// square's centre (x wraps at the antimeridian), alpha ramps 1 -> 0 over the outer band.
+SatelliteTiles.FEATHER_GLSL = [
+    '#ifdef USE_MAP',
+    '{',
+    '    vec2 satT = (uSatTile.xy + vec2(vMapUv.x, 1.0 - vMapUv.y)) * exp2(uSatGrid.y - uSatTile.z);',
+    '    vec2 satD = satT - uSatFeather.xy;',
+    '    satD.x -= uSatGrid.x * floor(satD.x / uSatGrid.x + 0.5);',
+    '    float satC = max(abs(satD.x), abs(satD.y));',
+    '    diffuseColor.a *= 1.0 - smoothstep(uSatFeather.z - uSatFeather.w, uSatFeather.z, satC);',
+    '}',
+    '#endif'
+].join('\n');
 
 // Make globally available (matches StreetTiles / GlobeMath pattern).
 if (typeof window !== 'undefined') {

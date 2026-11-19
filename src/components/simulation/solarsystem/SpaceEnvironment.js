@@ -2874,6 +2874,31 @@ class SpaceEnvironment {
     }
 
     /**
+     * F7 Explore chrome. On: body.explore-active hides the planet bar, its progress
+     * line, the action row and the time panel, and slims the nav and footer to strips
+     * (index.css); on a phone the panel starts as its small handle so the globe is seen
+     * first, unless the visitor already used the handle this visit. Off: all restored.
+     * Rule 5: 2 asserts.
+     * @param {boolean} on
+     * @returns {boolean} on
+     */
+    _applyExploreChrome(on) {
+        console.assert(typeof on === 'boolean', '_applyExploreChrome: boolean required');
+        console.assert(typeof document !== 'undefined' && document.body, '_applyExploreChrome: body required');
+        document.body.classList.toggle('explore-active', on);
+        if (on && !this._epUserToggled && window.innerWidth <= 600) this.toggleExplorePanelCollapsed(true);
+        return on;
+    }
+
+    /** The visitor used the collapse handle: toggle, and keep their choice from now on. */
+    _onExploreCollapseClick() {
+        console.assert(typeof this.toggleExplorePanelCollapsed === 'function', '_onExploreCollapseClick: toggle required');
+        console.assert(typeof document !== 'undefined', '_onExploreCollapseClick: document required');
+        this._epUserToggled = true;
+        return this.toggleExplorePanelCollapsed();
+    }
+
+    /**
      * Remove the window-level explore-panel listeners (move/up/resize) if present.
      * Safe to call when none are attached. Rule 5: 2 asserts.
      * @returns {boolean}
@@ -2952,7 +2977,7 @@ class SpaceEnvironment {
             const exit = document.getElementById('explore-exit');
             if (exit) exit.addEventListener('click', () => this.exitExploreMode());
             const collapse = document.getElementById('explore-collapse');
-            if (collapse) collapse.addEventListener('click', () => this.toggleExplorePanelCollapsed());
+            if (collapse) collapse.addEventListener('click', () => this._onExploreCollapseClick());
             this._wireExploreSections(panel);     // collapsible section headers
             this._wireDetailSubToggles();         // satellite/streets/states/cities/districts
             this._wirePinControls();              // add / editor / list delegation
@@ -2960,6 +2985,7 @@ class SpaceEnvironment {
             this._wireStyleEditor();              // per-layer colour/opacity customiser
             panel.dataset.wired = '1';
         }
+        this._applyExploreChrome(true);
         // Render the saved pin list + sync sub-toggle buttons each time the panel opens.
         const earth = this.getEarthObject();
         if (earth && earth.explorePins) earth.explorePins.setVisible(true);
@@ -3019,26 +3045,69 @@ class SpaceEnvironment {
         console.assert(Number.isFinite(n), '_updatePresenceCount: number required');
         console.assert(typeof document !== 'undefined', '_updatePresenceCount: document required');
         const el = document.getElementById('explore-presence-count');
-        if (el) el.textContent = (n > 0) ? (n + ' online') : '';
+        // The count now sits in the "Live" tab label, so it is a number badge; the
+        // full wording stays available as the tooltip and accessible name.
+        if (el) {
+            el.textContent = (n > 0) ? String(n) : '';
+            el.title = (n > 0) ? (n + ' online') : '';
+            el.setAttribute('aria-label', (n > 0) ? (n + ' online') : '');
+        }
         return true;
     }
 
-    // Wire each section header to collapse/expand its body (aria + data-collapsed).
-    // Rule 5: 2 asserts.
+    // Wire the panel's tab strip (F7: the five stacked sections became one tabbed card).
+    // ARIA tabs pattern: click selects; Left/Right/Home/End move + select (roving
+    // tabindex), so Tab goes strip -> open panel -> rest of the page. Rule 5: 2 asserts.
     _wireExploreSections(panel) {
         console.assert(panel && panel.querySelectorAll, '_wireExploreSections: panel required');
         console.assert(typeof document !== 'undefined', '_wireExploreSections: document required');
-        const heads = panel.querySelectorAll('.ep-sec-head');
-        for (let i = 0; i < heads.length && i < 8; i++) {     // Rule 2: bounded
-            const head = heads[i];
-            head.addEventListener('click', () => {
-                const sec = head.closest('.ep-section');
-                if (!sec) return;
-                const collapsed = sec.getAttribute('data-collapsed') === 'true';
-                sec.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
-                head.setAttribute('aria-expanded', collapsed ? 'true' : 'false');
+        const tabs = panel.querySelectorAll('.ep-tab[role="tab"]');
+        const n = Math.min(tabs.length, 8); // Rule 2: bounded
+        for (let i = 0; i < n; i++) {
+            const tab = tabs[i];
+            tab.addEventListener('click', () => this.selectExploreTab(tab.dataset.tab));
+            tab.addEventListener('keydown', (e) => {
+                let j = -1;
+                if (e.key === 'ArrowRight') j = (i + 1) % n;
+                else if (e.key === 'ArrowLeft') j = (i - 1 + n) % n;
+                else if (e.key === 'Home') j = 0;
+                else if (e.key === 'End') j = n - 1;
+                if (j < 0) return;
+                e.preventDefault();
+                this.selectExploreTab(tabs[j].dataset.tab, true);
             });
         }
+        return n > 0;
+    }
+
+    /**
+     * Show one tab of the Explore panel (layers | detail | style | pins | presence).
+     * Also expands a collapsed panel, so code that needs a tab (the pin editor) can
+     * always reach it. Rule 4: <=60 lines | Rule 5: 2 asserts.
+     * @param {string} name  data-tab value
+     * @param {boolean} [focus] move keyboard focus to the tab (arrow-key navigation)
+     * @returns {boolean} true if the tab exists
+     */
+    selectExploreTab(name, focus) {
+        console.assert(typeof name === 'string', 'selectExploreTab: name required');
+        console.assert(typeof document !== 'undefined', 'selectExploreTab: document required');
+        const panel = document.getElementById('explore-panel');
+        if (!panel) return false;
+        const tabs = panel.querySelectorAll('.ep-tab[role="tab"]');
+        let found = null;
+        for (let i = 0; i < tabs.length && i < 8; i++) { // Rule 2: bounded
+            const t = tabs[i];
+            const on = t.dataset.tab === name;
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.tabIndex = on ? 0 : -1;
+            const body = document.getElementById(t.getAttribute('aria-controls'));
+            if (body) body.hidden = !on;
+            if (on) found = t;
+        }
+        if (!found) return false;
+        panel.dataset.tab = name;
+        if (panel.classList.contains('ep-collapsed')) this.toggleExplorePanelCollapsed(false);
+        if (focus) found.focus();
         return true;
     }
 
@@ -3455,6 +3524,7 @@ class SpaceEnvironment {
         const pin = (earth && earth.explorePins) ? earth.explorePins.getPin(id) : null;
         const ed = document.getElementById('ep-editor');
         if (!pin || !ed) return false;
+        this.selectExploreTab('pins'); // the editor lives in the Pins tab (F7)
         this._editingPinId = id;
         this._pinEditorDraft = { type: pin.type, color: pin.color, radiusKm: pin.radiusKm };
         const name = document.getElementById('ep-ed-name');
@@ -3884,6 +3954,7 @@ class SpaceEnvironment {
         // disposed instance. The pointerdown stays on the panel (dies with the element);
         // a later setup re-attaches the window listeners via _makePanelDraggable.
         this._detachPanelWindowListeners();
+        this._applyExploreChrome(false); // F7: planet bar, action row, full nav/footer back
         const panel = document.getElementById('explore-panel');
         console.assert(panel === null || panel.nodeType === 1, 'teardownExplorePanel: bad panel');
         if (panel) { panel.hidden = true; panel.style.display = 'none'; }

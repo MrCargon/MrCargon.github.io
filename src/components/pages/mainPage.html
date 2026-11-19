@@ -436,7 +436,7 @@
         <!-- Explore Earth panel — docked side panel (wired by SpaceEnvironment.setupExplorePanel) -->
         <aside class="explore-panel" id="explore-panel" hidden role="region" aria-label="Explore Earth controls">
             <div class="ep-header" id="ep-drag-handle">
-                <strong>🌍 Explore Earth</strong>
+                <strong>🌍 <span class="ep-title-txt">Explore Earth</span></strong>
                 <!-- Collapse is deliberately SEPARATE from exit. On a phone the panel
                      fills the screen, and when ✕ was the only control it both dismissed
                      the panel and left Explore mode — so the globe could never actually
@@ -448,9 +448,9 @@
                 <button type="button" class="ep-close" id="explore-exit" aria-label="Exit Explore Earth mode">✕</button>
             </div>
             <div class="ep-info">
-                📍 Based in San Francisco · Open to work
-                <span id="explore-distance" style="display:block; opacity:0.6; font-size:10px;">—</span>
-                <span aria-hidden="true" style="display:block; opacity:0.45; font-size:9px;">drag · scroll · dbl-click globe to drop a pin · Esc exits</span>
+                <span>📍 Based in San Francisco · Open to work</span>
+                <span id="explore-distance" class="ep-dist">—</span>
+                <span class="ep-hint" aria-hidden="true">drag · scroll · dbl-click globe to drop a pin · Esc exits</span>
             </div>
             <div class="ep-zoom" role="group" aria-label="Camera zoom">
                 <span aria-hidden="true" title="Zoom out">🛰️</span>
@@ -458,14 +458,22 @@
                        aria-label="Camera zoom — left is far, right is street level">
                 <span aria-hidden="true" title="Zoom in (street level)">📍</span>
             </div>
+            <!-- F7 (2026-11-19): the five stacked sections are now ONE tabbed card. The
+                 sections keep their ids and contents; each body is a tabpanel shown by its
+                 tab. Wired by SpaceEnvironment._wireExploreSections (ARIA tabs pattern:
+                 arrow keys / Home / End move between tabs, Tab moves into the panel). -->
+            <div class="ep-tabs" role="tablist" aria-label="Explore controls">
+                <button type="button" class="ep-tab" role="tab" id="ep-tab-layers" data-tab="layers" aria-controls="ep-layers-body" aria-selected="true" tabindex="0">Layers</button>
+                <button type="button" class="ep-tab" role="tab" id="ep-tab-detail" data-tab="detail" aria-controls="ep-detail-body" aria-selected="false" tabindex="-1">Detail</button>
+                <button type="button" class="ep-tab" role="tab" id="ep-tab-style" data-tab="style" aria-controls="ep-style-body" aria-selected="false" tabindex="-1">Style</button>
+                <button type="button" class="ep-tab" role="tab" id="ep-tab-pins" data-tab="pins" aria-controls="ep-pins-body" aria-selected="false" tabindex="-1">Pins<span class="ep-count" id="ep-pin-count"></span></button>
+                <button type="button" class="ep-tab" role="tab" id="ep-tab-presence" data-tab="presence" aria-controls="ep-presence-body" aria-selected="false" tabindex="-1">Live<span class="ep-count" id="explore-presence-count"></span></button>
+            </div>
             <div class="ep-body">
 
                 <!-- PINS -->
                 <section class="ep-section" data-section="pins">
-                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-pins-body">
-                        <span><span class="ep-caret">▾</span> Pins</span><span class="ep-count" id="ep-pin-count"></span>
-                    </button>
-                    <div class="ep-sec-body" id="ep-pins-body">
+                    <div class="ep-sec-body" id="ep-pins-body" role="tabpanel" aria-labelledby="ep-tab-pins" tabindex="0" hidden>
                         <button type="button" class="ep-btn ep-btn--accent" id="ep-add-pin">＋ Add pin (centre)</button>
                         <ul class="ep-pin-list" id="ep-pin-list"></ul>
                         <div class="ep-empty" id="ep-pin-empty" hidden>No pins yet — double-click the globe or press ＋.</div>
@@ -498,10 +506,7 @@
 
                 <!-- LIVE PRESENCE (opt-in, coarse, ephemeral) -->
                 <section class="ep-section" data-section="presence">
-                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-presence-body">
-                        <span><span class="ep-caret">▾</span> Live</span><span class="ep-count" id="explore-presence-count"></span>
-                    </button>
-                    <div class="ep-sec-body" id="ep-presence-body">
+                    <div class="ep-sec-body" id="ep-presence-body" role="tabpanel" aria-labelledby="ep-tab-presence" tabindex="0" hidden>
                         <button type="button" class="ep-btn" id="explore-toggle-presence" aria-pressed="false">👥 Show online visitors</button>
                         <button type="button" class="ep-btn" id="explore-share-location" aria-pressed="false">📍 Share my location</button>
                         <div class="ep-empty" style="opacity:0.5;">Opt-in · coarse (~11 km) · ephemeral · nothing stored.</div>
@@ -510,22 +515,15 @@
 
                 <!-- LAYERS -->
                 <section class="ep-section" data-section="layers">
-                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-layers-body">
-                        <span><span class="ep-caret">▾</span> Layers</span>
-                    </button>
-                    <div class="ep-sec-body" id="ep-layers-body">
+                    <div class="ep-sec-body" id="ep-layers-body" role="tabpanel" aria-labelledby="ep-tab-layers" tabindex="0">
                         <button type="button" class="ep-btn ep-btn--accent" id="explore-center-sf" aria-label="Center the globe on San Francisco">🎯 Center on SF</button>
-                        <div class="ep-row">
+                        <div class="ep-grid3">
                             <button type="button" class="ep-switch" id="explore-toggle-borders" aria-pressed="false" aria-label="Toggle country borders">🗺️ Borders</button>
                             <button type="button" class="ep-switch" id="explore-toggle-grid" aria-pressed="false" aria-label="Toggle latitude and longitude grid">🌐 Grid</button>
-                        </div>
-                        <div class="ep-row">
+                            <button type="button" class="ep-switch" id="explore-toggle-places" aria-pressed="false" aria-label="Toggle places of interest">📍 Places</button>
                             <button type="button" class="ep-switch" id="explore-toggle-iss" aria-pressed="false" aria-label="Toggle the live ISS marker">🛰️ ISS</button>
                             <button type="button" class="ep-switch" id="explore-toggle-quakes" aria-pressed="false" aria-label="Toggle live earthquakes">🌋 Quakes</button>
-                        </div>
-                        <div class="ep-row">
-                            <button type="button" class="ep-switch" id="explore-toggle-places" aria-pressed="false" aria-label="Toggle places of interest">📍 Places</button>
-                            <button type="button" class="ep-switch" id="explore-toggle-sats" aria-pressed="false" aria-label="Toggle real satellites: GPS, weather and crewed stations">🛰️ Satellites</button>
+                            <button type="button" class="ep-switch" id="explore-toggle-sats" aria-pressed="false" aria-label="Toggle real satellites: GPS, weather and crewed stations">🛰️ Sats</button>
                         </div>
                         <div class="ep-empty" style="opacity:0.7;"><span style="color:#7dffb0;">●</span> GPS <span style="color:#ffc24a;">●</span> Weather <span style="color:#ff6ad3;">●</span> Stations · orbits: CelesTrak</div>
                     </div>
@@ -533,10 +531,7 @@
 
                 <!-- DETAIL -->
                 <section class="ep-section" data-section="detail">
-                    <button type="button" class="ep-sec-head" aria-expanded="true" aria-controls="ep-detail-body">
-                        <span><span class="ep-caret">▾</span> Detail</span>
-                    </button>
-                    <div class="ep-sec-body" id="ep-detail-body">
+                    <div class="ep-sec-body" id="ep-detail-body" role="tabpanel" aria-labelledby="ep-tab-detail" tabindex="0" hidden>
                         <button type="button" class="ep-switch" id="explore-toggle-lod" aria-pressed="true" aria-label="Toggle all detail layers">🔎 Detail (all)</button>
                         <div class="ep-sub">
                             <div class="ep-row">
@@ -555,11 +550,8 @@
                 </section>
 
                 <!-- STYLE — customise each detail layer's colour + opacity -->
-                <section class="ep-section" data-section="style" data-collapsed="true">
-                    <button type="button" class="ep-sec-head" aria-expanded="false" aria-controls="ep-style-body">
-                        <span><span class="ep-caret">▾</span> Style</span>
-                    </button>
-                    <div class="ep-sec-body" id="ep-style-body">
+                <section class="ep-section" data-section="style">
+                    <div class="ep-sec-body" id="ep-style-body" role="tabpanel" aria-labelledby="ep-tab-style" tabindex="0" hidden>
                         <label>Layer</label>
                         <div class="ep-row" id="ep-style-layers">
                             <button type="button" class="ep-switch" data-layer="streets" aria-pressed="true">Streets</button>

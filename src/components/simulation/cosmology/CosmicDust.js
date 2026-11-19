@@ -13,6 +13,7 @@
 // - Nesvorný, D., et al. (2010). "Cometary Origin of the Zodiacal Cloud and
 //   Carbonaceous Micrometeorites." The Astrophysical Journal, 713(2), 816-836.
 
+/* global RoundPoints */
 class CosmicDust {
     /**
      * Constructor for Cosmic Dust visualization
@@ -39,6 +40,8 @@ class CosmicDust {
             scaleHeight: 7, // Vertical thickness (thin disk, ~0.1 AU scaled)
             color: 0xaa8866, // Reddish-brown dust (reflects solar spectrum)
             particleSize: 0.4, // Visual size of dust particles
+            maxPx: 3.5, // Screen-size cap (CSS px) for the round motes
+            nearFade: [20, 60], // Hidden within 20 units of the camera, full by 60
             opacity: 0.4 // Base transparency
         };
 
@@ -127,9 +130,21 @@ class CosmicDust {
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
+        // Untextured points are SQUARES and grow without bound near the camera
+        // (20-40 px grey squares around Earth in focus/Explore). RoundPoints makes
+        // them soft round motes clamped to a few px, and hides the dust within
+        // nearFade world units of the camera, i.e. around the focused planet the
+        // camera sits next to (Earth focus/Explore: camera ~12 units from Earth).
+        const rounded = (typeof RoundPoints !== 'undefined');
+        if (rounded) {
+            RoundPoints.apply(this.material, {
+                soft: 1, minPx: 1.0, maxPx: this.config.maxPx, nearFade: this.config.nearFade
+            });
+        }
 
         // Create particle system
         this.dustParticles = new THREE.Points(this.geometry, this.material);
+        if (rounded) RoundPoints.attach(this.dustParticles);
         this.dustParticles.name = 'CosmicDust';
         this.scene.add(this.dustParticles);
 

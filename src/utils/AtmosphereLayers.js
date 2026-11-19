@@ -57,6 +57,8 @@ class AtmosphereLayers {
         this._onPointer = null;
         this._labelW = new Float32Array(5);
         this._labelH = new Float32Array(5);
+        this._scale = null;      // R1 #6: "not to scale" caption under the ladder
+        this._scaleW = 0; this._scaleH = 0;
         var V = (typeof THREE !== 'undefined') ? THREE.Vector3 : null;
         this._sCenter = V ? new V() : null; this._sRight = V ? new V() : null;
         this._sUp = V ? new V() : null; this._sZ = V ? new V() : null;
@@ -165,8 +167,32 @@ class AtmosphereLayers {
         }
         document.body.appendChild(this._svg);
         document.body.appendChild(this._ladder);
+        this._buildScaleNote();
         this._onPointer = this._trackPointer.bind(this);
         window.addEventListener('pointermove', this._onPointer, { passive: true });
+        return true;
+    }
+
+    // R1 #6: one small caption under the ladder. The bands are drawn stretched (the
+    // troposphere x6.4, the exosphere x0.1 of its real depth) while the ISS and every
+    // satellite sit at their true km, so objects can look like they are in the "wrong" band.
+    // Its own element beside the list (a list may hold only listitems). Rule 5: 2 asserts.
+    _buildScaleNote() {
+        console.assert(typeof document !== 'undefined', '_buildScaleNote: document required');
+        console.assert(this._ladder, '_buildScaleNote: ladder required');
+        var el = document.createElement('div');
+        el.className = 'atmo-scale';
+        var lines = ['Bands not to scale (×0.1–×6)', 'Satellites: true scale'];
+        for (var i = 0; i < lines.length; i++) {                  // Rule 2: bounded (2)
+            var ln = document.createElement('span');
+            ln.style.display = 'block'; ln.textContent = lines[i];
+            el.appendChild(ln);
+        }
+        el.style.cssText = 'position:fixed; left:0; top:0; z-index:36; visibility:hidden; pointer-events:none; ' +
+            'white-space:nowrap; font:400 10px/1.3 system-ui,-apple-system,sans-serif; ' +
+            'color:#aab3dd; text-shadow:0 0 5px rgba(8,14,40,0.95); will-change:transform;';
+        document.body.appendChild(el);
+        this._scale = el;
         return true;
     }
 
@@ -213,6 +239,11 @@ class AtmosphereLayers {
             if (lb.width > 0) { this._labelW[j] = lb.width; this._labelH[j] = lb.height; }
             else if (!this._labelW[j]) { this._labelW[j] = 96; this._labelH[j] = 19; }
         }
+        if (this._scale) {
+            var sb = this._scale.getBoundingClientRect();
+            if (sb.width > 0) { this._scaleW = sb.width; this._scaleH = sb.height; }
+            else if (!this._scaleW) { this._scaleW = 150; this._scaleH = 26; }
+        }
         return true;
     }
 
@@ -249,6 +280,7 @@ class AtmosphereLayers {
         var n = this.shells.length, right = (Math.cos(ang) >= 0) !== !!inward, gap = 4, h = 0, w = 0, i, j;
         for (i = 0; i < n; i++) { h += this._labelH[i] + gap; w = Math.max(w, this._labelW[i]); }
         h -= gap;
+        if (this._scale) { h += gap + this._scaleH; w = Math.max(w, this._scaleW); }   // caption row
         var reach = right ? -1e9 : 1e9;
         for (i = 0; i < n; i++) reach = right ? Math.max(reach, this._ax[i]) : Math.min(reach, this._ax[i]);
         var x = right ? reach + 26 : reach - 26 - w;
@@ -323,8 +355,16 @@ class AtmosphereLayers {
             ln.setAttribute('y2', (y + h * 0.5).toFixed(1));
             y += h + 4;
         }
+        if (this._scale) {                                    // caption under the Troposphere label
+            var sx = fit.right ? fit.x : fit.x + fit.w - this._scaleW;
+            this._scale.style.transform = 'translate(' + Math.round(sx) + 'px,' + Math.round(y) + 'px)';
+            this._scale.style.textAlign = fit.right ? 'left' : 'right';
+        }
         var o = op.toFixed(2);
-        if (this._ladder.style.opacity !== o) { this._ladder.style.opacity = o; this._svg.style.opacity = o; }
+        if (this._ladder.style.opacity !== o) {
+            this._ladder.style.opacity = o; this._svg.style.opacity = o;
+            if (this._scale) this._scale.style.opacity = o;
+        }
         return true;
     }
 
@@ -336,6 +376,7 @@ class AtmosphereLayers {
         this._labelsShown = on;
         this._ladder.style.visibility = on ? 'visible' : 'hidden';
         this._svg.style.visibility = on ? 'visible' : 'hidden';
+        if (this._scale) this._scale.style.visibility = on ? 'visible' : 'hidden';
         return on;
     }
 
@@ -445,6 +486,8 @@ class AtmosphereLayers {
         if (this._onPointer && typeof window !== 'undefined') window.removeEventListener('pointermove', this._onPointer);
         if (this._ladder && this._ladder.parentNode) this._ladder.parentNode.removeChild(this._ladder);
         if (this._svg && this._svg.parentNode) this._svg.parentNode.removeChild(this._svg);
+        if (this._scale && this._scale.parentNode) this._scale.parentNode.removeChild(this._scale);
+        this._scale = null;
         this._ladder = null; this._svg = null; this._lines = []; this.labels = [];
         this.built = false;
         return true;

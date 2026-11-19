@@ -2699,9 +2699,10 @@ class SpaceEnvironment {
      * the camera distance while exploring. GeoLOD lazily builds + cross-fades each
      * tier; safe no-op if absent. Called per-frame only while exploreMode.
      * Rule 4: <=60 lines.
+     * @param {number} [dt] - real frame time in seconds (animate()'s clamped deltaTime)
      * @returns {boolean}
      */
-    updateExploreLOD() {
+    updateExploreLOD(dt) {
         const earth = this.getEarthObject();
         if (!earth) return false;
         console.assert(this.camera, 'updateExploreLOD: camera required');
@@ -2806,9 +2807,10 @@ class SpaceEnvironment {
             }
         }
         // Living troposphere objects (balloons/jets) fade in by their viewing band and
-        // animate (bob/fly). dt defaults to ~1 frame inside update() (no dt plumbed here).
+        // animate (bob/fly). Real dt (R1 #5): without it every frame was 0.016 s, so the
+        // jets' speed scaled with the frame rate (2.4x faster on a 144 Hz screen).
         if (earth.troposphereObjects && typeof earth.troposphereObjects.update === 'function') {
-            earth.troposphereObjects.update(rr);
+            earth.troposphereObjects.update(rr, dt);
         }
         // Satellites fade out below ~1.5R; while the ISS marker layer is on it owns the ISS
         // (click card), so the satellite layer skips it: one ISS on the globe (audit F8).
@@ -4516,7 +4518,7 @@ class SpaceEnvironment {
                 // Explore: free user controls + cloud fly-through; the auto-orbit
                 // tracking is intentionally suppressed so the globe stays still.
                 this.updateExploreClouds();
-                this.updateExploreLOD();
+                this.updateExploreLOD(deltaTime);
             } else if (this.selectedPlanet && !this.cameraTransitioning) {
                 this.updateCameraPlanetTracking(deltaTime);
                 this._updateSelectedPlanetSurface();

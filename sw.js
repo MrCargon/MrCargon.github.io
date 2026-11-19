@@ -24,15 +24,44 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-475671c385c2';
+const CACHE_NAME = 'mrcargon-hub-3ace5bd078c9';
 const CORE_SHELL = ['./', './index.html', './index.css'];
+// Page-specific scripts that index.html no longer loads at boot (roast R2 #7a): the
+// page fetches them on first navigation through src/utils/LazyBundles.js. A visitor who
+// never opened those pages online would have no copy offline, so they are precached
+// here, best-effort, off the main thread. MUST list exactly the files in
+// LazyBundles.BUNDLES - tests/verify-lazy-bundles.cjs fails when the two drift.
+const LAZY_CODE = [
+    './src/utils/SineAudio.js',
+    './src/utils/Lenia.js',
+    './src/utils/LifePatterns.js',
+    './src/utils/ConwayLife.js',
+    './src/utils/LifeView.js',
+    './src/utils/ParticleLife.js',
+    './src/components/pages/LifePage.js',
+    './src/components/pages/StudioPage.js',
+    './src/utils/CalendarStore.js',
+    './src/utils/CalendarSync.js',
+    './src/components/pages/Calendar.js',
+    './src/utils/NotesStore.js',
+    './src/components/pages/Notes.js',
+    './src/components/simulation/cosmology/GravitationalWaves.js',
+    './src/components/simulation/cosmology/DarkMatterHalo.js',
+    './src/components/simulation/cosmology/ExoplanetSystems.js',
+    './src/components/simulation/cosmology/CosmicScale.js',
+    './src/components/simulation/cosmology/ExtraDimensionsViz.js',
+    './src/components/simulation/cosmology/VibratingString.js',
+    './src/components/simulation/cosmology/StringTheory.js',
+];
 // How long a /src/data/ request waits on the network before a cached copy answers.
 const DATA_WAIT_MS = 3500;
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(CORE_SHELL))
+            .then((cache) => cache.addAll(CORE_SHELL).then(() =>
+                // One by one, so a single miss does not drop the rest; never fails install.
+                Promise.all(LAZY_CODE.map((u) => cache.add(u).catch(() => null)))))
             .then(() => self.skipWaiting())
             .catch(() => self.skipWaiting()) // never block install on a shell miss
     );

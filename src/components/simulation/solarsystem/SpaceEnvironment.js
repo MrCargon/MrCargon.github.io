@@ -5970,7 +5970,10 @@ class SpaceEnvironment {
         const performanceTier = this.determinePerformanceTier();
 
         // Create string theory instance
+        // The camera frames the strings in front of the current view (P34: at the origin
+        // they sat inside the Sun and could not be seen).
         this.cosmologyFeatures.stringTheory = new StringTheory(this.scene, {
+            camera: this.camera,
             performanceTier: performanceTier,
             stringLength: 10,
             baseAmplitude: 2.0,

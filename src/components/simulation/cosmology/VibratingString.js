@@ -20,6 +20,7 @@ class VibratingString {
         this.scene = scene;
         this.options = {
             length: options.length || 10,
+            radius: options.radius || 0.1, // tube radius (StringTheory passes a readable one)
             amplitude: options.amplitude || 2,
             frequency: options.frequency || 1.0,
             modes: options.modes || [1], // Vibrational modes (1-3)
@@ -49,7 +50,8 @@ class VibratingString {
 
         // Create cylinder geometry ONCE (tube approximation)
         // Vertices are displaced by shader, not CPU
-        const geometry = new THREE.CylinderGeometry(0.1, 0.1, length, 8, segments, true);
+        const radius = this.options.radius;
+        const geometry = new THREE.CylinderGeometry(radius, radius, length, 12, segments, true);
 
         // Store base positions as custom attribute for shader
         const positions = geometry.attributes.position;
@@ -192,10 +194,12 @@ class VibratingString {
 
                 void main() {
                     vec3 light = normalize(vec3(1.0, 1.0, 1.0));
-                    float diffuse = max(dot(normalize(vNormal), light), 0.3);
-                    float glow = 0.6 + (0.4 * vModeIntensity);
-                    vec3 finalColor = color * diffuse * glow;
-                    float alpha = 0.9;
+                    // Mostly self-lit so the string reads against black space on any GPU;
+                    // the light term only adds roundness (P34: was diffuse*0.6, too dim).
+                    float diffuse = max(dot(normalize(vNormal), light), 0.0);
+                    float glow = 0.85 + (0.3 * vModeIntensity);
+                    vec3 finalColor = min(color * (0.6 + (0.4 * diffuse)) * glow, vec3(1.0));
+                    float alpha = 0.95;
                     gl_FragColor = vec4(finalColor, alpha);
                 }
             `;

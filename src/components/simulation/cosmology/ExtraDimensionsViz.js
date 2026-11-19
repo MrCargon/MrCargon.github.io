@@ -28,7 +28,8 @@ class ExtraDimensionsViz {
             resolution: options.resolution || 32, // NASA Rule 2: Fixed bound
             complexity: options.complexity || 5, // Visual complexity parameter
             visible: options.visible !== false,
-            rotationSpeed: options.rotationSpeed || 0.0005
+            rotationSpeed: options.rotationSpeed || 0.0005,
+            pointSize: options.pointSize || 0.15
         };
 
         this.mesh = null;
@@ -125,7 +126,7 @@ Visualization of Certain Complex Curves." Notices of the AMS.
 
         const geometry = this.generateSurface();
         this.material = new THREE.PointsMaterial({
-            size: 0.15,
+            size: this.options.pointSize,
             vertexColors: true,
             transparent: true,
             opacity: 0.8,

@@ -27,8 +27,23 @@ class StringTheory {
             baseAmplitude: options.baseAmplitude || 2,
             baseFrequency: options.baseFrequency || 1.0,
             visible: options.visible !== false,
-            showExtraDimensions: options.showExtraDimensions !== false
+            showExtraDimensions: options.showExtraDimensions !== false,
+            // P34: the strings used to sit at the world origin, i.e. inside the Sun, and
+            // were 0.2 units thick: invisible from the default camera. They now live in one
+            // group that is framed in front of the camera passed here (like CosmicScale gets
+            // the camera), at a distance where the layout fills the middle of the view.
+            camera: options.camera || null,
+            frameDistance: options.frameDistance || 55,
+            stringRadius: options.stringRadius || 0.5,
+            pointSize: options.pointSize || 0.4
         };
+
+        // Everything this feature draws hangs off this group, so one transform places it
+        // and one scene.remove takes it out again.
+        this.group = new THREE.Group();
+        this.group.name = 'StringTheory';
+        this._frameDir = new THREE.Vector3();
+        this._framePos = new THREE.Vector3();
 
         // State
         this.strings = []; // NASA Rule 2: Fixed max size based on tier
@@ -45,7 +60,7 @@ class StringTheory {
                 color: 0x00ffff, // Cyan
                 frequency: 1.0,
                 amplitude: 2.0,
-                position: new THREE.Vector3(-15, 0, 0)
+                position: new THREE.Vector3(-15, 6, 0)
             },
             {
                 name: 'up-quark',
@@ -53,7 +68,7 @@ class StringTheory {
                 color: 0xff00ff, // Magenta
                 frequency: 1.5,
                 amplitude: 1.8,
-                position: new THREE.Vector3(0, 0, 0)
+                position: new THREE.Vector3(0, 6, 0)
             },
             {
                 name: 'down-quark',
@@ -61,7 +76,7 @@ class StringTheory {
                 color: 0xffff00, // Yellow
                 frequency: 1.2,
                 amplitude: 1.9,
-                position: new THREE.Vector3(15, 0, 0)
+                position: new THREE.Vector3(15, 6, 0)
             }
         ];
     }
@@ -211,6 +226,8 @@ ${StringTheory.DISCLAIMER}
             }
         }
 
+        this.scene.add(this.group);
+
         // Create vibrating strings for each particle type
         const maxStrings = this.options.maxStrings;
         const particleTypesToShow = this.particleTypes.slice(0, maxStrings);
@@ -219,8 +236,9 @@ ${StringTheory.DISCLAIMER}
         for (let i = 0; i < particleTypesToShow.length; i++) {
             const config = particleTypesToShow[i];
 
-            const string = new VibratingString(this.scene, {
+            const string = new VibratingString(this.group, {
                 length: this.options.stringLength,
+                radius: this.options.stringRadius,
                 amplitude: config.amplitude,
                 frequency: config.frequency,
                 modes: config.modes,
@@ -236,22 +254,46 @@ ${StringTheory.DISCLAIMER}
 
         // Create extra dimensions visualization if enabled
         if (this.options.showExtraDimensions) {
-            this.extraDimensionsViz = new ExtraDimensionsViz(this.scene, {
+            this.extraDimensionsViz = new ExtraDimensionsViz(this.group, {
                 size: 8,
+                pointSize: this.options.pointSize,
                 resolution: this.getExtraDimsResolutionForTier(),
                 complexity: 5,
                 visible: true
             });
 
             await this.extraDimensionsViz.init();
-            // Position at center slightly below strings
-            this.extraDimensionsViz.mesh.position.set(0, -15, 0);
+            // Below the row of strings (group-local)
+            this.extraDimensionsViz.mesh.position.set(0, -12, 0);
+        }
+
+        if (this.options.camera) {
+            this.frameInFront(this.options.camera);
         }
 
         this.enabled = true;
         console.log(`StringTheory: Initialized with ${this.strings.length} strings`);
 
         return this;
+    }
+
+    // Place the group frameDistance in front of the camera, facing it, so the row of
+    // strings reads left to right across the middle of the view. Called once on init;
+    // the user can then orbit around it like any other object. Rule 5: 2 asserts.
+    frameInFront(camera) {
+        const Assert = window.Assert || {};
+        if (typeof Assert.assert === 'function') {
+            Assert.assert(camera && camera.isCamera, 'StringTheory.frameInFront: camera required');
+            Assert.assert(this.options.frameDistance > 0, 'StringTheory.frameInFront: distance must be positive');
+        }
+        if (!camera || !camera.isCamera) return false;
+
+        camera.updateMatrixWorld();
+        camera.getWorldDirection(this._frameDir);
+        camera.getWorldPosition(this._framePos);
+        this.group.position.copy(this._framePos).addScaledVector(this._frameDir, this.options.frameDistance);
+        camera.getWorldQuaternion(this.group.quaternion);
+        return true;
     }
 
     // Get string segments for current performance tier
@@ -344,6 +386,7 @@ ${StringTheory.DISCLAIMER}
             this.extraDimensionsViz = null;
         }
 
+        this.scene.remove(this.group);
         this.enabled = false;
     }
 }

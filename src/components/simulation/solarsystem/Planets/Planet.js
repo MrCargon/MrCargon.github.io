@@ -151,9 +151,21 @@ class Planet {
         if (!oe) return false;
         const e = oe.eccentricity;
         this.sqrtFactor = Math.sqrt(1 - (e * e));
-        const omega = THREE.MathUtils.degToRad(oe.argumentOfPeriapsis || 0);
+        // R1 #9 (2026-11-19): the ellipse is oriented in the ECLIPTIC by the longitude of
+        // perihelion ϖ (= Ω + ω), not by the argument of perihelion ω, which is measured
+        // from the node inside the orbit plane. Using ω put every planet 30-170 deg off.
+        // The mean anomaly at J2000 is L0 - ϖ (Standish elements), not 0. And longitude
+        // grows counter-clockwise seen from +y (zSign -1, ecliptic longitude 90 = -z),
+        // the same sense as Earth's spin. Bodies without ϖ (dwarf planets) keep the old
+        // layout until they get the same elements.
+        const prograde = typeof oe.longitudeOfPerihelion === 'number';
+        const omega = THREE.MathUtils.degToRad(prograde ? oe.longitudeOfPerihelion : (oe.argumentOfPeriapsis || 0));
         this.cosOmega = Math.cos(omega);
         this.sinOmega = Math.sin(omega);
+        this.zSign = prograde ? -1 : 1;
+        this.epochAnomaly = (prograde && typeof oe.meanLongitudeAtEpoch === 'number')
+            ? THREE.MathUtils.degToRad(oe.meanLongitudeAtEpoch - oe.longitudeOfPerihelion)
+            : (oe.meanAnomalyAtEpoch || 0);
         return true;
     }
 
@@ -214,7 +226,7 @@ class Planet {
         const sinOmega = this.sinOmega !== undefined ? this.sinOmega : 0;
 
         const x = (xOrbital * cosOmega) - (zOrbital * sinOmega);
-        const z = (xOrbital * sinOmega) + (zOrbital * cosOmega);
+        const z = (this.zSign || 1) * ((xOrbital * sinOmega) + (zOrbital * cosOmega));
 
         // Set position
         this.mesh.position.set(x, 0, z);
@@ -271,7 +283,8 @@ class Planet {
         // NASA Rule 7: Check if time-synchronized mode is available
         if (j2000Days !== null && this.data.orbitalPeriodDays && typeof OrbitalCalculator !== 'undefined') {
             // NEW: Calculate orbital position from real time
-            const epochAnomaly = this.data.orbitalElements?.meanAnomalyAtEpoch || 0;
+            const epochAnomaly = (typeof this.epochAnomaly === 'number')
+                ? this.epochAnomaly : (this.data.orbitalElements?.meanAnomalyAtEpoch || 0);
             const meanAnomaly = OrbitalCalculator.calculateMeanAnomaly(
                 j2000Days,
                 this.data.orbitalPeriodDays,

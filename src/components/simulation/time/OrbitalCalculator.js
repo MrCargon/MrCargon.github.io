@@ -244,6 +244,99 @@ class OrbitalCalculator {
 
     return eccentricAnomaly;
   }
+
+  // ---------------------------------------------------------------------------
+  // Low-precision ephemeris: where the Sun, the Moon and Earth's spin really are.
+  //
+  // All of these take days since J2000.0 (2000-01-01 12:00 UT), the same number
+  // TimeScaleManager.getJ2000Days() gives, so ONE clock drives the whole sky.
+  // Formulas: Astronomical Almanac "low precision" series (also Meeus ch. 12, 25, 47).
+  // Accuracy: Sun ~0.01 deg, GMST ~0.001 deg, Moon ~0.3 deg in longitude - far
+  // below a pixel at any zoom the site draws. Checked against JPL Horizons in
+  // tests/verify-astro.cjs and tests/e2e/earth-astro.spec.js.
+  //
+  // Scene frame (shared by every caller): ecliptic longitude 0 (the vernal equinox)
+  // = world +x, ecliptic north = world +y, longitude 90 deg = world -z. So prograde
+  // motion is counter-clockwise seen from +y, the same sense as Earth's spin
+  // (rotation.y increasing = eastward, GlobeMath's lng 90E = local -z).
+  // ---------------------------------------------------------------------------
+
+  /** @param {number} deg @returns {number} angle in degrees wrapped to [0, 360) */
+  static wrapDeg(deg) {
+    console.assert(typeof deg === 'number', 'OrbitalCalculator.wrapDeg: number required');
+    const w = deg % 360;
+    return w < 0 ? w + 360 : w;
+  }
+
+  /**
+   * Greenwich mean sidereal time: the angle from the vernal equinox to the
+   * Greenwich meridian, measured eastward. Earth's rotation.y IS this angle.
+   * @param {number} d - days since J2000.0 (UT)
+   * @returns {number} degrees in [0, 360)
+   */
+  static gmstDeg(d) {
+    console.assert(typeof d === 'number' && isFinite(d), 'OrbitalCalculator.gmstDeg: finite days required');
+    const g = this.wrapDeg(280.46061837 + (360.98564736629 * d));
+    console.assert(g >= 0 && g < 360, 'OrbitalCalculator.gmstDeg: result in range');
+    return g;
+  }
+
+  /** @param {number} d - days since J2000.0 @returns {number} obliquity of the ecliptic, degrees */
+  static obliquityDeg(d) {
+    console.assert(typeof d === 'number' && isFinite(d), 'OrbitalCalculator.obliquityDeg: finite days required');
+    return 23.439 - (0.0000004 * d);
+  }
+
+  /**
+   * Apparent geocentric ecliptic longitude of the Sun (Earth's heliocentric
+   * longitude is this + 180).
+   * @param {number} d - days since J2000.0
+   * @returns {number} degrees in [0, 360)
+   */
+  static sunEclipticLonDeg(d) {
+    console.assert(typeof d === 'number' && isFinite(d), 'OrbitalCalculator.sunEclipticLonDeg: finite days required');
+    const L = 280.460 + (0.9856474 * d);                       // mean longitude
+    const g = (357.528 + (0.9856003 * d)) * this.DEG_TO_RAD;   // mean anomaly
+    const lon = this.wrapDeg(L + (1.915 * Math.sin(g)) + (0.020 * Math.sin(2 * g)));
+    console.assert(isFinite(lon), 'OrbitalCalculator.sunEclipticLonDeg: result finite');
+    return lon;
+  }
+
+  /**
+   * The point on Earth where the Sun is overhead.
+   * @param {number} d - days since J2000.0
+   * @returns {{lat:number, lng:number}} degrees, lng in [-180, 180)
+   */
+  static subsolarPoint(d) {
+    console.assert(typeof d === 'number' && isFinite(d), 'OrbitalCalculator.subsolarPoint: finite days required');
+    const lam = this.sunEclipticLonDeg(d) * this.DEG_TO_RAD;
+    const eps = this.obliquityDeg(d) * this.DEG_TO_RAD;
+    const dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+    const ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)) * this.RAD_TO_DEG;
+    const lng = this.wrapDeg(ra - this.gmstDeg(d) + 180) - 180;
+    console.assert(lng >= -180 && lng < 180, 'OrbitalCalculator.subsolarPoint: lng in range');
+    return { lat: dec * this.RAD_TO_DEG, lng: lng };
+  }
+
+  /**
+   * Geocentric ecliptic longitude/latitude of the Moon (main periodic terms).
+   * Mean motion 13.176 deg/day = one sidereal month of 27.32 days.
+   * @param {number} d - days since J2000.0
+   * @returns {{lon:number, lat:number}} degrees, lon in [0, 360)
+   */
+  static moonEcliptic(d) {
+    console.assert(typeof d === 'number' && isFinite(d), 'OrbitalCalculator.moonEcliptic: finite days required');
+    const T = d / 36525;
+    const s = (a, b) => Math.sin((a + (b * T)) * this.DEG_TO_RAD);
+    const lon = 218.32 + (481267.881 * T)
+        + (6.29 * s(134.9, 477198.85)) - (1.27 * s(259.2, -413335.38))
+        + (0.66 * s(235.7, 890534.23)) + (0.21 * s(269.9, 954397.70))
+        - (0.19 * s(357.5, 35999.05)) - (0.11 * s(186.6, 966404.05));
+    const lat = (5.13 * s(93.3, 483202.03)) + (0.28 * s(228.2, 960400.87))
+        - (0.28 * s(318.3, 6003.18)) - (0.17 * s(217.6, -407332.20));
+    console.assert(isFinite(lon) && isFinite(lat), 'OrbitalCalculator.moonEcliptic: result finite');
+    return { lon: this.wrapDeg(lon), lat: lat };
+  }
 }
 
 // Make globally available for non-module scripts

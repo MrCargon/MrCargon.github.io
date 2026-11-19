@@ -24,7 +24,10 @@
 
 class TimeConverter {
   // Constants
-  static EPOCH_JD = 2440588.0; // JD for Unix epoch (1970-01-01 00:00 UTC)
+  // JD for the Unix epoch, 1970-01-01 00:00 UTC. Julian days start at NOON, so midnight
+  // is x.5. It was 2440588.0 (= 1970-01-01 12:00), which ran every sim date 12 h fast -
+  // half of why Explore lit San Francisco at night (R1 #1, measured 2026-11-19).
+  static EPOCH_JD = 2440587.5;
   static MS_PER_DAY = 86400000; // Milliseconds per day (24 * 60 * 60 * 1000)
   static J2000_JD = 2451545.0; // JD for J2000 epoch (2000-01-01 12:00 TT)
   static MIN_SAFE_JD = 2415020.5; // 1900-01-01 (safe range lower bound)

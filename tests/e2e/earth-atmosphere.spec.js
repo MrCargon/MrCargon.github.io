@@ -86,6 +86,7 @@ test('labels carry each layer\'s altitude and note', async ({ page }) => {
 // R3 #10: the five labels used to be five Tab stops BEFORE the Explore panel. Now the
 // panel comes right after the nav/credits, the ladder is one stop after it, and the
 // arrow keys (plus Home/End) reach every label, each still showing its note on focus.
+// R3 #9a (P30): the globe canvas is one more stop, right after the ladder.
 test('Tab reaches the panel before the ladder; arrows walk all five labels', async ({ page }) => {
     await enterExplore(page);
     await place(page, 3);
@@ -98,6 +99,8 @@ test('Tab reaches the panel before the ladder; arrows walk all five labels', asy
             const a = document.activeElement;
             if (!a || a === document.body) return 'BODY';
             if (a.classList.contains('atmo-label')) return 'atmo';
+            if (a === window.spaceEnvironment.renderer.domElement) return 'canvas';
+            if (a.closest('#explore-detail')) return 'card';   // the intro/detail card's ✕, while shown
             if (a.closest('#explore-panel')) return 'panel';
             if (a.closest('#header-container, #footer-container')) return 'chrome';
             return 'other';
@@ -109,6 +112,12 @@ test('Tab reaches the panel before the ladder; arrows walk all five labels', asy
     expect(walk.slice(0, firstPanel).every((w) => w === 'chrome'), walk.join(',')).toBe(true);
     expect(walk.filter((w) => w === 'atmo'), 'the ladder is ONE Tab stop').toHaveLength(1);
     expect(firstAtmo, 'ladder comes after the panel').toBeGreaterThan(walk.lastIndexOf('panel'));
+    expect(walk.filter((w) => w === 'canvas'), 'the globe is ONE Tab stop').toHaveLength(1);
+    // After the ladder: the card's ✕ when a card is open, then the globe, then the end of the page.
+    expect(walk.slice(firstAtmo + 1, walk.indexOf('canvas')).every((w) => w === 'card'),
+        'only the open card sits between the ladder and the globe: ' + walk.join(',')).toBe(true);
+    expect(walk.indexOf('canvas'), 'the globe comes after the ladder').toBeGreaterThan(firstAtmo);
+    expect(walk[walk.indexOf('canvas') + 1], 'the globe is the last stop').toBe('BODY');
 
     // Land on the ladder, then walk it with the arrow keys.
     await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });

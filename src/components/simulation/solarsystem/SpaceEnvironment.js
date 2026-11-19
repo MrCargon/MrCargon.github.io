@@ -183,6 +183,11 @@ class SpaceEnvironment {
                 this.exitExploreMode();
             }
         };
+        // R3 #9a: keys on the focused Explore canvas (arrows orbit, +/- zoom). Bound once.
+        this._onGlobeKeydown = (e) => this._handleGlobeKey(e);
+        this._globeKeyGoal = null;      // {theta, phi, alt} the key moves are heading for
+        this._globeKeyId = 0;           // bumped to stop a key glide in flight
+        this._canvasHome = null;        // where the container sat in <body> before Explore
 
         // A1: live reduced-motion flag. When true, the simulation starts PAUSED
         // (no autonomous orbital motion) but stays fully interactive — the Time
@@ -2243,6 +2248,7 @@ class SpaceEnvironment {
         // pointer-down, before any rotation is applied.
         this._onExploreControlStart = () => {
             this._entryFlyId++;        // P28: a drag during the entry fly-in takes over from it
+            this._globeKeyId++;        // R3 #9a: ...and from a key glide
             this._endExploreIntro();   // R3 #11: first drag / wheel / pinch hides the intro
             const e = this.getEarthObject();
             if (!e || !this.controls) return;
@@ -2291,6 +2297,7 @@ class SpaceEnvironment {
         window.addEventListener('dblclick', this._onExploreDblClick);   // double-click → re-center
 
         this.setupExplorePanel();
+        this._setGlobeKeyboard(true);   // R3 #9a: the canvas is a Tab stop after the ladder
         this._syncExploreToggleButtons();
         this.announceExplore('Explore Earth mode. Drag to rotate, scroll to zoom. Click markers for details.');
         this._showExploreIntro();      // R3 #11: brief San Francisco card, then it gets out of the way
@@ -2349,6 +2356,144 @@ class SpaceEnvironment {
         };
         step();
         return ok;
+    }
+
+    /**
+     * R3 #9a: the Explore canvas as a keyboard control. On: Tab stop + role/label, and the
+     * container moves to the END of <body>, so Tab goes nav -> credits -> panel -> ladder ->
+     * globe (the panel first: it holds the controls and says what the globe is). The
+     * container is position:fixed with its own z-index, so where it sits in the DOM changes
+     * the Tab order only, not what paints on top. Off: all of it undone, and the container
+     * goes back to where it was. Rule 5: 2 asserts.
+     * @param {boolean} on
+     * @returns {boolean} on
+     */
+    _setGlobeKeyboard(on) {
+        console.assert(typeof on === 'boolean', '_setGlobeKeyboard: boolean required');
+        console.assert(typeof document !== 'undefined', '_setGlobeKeyboard: document required');
+        const cv = this.renderer && this.renderer.domElement;
+        const box = this.container;
+        if (!cv || !box || !box.parentNode) return false;
+        this._globeKeyId++;            // stop any key glide
+        this._globeKeyGoal = null;
+        if (on) {
+            cv.tabIndex = 0;
+            cv.setAttribute('role', 'application');
+            cv.setAttribute('aria-roledescription', 'globe');
+            cv.setAttribute('aria-label', 'Earth globe. Arrow keys rotate, plus and minus zoom, '
+                + 'Escape leaves Explore.');
+            cv.addEventListener('keydown', this._onGlobeKeydown);
+            if (box.parentNode === document.body && box !== document.body.lastElementChild) {
+                this._canvasHome = { next: box.nextSibling };
+                document.body.appendChild(box);
+            }
+            return true;
+        }
+        cv.removeEventListener('keydown', this._onGlobeKeydown);
+        if (document.activeElement === cv) cv.blur();
+        cv.removeAttribute('tabindex');
+        ['role', 'aria-roledescription', 'aria-label'].forEach((a) => cv.removeAttribute(a));
+        const home = this._canvasHome;
+        this._canvasHome = null;
+        if (home && box.parentNode === document.body) {
+            const next = (home.next && home.next.parentNode === document.body) ? home.next : document.body.firstChild;
+            document.body.insertBefore(box, next);
+        }
+        return false;
+    }
+
+    /**
+     * The orbit step one arrow press turns, in radians: 5 degrees from 2R altitude (3R
+     * distance) out, shrinking with altitude below that so a press near the surface moves
+     * the ground about as far on screen as it does from orbit (floor 0.01 deg). Rule 5: 2 asserts.
+     * @param {number} alt altitude in Earth radii
+     * @returns {number}
+     */
+    _globeKeyOrbitStep(alt) {
+        console.assert(Number.isFinite(alt), '_globeKeyOrbitStep: altitude required');
+        const deg = Math.max(0.01, 5 * Math.min(1, alt / 2));
+        console.assert(deg > 0, '_globeKeyOrbitStep: positive step');
+        return deg * Math.PI / 180;
+    }
+
+    /**
+     * Keydown on the focused Explore canvas. Arrows orbit (Left/Right azimuth, Up/Down polar
+     * angle), + / = zoom in and - / _ zoom out by a factor of 1.5 in altitude per press. Zoom
+     * in stops at the zoom slider's near end; zoom out goes on past its far end (6R) like
+     * the wheel, so the existing rule (rr > 9 in updateExploreLOD) still leaves Explore.
+     * Escape is the document handler's (unchanged). Ctrl/Alt/Meta combos are the browser's.
+     * Rule 4: <=60 lines | Rule 5: 2 asserts.
+     * @param {KeyboardEvent} e
+     * @returns {boolean} true when the key was used
+     */
+    _handleGlobeKey(e) {
+        console.assert(e && typeof e.key === 'string', '_handleGlobeKey: key event required');
+        console.assert(this.controls, '_handleGlobeKey: controls required');
+        if (!this.exploreMode || !this.controls || e.ctrlKey || e.altKey || e.metaKey) return false;
+        const earth = this.getEarthObject();
+        if (!earth) return false;
+        const k = e.key;
+        let dTheta = 0, dPhi = 0, zoom = 0;
+        if (k === 'ArrowLeft') dTheta = -1;
+        else if (k === 'ArrowRight') dTheta = 1;
+        else if (k === 'ArrowUp') dPhi = -1;
+        else if (k === 'ArrowDown') dPhi = 1;
+        else if (k === '+' || k === '=') zoom = -1;
+        else if (k === '-' || k === '_') zoom = 1;
+        else return false;
+        e.preventDefault();
+        this._entryFlyId++;           // like a drag: take over from the entry fly-in
+        this._endExploreIntro();      // and hide the intro card
+        const radius = (earth.data && earth.data.radius) || 2;
+        const sph = new THREE.Spherical().setFromVector3(
+            this._scratchCamPos.copy(this.camera.position).sub(this.controls.target));
+        // Presses while a glide runs add to where it is heading, so each one is a whole step.
+        const g = this._globeKeyGoal || { theta: sph.theta, phi: sph.phi, alt: sph.radius / radius - 1 };
+        const step = this._globeKeyOrbitStep(g.alt);
+        g.theta += dTheta * step;
+        g.phi = Math.max(0.01, Math.min(Math.PI - 0.01, g.phi + dPhi * step));
+        const minAlt = this._zoomRange().minR - 1;
+        const maxAlt = this.controls.maxDistance / radius - 1;
+        if (zoom) g.alt = Math.max(minAlt, Math.min(maxAlt, g.alt * Math.pow(1.5, zoom)));
+        this._globeKeyGlide(g, sph, radius);
+        return true;
+    }
+
+    /**
+     * Move the camera to goal g (spherical around controls.target). Reduced motion: placed
+     * at once, as centerOnLatLng and the entry fly-in do (P23). Otherwise a 160 ms ease-out
+     * glide; a newer press, a drag or leaving Explore stops it. Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _globeKeyGlide(g, from, radius) {
+        console.assert(g && Number.isFinite(g.theta) && Number.isFinite(g.alt), '_globeKeyGlide: goal required');
+        console.assert(from && radius > 0, '_globeKeyGlide: start + radius required');
+        const id = ++this._globeKeyId;
+        const place = (th, ph, r) => {
+            const s = new THREE.Spherical(r, ph, th);
+            this.camera.position.copy(this.controls.target).add(this._scratchCamPos.setFromSpherical(s));
+            this.controls.update();
+        };
+        const toR = radius * (1 + g.alt);
+        if (this.prefersReducedMotion()) {
+            this._globeKeyGoal = null;
+            place(g.theta, g.phi, toR);
+            return true;
+        }
+        this._globeKeyGoal = g;
+        const t0 = performance.now(), ms = 160;
+        // atan2 wraps at +-PI; start from the turn nearest the goal so a glide never spins the long way.
+        const th0 = from.theta + 2 * Math.PI * Math.round((g.theta - from.theta) / (2 * Math.PI));
+        const ph0 = from.phi, r0 = from.radius;
+        const tick = () => {
+            if (id !== this._globeKeyId || !this.exploreMode) return;
+            const t = Math.min((performance.now() - t0) / ms, 1);
+            const e = 1 - Math.pow(1 - t, 3);
+            place(th0 + (g.theta - th0) * e, ph0 + (g.phi - ph0) * e, r0 + (toR - r0) * e);
+            if (t < 1) requestAnimationFrame(tick); else this._globeKeyGoal = null;
+        };
+        tick();
+        return true;
     }
 
     /**
@@ -2653,6 +2798,7 @@ class SpaceEnvironment {
         window.removeEventListener('click', this._onExploreClick);
         window.removeEventListener('mousemove', this._onExploreMove);
         window.removeEventListener('dblclick', this._onExploreDblClick);
+        this._setGlobeKeyboard(false);   // R3 #9a: no Tab stop, back to its old place
         // Restore canvas z-index + content pointer-events + the hidden side panels.
         if (this.container) this.container.style.zIndex = (this._prevContainerZ != null ? this._prevContainerZ : '-5');
         this._syncInputLayerZ();

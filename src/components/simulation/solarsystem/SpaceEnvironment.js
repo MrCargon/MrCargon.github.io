@@ -2476,8 +2476,10 @@ class SpaceEnvironment {
         const dist = this.camera.position.distanceTo(earthPos);
         // Live zoom readout — cached element, no per-frame DOM query/alloc.
         if (this._distEl) this._distEl.textContent = (dist / radius).toFixed(2) + '× Earth radius';
-        const fadeStart = radius * 2.5;   // begin fading here
-        const hideBelow = radius * 1.3;   // fully hidden below here
+        // The cloud shell is a soft 2k texture: from mid zoom down it smears over the sharp
+        // imagery and streets, so it is gone before the imagery patch takes over (~1.5R).
+        const fadeStart = radius * 2.6;   // full above here
+        const hideBelow = radius * 1.5;   // fully hidden below here
 
         const clouds = earth.cloudsMesh;
         if (dist <= hideBelow) {
@@ -2486,9 +2488,10 @@ class SpaceEnvironment {
             return true;
         }
         clouds.visible = true;
-        // Lerp opacity 0 (close) → 0.8 (at/above fadeStart).
+        // Smoothstep opacity 0 (close) → 0.8 (at/above fadeStart): no kink at either end.
         const span = Math.max(fadeStart - hideBelow, 1e-3);
-        const k = Math.max(0, Math.min(1, (dist - hideBelow) / span));
+        const t = Math.max(0, Math.min(1, (dist - hideBelow) / span));
+        const k = t * t * (3 - 2 * t);
         clouds.material.opacity = 0.8 * k;
         earth.setCloudShadow(k);        // shadows follow the clouds that cast them
         return true;

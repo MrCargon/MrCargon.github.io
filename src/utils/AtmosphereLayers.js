@@ -57,6 +57,7 @@ class AtmosphereLayers {
         this._onPointer = null;
         this._labelW = new Float32Array(5);
         this._labelH = new Float32Array(5);
+        this._wr = new Float64Array(AtmosphereLayers.WR_SIZE).fill(NaN);   // last written ladder values
         this._scale = null;      // R1 #6: "not to scale" caption under the ladder
         this._scaleW = 0; this._scaleH = 0;
         var V = (typeof THREE !== 'undefined') ? THREE.Vector3 : null;
@@ -130,6 +131,7 @@ class AtmosphereLayers {
         console.assert(typeof document !== 'undefined', '_buildLabels: document required');
         if (typeof document === 'undefined' || this.labels.length) return false;
         var NS = 'http://www.w3.org/2000/svg';
+        this._wr.fill(NaN);                                    // new elements: nothing written yet
         this._svg = document.createElementNS(NS, 'svg');
         this._svg.setAttribute('aria-hidden', 'true');
         this._svg.style.cssText = 'position:fixed; inset:0; width:100vw; height:100vh; z-index:35; ' +
@@ -240,6 +242,18 @@ class AtmosphereLayers {
         el.addEventListener('pointerenter', on); el.addEventListener('focus', on);
         el.addEventListener('pointerleave', off);
         el.addEventListener('blur', function () { el.lastChild.style.display = 'none'; });
+        return true;
+    }
+
+    // Set an SVG attribute to v.toFixed(1), only when v moved to another tenth since the
+    // last write in slot i of w (R2 #8: no string per frame). Rule 5: 2 asserts.
+    static _attr1(el, name, v, w, i) {
+        console.assert(el && typeof el.setAttribute === 'function', '_attr1: element required');
+        console.assert(Number.isFinite(v) && i >= 0 && i < w.length, '_attr1: value/slot required');
+        var t = Math.round(v * 10);
+        if (w[i] === t) return false;
+        w[i] = t;
+        el.setAttribute(name, v.toFixed(1));
         return true;
     }
 
@@ -380,24 +394,39 @@ class AtmosphereLayers {
     _placeLadder(fit, op) {
         console.assert(fit && Number.isFinite(fit.x), '_placeLadder: fit required');
         console.assert(Number.isFinite(op), '_placeLadder: opacity required');
-        var n = this.shells.length, y = fit.y;
+        // R2 #8: write a value only when its rounded form changes (the strings were ~470 KB
+        // of garbage per 4 s). _wr holds the last written whole px / tenths per slot.
+        var n = this.shells.length, y = fit.y, w = this._wr, b;
         for (var k = n - 1; k >= 0; k--) {                    // Exosphere on top, Troposphere at the bottom
             var el = this.labels[k], h = this._labelH[k];
             var lx = fit.right ? fit.x : fit.x + fit.w - this._labelW[k];
-            el.style.transform = 'translate(' + Math.round(lx) + 'px,' + Math.round(y) + 'px)';
+            var tx = Math.round(lx), ty = Math.round(y);
+            b = k * 6;
+            if (w[b] !== tx || w[b + 1] !== ty) {
+                w[b] = tx; w[b + 1] = ty;
+                el.style.transform = 'translate(' + tx + 'px,' + ty + 'px)';
+            }
             var ln = this._lines[k];
-            ln.setAttribute('x1', this._ax[k].toFixed(1)); ln.setAttribute('y1', this._ay[k].toFixed(1));
-            ln.setAttribute('x2', (fit.right ? lx - 2 : lx + this._labelW[k] + 2).toFixed(1));
-            ln.setAttribute('y2', (y + h * 0.5).toFixed(1));
+            AtmosphereLayers._attr1(ln, 'x1', this._ax[k], w, b + 2);
+            AtmosphereLayers._attr1(ln, 'y1', this._ay[k], w, b + 3);
+            AtmosphereLayers._attr1(ln, 'x2', fit.right ? lx - 2 : lx + this._labelW[k] + 2, w, b + 4);
+            AtmosphereLayers._attr1(ln, 'y2', y + h * 0.5, w, b + 5);
             y += h + 4;
         }
         if (this._scale) {                                    // caption under the Troposphere label
-            var sx = fit.right ? fit.x : fit.x + fit.w - this._scaleW;
-            this._scale.style.transform = 'translate(' + Math.round(sx) + 'px,' + Math.round(y) + 'px)';
-            this._scale.style.textAlign = fit.right ? 'left' : 'right';
+            var sx = Math.round(fit.right ? fit.x : fit.x + fit.w - this._scaleW), sy = Math.round(y);
+            b = AtmosphereLayers.WR_SCALE;
+            if (w[b] !== sx || w[b + 1] !== sy) {
+                w[b] = sx; w[b + 1] = sy;
+                this._scale.style.transform = 'translate(' + sx + 'px,' + sy + 'px)';
+            }
+            var side = fit.right ? 1 : 0;
+            if (w[b + 2] !== side) { w[b + 2] = side; this._scale.style.textAlign = side ? 'left' : 'right'; }
         }
-        var o = op.toFixed(2);
-        if (this._ladder.style.opacity !== o) {
+        var oi = Math.round(op * 100);
+        if (w[AtmosphereLayers.WR_OP] !== oi) {             // only writer of these opacities
+            var o = op.toFixed(2);
+            w[AtmosphereLayers.WR_OP] = oi;
             this._ladder.style.opacity = o; this._svg.style.opacity = o;
             if (this._scale) this._scale.style.opacity = o;
         }
@@ -530,6 +559,9 @@ class AtmosphereLayers {
     }
 }
 
+AtmosphereLayers.WR_SCALE = 30;      // _wr slots: 6 per label (5 labels), then the caption x, y, side,
+AtmosphereLayers.WR_OP = 33;         // then the opacity in hundredths
+AtmosphereLayers.WR_SIZE = 34;
 // Elements the ladder must never cover (nav bar, footer, Explore panel, planet bar, popups).
 AtmosphereLayers.AVOID = '#header-container > *, #footer-container > *, header, footer, nav, ' +
     '#explore-panel, .planet-selector-wrapper, .action-buttons-row, #time-panel-inline, ' +

@@ -43,6 +43,8 @@ class Satellites {
         this._records = [];         // { satrec, group } flat, bounded by MAX_OBJECTS
         this._lastTick = -Infinity;
         this._fade = 1;             // zoom fade (setView): 1 far out, 0 below ~1.4R
+        this._rr = 0;               // camera distance / Earth radius (setView)
+        this._pxPerRad = 0;         // screen px per radian (setView); 0 = unknown, keep 4 Hz
         this.hideIss = false;       // true while the ISS marker layer draws the ISS
         this.hiddenCount = 0;       // records not drawn (stacked, or the ISS by marker)
         this._starting = null;
@@ -87,13 +89,16 @@ class Satellites {
      * drawn below it. hideIss: the ISS marker layer is on, so this layer skips the ISS.
      * @param {number} rr - camera distance / Earth radius
      * @param {boolean} hideIss
+     * @param {number} [pxPerRad] - screen CSS px per radian at the view centre (R2 #8)
      * @returns {number} the fade in [0,1]
      */
-    setView(rr, hideIss) {
+    setView(rr, hideIss, pxPerRad) {
         console.assert(Number.isFinite(rr) && rr > 0, 'Satellites.setView: bad rr');
         console.assert(typeof hideIss === 'boolean', 'Satellites.setView: boolean required');
+        this._pxPerRad = (Number.isFinite(pxPerRad) && pxPerRad > 0) ? pxPerRad : 0;
         const t = Math.max(0, Math.min(1, (rr - Satellites.FADE_NEAR_R) / (Satellites.FADE_FAR_R - Satellites.FADE_NEAR_R)));
         this._fade = t * t * (3 - 2 * t);
+        this._rr = rr;
         if (hideIss !== this.hideIss) {
             this.hideIss = hideIss;
             if (this.points) this._markHidden();
@@ -294,8 +299,8 @@ class Satellites {
                     satrec = null;
                 }
                 if (satrec && !satrec.error) {
-                    out.push({ satrec: satrec, group: group, name: list[i].OBJECT_NAME,
-                        norad: Number(list[i].NORAD_CAT_ID) });
+                    out.push(Object.assign({ satrec: satrec, group: group, name: list[i].OBJECT_NAME,
+                        norad: Number(list[i].NORAD_CAT_ID) }, Satellites._orbitBounds(satrec)));
                     n++;
                 }
             }
@@ -388,9 +393,55 @@ class Satellites {
         const gap = this.reducedMotion ? Satellites.TICK_REDUCED_MS : Satellites.TICK_MS;
         // abs: after the clock moves back, the plain difference would stay negative and
         // the dots would freeze until the clock caught up.
-        if (Math.abs(now - this._lastTick) < gap) return false;
+        const since = Math.abs(now - this._lastTick);
+        if (since < gap) return false;
+        // R2 #8: the dots run on the wall clock (always 1x). Step at 1 Hz instead of 4 Hz
+        // while no dot can move a whole pixel in a 1 s step from this view.
+        if (!this.reducedMotion && since < Satellites.TICK_FAR_MS
+            && this._maxStepPx(Satellites.TICK_FAR_MS) < Satellites.FAR_MAX_PX) return false;
         this._propagate(now);
         return true;
+    }
+
+    /**
+     * Upper bound on how far any dot moves on screen in `ms`, from the current view: each
+     * object's top Earth-fixed speed (its orbit's perigee speed plus the frame's spin at
+     * apogee), seen side-on from the camera at the nearest distance it can have: the
+     * camera's distance from Earth's centre minus the object's distance from it, less how
+     * far it can move meanwhile. Infinity while the view is unknown. Rule 5: 2 asserts.
+     * @param {number} ms
+     * @returns {number} CSS px
+     */
+    _maxStepPx(ms) {
+        console.assert(Number.isFinite(ms) && ms > 0, 'Satellites._maxStepPx: time required');
+        console.assert(Array.isArray(this._records), 'Satellites._maxStepPx: records required');
+        if (!(this._pxPerRad > 0) || !(this._rr > 0) || !this._positions) return Infinity;
+        const rr = this._rr, recs = this._records, b = this._stepMemo || (this._stepMemo = {});
+        if (b.rr !== rr || b.tick !== this._lastTick || b.ms !== ms) {
+            const pos = this._positions, k = this.kmToUnits * Satellites.EARTH_RADIUS_KM;   // units per R
+            let worst = 0;                                        // rad over ms
+            for (let i = 0; i < recs.length; i++) {
+                const r = Math.hypot(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]) / k;
+                const move = recs[i].vMax * ms / 1000 / Satellites.EARTH_RADIUS_KM;   // Earth radii
+                const gap = Math.abs(rr - r) - 2 * move;
+                if (!(gap > Satellites.SHELL_MIN_R)) { worst = Infinity; break; }
+                if (move / gap > worst) worst = move / gap;
+            }
+            b.rr = rr; b.tick = this._lastTick; b.ms = ms; b.rad = worst;
+        }
+        return b.rad * this._pxPerRad;
+    }
+
+    // Top Earth-fixed speed (km/s) of one orbit: perigee speed from the satrec's semi-major
+    // axis (Earth radii of 6378.137 km) and eccentricity, plus the frame's spin at apogee.
+    // Unknown = 12 km/s, above any bound orbit. Rule 5: 2 asserts.
+    static _orbitBounds(satrec) {
+        console.assert(satrec && typeof satrec === 'object', 'Satellites._orbitBounds: satrec required');
+        console.assert(Satellites.EARTH_RADIUS_KM > 0, 'Satellites._orbitBounds: radius required');
+        const aKm = satrec.a * 6378.137, e = satrec.ecco;
+        if (!(aKm > 0) || !(e >= 0 && e < 1)) return { vMax: 12 };
+        const vPeri = Math.sqrt(398600.4418 * (1 + e) / (aKm * (1 - e)));
+        return { vMax: vPeri + 7.2921e-5 * aKm * (1 + e) };
     }
 
     // SGP4 -> Earth-fixed km -> globe-local units. A decayed or failed object parks at the
@@ -505,6 +556,9 @@ class Satellites {
 Satellites.EARTH_RADIUS_KM = 6371;
 Satellites.MAX_OBJECTS = 300;           // the buffers are this big; extras are dropped
 Satellites.TICK_MS = 250;
+Satellites.TICK_FAR_MS = 1000;          // R2 #8: 1 Hz while a 1 s step stays under FAR_MAX_PX
+Satellites.FAR_MAX_PX = 1;              // CSS px, the bound from _maxStepPx
+Satellites.SHELL_MIN_R = 0.01;          // an object this close to the camera's radius: 4 Hz
 Satellites.DOT_PX = 3;                  // CSS px, round (RoundPoints)
 Satellites.OPACITY = 0.95;
 Satellites.FADE_FAR_R = 1.6;            // full above this camera distance (Earth radii)

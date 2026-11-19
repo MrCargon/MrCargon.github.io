@@ -13,9 +13,11 @@ const GlobeMath = {
      * @param {number} lng - Longitude in degrees [-180, 180]
      * @param {number} radius - Sphere radius (> 0)
      * @param {boolean} [flipX=false] - Mirror east/west if the texture is flipped
-     * @returns {THREE.Vector3} Point on the sphere surface
+     * @param {THREE.Vector3} [out] - write into this vector instead of a new one (R2 #8:
+     *     no allocation in per-frame callers)
+     * @returns {THREE.Vector3} Point on the sphere surface (out when given)
      */
-    latLngToVector3(lat, lng, radius, flipX = false) {
+    latLngToVector3(lat, lng, radius, flipX = false, out = null) {
         // NASA Rule 5: validate inputs at smallest scope.
         console.assert(typeof THREE !== 'undefined', 'GlobeMath: THREE required');
         console.assert(Number.isFinite(lat) && lat >= -90 && lat <= 90,
@@ -32,7 +34,7 @@ const GlobeMath = {
         const z = radius * sinPhi * Math.sin(theta);
         const y = radius * Math.cos(phi);
 
-        return new THREE.Vector3(x, y, z);
+        return out ? out.set(x, y, z) : new THREE.Vector3(x, y, z);
     },
 
     /**

@@ -527,7 +527,7 @@
                     </div>
                 </section>
 
-                <!-- LIVE PRESENCE (opt-in, coarse, ephemeral) -->
+                <!-- LIVE PRESENCE (opt-in, coarse, kept only while online) -->
                 <section class="ep-section" data-section="presence">
                     <div class="ep-sec-body" id="ep-presence-body" role="tabpanel" aria-labelledby="ep-tab-presence" tabindex="0" hidden>
                         <!-- R3 #2: with no Firebase URL in PresenceConfig.js the layer runs on
@@ -535,9 +535,9 @@
                              html[data-presence="demo"|"live"]; the demo wording + chip show and
                              the visitor count is hidden, so sample pins never pass as real people. -->
                         <button type="button" class="ep-btn" id="explore-toggle-presence" aria-pressed="false"><span class="presence-live-only">👥 Show online visitors</span><span class="presence-demo-only">👥 Show demo visitors (sample)</span></button>
-                        <button type="button" class="ep-btn" id="explore-share-location" aria-pressed="false">📍 Share my location</button>
+                        <button type="button" class="ep-btn" id="explore-share-location" aria-pressed="false">📍 Share my location<span class="presence-demo-only"> (demo: stays on this device)</span></button>
                         <div class="ep-empty ep-demo-note presence-demo-only">Demo mode: no live server is connected, so the visitor pins are a fixed sample, not real people.</div>
-                        <div class="ep-empty">Opt-in · coarse (~11 km) · ephemeral · nothing stored.</div>
+                        <div class="ep-empty">Opt-in · coarse (about 10 km) · kept only while you're online.</div>
                     </div>
                 </section>
 

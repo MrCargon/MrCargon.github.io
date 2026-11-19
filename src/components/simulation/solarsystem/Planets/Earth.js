@@ -188,40 +188,50 @@ class Earth extends Planet {
             await this.createMoon();
             this.createAtmosphere();
             this.createMarker();
-            // Zoom-LOD geography overlays (lazy; safe no-op if GeoLOD absent).
-            this.geoLOD = (typeof GeoLOD !== 'undefined' && this.mesh)
-                ? new GeoLOD(this.mesh, this.data.radius)
-                : null;
-            // High-zoom street tiles (lazy; safe no-op if StreetTiles absent).
-            this.streetTiles = (typeof StreetTiles !== 'undefined' && this.mesh)
-                ? new StreetTiles(this.mesh, this.data.radius)
-                : null;
-            // Atmospheric shells (lazy; safe no-op if absent).
-            this.atmosphereLayers = (typeof AtmosphereLayers !== 'undefined' && this.mesh)
-                ? new AtmosphereLayers(this.mesh, this.data.radius)
-                : null;
-            // Keyless Esri satellite imagery patches (lazy; safe no-op if absent).
+            // Keyless Esri satellite imagery patches (lazy; safe no-op if absent). Stays at
+            // boot: Mars streams its surface through the same class outside Explore.
             this.satelliteTiles = (typeof SatelliteTiles !== 'undefined' && this.mesh)
                 ? new SatelliteTiles(this.mesh, this.data.radius)
                 : null;
-            // Living troposphere objects (balloons/jets; lazy, safe no-op if absent).
-            this.troposphereObjects = (typeof TroposphereObjects !== 'undefined' && this.mesh)
-                ? new TroposphereObjects(this.mesh, this.data.radius)
-                : null;
-            // User-managed saved pins (loads persisted pins; safe no-op if absent).
-            this.explorePins = (typeof ExplorePins !== 'undefined' && this.mesh)
-                ? new ExplorePins(this.mesh, this.data.radius)
-                : null;
-            // Live presence markers (ephemeral; online visitors). Renderer only — the
-            // Presence controller + opt-in UI live in SpaceEnvironment. Hidden until enabled.
-            this.presencePins = (typeof PresencePins !== 'undefined' && this.mesh)
-                ? new PresencePins(this.mesh, this.data.radius)
-                : null;
+            // The Explore-only layers. Their classes load with the 'explore' bundle on the
+            // first enterExploreMode (roast R2 #7b), so here this is usually a no-op;
+            // SpaceEnvironment calls it again once the bundle has run.
+            this.buildExploreLayers();
             return true;
         } catch (err) {
             console.error('Earth.init: failed to initialize:', err);
             return false;
         }
+    }
+
+    /**
+     * Build the Explore-only globe layers whose class is loaded and that are not built
+     * yet. Idempotent: the classes arrive with LazyBundles 'explore' on the first
+     * enterExploreMode (roast R2 #7b), not at boot. Each is a safe no-op if absent.
+     * Rule 5: 2 asserts.
+     * @returns {number} how many layers were built by this call
+     */
+    buildExploreLayers() {
+        console.assert(this.data && this.data.radius > 0, 'Earth.buildExploreLayers: radius required');
+        console.assert(typeof window !== 'undefined', 'Earth.buildExploreLayers: window required');
+        if (!this.mesh) return 0;
+        const r = this.data.radius;
+        let n = 0;
+        const make = (field, name) => {
+            const C = (typeof window[name] === 'function') ? window[name] : null;
+            if (this[field] || !C) return;
+            this[field] = new C(this.mesh, r);
+            n++;
+        };
+        make('geoLOD', 'GeoLOD');                         // zoom-LOD geography overlays
+        make('streetTiles', 'StreetTiles');               // high-zoom street tiles
+        make('atmosphereLayers', 'AtmosphereLayers');     // atmospheric shells
+        make('troposphereObjects', 'TroposphereObjects'); // balloons/jets
+        make('explorePins', 'ExplorePins');               // user-saved pins (loads persisted)
+        // Live presence markers (ephemeral; online visitors). Renderer only - the
+        // Presence controller + opt-in UI live in SpaceEnvironment. Hidden until enabled.
+        make('presencePins', 'PresencePins');
+        return n;
     }
 
     // Build the day/night ShaderMaterial mesh. Rule 4: <=60 lines.

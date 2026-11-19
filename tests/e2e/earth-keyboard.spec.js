@@ -17,7 +17,7 @@ async function enterExplore(page) {
     await page.waitForFunction(() => {
         const se = window.spaceEnvironment;
         const e = se && se.getEarthObject && se.getEarthObject();
-        return !!(e && e.mesh && e.atmosphereLayers);
+        return !!(e && e.mesh);   // the layers are built on the first Explore entry (R2 #7b)
     }, null, { timeout: 40000 });
     await page.waitForTimeout(4000);
     await page.evaluate(() => window.spaceEnvironment.enterExploreMode());

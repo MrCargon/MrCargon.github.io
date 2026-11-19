@@ -184,18 +184,14 @@
     <script src="src/utils/SafeFetch.js" defer></script>
     <!-- Round soft point sprites (CosmicDust, GeoLOD cities); before both users. -->
     <script src="src/utils/RoundPoints.js" defer></script>
-    <script src="src/utils/GeoLOD.js" defer></script>
-    <script src="src/assets/vendor/mvt-decoder.js" defer></script>
-    <script src="src/utils/StreetTiles.js" defer></script>
     <script src="src/utils/SatelliteTiles.js" defer></script>
-    <script src="src/utils/AtmosphereLayers.js" defer></script>
-    <script src="src/utils/TroposphereObjects.js" defer></script>
-    <!-- Live globe markers (places, quakes, ISS): one constant-pixel Points draw per layer. -->
+    <!-- Live globe markers (places, quakes, ISS): one constant-pixel Points draw per layer.
+         Stays at boot: Earth.PALETTE reads GlobeMarkers.PALETTE when Earth.js loads. -->
     <script src="src/utils/GlobeMarkers.js" defer></script>
-    <script src="src/utils/ExplorePins.js" defer></script>
-    <script src="src/utils/PresencePins.js" defer></script>
-    <script src="src/utils/PresenceConfig.js" defer></script>
-    <script src="src/utils/Presence.js" defer></script>
+    <!-- The Explore Earth engines (GeoLOD, mvt-decoder, StreetTiles, AtmosphereLayers,
+         TroposphereObjects, ExplorePins, Presence*) are NOT loaded here (roast R2 #7b):
+         LazyBundles 'explore' brings them on the first Explore entry. SatelliteTiles
+         stays, because Mars uses it outside Explore. -->
     <!-- Discord notify: contact form + calendar events -> Discord webhooks via
          a serverless proxy (see DiscordProxyConfig.js). Loaded before Calendar.js
          and contactPage's handler since both call into it. -->

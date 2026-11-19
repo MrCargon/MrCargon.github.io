@@ -40,7 +40,6 @@ test('demo presence: show + share make no Firebase requests, wording is honest',
         const earth = se && se.getEarthObject && se.getEarthObject();
         return !!(earth && earth.mesh);
     }, null, { timeout: 60000 });
-    expect(await page.evaluate(() => document.documentElement.getAttribute('data-presence'))).toBe('demo');
     await page.waitForTimeout(3000);
     await page.evaluate(() => {
         const se = window.spaceEnvironment;
@@ -48,6 +47,8 @@ test('demo presence: show + share make no Firebase requests, wording is honest',
         se.enterExploreMode();
     });
     await expect(page.locator('#ep-tab-presence')).toBeVisible({ timeout: 20000 });
+    // Presence.js marks the mode when it loads, which is now with the Explore bundle (R2 #7b).
+    expect(await page.evaluate(() => document.documentElement.getAttribute('data-presence'))).toBe('demo');
     await page.locator('#ep-tab-presence').click();
 
     // wording

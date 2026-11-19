@@ -24,11 +24,12 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-2d29093e03ff';
+const CACHE_NAME = 'mrcargon-hub-7c9ca9eb1755';
 const CORE_SHELL = ['./', './index.html', './index.css'];
-// Page-specific scripts that index.html no longer loads at boot (roast R2 #7a): the
-// page fetches them on first navigation through src/utils/LazyBundles.js. A visitor who
-// never opened those pages online would have no copy offline, so they are precached
+// Page-specific scripts that index.html no longer loads at boot (roast R2 #7a), and the
+// Explore globe engines (R2 #7b): the page fetches them on first navigation or first
+// Explore, through src/utils/LazyBundles.js. A visitor who never opened those pages
+// online would have no copy offline, so they are precached
 // here, best-effort, off the main thread. MUST list exactly the files in
 // LazyBundles.BUNDLES - tests/verify-lazy-bundles.cjs fails when the two drift.
 const LAZY_CODE = [
@@ -52,6 +53,15 @@ const LAZY_CODE = [
     './src/components/simulation/cosmology/ExtraDimensionsViz.js',
     './src/components/simulation/cosmology/VibratingString.js',
     './src/components/simulation/cosmology/StringTheory.js',
+    './src/utils/GeoLOD.js',
+    './src/assets/vendor/mvt-decoder.js',
+    './src/utils/StreetTiles.js',
+    './src/utils/AtmosphereLayers.js',
+    './src/utils/TroposphereObjects.js',
+    './src/utils/ExplorePins.js',
+    './src/utils/PresencePins.js',
+    './src/utils/PresenceConfig.js',
+    './src/utils/Presence.js',
 ];
 // How long a /src/data/ request waits on the network before a cached copy answers.
 const DATA_WAIT_MS = 3500;

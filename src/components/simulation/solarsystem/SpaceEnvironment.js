@@ -177,6 +177,9 @@ class SpaceEnvironment {
         this._onExploreClick = (e) => this._handleExploreClick(e);
         this._onExploreMove = (e) => this._handleExploreHover(e);
         this._onExploreDblClick = (e) => this._handleExploreDblClick(e);
+        // R2 #7b: the first Explore entry waits for the 'explore' bundle; Esc cancels it.
+        this._exploreLoad = null;
+        this._onExploreLoadKey = (e) => { if (e.key === 'Escape') this._cancelExploreLoad(); };
         // Bound Escape handler so it can be added/removed without leaking.
         this._onExploreKeydown = (e) => {
             if (e.key === 'Escape' && this.exploreMode) {
@@ -1265,6 +1268,7 @@ class SpaceEnvironment {
         // would strand its panel, its button and its frozen globe. Same reasoning as the
         // exitExploreMode guard on page navigation.
         if (mode !== 'solar' && this.exploreMode) this.exitExploreMode(true);
+        if (mode !== 'solar') this._cancelExploreLoad();   // R2 #7b: a pending first entry too
 
         this.sceneMode = mode;
         if (mode === 'particles') this._ensureParticleField();
@@ -1673,6 +1677,7 @@ class SpaceEnvironment {
             if (this.exploreMode) {
                 this.exitExploreMode(true);
             }
+            this._cancelExploreLoad();   // R2 #7b: ...and a first entry still loading
             // Same for Scale View: it freezes every planet's position, so leaving it
             // engaged here would reset the camera onto a solar system stuck in a row.
             // Clear the saved camera BEFORE exiting so _exitScaleView restores the
@@ -1750,6 +1755,7 @@ class SpaceEnvironment {
         const items = this._scaleViewBodies();
         if (items.length === 0) return false;
         if (this.exploreMode) this.exitExploreMode(true);
+        this._cancelExploreLoad();   // R2 #7b
         this.isAutoOrbiting = false;
 
         // Remember everything we are about to overwrite, so exit is exact.
@@ -2200,16 +2206,162 @@ class SpaceEnvironment {
     }
 
     /**
+     * Enter Explore Earth. The globe engines (streets, geography LOD, atmosphere,
+     * troposphere, pins, presence) load on the FIRST entry through LazyBundles 'explore'
+     * (roast R2 #7b), so:
+     * - bundle already run (every later entry): enters at once and returns a boolean;
+     * - first entry: returns a Promise<boolean>. The globe stays as it is until the
+     *   bundle has run, the button says "Loading" after EXPLORE_LOADING_DELAY_MS, a failed
+     *   load (after LazyBundles' own retries) shows a Retry box, and Esc, a page change,
+     *   another planet, Home or a scene switch cancel the pending entry.
+     * Rule 5: 2 asserts.
+     * @returns {boolean|Promise<boolean>}
+     */
+    enterExploreMode() {
+        console.assert(this.controls, 'enterExploreMode: controls required');
+        console.assert(typeof document !== 'undefined', 'enterExploreMode: document required');
+        if (this._exploreBundleReady()) return this._enterExploreNow();
+        if (this._exploreLoad) return this._exploreLoad.promise;   // a second click waits too
+        this._clearExploreLoadError();
+        const load = { timer: 0, promise: null };
+        this._exploreLoad = load;
+        load.timer = setTimeout(() => this._setExploreLoading(true), SpaceEnvironment.EXPLORE_LOADING_DELAY_MS);
+        document.addEventListener('keydown', this._onExploreLoadKey);
+        load.promise = this._ensureExploreBundle().then((ok) => {
+            if (this._exploreLoad !== load) return false;          // cancelled meanwhile
+            this._endExploreLoad();
+            if (!ok) { this._showExploreLoadError(); return false; }
+            // Belt and braces: never enter over another page or another scene.
+            if (this.backgroundMode || this.sceneMode !== 'solar') return false;
+            return this._enterExploreNow();
+        });
+        return load.promise;
+    }
+
+    /** True when the Explore engines have run (or this build has no LazyBundles). Rule 5: 2 asserts. */
+    _exploreBundleReady() {
+        console.assert(typeof window !== 'undefined', '_exploreBundleReady: window');
+        console.assert(this._exploreLoad === null || typeof this._exploreLoad === 'object', '_exploreBundleReady: state');
+        return typeof LazyBundles === 'undefined' || LazyBundles.isLoaded('explore');
+    }
+
+    /**
+     * Load the Explore globe engines once (LazyBundles retries each file), then build
+     * Earth's layers from them. Rule 5: 2 asserts | Rule 6: false on failure.
+     * @returns {Promise<boolean>}
+     */
+    async _ensureExploreBundle() {
+        console.assert(this.solarSystem, '_ensureExploreBundle: solarSystem required');
+        console.assert(typeof window !== 'undefined', '_ensureExploreBundle: window');
+        if (typeof LazyBundles === 'undefined') return true;
+        try {
+            await LazyBundles.load('explore');
+        } catch (error) {
+            console.error('Explore Earth failed to load:', error && error.message);
+            return false;
+        }
+        const earth = this.getEarthObject();
+        if (earth && typeof earth.buildExploreLayers === 'function') earth.buildExploreLayers();
+        return true;
+    }
+
+    /** Stop the pending first entry (no-op when none): Esc, page change, Home. Rule 5: 2 asserts. */
+    _cancelExploreLoad() {
+        console.assert(typeof document !== 'undefined', '_cancelExploreLoad: document');
+        console.assert(this._exploreLoad === null || typeof this._exploreLoad === 'object', '_cancelExploreLoad: state');
+        this._clearExploreLoadError();
+        if (!this._exploreLoad) return false;
+        this._endExploreLoad();                // the bundle still finishes; the next entry is instant
+        return true;
+    }
+
+    /** Clear the pending-entry state and its loading look. Rule 5: 2 asserts. */
+    _endExploreLoad() {
+        console.assert(this._exploreLoad, '_endExploreLoad: a pending load');
+        console.assert(typeof document !== 'undefined', '_endExploreLoad: document');
+        clearTimeout(this._exploreLoad.timer);
+        this._exploreLoad = null;
+        document.removeEventListener('keydown', this._onExploreLoadKey);
+        this._setExploreLoading(false);
+        return true;
+    }
+
+    /**
+     * The small loading look: the Explore button itself says "Loading Explore..." and is
+     * aria-busy. Only shown if the bundle takes longer than EXPLORE_LOADING_DELAY_MS.
+     * Rule 5: 2 asserts.
+     */
+    _setExploreLoading(on) {
+        console.assert(typeof on === 'boolean', '_setExploreLoading: boolean');
+        const btn = document.getElementById('explore-enter-btn');
+        console.assert(btn === null || btn.nodeType === 1, '_setExploreLoading: bad button');
+        if (!btn) return false;
+        if (on && !btn.hasAttribute('aria-busy')) {
+            btn.dataset.idleLabel = btn.textContent;
+            btn.textContent = '\u{1F30D} Loading Explore\u2026';
+            btn.setAttribute('aria-busy', 'true');
+            btn.style.cursor = 'progress';
+        } else if (!on && btn.hasAttribute('aria-busy')) {
+            if (btn.dataset.idleLabel) btn.textContent = btn.dataset.idleLabel;
+            btn.removeAttribute('aria-busy');
+            btn.style.cursor = 'pointer';
+        }
+        return true;
+    }
+
+    /**
+     * The failed-load box: the same message + Retry look as the page router's
+     * (.page-load-error / .page-load-retry, PageManager._renderBundleError), but floating
+     * above the Explore button instead of replacing the page. Rule 5: 2 asserts.
+     */
+    _showExploreLoadError() {
+        console.assert(typeof document !== 'undefined', '_showExploreLoadError: document');
+        console.assert(document.body, '_showExploreLoadError: body');
+        this._clearExploreLoadError();
+        const box = document.createElement('div');
+        box.id = 'explore-load-error';
+        box.className = 'page-load-error';
+        box.setAttribute('role', 'alert');
+        box.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:300;' +
+            'width:max-content;max-width:min(22rem,calc(100vw - 32px));padding:.9rem 1.1rem;text-align:center;' +
+            'background:rgba(10,14,24,.9);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:#e8ecf4;' +
+            'font:14px/1.4 system-ui,-apple-system,sans-serif;';
+        const msg = document.createElement('p');
+        msg.style.margin = '0';
+        msg.textContent = 'Explore Earth could not load. Check your connection and try again.';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'page-load-retry';
+        btn.textContent = 'Retry';
+        btn.style.cssText = 'margin-top:.6rem;padding:.45rem 1.2rem;cursor:pointer;';
+        btn.addEventListener('click', () => { this._clearExploreLoadError(); this.enterExploreMode(); });
+        box.appendChild(msg);
+        box.appendChild(btn);
+        document.body.appendChild(box);
+        return true;
+    }
+
+    /** Remove the failed-load box if it is up. Rule 5: 2 asserts. */
+    _clearExploreLoadError() {
+        console.assert(typeof document !== 'undefined', '_clearExploreLoadError: document');
+        const box = document.getElementById('explore-load-error');
+        console.assert(box === null || box.nodeType === 1, '_clearExploreLoadError: bad box');
+        if (box) box.remove();
+        return !!box;
+    }
+
+    /**
      * Enter free-look Explore mode on Earth: freeze the globe, hand control to the
      * user, lock controls.target to Earth, set close zoom bounds, build/show the
      * graticule + borders, and show the location panel. Rule 4: <=60 lines.
      * @returns {boolean}
      */
-    enterExploreMode() {
+    _enterExploreNow() {
         const earth = this.getEarthObject();
         console.assert(earth, 'enterExploreMode: Earth object required');
         console.assert(this.controls, 'enterExploreMode: controls required');
         if (!earth || !this.controls) return false;
+        if (typeof earth.buildExploreLayers === 'function') earth.buildExploreLayers();   // no-op once built
 
         const radius = (earth.data && earth.data.radius) || 2;
         this.exploreMode = true;
@@ -4703,6 +4855,7 @@ class SpaceEnvironment {
         if (this.exploreMode) {
             this.exitExploreMode(true);
         }
+        if (planetName !== 'Earth') this._cancelExploreLoad();   // R2 #7b: Explore is Earth only
 
         // Update planet info in the UI
         this.updatePlanetInfo(planetName);
@@ -5438,6 +5591,7 @@ class SpaceEnvironment {
         if (this.exploreMode) {
             this.exitExploreMode(true);
         }
+        this._cancelExploreLoad();   // R2 #7b: a first entry still loading, or its Retry box
         // Belt-and-suspenders: the atmosphere DOM labels live in <body> (outside the
         // #content that PageManager wipes), so if explore was already torn down by
         // another path they could linger on the next page. Force them hidden here
@@ -6168,6 +6322,7 @@ class SpaceEnvironment {
         } else {
             this.teardownExplorePanel();
         }
+        this._cancelExploreLoad();   // R2 #7b
         // B2/B3: belt-and-suspenders — ensure the panel window listeners are gone even
         // if neither branch above ran a teardown.
         this._detachPanelWindowListeners();
@@ -6254,6 +6409,7 @@ SpaceEnvironment.DPR_BAD_WINDOWS = 2; // consecutive slow windows before droppin
 SpaceEnvironment.DPR_GOOD_WINDOWS = 5; // consecutive fast windows before restoring
 SpaceEnvironment.DPR_MAX_RESTORES = 2; // after this many restores 1x stays for the session
 SpaceEnvironment.INTRO_MS = 6000; // R3 #11: the San Francisco intro card hides after this
+SpaceEnvironment.EXPLORE_LOADING_DELAY_MS = 200; // R2 #7b: "Loading Explore" only if the first entry is slower
 SpaceEnvironment.LIST_QUAKES = 10; // R3 #9b: quakes in the Live markers list (nearest the view centre)
 SpaceEnvironment.DPR_GAP_MS = 250; // a gap longer than this is not a frame
 

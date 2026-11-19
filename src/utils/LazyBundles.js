@@ -4,7 +4,7 @@
  * WHY (roast R2 #7a): index.html loaded every script on every visit, including the
  * Life, Studio, Calendar and Notes pages and the cosmology features, which the solar
  * page never touches at boot. They are still plain classic scripts with globals; this
- * only moves WHEN they arrive.
+ * only moves WHEN they arrive. Part B (R2 #7b) added the Explore globe engines.
  *
  * HOW: each bundle is an ordered list of files. load(name) appends one <script> per
  * file with async = false, so the files download in parallel but EXECUTE in list
@@ -140,6 +140,22 @@ LazyBundles.BUNDLES = {
         'src/components/simulation/cosmology/ExtraDimensionsViz.js',
         'src/components/simulation/cosmology/VibratingString.js',
         'src/components/simulation/cosmology/StringTheory.js'
+    ],
+    // The Explore Earth globe engines (roast R2 #7b), loaded by the first
+    // SpaceEnvironment.enterExploreMode; Earth.buildExploreLayers() then builds them.
+    // NOT here, because something outside Explore uses them: SatelliteTiles (Mars
+    // surface), GlobeMarkers (Earth.PALETTE at load time, Satellites), RoundPoints
+    // (CosmicDust), GlobeMath, SafeFetch. Satellites.js already loads itself on demand.
+    explore: [
+        'src/utils/GeoLOD.js',
+        'src/assets/vendor/mvt-decoder.js',
+        'src/utils/StreetTiles.js',
+        'src/utils/AtmosphereLayers.js',
+        'src/utils/TroposphereObjects.js',
+        'src/utils/ExplorePins.js',
+        'src/utils/PresencePins.js',
+        'src/utils/PresenceConfig.js',
+        'src/utils/Presence.js'
     ]
 };
 LazyBundles.MAX_TRIES = 3;

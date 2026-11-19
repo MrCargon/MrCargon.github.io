@@ -648,6 +648,21 @@ body {
 .ep-empty { opacity: 0.8; font-size: 11px; padding: 4px 2px; }   /* R3 #3: was 0.5 (4.1:1) */
 /* Live feed status lines (R3 #5): a dot per state, the switch keeps the user's choice. */
 .ep-feeds { display: grid; gap: 2px; margin: 6px 0 2px; }
+/* Live markers list (R3 #9b): collapsed by default, one compact button per marker. */
+.ep-markers { margin: 4px 0 2px; font-size: 11px; }
+.ep-markers > summary { cursor: pointer; padding: 4px 2px; min-height: 24px; box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.88); border-radius: 5px; }
+.ep-markers > summary:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+.ep-markers .ep-count { opacity: 0.8; margin-left: 4px; }
+.ep-markers .ep-count::before { content: '('; } .ep-markers .ep-count::after { content: ')'; }
+.ep-marker-list { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 2px;
+  max-height: 168px; overflow-y: auto; }
+.ep-mk-btn { width: 100%; min-height: 24px; padding: 3px 6px; text-align: left; font: inherit; font-size: 11px;
+  color: #dce8ff; background: rgba(30, 50, 90, 0.4); border: 1px solid rgba(120, 180, 255, 0.25); border-radius: 5px;
+  cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ep-marker-list:empty { display: none; }
+.ep-mk-btn:hover { background: rgba(45, 85, 150, 0.55); }
+.ep-mk-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -2px; }
 .ep-feed { position: relative; padding: 0 2px 0 13px; font-size: 11px; line-height: 1.4; color: rgba(255, 255, 255, 0.88); }
 .ep-feed::before { content: ''; position: absolute; left: 2px; top: 0.45em; width: 7px; height: 7px; border-radius: 50%; background: #8a929c; }
 .ep-feed[data-state="live"]::before { background: #5ee08a; }

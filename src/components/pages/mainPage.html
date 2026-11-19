@@ -559,6 +559,13 @@
                             <div class="ep-feed" id="ep-feed-quakes" data-state="off" hidden></div>
                             <div class="ep-feed" id="ep-feed-sats" data-state="off" hidden></div>
                         </div>
+                        <!-- R3 #9b: the ISS + the 10 quakes nearest the view centre as buttons, so the
+                             detail cards open without a mouse. Collapsed by default (clean panel). -->
+                        <details class="ep-markers" id="ep-markers">
+                            <summary>Live markers <span class="ep-count" id="ep-markers-count"></span></summary>
+                            <ul class="ep-marker-list" id="ep-marker-list" aria-label="Live markers, nearest the view centre first"></ul>
+                            <div class="ep-empty" id="ep-markers-empty">Turn on ISS or Quakes to list them here.</div>
+                        </details>
                         <div class="ep-empty"><span style="color:#7dffb0;">●</span> GPS <span style="color:#5cb4ff;">●</span> Weather <span style="color:#ff6ad3;">●</span> Stations · orbits: CelesTrak</div>
                         <!-- R1 #5: the troposphere balloons + jets are decoration, not a feed. -->
                         <div class="ep-empty" id="ep-tropo-note">Balloons + jets (low sky): illustrative, not live</div>

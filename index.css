@@ -690,6 +690,13 @@ html[data-presence="demo"] #ep-tab-presence { flex-grow: 1.6; }
 #explore-panel button:focus-visible, #explore-panel input:focus-visible, #explore-panel [tabindex]:focus-visible {
   outline: 2px solid var(--primary-color); outline-offset: 2px;
 }
+/* R3 #9a: the Explore globe is a Tab stop (arrows orbit, +/- zoom). The canvas fills the
+   window, so the ring is drawn inset, inside the edges, where the nav and footer strips
+   do not cover it. */
+#solar-system-container canvas:focus { outline: none; }
+#solar-system-container canvas:focus-visible {
+  outline: 3px solid var(--primary-color); outline-offset: -3px;
+}
 /* Collapsed: hide everything except the header, so there is always a way back.
    Works at every width — on desktop it shrinks the docked panel to its title bar. */
 #explore-panel.ep-collapsed > *:not(.ep-header) { display: none; }

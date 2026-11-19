@@ -1459,3 +1459,166 @@ html {
 .space-exploration-container > * {
   pointer-events: auto;
 }
+
+/* ========================================
+   IDENTITY CARD (R3 #1, 2026-11-19)
+   Who this is and where to click, on the landing view. Sits bottom-left of the hero,
+   clear of the Sun and the planet bar; a short stacked card on a phone, under the Sun.
+   Text is full-strength on a dark glass panel (no faded text).
+   ======================================== */
+.identity-card {
+    position: absolute;
+    left: 0;
+    bottom: 8px;
+    z-index: 10;
+    width: min(320px, 100%);
+    box-sizing: border-box;
+    padding: 12px 14px 14px;
+    background: rgba(10, 12, 20, 0.78);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 165, 0, 0.28);
+    border-radius: 14px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.idc-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.idc-name {
+    margin: 0;
+    flex: 1 1 auto;
+    font-size: 1.35rem;
+    line-height: 1.2;
+    font-weight: 700;
+    color: #fff;
+}
+.idc-handle {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--primary-color, #FFA500);
+}
+.idc-toggle {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+.idc-toggle:hover { background: rgba(255, 165, 0, 0.18); }
+.idc-role {
+    margin: 4px 0 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.92);
+}
+.idc-status {
+    margin: 4px 0 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.idc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.8);
+    flex: 0 0 auto;
+}
+.idc-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+.idc-btn {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    text-shadow: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.idc-btn:hover { background: rgba(255, 255, 255, 0.16); }
+.idc-btn--primary {
+    background: var(--primary-color, #FFA500);
+    border-color: var(--primary-color, #FFA500);
+    color: #111;
+}
+.idc-btn--primary:hover { background: #ffb733; }
+.idc-btn:focus-visible,
+.idc-toggle:focus-visible {
+    outline: 2px solid var(--primary-color, #FFA500);
+    outline-offset: 2px;
+}
+/* Collapsed: the name (the page's h1) and the re-open button stay. */
+.identity-card.idc-collapsed { width: auto; padding: 8px 10px 8px 14px; }
+.identity-card.idc-collapsed .idc-body { display: none; }
+.identity-card.idc-collapsed .idc-name { font-size: 1.05rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .identity-card { animation: idcIn 0.5s ease 0.2s both; }
+}
+@keyframes idcIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .idc-btn { transition: none; }
+}
+
+@media (max-width: 600px) {
+    /* Phone: full width of the hero, under the Sun, above the footer. */
+    .identity-card { right: 0; width: auto; padding: 10px 12px 12px; }
+    .identity-card.idc-collapsed { right: auto; }
+    .idc-name { font-size: 1.2rem; }
+    .idc-role { font-size: 0.9rem; }
+    .idc-toggle { width: 44px; height: 44px; }
+    .idc-btn { min-height: 44px; }
+}
+/* Short landscape phones: the hero is too short for the card and the planet bar both. */
+@media (max-height: 520px) {
+    .identity-card:not(.idc-collapsed) .idc-role,
+    .identity-card:not(.idc-collapsed) .idc-status { display: none; }
+}
+
+/* ========================================
+   TOUCH TARGETS (R3 #8, 2026-11-19)
+   Phone I/C/T/R row measured 31x23 (below the 24x24 AA minimum) and the planet chips
+   32x26. Both now reach the 44 px phone guideline.
+   ======================================== */
+@media (max-width: 768px) {
+    .action-btn {
+        min-width: 44px;
+        min-height: 44px;
+        justify-content: center;
+    }
+    .planet-btn {
+        min-height: 44px;
+    }
+}
+@media (max-width: 400px) {
+    .planet-btn {
+        width: 44px;
+    }
+}

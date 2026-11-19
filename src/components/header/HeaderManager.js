@@ -242,7 +242,9 @@ class HeaderManager {
     updateMobileLogoText() {
         if (!this.logoElement) return;
         
-        if (this.currentPageName) {
+        // R3 #1: on the landing page the phone brand slot said "Main", so the first
+        // screen never named the site. Main shows the brand; other pages keep their name.
+        if (this.currentPageName && this.currentPageName !== 'Main') {
             this.logoElement.textContent = this.currentPageName;
         } else {
             this.logoElement.textContent = this.originalLogoText;

@@ -1660,6 +1660,7 @@ class PageManager {
  // Setup pop-up system with enhanced validation
             this.setupPopupInteractions();
             this.setupQuickActionBar();
+            this.setupIdentityCard();
             this.setupKeyboardShortcuts();
             this.setupPopupPositionValidation();
             // Keyboard shortcuts are shown on the action buttons themselves (I / C / T
@@ -1767,6 +1768,55 @@ class PageManager {
             this._singletonSetup.popupInteractions = true;
         }
 
+        return true;
+    }
+
+    /**
+     * Landing identity card (R3 #1): collapse toggle, remembered across visits.
+     * Runs on every mainPage.html load: applies the saved state to the FRESH card, and
+     * attaches one document-level click delegate (same pattern as setupQuickActionBar).
+     * localStorage can throw (private mode, blocked storage): both paths are guarded and
+     * the card simply starts expanded.
+     * Rule 4: <=60 lines | Rule 5: 2+ assertions
+     *
+     * @returns {boolean} True if the card was found and set up
+     */
+    setupIdentityCard() {
+        console.assert(typeof document !== 'undefined', 'setupIdentityCard: document required');
+        console.assert(this !== undefined, 'setupIdentityCard: instance required');
+        const KEY = 'mrcargon.identityCard.collapsed';
+        const apply = (card, collapsed) => {
+            card.classList.toggle('idc-collapsed', collapsed);
+            const btn = card.querySelector('#idc-toggle');
+            if (btn) {
+                btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                btn.setAttribute('aria-label', collapsed ? 'Show intro card' : 'Hide intro card');
+                btn.title = collapsed ? 'Show intro card' : 'Hide intro card';
+                const glyph = btn.querySelector('span');
+                if (glyph) glyph.textContent = collapsed ? '▴' : '▾';
+            }
+        };
+        const card = document.getElementById('identity-card');
+        if (!card) return false;
+        let saved = false;
+        try { saved = window.localStorage.getItem(KEY) === '1'; } catch (e) { saved = false; }
+        apply(card, saved);
+
+        this._singletonSetup = this._singletonSetup || {};
+        if (!this._singletonSetup.identityCard) {
+            this._boundHandlers = this._boundHandlers || {};
+            this._boundHandlers.identityCardHandler = (e) => {
+                const btn = e.target.closest('#idc-toggle');
+                if (!btn) return;
+                const c = document.getElementById('identity-card');
+                if (!c) return;
+                const next = !c.classList.contains('idc-collapsed');
+                apply(c, next);
+                try { window.localStorage.setItem(KEY, next ? '1' : '0'); } catch (err) { /* storage blocked: state lasts this visit only */ }
+            };
+            document.addEventListener('click', this._boundHandlers.identityCardHandler);
+            this._singletonSetup.identityCard = true;
+        }
         return true;
     }
 

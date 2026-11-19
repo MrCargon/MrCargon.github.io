@@ -3,6 +3,28 @@
     
     <!-- Space Exploration UI - Elegant Pop-up System -->
     <div class="space-exploration-container">
+        <!-- Identity card (R3 #1, 2026-11-19). The landing view had no heading and never
+             said whose site this is: the name was only on the 5 s loading screen and in
+             the footer. Wording is taken from the About page and the Explore panel, not
+             new claims. Collapse state is remembered (PageManager.setupIdentityCard);
+             hidden in Explore mode like the planet bar. -->
+        <section class="identity-card" id="identity-card" aria-labelledby="idc-name">
+            <div class="idc-head">
+                <h1 class="idc-name" id="idc-name">Andrejs K <span class="idc-handle">(MrCargon)</span></h1>
+                <button type="button" class="idc-toggle" id="idc-toggle"
+                        aria-expanded="true" aria-controls="idc-body"
+                        aria-label="Hide intro card" title="Hide intro card"><span aria-hidden="true">▾</span></button>
+            </div>
+            <div class="idc-body" id="idc-body">
+                <p class="idc-role">Creative Developer and 3D Designer</p>
+                <p class="idc-status"><span class="idc-dot" aria-hidden="true"></span>Based in San Francisco · Open to work</p>
+                <div class="idc-actions">
+                    <a class="idc-btn idc-btn--primary" href="#projects">View projects</a>
+                    <a class="idc-btn" href="#about">About / CV</a>
+                </div>
+            </div>
+        </section>
+
         <!-- Planet Selection Bar - Top navigation -->
         <div class="planet-selector-wrapper" role="navigation" aria-label="Planet Selection">
             <button class="scroll-indicator left" aria-label="Scroll left">
@@ -467,7 +489,7 @@
                 <button type="button" class="ep-tab" role="tab" id="ep-tab-detail" data-tab="detail" aria-controls="ep-detail-body" aria-selected="false" tabindex="-1">Detail</button>
                 <button type="button" class="ep-tab" role="tab" id="ep-tab-style" data-tab="style" aria-controls="ep-style-body" aria-selected="false" tabindex="-1">Style</button>
                 <button type="button" class="ep-tab" role="tab" id="ep-tab-pins" data-tab="pins" aria-controls="ep-pins-body" aria-selected="false" tabindex="-1">Pins<span class="ep-count" id="ep-pin-count"></span></button>
-                <button type="button" class="ep-tab" role="tab" id="ep-tab-presence" data-tab="presence" aria-controls="ep-presence-body" aria-selected="false" tabindex="-1">Live<span class="ep-count" id="explore-presence-count"></span></button>
+                <button type="button" class="ep-tab" role="tab" id="ep-tab-presence" data-tab="presence" aria-controls="ep-presence-body" aria-selected="false" tabindex="-1">Live<span class="ep-demo-chip presence-demo-only">demo</span><span class="ep-count" id="explore-presence-count"></span></button>
             </div>
             <div class="ep-body">
 
@@ -507,9 +529,14 @@
                 <!-- LIVE PRESENCE (opt-in, coarse, ephemeral) -->
                 <section class="ep-section" data-section="presence">
                     <div class="ep-sec-body" id="ep-presence-body" role="tabpanel" aria-labelledby="ep-tab-presence" tabindex="0" hidden>
-                        <button type="button" class="ep-btn" id="explore-toggle-presence" aria-pressed="false">👥 Show online visitors</button>
+                        <!-- R3 #2: with no Firebase URL in PresenceConfig.js the layer runs on
+                             DemoAdapter's 5 seeded sample visitors. Presence.js marks the page
+                             html[data-presence="demo"|"live"]; the demo wording + chip show and
+                             the visitor count is hidden, so sample pins never pass as real people. -->
+                        <button type="button" class="ep-btn" id="explore-toggle-presence" aria-pressed="false"><span class="presence-live-only">👥 Show online visitors</span><span class="presence-demo-only">👥 Show demo visitors (sample)</span></button>
                         <button type="button" class="ep-btn" id="explore-share-location" aria-pressed="false">📍 Share my location</button>
-                        <div class="ep-empty" style="opacity:0.5;">Opt-in · coarse (~11 km) · ephemeral · nothing stored.</div>
+                        <div class="ep-empty ep-demo-note presence-demo-only">Demo mode: no live server is connected, so the visitor pins are a fixed sample, not real people.</div>
+                        <div class="ep-empty">Opt-in · coarse (~11 km) · ephemeral · nothing stored.</div>
                     </div>
                 </section>
 
@@ -525,7 +552,7 @@
                             <button type="button" class="ep-switch" id="explore-toggle-quakes" aria-pressed="false" aria-label="Toggle live earthquakes">🌋 Quakes</button>
                             <button type="button" class="ep-switch" id="explore-toggle-sats" aria-pressed="false" aria-label="Toggle real satellites: GPS, weather and crewed stations">🛰️ Sats</button>
                         </div>
-                        <div class="ep-empty" style="opacity:0.7;"><span style="color:#7dffb0;">●</span> GPS <span style="color:#ffc24a;">●</span> Weather <span style="color:#ff6ad3;">●</span> Stations · orbits: CelesTrak</div>
+                        <div class="ep-empty"><span style="color:#7dffb0;">●</span> GPS <span style="color:#ffc24a;">●</span> Weather <span style="color:#ff6ad3;">●</span> Stations · orbits: CelesTrak</div>
                     </div>
                 </section>
 
@@ -545,7 +572,7 @@
                             <button type="button" class="ep-switch" id="ep-toggle-districts" aria-pressed="true">Districts</button>
                             <button type="button" class="ep-btn" id="explore-mode" aria-label="Switch the map basemap style">🗺️ Basemap: Satellite</button>
                         </div>
-                        <div class="ep-empty" style="opacity:0.5;">Earth texture: NASA Earth Observatory / Blue Marble Next Generation (Reto Stöckli, NASA GSFC)</div>
+                        <div class="ep-empty">Earth texture: NASA Earth Observatory / Blue Marble Next Generation (Reto Stöckli, NASA GSFC)</div>
                     </div>
                 </section>
 

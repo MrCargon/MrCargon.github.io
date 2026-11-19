@@ -231,6 +231,7 @@ class Presence {
             try { return new FirebaseAdapter(cfg); }
             catch (e) { console.warn('[Presence] Firebase init failed, using Demo:', e && e.message); }
         }
+        Presence.markMode('demo');   // R3 #2: the Live tab must say these are samples
         // Otherwise: a seeded world roster gives the globe immediate visible life, $0, no signup.
         return new DemoAdapter();
     }
@@ -307,7 +308,25 @@ class Presence {
     }
 }
 
+// R3 #2 (2026-11-19): tell the page which mode presence runs in, as
+// html[data-presence="demo"|"live"]. CSS (index.css) then labels the Live tab "demo",
+// words the button "Show demo visitors (sample)" and hides the visitor count, so the
+// 5 seeded DemoAdapter pins are never shown as real people. Set at load from the config
+// (mainPage.html is injected later and picks it up), and re-marked demo if a configured
+// Firebase adapter fails to start (defaultAdapter fallback).
+Presence.markMode = function (mode) {
+    console.assert(mode === 'demo' || mode === 'live', 'markMode: demo|live');
+    console.assert(typeof document !== 'undefined', 'markMode: document');
+    if (typeof document !== 'undefined' && document.documentElement) document.documentElement.setAttribute('data-presence', mode);
+    return mode;
+};
+Presence.configuredMode = function () {
+    var cfg = (typeof window !== 'undefined') ? window.MRCARGON_FIREBASE : null;
+    return (cfg && typeof cfg.databaseURL === 'string' && cfg.databaseURL.trim()) ? 'live' : 'demo';
+};
+
 if (typeof window !== 'undefined') {
+    Presence.markMode(Presence.configuredMode());
     window.Presence = Presence;
     window.PresenceDemoAdapter = DemoAdapter;
     window.PresenceBroadcastAdapter = BroadcastChannelAdapter;

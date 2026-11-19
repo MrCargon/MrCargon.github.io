@@ -11,6 +11,7 @@
 // REUSE: GlobeMath.latLngToVector3(lat,lng,radius) for all lat/lng -> Vector3, and
 // SafeFetch.json(url,{ttl}) for fetching (falls back to fetch(); fails soft).
 // global THREE (r184), global GlobeMath, global SafeFetch. Classic script, no modules.
+/* global RoundPoints */
 class GeoLOD {
     // NASA Rule 5: validate deps. Does NOT build geometry (lazy).
     constructor(earthMesh, radius, options = {}) {
@@ -43,7 +44,10 @@ class GeoLOD {
             { name: 'states', url: 'src/assets/geo/admin1-50m.json', kind: 'lines',
                 color: 0x6fb0e0, rOffset: 1.00060, showBelow: 2.4, hideAbove: 2.7, fadeOutBelow: 1.45 },
             { name: 'cities', url: 'src/assets/geo/populated-places.json', kind: 'points',
-                color: 0xffd24a, rOffset: 1.00062, showBelow: 1.7, hideAbove: 1.95, fadeOutBelow: 1.2 },
+                color: 0xffd24a, rOffset: 1.00062, showBelow: 1.7, hideAbove: 1.95, fadeOutBelow: 1.2,
+                // Declutter: places are sorted by population; only the biggest ~15%
+                // show at the top of the band (1.75R), all of them by 1.25R.
+                declutter: [1.75, 1.25, 0.15] },
             { name: 'districts', url: 'src/assets/geo/districts-sf.json', kind: 'lines-or-points',
                 color: 0x8fe3ff, rOffset: 1.00064, showBelow: 1.3, hideAbove: 1.5, fadeOutBelow: 0 }
         ];
@@ -52,6 +56,7 @@ class GeoLOD {
             this.tiers.set(d.name, {
                 name: d.name, url: d.url, kind: d.kind, color: d.color, rOffset: d.rOffset,
                 showBelow: d.showBelow, hideAbove: d.hideAbove, fadeOutBelow: d.fadeOutBelow,
+                declutter: d.declutter || null,
                 group: null, material: null, built: false, failed: false,
                 requested: false, opacity: 0, targetOpacity: 0
             });
@@ -103,7 +108,20 @@ class GeoLOD {
             // Render opacity = zoom cross-fade × the user's style opacity (default 1).
             if (tier.material) tier.material.opacity = tier.opacity * (tier.styleOpacity || 1);
             if (tier.group) tier.group.visible = tier.opacity > 0.01;
+            if (tier.declutter) this._declutter(tier, d);
         }
+    }
+
+    // Zoom declutter (round-points tiers): the rank cut-off eases from the biggest
+    // few places at the band top to every place near the bottom. No allocation.
+    _declutter(tier, d) {
+        console.assert(Array.isArray(tier.declutter), 'GeoLOD._declutter: declutter band required');
+        console.assert(typeof d === 'number', 'GeoLOD._declutter: distance required');
+        const rp = tier.material && tier.material.userData.roundPoints;
+        if (!rp) return;
+        const dc = tier.declutter;
+        const t = Math.max(0, Math.min(1, (dc[0] - d) / (dc[0] - dc[1])));
+        rp.uRankCut.value = dc[2] + ((1.04 - dc[2]) * t);
     }
 
     // Toggle auto-driving of targets. When false, update() leaves targets alone and
@@ -246,21 +264,30 @@ class GeoLOD {
         if (!data || !Array.isArray(data.places)) return null;
         const r = this.radius * tier.rOffset;
         const positions = [];
+        const ranks = [];
         const max = Math.min(data.places.length, 2000);   // Rule 2: bounded cap
         for (let i = 0; i < max; i++) {
             const p = data.places[i];
             if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
             const v = GlobeMath.latLngToVector3(p.lat, p.lng, r);
             positions.push(v.x, v.y, v.z);
+            ranks.push(i / max); // 0 = most populous (list is sorted desc)
         }
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('rpRank', new THREE.Float32BufferAttribute(ranks, 1));
         const material = new THREE.PointsMaterial({
             color: tier.color, size: this.radius * 0.01, sizeAttenuation: true,
             transparent: true, opacity: 0, depthWrite: false
         });
+        // Round crisp dots (an untextured PointsMaterial draws squares), clamped
+        // to 2-6 CSS px so they never balloon at the bottom of the band.
+        const rounded = (typeof RoundPoints !== 'undefined');
+        if (rounded) RoundPoints.apply(material, { soft: 0.3, minPx: 2, maxPx: 6, rank: Boolean(tier.declutter) });
         tier.material = material;
-        return new THREE.Points(geometry, material);
+        const pts = new THREE.Points(geometry, material);
+        if (rounded) RoundPoints.attach(pts);
+        return pts;
     }
 
     // Fetch JSON via SafeFetch (preferred) with a plain fetch() fallback. Never

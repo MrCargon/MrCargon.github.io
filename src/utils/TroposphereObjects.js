@@ -59,6 +59,22 @@ class TroposphereObjects {
         this._sUp = (typeof THREE !== 'undefined') ? new THREE.Vector3() : null;
         this._sPos = (typeof THREE !== 'undefined') ? new THREE.Vector3() : null;
         this._sAhead = (typeof THREE !== 'undefined') ? new THREE.Vector3() : null;
+        this._sWorld = null;        // clamp scratch, created in build() (THREE present)
+        this._sScale = null;
+        // Screen-size clamp: each object's largest on-screen extent is capped at this
+        // many CSS px, so a world-size balloon can never grow into a blob that covers
+        // the view up close. The camera + canvas height are captured by an
+        // onBeforeRender hook on the lead mesh of each object (no SpaceEnvironment
+        // plumbing needed); the clamp then runs in update() on the next frame.
+        this.maxPx = opts.maxPx || { balloon: 22, jet: 34, weather: 9 };
+        this._cam = null;           // last camera that rendered us (PerspectiveCamera)
+        this._viewH = 0;            // canvas CSS height (px) at that render
+        var self = this;
+        this._captureCam = function (renderer, _scene, camera) {
+            self._cam = camera;
+            var el = renderer && renderer.domElement;
+            self._viewH = el ? (el.clientHeight || el.height || 0) : 0;
+        };
     }
 
     // Lazily build all objects (hidden, opacity 0). Rule 4: <=60 lines.
@@ -66,6 +82,8 @@ class TroposphereObjects {
         console.assert(this.earthMesh, 'TroposphereObjects.build: earthMesh required');
         console.assert(!this._disposed, 'TroposphereObjects.build: not disposed');
         if (this.built || this._disposed || typeof THREE === 'undefined') return false;
+        this._sWorld = new THREE.Vector3();
+        this._sScale = new THREE.Vector3();
         this.group = new THREE.Group();
         this.group.visible = false;
         this.earthMesh.add(this.group);
@@ -94,10 +112,12 @@ class TroposphereObjects {
             var baskMat = new THREE.MeshBasicMaterial({ color: 0x5a3a1a, transparent: true, opacity: 0 });
             baskMat._tropoScale = 1;
             holder.add(env); holder.add(new THREE.Mesh(baskGeo, baskMat));
+            env.onBeforeRender = this._captureCam;
             this._placeOnGlobe(holder, s.lat, s.lng, rOff);
             this.group.add(holder);
+            // extent = basket bottom to envelope top (~2.6 x size), for the px clamp.
             this.balloons.push({ mesh: holder, baseR: this.radius * rOff, phase: i * 1.7,
-                mats: [envMat, baskMat] });
+                mats: [envMat, baskMat], extent: size * 2.6, maxPx: this.maxPx.balloon });
         }
         return true;
     }
@@ -121,8 +141,11 @@ class TroposphereObjects {
             var trail = new THREE.Mesh(new THREE.PlaneGeometry(size * 4, size * 0.5), trailMat);
             trail.position.x = -size * 2.2;
             holder.add(body); holder.add(trail);
+            body.onBeforeRender = this._captureCam;
+            // extent = contrail tail to nose (~5 x size), for the px clamp.
             this.jets.push({ mesh: holder, lat: s.lat, lng: s.lng, heading: s.heading,
-                speed: s.speed, rOff: rOff, mats: [bodyMat, trailMat] });
+                speed: s.speed, rOff: rOff, mats: [bodyMat, trailMat],
+                extent: size * 5, maxPx: this.maxPx.jet });
             this.group.add(holder);
         }
         return true;
@@ -138,9 +161,11 @@ class TroposphereObjects {
             var mat = new THREE.MeshBasicMaterial({ color: 0xdfe8f5, transparent: true, opacity: 0 });
             mat._tropoScale = 0.9;
             var m = new THREE.Mesh(new THREE.SphereGeometry(size, 10, 8), mat);
+            m.onBeforeRender = this._captureCam;
             this._placeOnGlobe(m, s.lat, s.lng, rOff);
             this.group.add(m);
-            this.weather.push({ mesh: m, baseR: this.radius * rOff, phase: i * 2.3, mats: [mat] });
+            this.weather.push({ mesh: m, baseR: this.radius * rOff, phase: i * 2.3, mats: [mat],
+                extent: size * 2, maxPx: this.maxPx.weather });
         }
         return true;
     }
@@ -165,9 +190,11 @@ class TroposphereObjects {
         if (!this.built || this._disposed) return false;
         var d = Number.isFinite(dt) ? Math.min(dt, 0.1) : 0.016;
         this._t += d;
-        // Bell-ish band: 1 inside [showNear,showFar], ramps to 0 over a margin each side.
+        // Band: 0 at/below showNear, ramps up to 1 at showNear+m, 1 up to showFar, then
+        // ramps to 0 at showFar+m. (The lower ramp used to start at showNear-m, which
+        // left it at ~0.78 at the closest zoom, so the objects never faded out up close.)
         var rr = cameraDistInRadii, m = 0.18;
-        var below = Math.max(0, Math.min(1, (rr - (this.showNear - m)) / m));
+        var below = Math.max(0, Math.min(1, (rr - this.showNear) / m));
         var above = Math.max(0, Math.min(1, ((this.showFar + m) - rr) / m));
         this._target = Math.max(0, Math.min(1, below * above));
         var ease = this.reducedMotion ? 1 : 0.1;
@@ -175,6 +202,7 @@ class TroposphereObjects {
         this.group.visible = this._opacity > 0.01;
         if (!this.group.visible) return true;
         this._applyOpacity(this._opacity);
+        this._clampScreenSize();
         if (!this.reducedMotion) { this._animBalloons(); this._animJets(d); this._animWeather(); }
         return true;
     }
@@ -189,6 +217,36 @@ class TroposphereObjects {
             for (var i = 0; i < arr.length; i++) {               // Rule 2: bounded
                 var mats = arr[i].mats;
                 for (var k = 0; k < mats.length; k++) mats[k].opacity = o * mats[k]._tropoScale;
+            }
+        }
+        return true;
+    }
+
+    // Cap every object's on-screen size at its maxPx (scale <= 1, never enlarged), so
+    // none can cover the view at any zoom. Uses the camera captured at the last render.
+    // Rule 4: <=60 lines | no per-frame allocation (scratch vectors).
+    _clampScreenSize() {
+        console.assert(this.group, '_clampScreenSize: group required');
+        console.assert(this._sWorld, '_clampScreenSize: scratch required');
+        var cam = this._cam;
+        if (!cam || !cam.isPerspectiveCamera || !(this._viewH > 0)) return false;
+        var tanHalf = Math.tan(cam.fov * Math.PI / 360);
+        if (!(tanHalf > 0)) return false;
+        this.group.getWorldScale(this._sScale);
+        var worldK = this._sScale.x;                              // group world scale
+        var ce = cam.matrixWorld.elements;                        // camera world position
+        var sets = [this.balloons, this.jets, this.weather];
+        for (var g = 0; g < sets.length; g++) {                  // Rule 2: bounded (3)
+            var arr = sets[g];
+            for (var i = 0; i < arr.length; i++) {               // Rule 2: bounded
+                var o = arr[i];
+                o.mesh.getWorldPosition(this._sWorld);
+                var dx = this._sWorld.x - ce[12], dy = this._sWorld.y - ce[13], dz = this._sWorld.z - ce[14];
+                var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (!(dist > 1e-6)) { o.mesh.scale.setScalar(0.001); continue; }
+                var px = (o.extent * worldK * this._viewH) / (2 * dist * tanHalf);
+                var s = px > o.maxPx ? o.maxPx / px : 1;
+                o.mesh.scale.setScalar(Math.max(0.001, s));
             }
         }
         return true;

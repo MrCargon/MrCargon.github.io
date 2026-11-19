@@ -79,7 +79,8 @@ class Earth extends Planet {
         // Live keyless data layers (children of this.mesh so they track the globe).
         this.layers = { iss: null, quakes: null, pois: null };
         this._issTimer = null;
-        this.pickables = [];          // meshes the raycaster can click for a detail card
+        this.markers = null;          // GlobeMarkers: the 3 layers above as Points (screen-space pick)
+        this.pickables = [];          // extra meshes the raycaster can click for a detail card
 
         // Country hover: point-in-polygon hit-test + glowing outline + name.
         this.countryShapes = null;
@@ -913,44 +914,41 @@ class Earth extends Planet {
 
     // ---- Live keyless data layers (children of this.mesh; reuse GlobeMath) ----
 
-    // Small glowing marker helper. Rule 5: 2 asserts.
-    _makeMarker(lat, lng, radiusFactor, color, size, userData) {
-        console.assert(typeof GlobeMath !== 'undefined', 'Earth._makeMarker: GlobeMath required');
-        console.assert(size > 0, 'Earth._makeMarker: size required');
-        const pos = GlobeMath.latLngToVector3(lat, lng, this.data.radius * radiusFactor);
-        const geo = new THREE.SphereGeometry(size, 12, 12);
-        const mat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.95 });
-        const m = new THREE.Mesh(geo, mat);
-        m.position.copy(pos);
-        m.userData = userData || {};
-        return m;
+    // One GlobeMarkers instance holds the places / quakes / ISS layers: one Points draw
+    // per layer, constant pixel size, linear colours, screen-space picking (audit F3).
+    _ensureMarkers() {
+        console.assert(this.mesh, 'Earth._ensureMarkers: mesh required');
+        if (this.markers) return this.markers;
+        if (typeof GlobeMarkers === 'undefined') {
+            console.error('Earth._ensureMarkers: GlobeMarkers missing');
+            return null;
+        }
+        this.markers = new GlobeMarkers(this.mesh, this.data.radius);
+        console.assert(this.markers, 'Earth._ensureMarkers: create failed');
+        return this.markers;
     }
 
-    // Curated places of interest (static, no API). Click → detail card.
+    // Curated places of interest (static, no API). Click -> detail card.
     buildPois() {
         console.assert(this.mesh, 'Earth.buildPois: mesh required');
         if (this.layers.pois) return this.layers.pois;
+        const mk = this._ensureMarkers();
+        if (!mk) return null;
         const places = [
             { name: 'San Francisco', lat: 37.7749, lng: -122.4194, info: 'Based here · open to work' },
             { name: 'London', lat: 51.5074, lng: -0.1278, info: 'Open to remote / relocation' },
             { name: 'Tokyo', lat: 35.6762, lng: 139.6503, info: 'Open to remote / relocation' },
             { name: 'New York', lat: 40.7128, lng: -74.0060, info: 'Open to remote / relocation' }
         ];
-        const group = new THREE.Group();
-        for (let i = 0; i < places.length; i++) {
-            const p = places[i];
-            const m = this._makeMarker(p.lat, p.lng, 1.0009, 0xffd24a, this.data.radius * 0.02,
-                { type: 'place', name: p.name, info: p.info });
-            group.add(m);
-            this.pickables.push(m);
-        }
-        group.visible = false;
+        const group = mk.addLayer('pois', { clusterPx: 0 });
+        mk.setItems('pois', places.map((p) => ({ lat: p.lat, lng: p.lng, alt: 1.0009, color: 0xffd24a,
+            size: 10, rank: 1, data: { type: 'place', name: p.name, info: p.info } })));
         this.layers.pois = group;
-        this.mesh.add(group);
         return group;
     }
 
-    // Live earthquakes (USGS, keyless + CORS). Markers sized by magnitude.
+    // Live earthquakes (USGS, keyless + CORS). Colour + size by magnitude, clustered
+    // on screen where they pile up (Pacific ring at far zoom).
     async buildQuakes() {
         console.assert(this.mesh, 'Earth.buildQuakes: mesh required');
         if (this.layers.quakes) return this.layers.quakes;
@@ -961,27 +959,31 @@ class Earth extends Planet {
             console.error('Earth.buildQuakes: no USGS data');
             return null;
         }
-        const group = new THREE.Group();
+        if (this.layers.quakes) return this.layers.quakes;   // a parallel call finished first
+        const mk = this._ensureMarkers();
+        if (!mk) return null;
+        const items = [];
         const max = Math.min(data.features.length, 250);   // Rule 2: bounded
         for (let i = 0; i < max; i++) {
             const f = data.features[i];
-            if (!f.geometry || !f.geometry.coordinates) continue;
-            const lng = f.geometry.coordinates[0], lat = f.geometry.coordinates[1];
-            const mag = (f.properties && f.properties.mag) || 2.5;
-            const size = this.data.radius * (0.006 + mag * 0.004);
-            const m = this._makeMarker(lat, lng, 1.0009, 0xff5a3c, size,
-                { type: 'quake', name: 'M' + mag.toFixed(1) + ' earthquake',
-                    info: (f.properties && f.properties.place) || '' });
-            group.add(m);
-            this.pickables.push(m);
+            if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) continue;
+            const lng = Number(f.geometry.coordinates[0]), lat = Number(f.geometry.coordinates[1]);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+            const m = Number(f.properties && f.properties.mag);
+            const mag = Number.isFinite(m) ? m : 2.5;
+            items.push({ lat: lat, lng: lng, alt: 1.0009, color: GlobeMarkers.quakeColor(mag),
+                size: GlobeMarkers.quakeSize(mag), rank: mag,
+                data: { type: 'quake', name: 'M' + mag.toFixed(1) + ' earthquake',
+                    info: (f.properties && f.properties.place) || '' } });
         }
-        group.visible = false;
+        const group = mk.addLayer('quakes', { clusterPx: 14, clusterNoun: 'earthquakes' });
+        mk.setItems('quakes', items);
         this.layers.quakes = group;
-        this.mesh.add(group);
         return group;
     }
 
     // ISS live position (wheretheiss.at, keyless + CORS). Polls while shown.
+    // NOTE: Satellites.js also draws the ISS as one of its dots (piece F8 merges them).
     startISS() {
         console.assert(this.mesh, 'Earth.startISS: mesh required');
         if (this._issTimer) return;
@@ -990,12 +992,11 @@ class Earth extends Planet {
             if (typeof document !== 'undefined' && document.hidden) return;   // pause when hidden
             if (typeof SafeFetch === 'undefined') return;
             const d = await SafeFetch.json('https://api.wheretheiss.at/v1/satellites/25544', { ttl: 4000 });
-            if (d && this.layers.iss && typeof d.latitude === 'number') {
+            if (d && this.markers && this.layers.iss && typeof d.latitude === 'number') {
                 const altF = 1 + ((d.altitude || 420) / 6371);
-                const pos = GlobeMath.latLngToVector3(d.latitude, d.longitude, this.data.radius * altF);
-                this.layers.iss.position.copy(pos);
-                this.layers.iss.userData.info = 'Alt ' + Math.round(d.altitude) + ' km · '
-                    + Math.round(d.velocity) + ' km/h';
+                this.markers.setItemPosition('iss', 0, d.latitude, d.longitude, altF);
+                const info = this.markers.itemData('iss', 0);
+                if (info) info.info = 'Alt ' + Math.round(d.altitude) + ' km · ' + Math.round(d.velocity) + ' km/h';
             }
         };
         poll();
@@ -1004,12 +1005,13 @@ class Earth extends Planet {
 
     _ensureIssMarker() {
         if (this.layers.iss) return;
-        const m = this._makeMarker(0, 0, 1.06, 0x66ffcc, this.data.radius * 0.025,
-            { type: 'iss', name: 'ISS (Zarya)', info: 'International Space Station' });
-        m.visible = false;
-        this.layers.iss = m;
-        this.pickables.push(m);
-        this.mesh.add(m);
+        const mk = this._ensureMarkers();
+        if (!mk) return;
+        const group = mk.addLayer('iss', { clusterPx: 0 });
+        // Hidden until the first position fix (it used to sit at 0,0 until then).
+        mk.setItems('iss', [{ lat: 0, lng: 0, alt: 1.06, color: 0x66ffcc, size: 9, rank: 2, hidden: true,
+            data: { type: 'iss', name: 'ISS (Zarya)', info: 'International Space Station' } }]);
+        this.layers.iss = group;
     }
 
     stopISS() {
@@ -1022,6 +1024,7 @@ class Earth extends Planet {
         console.assert(this.layers, 'Earth.setLayerVisible: layers map required');
         const obj = this.layers[name];
         if (obj) obj.visible = !!vis;
+        if (this.markers) this.markers.syncVisibility();   // drop count badges of hidden layers
         return !!obj;
     }
 
@@ -1226,13 +1229,8 @@ class Earth extends Planet {
 
         // Live data layers: stop ISS polling + dispose marker meshes (no cached textures).
         this.stopISS();
-        ['iss', 'quakes', 'pois'].forEach((k) => {
-            const obj = this.layers[k];
-            if (!obj) return;
-            obj.traverse((c) => { if (c.isMesh) Earth.disposeMesh(c); });
-            if (obj.parent) obj.parent.remove(obj);
-            this.layers[k] = null;
-        });
+        if (this.markers) { this.markers.dispose(); this.markers = null; }
+        ['iss', 'quakes', 'pois'].forEach((k) => { this.layers[k] = null; });
         this.pickables = [];
         if (this.countryHighlight) { Earth.disposeMesh(this.countryHighlight); this.countryHighlight = null; }
         this.countryShapes = null;

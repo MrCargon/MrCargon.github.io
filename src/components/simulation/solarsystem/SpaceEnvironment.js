@@ -2476,8 +2476,10 @@ class SpaceEnvironment {
         const dist = this.camera.position.distanceTo(earthPos);
         // Live zoom readout — cached element, no per-frame DOM query/alloc.
         if (this._distEl) this._distEl.textContent = (dist / radius).toFixed(2) + '× Earth radius';
-        const fadeStart = radius * 2.5;   // begin fading here
-        const hideBelow = radius * 1.3;   // fully hidden below here
+        // The cloud shell is a soft 2k texture: from mid zoom down it smears over the sharp
+        // imagery and streets, so it is gone before the imagery patch takes over (~1.5R).
+        const fadeStart = radius * 2.6;   // full above here
+        const hideBelow = radius * 1.5;   // fully hidden below here
 
         const clouds = earth.cloudsMesh;
         if (dist <= hideBelow) {
@@ -2486,9 +2488,10 @@ class SpaceEnvironment {
             return true;
         }
         clouds.visible = true;
-        // Lerp opacity 0 (close) → 0.8 (at/above fadeStart).
+        // Smoothstep opacity 0 (close) → 0.8 (at/above fadeStart): no kink at either end.
         const span = Math.max(fadeStart - hideBelow, 1e-3);
-        const k = Math.max(0, Math.min(1, (dist - hideBelow) / span));
+        const t = Math.max(0, Math.min(1, (dist - hideBelow) / span));
+        const k = t * t * (3 - 2 * t);
         clouds.material.opacity = 0.8 * k;
         earth.setCloudShadow(k);        // shadows follow the clouds that cast them
         return true;
@@ -2615,15 +2618,12 @@ class SpaceEnvironment {
             if (earth.markerHalo && earth.markerHalo.material) earth.markerHalo.material.opacity = 0.55 * pinFade;
             earth.marker.visible = pinFade > 0.02;
         }
-        // All live-marker layers (ISS, quakes, POIs) are fixed-world-size spheres
-        // that balloon up close (a big M5 quake dot or a POI pin covers the map at
-        // street zoom). Fade them by the same pinFade; the toggle still owns .visible.
-        if (earth.layers) {
-            ['iss', 'quakes', 'pois'].forEach((k) => {
-                const layer = earth.layers[k];
-                if (!layer || !layer.traverse) return;
-                layer.traverse((o) => { if (o.isMesh && o.material) o.material.opacity = 0.95 * pinFade; });
-            });
+        // Live-marker layers (ISS, quakes, POIs): constant-pixel Points (GlobeMarkers).
+        // Same pinFade; once it reaches 0 they are not drawn at all. The toggle still
+        // owns the layer group's .visible. Quakes cluster on screen with a count badge.
+        const markerRect = earth.markers ? this._getCanvasRect() : null;
+        if (markerRect) {
+            earth.markers.update(this.camera, markerRect, pinFade, this.renderer.getPixelRatio());
         }
         // Country borders recede as the camera approaches the surface so they don't
         // compete with the satellite imagery + street lines at close zoom (full at
@@ -3160,7 +3160,7 @@ class SpaceEnvironment {
         console.assert(typeof this === 'object', '_styleDefaults: instance');
         console.assert(true, '_styleDefaults: ok');
         return {
-            streets:   { color: 0x9fd8ff, opacity: 0.65, width: 2 },
+            streets:   { color: 0xf2dcb0, opacity: 0.6, width: 2 },    // F4: soft sand; StreetTiles scales by zoom
             states:    { color: 0x6fb0e0, opacity: 1.0 },
             cities:    { color: 0xffd24a, opacity: 1.0 },
             districts: { color: 0x8fe3ff, opacity: 1.0 }
@@ -3204,7 +3204,7 @@ class SpaceEnvironment {
         this._styleKey = 'mrcargon.explore.style';
         this._style = this._readStyleState();
         this._styleLayer = 'streets';
-        this._stylePalette = [0x9fd8ff, 0xffffff, 0xff5a4a, 0xffc24a, 0x6ad36a, 0xc08bff, 0xff6ad3, 0x8fe3ff, 0x66e8ff];
+        this._stylePalette = [0xf2dcb0, 0xffffff, 0xff5a4a, 0xffc24a, 0x6ad36a, 0xc08bff, 0xff6ad3, 0x8fe3ff, 0x66e8ff];
         this._buildStyleSwatches();
         const layers = document.getElementById('ep-style-layers');
         if (layers) layers.addEventListener('click', (e) => {
@@ -3680,18 +3680,25 @@ class SpaceEnvironment {
     _handleExploreClick(event) {
         if (!this.exploreMode || !this.camera || !this._detailEl) return;
         const earth = this.getEarthObject();
-        if (!earth || !earth.pickables || !earth.pickables.length) return;
+        if (!earth) return;
         const rect = this._getCanvasRect();
         if (!rect) return;
-        this._ndc.set(
-            ((event.clientX - rect.left) / rect.width) * 2 - 1,
-            -((event.clientY - rect.top) / rect.height) * 2 + 1
-        );
-        this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
-        const pick = earth.pickables.filter((m) => m.visible && (!m.parent || m.parent.visible));
-        const hits = this._exploreRaycaster.intersectObjects(pick, false);
-        if (hits.length) {
-            const u = hits[0].object.userData || {};
+        // Live markers are constant-pixel Points: pick them in screen space (a cluster
+        // returns "N earthquakes here" + its strongest member). Meshes in pickables
+        // still go through the raycaster.
+        let u = (earth.markers && typeof earth.markers.pick === 'function')
+            ? earth.markers.pick(event.clientX, event.clientY, rect) : null;
+        if (!u && earth.pickables && earth.pickables.length) {
+            this._ndc.set(
+                ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                -((event.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
+            const pick = earth.pickables.filter((m) => m.visible && (!m.parent || m.parent.visible));
+            const hits = this._exploreRaycaster.intersectObjects(pick, false);
+            if (hits.length) u = hits[0].object.userData || {};
+        }
+        if (u) {
             // textContent (not innerHTML): marker info can come from live feeds
             // (e.g. USGS quake "place" strings), so never inject feed text as HTML.
             this._detailEl.textContent = '';

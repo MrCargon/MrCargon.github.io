@@ -3360,7 +3360,7 @@ class SpaceEnvironment {
         return on;
     }
 
-    // Opt-in to SHARING your coarse (~11 km) location. Rule 5: 2 asserts.
+    // Opt-in to SHARING your coarse (about 10 km) location. Rule 5: 2 asserts.
     _toggleShareLocation(btn) {
         console.assert(btn && btn.setAttribute, '_toggleShareLocation: btn required');
         console.assert(typeof this.getEarthObject === 'function', '_toggleShareLocation: earth getter');

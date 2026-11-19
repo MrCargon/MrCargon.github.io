@@ -3,8 +3,11 @@
 //
 // PRIVACY BY DESIGN (non-negotiable):
 //   - Receiving others is always allowed; SHARING your own location is opt-in, default OFF.
-//   - Coordinates you share are rounded to ~1 decimal (~11 km) — never GPS-precise.
-//   - Nothing is persisted; rosters are ephemeral and pruned when peers go stale.
+//   - Coordinates you share are rounded to 1 decimal — never GPS-precise. That is a cell
+//     of about 10 km: 11 km north-south, ~9 km east-west at San Francisco (cos 37.8°).
+//   - Demo mode keeps everything on this device (no network). With Firebase on, your
+//     record is kept only while you're online: removed on stop / page close, and pruned
+//     when stale (see FirebaseAdapter + the rules in PresenceConfig.js).
 //
 // Backends (zero-fee):
 //   - DemoAdapter            : seeded sample users + (if sharing) you. No network, $0, no signup.
@@ -121,21 +124,59 @@ class BroadcastChannelAdapter {
 // SDK, no bundler, no extra <script>. Each client writes its own coarse record with a
 // timestamp and refreshes it on the controller's heartbeat; peers are pruned client-side
 // once their timestamp goes stale (covers hard closes where DELETE never fires).
+// R3 #12 (2026-11-19): writes need an anonymous Firebase Auth sign-in (REST, apiKey from
+// PresenceConfig.js), made only on the first share, and the record is keyed by that uid so
+// the rules can say $id === auth.uid. Reading stays public and needs no account. Stand-ins
+// for the SDK's onDisconnect().remove(): DELETE on stop, keepalive DELETE on pagehide, and
+// signed-in sharers delete records > 5 min stale (the rules allow exactly that).
+var FB_AUTH_SIGNUP = 'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=';
+var FB_AUTH_REFRESH = 'https://securetoken.googleapis.com/v1/token?key=';
 class FirebaseAdapter {
     constructor(opts) {
         var o = opts || {};
         // strip trailing slashes so URL joins are clean
         this.databaseURL = String(o.databaseURL || '').replace(/\/+$/, '');
         this.path = o.path || 'presence';
+        this.apiKey = String(o.apiKey || '').trim();   // empty = view-only (no sharing)
         this.staleMs = Number.isFinite(o.staleMs) ? o.staleMs : 75000;   // ~2.5x default heartbeat
+        this.pruneMs = 330000;    // rules allow deleting others' records once ts < now - 300 s
         this.pollMs = Number.isFinite(o.pollMs) ? o.pollMs : 6000;
         this.onRoster = null;
         this._self = null;
-        this._lastId = null;      // last id we wrote, so disconnect can remove it
+        this._lastId = null;      // last key (uid) we wrote, so disconnect can remove it
         this._poll = null;
+        this._auth = null;        // { token, uid, refresh, exp } - memory only, never stored
+        this._authP = null;       // in-flight sign-in / refresh
+        var self = this;
+        this._onHide = function () { if (self._lastId) self._remove(self._lastId, true); };
     }
-    _url(id) {
-        return this.databaseURL + '/' + this.path + (id != null ? '/' + encodeURIComponent(id) : '') + '.json';
+    _url(id, token) {
+        var u = this.databaseURL + '/' + this.path + (id != null ? '/' + encodeURIComponent(id) : '') + '.json';
+        return token ? u + '?auth=' + encodeURIComponent(token) : u;
+    }
+    // Anonymous sign-in (or token refresh) over REST. Resolves the auth or null. <=60 lines.
+    _ensureAuth() {
+        console.assert(typeof fetch === 'function', '_ensureAuth: fetch');
+        console.assert(typeof this.apiKey === 'string', '_ensureAuth: apiKey string');
+        var self = this, a = this._auth;
+        if (!this.apiKey) return Promise.resolve(null);
+        if (a && Date.now() < a.exp - 300000) return Promise.resolve(a);
+        if (this._authP) return this._authP;
+        var key = encodeURIComponent(this.apiKey);
+        var req = (a && a.refresh)
+            ? fetch(FB_AUTH_REFRESH + key, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(a.refresh) })
+            : fetch(FB_AUTH_SIGNUP + key, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ returnSecureToken: true }) });
+        this._authP = req.then(function (r) { return (r && r.ok) ? r.json() : null; }).then(function (j) {
+            self._authP = null;
+            var token = j && (j.idToken || j.id_token), uid = j && (j.localId || j.user_id);
+            if (!token || !uid) return null;
+            var secs = Number(j.expiresIn || j.expires_in) || 3600;
+            self._auth = { token: token, uid: String(uid), refresh: j.refreshToken || j.refresh_token, exp: Date.now() + secs * 1000 };
+            return self._auth;
+        }).catch(function (e) { self._authP = null; console.warn('[Presence/FB] sign-in failed:', e && e.message); return null; });
+        return this._authP;
     }
     connect(handlers) {
         console.assert(handlers && typeof handlers.onRoster === 'function', 'FirebaseAdapter: onRoster required');
@@ -144,25 +185,33 @@ class FirebaseAdapter {
         var self = this;
         this._tick();
         this._poll = setInterval(function () { self._tick(); }, this.pollMs);
+        if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('pagehide', this._onHide);
         return true;
     }
     publish(record) {
         console.assert(this.onRoster, 'FirebaseAdapter: connect first');
         console.assert(record === null || typeof record === 'object', 'FirebaseAdapter: record');
         this._self = record;
+        var self = this;
         if (record && record.id != null) {
-            this._lastId = String(record.id);
-            var body = JSON.stringify({ id: record.id, lat: record.lat, lng: record.lng, name: record.name, ts: Date.now() });
-            fetch(this._url(record.id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: body })
-                .catch(function (e) { console.warn('[Presence/FB] publish failed:', e && e.message); });
+            this._ensureAuth().then(function (a) {
+                if (!a) { console.warn('[Presence/FB] not signed in (apiKey empty or refused): view-only, not sharing'); return; }
+                if (self._self !== record) return;              // stopped / changed while signing in
+                self._lastId = a.uid;
+                // ts is the server clock ({".sv":"timestamp"}), so the rules' "ts near now" holds
+                var body = JSON.stringify({ id: a.uid, lat: record.lat, lng: record.lng, name: record.name, ts: { '.sv': 'timestamp' } });
+                fetch(self._url(a.uid, a.token), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: body })
+                    .catch(function (e) { console.warn('[Presence/FB] publish failed:', e && e.message); });
+            });
         } else if (this._lastId) {
             this._remove(this._lastId);
             this._lastId = null;
         }
         return true;
     }
-    _remove(id) {
-        fetch(this._url(id), { method: 'DELETE' }).catch(function () {});
+    _remove(id, keepalive) {
+        var token = this._auth ? this._auth.token : null;
+        fetch(this._url(id, token), { method: 'DELETE', keepalive: !!keepalive }).catch(function () {});
     }
     _tick() {
         var self = this;
@@ -173,14 +222,19 @@ class FirebaseAdapter {
     }
     _emit(obj) {
         if (!this.onRoster) return;
-        var now = Date.now(), self = this, list = [];
+        var now = Date.now(), self = this, list = [], pruned = 0;
         var selfId = this._self ? String(this._self.id) : null;
+        var selfUid = this._auth ? this._auth.uid : null;
         if (obj && typeof obj === 'object') {
             Object.keys(obj).forEach(function (k) {
                 var rec = obj[k];
                 if (!rec || rec.id == null) return;
                 if (selfId !== null && String(rec.id) === selfId) return;              // self added below
-                if (typeof rec.ts === 'number' && (now - rec.ts) > self.staleMs) return; // prune stale
+                if (selfUid !== null && String(k) === selfUid) return;                  // own Firebase record
+                var age = (typeof rec.ts === 'number') ? (now - rec.ts) : 0;
+                // signed-in sharers clear long-dead records (bounded: 5 per poll)
+                if (selfUid !== null && age > self.pruneMs && pruned < 5) { pruned++; self._remove(k); }
+                if (age > self.staleMs) return;                                         // prune stale
                 list.push({ id: rec.id, lat: rec.lat, lng: rec.lng, name: rec.name });
             });
         }
@@ -190,6 +244,7 @@ class FirebaseAdapter {
     disconnect() {
         if (this._lastId) { this._remove(this._lastId); this._lastId = null; }
         if (this._poll) { clearInterval(this._poll); this._poll = null; }
+        if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('pagehide', this._onHide);
         this.onRoster = null;
         this._self = null;
         return true;

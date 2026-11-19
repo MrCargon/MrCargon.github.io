@@ -168,24 +168,12 @@
          No image or sound files involved. Same algorithms are mirrored in
          docs/godot/ for the multiplayer game. -->
     <script src="src/utils/SineShape.js" defer></script>
-    <script src="src/utils/SineAudio.js" defer></script>
-    <!-- Lenia: continuous cellular automata, GPU ping-pong. Artificial life. -->
-    <script src="src/utils/Lenia.js" defer></script>
 
-    <!-- Conway's Game of Life: the discrete end of the same family as Lenia. Both
-         simulations are driven by ONE page (LifePage) behind a mode switch, sharing
-         LifeView for zoom/pan/palette. Order matters: LifePatterns and both sims must be
-         defined before LifePage reads them during init(). All classic scripts touching
-         THREE only at runtime, per the note below.
-
+    <!-- Main-page backdrops (scene select: particles / orbitals / shapes).
          ForceMatrix is FIRST and is not optional: it holds the Particle Life model shared
-         by the 2D page sim and the 3D main-page scene, and both read its constants at
-         load time, not at construction. -->
+         by the 3D main-page scene and the Life page's 2D sim (lazy, LazyBundles 'life'),
+         and both read its constants at load time, not at construction. -->
     <script src="src/utils/ForceMatrix.js" defer></script>
-    <script src="src/utils/LifePatterns.js" defer></script>
-    <script src="src/utils/ConwayLife.js" defer></script>
-    <script src="src/utils/LifeView.js" defer></script>
-    <script src="src/utils/ParticleLife.js" defer></script>
     <script src="src/utils/ParticleField3D.js" defer></script>
     <!-- Hydrogen orbitals: the third backdrop. Loads AFTER ParticleField3D because it
          reuses that file's generated dot sprite rather than making a second one. -->
@@ -193,8 +181,6 @@
     <!-- Fourier-series creatures. Needs SineShape for the maths, OrbitalCloud for its
          hue helper and ForceMatrix for the linear-light conversion, so it loads last. -->
     <script src="src/utils/SineField.js" defer></script>
-    <script src="src/components/pages/LifePage.js" defer></script>
-    <script src="src/components/pages/StudioPage.js" defer></script>
     <script src="src/utils/SafeFetch.js" defer></script>
     <!-- Round soft point sprites (CosmicDust, GeoLOD cities); before both users. -->
     <script src="src/utils/RoundPoints.js" defer></script>
@@ -215,12 +201,12 @@
          and contactPage's handler since both call into it. -->
     <script src="src/utils/DiscordProxyConfig.js" defer></script>
     <script src="src/utils/DiscordNotify.js" defer></script>
-    <!-- Launcher modules: local-first stores + optional Firestore sync + UIs -->
-    <script src="src/utils/CalendarStore.js" defer></script>
-    <script src="src/utils/CalendarSync.js" defer></script>
-    <script src="src/components/pages/Calendar.js" defer></script>
-    <script src="src/utils/NotesStore.js" defer></script>
-    <script src="src/components/pages/Notes.js" defer></script>
+    <!-- Page-specific bundles are NOT loaded here (roast R2 #7a). The Life page (Lenia,
+         Conway, Particle Life, SineAudio), Studio, Calendar, Notes and the cosmology
+         features load on first navigation / first use through LazyBundles, which keeps
+         their order. The file lists live in LazyBundles.js; sw.js precaches the same
+         files for offline use; tests/verify-lazy-bundles.cjs keeps all three in step. -->
+    <script src="src/utils/LazyBundles.js" defer></script>
 
     <!-- 🌌 THREE.js r184 (was r128, 2021).
          Modern three.js ships ESM ONLY - the UMD `three.min.js` global build and the
@@ -286,14 +272,8 @@
     <script src="src/components/simulation/solarsystem/HabitableZone.js" defer></script>
     <script src="src/components/simulation/solarsystem/Galaxy.js" defer></script>
 
-    <!-- 🌌 Cosmology Features (Phase 5) -->
-    <script src="src/components/simulation/cosmology/GravitationalWaves.js" defer></script>
-    <script src="src/components/simulation/cosmology/DarkMatterHalo.js" defer></script>
-    <script src="src/components/simulation/cosmology/ExoplanetSystems.js" defer></script>
-    <script src="src/components/simulation/cosmology/CosmicScale.js" defer></script>
-    <script src="src/components/simulation/cosmology/ExtraDimensionsViz.js" defer></script>
-    <script src="src/components/simulation/cosmology/VibratingString.js" defer></script>
-    <script src="src/components/simulation/cosmology/StringTheory.js" defer></script>
+    <!-- 🌌 Cosmology Features (Phase 5). Only CosmicDust loads at boot (Galaxy and
+         SolarSystem build it); the rest are in LazyBundles 'cosmology'. -->
     <script src="src/components/simulation/cosmology/CosmicDust.js" defer></script>
 
     <!-- Time System (Phase 1 & 2) -->

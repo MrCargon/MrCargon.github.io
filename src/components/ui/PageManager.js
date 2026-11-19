@@ -123,6 +123,7 @@ class PageManager {
             life: {
                 path: 'src/components/pages/lifePage.html',
                 title: 'Life - Artificial Life Simulation',
+                bundle: 'life',                  // scripts load on first visit (LazyBundles)
                 // Owns a WebGL context of its own, so cleanup is mandatory rather than
                 // optional: leaked contexts are not GC'd and the browser caps how many
                 // a tab may hold.
@@ -140,6 +141,7 @@ class PageManager {
             conway: {
                 path: 'src/components/pages/lifePage.html',
                 title: "Conway's Game of Life - Cellular Automata",
+                bundle: 'life',
                 init: () => { this._lifePage = new LifePage(); this._lifePage.init(); },
                 cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
                 preload: false
@@ -151,6 +153,7 @@ class PageManager {
             particles: {
                 path: 'src/components/pages/lifePage.html',
                 title: 'Particle Life - Emergent Structure',
+                bundle: 'life',
                 init: () => { this._lifePage = new LifePage(); this._lifePage.init(); },
                 cleanup: () => { if (this._lifePage) { this._lifePage.cleanup(); this._lifePage = null; } },
                 preload: false
@@ -186,6 +189,7 @@ class PageManager {
             calendar: {
                 path: 'src/components/pages/calendarPage.html',
                 title: 'Calendar - Launcher',
+                bundle: 'calendar',
                 init: () => this.initCalendarPage(),
                 cleanup: () => this.cleanupCalendarPage(),
                 preload: false
@@ -193,6 +197,7 @@ class PageManager {
             notes: {
                 path: 'src/components/pages/notesPage.html',
                 title: 'Notes - Launcher',
+                bundle: 'notes',
                 init: () => this.initNotesPage(),
                 cleanup: () => this.cleanupNotesPage(),
                 preload: false
@@ -202,6 +207,7 @@ class PageManager {
             studio: {
                 path: 'src/components/pages/studioPage.html',
                 title: 'Studio - Live, Videos & Community',
+                bundle: 'studio',
                 init: () => {
                     if (typeof StudioPage !== 'function') { console.warn('StudioPage controller missing'); return; }
                     this._studioPage = new StudioPage();
@@ -741,6 +747,10 @@ class PageManager {
         }
         
         const pageConfig = this.pages[pageName];
+        // Page-specific scripts (LazyBundles, roast R2 #7a) download alongside the HTML.
+        // Started before the fetch so the two overlap; awaited BEFORE the old page is torn
+        // down, so a slow bundle leaves the current page on screen instead of a blank one.
+        const bundleLoad = pageConfig.bundle ? this.loadPageBundle(pageConfig.bundle) : null;
         
         try {
             let content;
@@ -760,6 +770,12 @@ class PageManager {
                 if (this.pageCache.size < 10) {
                     this.pageCache.set(pageName, content);
                 }
+            }
+
+            if (bundleLoad && !(await bundleLoad)) {
+                await this.cleanupCurrentPage();
+                this._renderBundleError(pageName);
+                return true;                     // handled: the panel offers a retry
             }
             
  // Cleanup previous page
@@ -968,6 +984,56 @@ class PageManager {
             console.error('Timeout clearing error:', error);
             return false;
         }
+    }
+
+    /**
+     * Load a page's script bundle (LazyBundles). Resolves true/false, never throws, so
+     * the router can show a retry panel instead of a broken page.
+     * Rule 5: 2 asserts | Rule 6: failure is a value.
+     */
+    async loadPageBundle(name) {
+        console.assert(typeof name === 'string', 'loadPageBundle: name string');
+        console.assert(typeof window !== 'undefined', 'loadPageBundle: window');
+        if (typeof LazyBundles === 'undefined') {
+            console.error('LazyBundles missing - cannot load bundle', name);
+            return false;
+        }
+        try {
+            return await LazyBundles.load(name);
+        } catch (error) {
+            console.error(`Page bundle '${name}' failed:`, error && error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Shown when a page bundle could not load after LazyBundles' own retries (offline,
+     * flaky network). Built with DOM calls, not innerHTML + onclick, so the strict CSP
+     * needs no change. currentPage is cleared so Retry is a fresh navigation.
+     * Rule 5: 2 asserts.
+     */
+    _renderBundleError(pageName) {
+        console.assert(this.contentContainer, '_renderBundleError: container');
+        console.assert(this.pages[pageName], '_renderBundleError: known page');
+        this.currentPage = null;
+        const box = document.createElement('div');
+        box.className = 'page-load-error';
+        box.setAttribute('role', 'alert');
+        box.style.cssText = 'max-width:32rem;margin:20vh auto 0;padding:1.5rem;text-align:center;' +
+            'background:rgba(10,14,24,.85);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:#e8ecf4;';
+        const msg = document.createElement('p');
+        msg.textContent = 'This page could not load. Check your connection and try again.';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'page-load-retry';
+        btn.textContent = 'Retry';
+        btn.style.cssText = 'margin-top:.75rem;padding:.5rem 1.25rem;cursor:pointer;';
+        btn.addEventListener('click', () => { this.navigateToPage(pageName, false); });
+        box.appendChild(msg);
+        box.appendChild(btn);
+        this.contentContainer.replaceChildren(box);
+        if (typeof this.showSpaceAsBackground === 'function') this.showSpaceAsBackground();
+        return true;
     }
 
     /**

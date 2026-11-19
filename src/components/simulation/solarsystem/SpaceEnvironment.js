@@ -5744,11 +5744,30 @@ class SpaceEnvironment {
     }
 
     /**
+     * Load the cosmology feature classes on first use. They used to be <script> tags in
+     * index.html that every visit paid for, while only these enable*() calls use them.
+     * Rule 5: 2 asserts | Rule 6: false on failure, the caller returns false.
+     */
+    async _ensureCosmologyBundle() {
+        console.assert(this.scene !== null, '_ensureCosmologyBundle: scene required');
+        console.assert(typeof window !== 'undefined', '_ensureCosmologyBundle: window');
+        if (typeof LazyBundles === 'undefined') return typeof GravitationalWaves !== 'undefined';
+        try {
+            return await LazyBundles.load('cosmology');
+        } catch (error) {
+            console.error('Cosmology features failed to load:', error && error.message);
+            return false;
+        }
+    }
+
+    /**
      * Enable Gravitational Waves visualization
      * NASA Rule 5: 2+ assertions | Rule 7: Check returns
      * @returns {Promise<boolean>} Success status
      */
     async enableGravitationalWaves() {
+        // Classes arrive with the 'cosmology' bundle on first use (roast R2 #7a).
+        if (!(await this._ensureCosmologyBundle())) return false;
         console.assert(this.scene !== null, 'enableGravitationalWaves: scene required');
         console.assert(typeof GravitationalWaves !== 'undefined',
             'enableGravitationalWaves: GravitationalWaves class required');
@@ -5794,6 +5813,8 @@ class SpaceEnvironment {
      * @returns {Promise<boolean>} Success status
      */
     async enableDarkMatterHalo() {
+        // Classes arrive with the 'cosmology' bundle on first use (roast R2 #7a).
+        if (!(await this._ensureCosmologyBundle())) return false;
         console.assert(this.scene !== null, 'enableDarkMatterHalo: scene required');
         console.assert(typeof DarkMatterHalo !== 'undefined',
             'enableDarkMatterHalo: DarkMatterHalo class required');
@@ -5842,6 +5863,8 @@ class SpaceEnvironment {
      * @returns {Promise<boolean>} Success status
      */
     async enableExoplanetSystems(systemName = 'TRAPPIST-1') {
+        // Classes arrive with the 'cosmology' bundle on first use (roast R2 #7a).
+        if (!(await this._ensureCosmologyBundle())) return false;
         console.assert(this.scene !== null, 'enableExoplanetSystems: scene required');
         console.assert(typeof ExoplanetSystems !== 'undefined',
             'enableExoplanetSystems: ExoplanetSystems class required');
@@ -5934,6 +5957,8 @@ class SpaceEnvironment {
      * @returns {Promise<boolean>} Success status (false if user declines disclaimer)
      */
     async enableStringTheory() {
+        // Classes arrive with the 'cosmology' bundle on first use (roast R2 #7a).
+        if (!(await this._ensureCosmologyBundle())) return false;
         console.assert(this.scene !== null, 'enableStringTheory: scene required');
         console.assert(typeof StringTheory !== 'undefined',
             'enableStringTheory: StringTheory class required');
@@ -5977,6 +6002,8 @@ class SpaceEnvironment {
      * @returns {Promise<boolean>} Success status
      */
     async enableCosmicScale() {
+        // Classes arrive with the 'cosmology' bundle on first use (roast R2 #7a).
+        if (!(await this._ensureCosmologyBundle())) return false;
         console.assert(this.scene !== null, 'enableCosmicScale: scene required');
         console.assert(this.camera !== null, 'enableCosmicScale: camera required');
         console.assert(typeof CosmicScale !== 'undefined',

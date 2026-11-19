@@ -2381,10 +2381,11 @@ class SpaceEnvironment {
         this.controls.enabled = true;
         this.controls.minDistance = this._exploreMinDistance;
         this.controls.maxDistance = this._exploreMaxDistance;
-        // Fly in to a close framing (~3x radius) that faces San Francisco (P28): keeping the
-        // old camera direction showed whatever the clock's GMST spin put there.
+        // Fly in to a whole-Earth framing that faces a fixed neutral point (F2): keeping the
+        // old camera direction showed whatever the clock's GMST spin put there (P28), and the
+        // old SF framing pointed at the owner's home city.
         this.controls.target.copy(earthPos);
-        this._exploreEntryFlyIn(earth, earthPos, radius * 3.0);
+        this._exploreEntryFlyIn(earth, earthPos, this._exploreWholeEarthDist(radius));
         this.controls.enablePan = false; // pan would drift off the globe
         // Inertial damping for smooth, consistent drag/zoom (the animate loop already
         // calls controls.update() every frame, which damping requires). Restored on exit.
@@ -2452,20 +2453,39 @@ class SpaceEnvironment {
         this._setGlobeKeyboard(true);   // R3 #9a: the canvas is a Tab stop after the ladder
         this._syncExploreToggleButtons();
         this.announceExplore('Explore Earth mode. Drag to rotate, scroll to zoom. Click markers for details.');
-        this._showExploreIntro();      // R3 #11: brief San Francisco card, then it gets out of the way
+        this._showExploreIntro();      // R3 #11: brief one-line hint, then it gets out of the way
         this._updateExploreButton();   // hides the opt-in button while exploring
         console.log('Entered Explore Earth mode');
         return true;
     }
 
     /**
-     * The Explore entry fly-in (P28). It ends on the ray from Earth's centre through San
-     * Francisco, the view "Center on SF" gives, at `dist`. The path swings the direction
-     * round the globe (a quaternion slerp) while the distance eases in, so it never cuts
-     * through the Earth even when SF starts on the far side. A drag (controls 'start') or
-     * exit bumps _entryFlyId and the flight stops where it is. Reduced motion: no flight,
-     * the camera is placed (as centerOnLatLng does, P23). Rule 5: 2 asserts.
-     * @returns {boolean} true when the camera was aimed at SF
+     * Camera distance that frames the WHOLE globe (F2): its angular radius asin(R/d) fits in
+     * 85% of the narrower half field of view (a phone in portrait is the narrow case). Never
+     * closer than 3R (the old close framing) nor past 8R (the zoom-out exit is at 9R).
+     * Rule 5: 2 asserts.
+     * @param {number} radius - Earth radius in scene units
+     * @returns {number}
+     */
+    _exploreWholeEarthDist(radius) {
+        console.assert(radius > 0, '_exploreWholeEarthDist: radius required');
+        console.assert(this.camera, '_exploreWholeEarthDist: camera required');
+        const halfV = ((this.camera && this.camera.fov) || 60) * Math.PI / 360;
+        const aspect = (this.camera && this.camera.aspect) || 1;
+        const half = Math.min(halfV, Math.atan(Math.tan(halfV) * aspect)) * 0.85;
+        const d = radius / Math.sin(Math.max(half, 0.05));
+        return Math.min(Math.max(d, radius * 3.0), radius * 8.0);
+    }
+
+    /**
+     * The Explore entry fly-in (P28, F2). It ends on the ray from Earth's centre through the
+     * neutral EXPLORE_HOME point (not anyone's home city), at `dist`. The path swings the
+     * direction round the globe (a quaternion slerp) while the distance eases in, so it never
+     * cuts through the Earth even when that point starts on the far side. A drag (controls
+     * 'start') or exit bumps _entryFlyId and the flight stops where it is. Reduced motion: no
+     * flight, the camera is placed (as centerOnLatLng does, P23). "Reset view" reuses it.
+     * Rule 5: 2 asserts.
+     * @returns {boolean} true when the camera was aimed at the neutral point
      */
     _exploreEntryFlyIn(earth, earthPos, dist) {
         console.assert(earth && earthPos && earthPos.isVector3, '_exploreEntryFlyIn: Earth + centre required');
@@ -2478,7 +2498,7 @@ class SpaceEnvironment {
         // before the fly-to Earth lands) the first frame would pass the 9R zoom-out exit.
         const fromDist = Math.min(this.camera.position.distanceTo(centre), dist * 2);
         const to = from.clone();
-        const c = earth.markerCoords;
+        const c = SpaceEnvironment.EXPLORE_HOME;
         const ok = !!(c && typeof GlobeMath !== 'undefined' && earth.data);
         if (ok) {
             const mesh = earth.getMesh();
@@ -3035,9 +3055,6 @@ class SpaceEnvironment {
             }
             if (typeof this._closePinEditor === 'function') this._closePinEditor();
             if (earth.satelliteTiles && typeof earth.satelliteTiles.hide === 'function') earth.satelliteTiles.hide();
-            // Reset the SF marker scale (updateExploreLOD shrinks it when zoomed in
-            // and only runs in explore — otherwise it stays shrunk in solar view).
-            if (earth.marker) earth.marker.userData.distanceScale = 1;
             // Restore full base-globe brightness (explore dims it at close zoom).
             const bm2 = earth.mesh && earth.mesh.material && earth.mesh.material.uniforms;
             if (bm2 && bm2.uSurfaceDim) bm2.uSurfaceDim.value = 1.0;
@@ -3093,40 +3110,28 @@ class SpaceEnvironment {
     }
 
     /**
-     * Move the CAMERA onto the ray from Earth's centre through the SF marker's
-     * WORLD position (accounts for latitude AND current rotation), keeping
-     * controls.target on Earth centre — so SF ends up centred at ANY latitude.
-     * Rule 4: <=60 lines | Rule 5: asserts.
+     * "Reset view" (F2): back to the whole-Earth framing Explore opens on, facing the
+     * neutral EXPLORE_HOME point, by the same swing the entry uses (placed at once under
+     * reduced motion; a drag takes over). Rule 4: <=60 lines | Rule 5: 2 asserts.
      * @returns {boolean}
      */
-    centerOnSanFrancisco() {
+    resetExploreView() {
         const earth = this.getEarthObject();
-        console.assert(earth, 'centerOnSanFrancisco: Earth required');
-        if (!earth || !earth.marker || !this.camera) return false;
-        if (!this.controls) return false;
-
-        const mesh = earth.getMesh();
-        const earthPos = mesh.getWorldPosition(this._scratchEarthPos);
-        const markerWorld = earth.marker.getWorldPosition(this._scratchCamPos);
-        const dir = markerWorld.clone().sub(earthPos).normalize();
-        if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
-        const dist = this.camera.position.distanceTo(earthPos);
-        const destPos = earthPos.clone().addScaledVector(dir, dist);
-
-        if (this.prefersReducedMotion()) {
-            this.camera.position.copy(destPos);
-            this.controls.target.copy(earthPos);
-            this.controls.update();
-            console.log('Centered on San Francisco (instant)');
-            return true;
-        }
-        return this.centerOnLatLng(earth.markerCoords.lat, earth.markerCoords.lng);
+        console.assert(earth, 'resetExploreView: Earth required');
+        console.assert(SpaceEnvironment.EXPLORE_HOME, 'resetExploreView: home point required');
+        if (!earth || !this.camera || !this.controls || !this.exploreMode) return false;
+        this._globeKeyId++;            // stop a key glide, like a drag does
+        const radius = (earth.data && earth.data.radius) || 2;
+        const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos).clone();
+        const ok = this._exploreEntryFlyIn(earth, earthPos, this._exploreWholeEarthDist(radius));
+        console.log('Explore view reset to the whole Earth');
+        return ok;
     }
 
     /**
      * Re-orient the globe so a chosen (lat,lng) faces the camera, keeping the
-     * centre-orbit pivot (you then spin the globe around it). Used by "Center on SF"
-     * and by clicking any place / region / zip. Holds the current zoom distance.
+     * centre-orbit pivot (you then spin the globe around it). Used by clicking any
+     * place / region / zip. Holds the current zoom distance.
      * Rule 4: <=60 lines | Rule 5: 2 asserts.
      * @returns {boolean}
      */
@@ -3334,17 +3339,10 @@ class SpaceEnvironment {
             this._updateExploreButton();         // show the "Explore Earth" button again
             return true;
         }
-        // Location pins (SF marker + POI pins) are orientation aids for the far/mid
-        // view; they balloon and cover the map up close, so fade them out as the
-        // camera approaches (full >1.7R → gone by ~1.2R). Also keep the SF marker at
-        // ~constant screen size while it's visible.
+        // Location pins (POI pins) are orientation aids for the far/mid view; they
+        // balloon and cover the map up close, so fade them out as the camera
+        // approaches (full >1.7R → gone by ~1.2R).
         const pinFade = Math.max(0, Math.min(1, (rr - 1.2) / (1.7 - 1.2)));
-        if (earth.marker) {
-            earth.marker.userData.distanceScale = Math.max(0.3, Math.min(1.8, rr / 3));
-            if (earth.marker.material) earth.marker.material.opacity = pinFade;
-            if (earth.markerHalo && earth.markerHalo.material) earth.markerHalo.material.opacity = 0.55 * pinFade;
-            earth.marker.visible = pinFade > 0.02;
-        }
         // Live-marker layers (ISS, quakes, POIs): constant-pixel Points (GlobeMarkers).
         // Same pinFade; once it reaches 0 they are not drawn at all. The toggle still
         // owns the layer group's .visible. Quakes cluster on screen with a count badge.
@@ -3704,14 +3702,14 @@ class SpaceEnvironment {
         this._makePanelDraggable(panel);   // movable by its background; buttons still click
 
         if (!panel.dataset.wired) {
-            const center = document.getElementById('explore-center-sf');
+            const center = document.getElementById('explore-reset-view');
             const borders = document.getElementById('explore-toggle-borders');
             const grid = document.getElementById('explore-toggle-grid');
             const iss = document.getElementById('explore-toggle-iss');
             const quakes = document.getElementById('explore-toggle-quakes');
             const places = document.getElementById('explore-toggle-places');
             const lod = document.getElementById('explore-toggle-lod');
-            if (center) center.addEventListener('click', () => this.centerOnSanFrancisco());
+            if (center) center.addEventListener('click', () => this.resetExploreView());
             if (borders) borders.addEventListener('click', () => this._toggleExploreLayer('borders', borders));
             if (grid) grid.addEventListener('click', () => this._toggleExploreLayer('graticule', grid));
             if (iss) iss.addEventListener('click', () => this._toggleDataLayer('iss', iss));
@@ -4251,8 +4249,8 @@ class SpaceEnvironment {
         const earth = this.getEarthObject();
         if (!earth || !earth.explorePins) return false;
         const ll = this._centreLatLng(earth);
-        const lat = ll ? ll.lat : (earth.markerCoords ? earth.markerCoords.lat : 37.77);
-        const lng = ll ? ll.lng : (earth.markerCoords ? earth.markerCoords.lng : -122.42);
+        const lat = ll ? ll.lat : SpaceEnvironment.EXPLORE_HOME.lat;   // F2: neutral, not a home city
+        const lng = ll ? ll.lng : SpaceEnvironment.EXPLORE_HOME.lng;
         const pin = earth.explorePins.addPin(lat, lng, { name: 'New pin' });
         this._renderPinList();
         if (pin) this._openPinEditor(pin.id);
@@ -4626,14 +4624,14 @@ class SpaceEnvironment {
     }
 
     /**
-     * The San Francisco intro card on entering Explore (R3 #11): up for 6 s, or until the
+     * The one-line hint card on entering Explore (R3 #11, F2): up for 6 s, or until the
      * first drag / wheel / pinch / zoom-slider move, or the ✕ — whichever comes first.
      * @returns {boolean}
      */
     _showExploreIntro() {
         console.assert(typeof this._showDetail === 'function', '_showExploreIntro: card required');
         console.assert(SpaceEnvironment.INTRO_MS > 0, '_showExploreIntro: bad timeout');
-        if (!this._showDetail('San Francisco', 'Based here · open to work', true)) return false;
+        if (!this._showDetail('Explore Earth', SpaceEnvironment.INTRO_HINT, true)) return false;
         // Keyboard focus on the ✕ holds the card (it must not vanish under the focus);
         // the timer re-arms and the card goes once focus has left it.
         const tick = () => {
@@ -6408,7 +6406,11 @@ SpaceEnvironment.DPR_GOOD_MS = 15; // p95 below this = room to go back up (hyste
 SpaceEnvironment.DPR_BAD_WINDOWS = 2; // consecutive slow windows before dropping
 SpaceEnvironment.DPR_GOOD_WINDOWS = 5; // consecutive fast windows before restoring
 SpaceEnvironment.DPR_MAX_RESTORES = 2; // after this many restores 1x stays for the session
-SpaceEnvironment.INTRO_MS = 6000; // R3 #11: the San Francisco intro card hides after this
+SpaceEnvironment.INTRO_MS = 6000; // R3 #11: the Explore hint card hides after this
+SpaceEnvironment.INTRO_HINT = 'Drag to spin · click a place'; // F2: neutral hint (no home city)
+// F2: the neutral point the Explore entry and "Reset view" face (lat/lng on the globe). Not a
+// home city on purpose: the owner asked that the globe stop pointing at where he lives.
+SpaceEnvironment.EXPLORE_HOME = Object.freeze({ lat: 20, lng: 0 });
 SpaceEnvironment.EXPLORE_LOADING_DELAY_MS = 200; // R2 #7b: "Loading Explore" only if the first entry is slower
 SpaceEnvironment.LIST_QUAKES = 10; // R3 #9b: quakes in the Live markers list (nearest the view centre)
 SpaceEnvironment.DPR_GAP_MS = 250; // a gap longer than this is not a frame

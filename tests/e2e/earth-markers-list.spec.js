@@ -9,7 +9,7 @@ import { mkdirSync } from 'node:fs';
  * the 10 quakes nearest the view centre, as buttons. A button flies the camera there and
  * opens the card through the same _showDetail a click uses (one announcement, the ✕).
  *
- * Every feed is answered here. 10 quakes sit on the San Francisco side (Target Island far
+ * Every feed is answered here. 10 quakes sit on the North American west side (Target Island far
  * enough from the rest that a click on it is never a cluster), 2 on the far side.
  *
  * MARKERS_SHOT_DIR (optional): where to save the collapsed / open screenshots.
@@ -42,7 +42,7 @@ async function routeFeeds(page) {
         JSON.stringify({ iss: true, quakes: true, sats: false, pois: true })));
 }
 
-/** Boot, pick Earth, enter Explore by its button, close the intro card, face SF. */
+/** Boot, pick Earth, enter Explore by its button, close the intro card, face the quakes' side. */
 async function enter(page) {
     await page.goto('/#main');
     await page.waitForFunction(() => {
@@ -55,9 +55,9 @@ async function enter(page) {
     await page.waitForTimeout(2500);
     await page.locator('#explore-enter-btn').click();
     await page.waitForFunction(() => window.spaceEnvironment.exploreMode === true, null, { timeout: 10000 });
-    await expect(card(page)).toContainText('San Francisco');
+    await expect(card(page)).toContainText('Drag to spin');
     await page.locator('#explore-detail .ed-close').click();
-    await page.locator('#explore-center-sf').click();
+    await page.evaluate(() => window.spaceEnvironment.centerOnLatLng(38, -125));
     // Both live layers loaded and the ISS placed.
     await page.waitForFunction(() => {
         const mk = window.spaceEnvironment.getEarthObject().markers;

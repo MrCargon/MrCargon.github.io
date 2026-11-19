@@ -1,4 +1,4 @@
-// Earth.js - Day/night city-lights shader + San Francisco marker + explore layers.
+// Earth.js - Day/night city-lights shader + explore layers.
 // Extends Planet. Overrides init() to build a custom ShaderMaterial so the dark
 // hemisphere shows city lights instead of pure black, and adds the explore-mode
 // overlays (graticule, borders, live ISS/quakes/places, country hover).
@@ -36,15 +36,12 @@ class Earth extends Planet {
         this.nightTexturePath = (data && data.nightLightsPath)
             || 'src/assets/textures/planets/earth/earth_night.jpg';
 
-        // San Francisco (lat, lng). Marker is parented to this.mesh.
-        this.markerCoords = { lat: 37.7749, lng: -122.4194 };
-        this.marker = null;
-        this.markerHalo = null;
-        this.markerPulse = 0;
+        // F2: no home-city marker (privacy: the owner asked the globe not to point at
+        // where he lives). Live markers (quakes, ISS, places) are this.markers below.
 
         // Reduced-motion + per-frame scratch vectors (Rule: no per-frame alloc).
-        // FIX 4: cache the value but keep it live by listening for OS toggles so the
-        // marker pulse reacts mid-session instead of being frozen at construct time.
+        // FIX 4: cache the value but keep it live by listening for OS toggles so
+        // motion reacts mid-session instead of being frozen at construct time.
         this.reducedMotion = Earth.prefersReducedMotion();
         this._reducedMotionMq = (typeof window !== 'undefined' && window.matchMedia)
             ? window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -75,7 +72,7 @@ class Earth extends Planet {
         this.orbit = { angle: Math.random() * Math.PI * 2 };
 
         // Explore-mode state. When frozen, update() skips rotation/orbit so the
-        // globe stops moving and the SF marker stays put for inspection.
+        // globe stops moving and stays put for inspection.
         this.frozen = false;
         // Lazily-built explore overlays (one draw call each, children of mesh).
         this.graticule = null;
@@ -158,7 +155,7 @@ class Earth extends Planet {
         // FIX B: wrap the happy path in try/catch to match the base Planet.init
         // contract (returns false on failure). SolarSystem.createPlanets awaits
         // planet.init() with no per-planet guard, so an unguarded throw from
-        // buildSurface/createMoon/createAtmosphere/createMarker would reject the
+        // buildSurface/createMoon/createAtmosphere would reject the
         // whole SolarSystem.init() and kill the entire simulation.
         // This override does NOT call super.init() on the happy path, so it has to do the
         // orbital precompute itself. Without it cosOmega/sinOmega stay undefined and
@@ -187,7 +184,6 @@ class Earth extends Planet {
             await this.buildSurface(dayMap, nightMap);
             await this.createMoon();
             this.createAtmosphere();
-            this.createMarker();
             // Keyless Esri satellite imagery patches (lazy; safe no-op if absent). Stays at
             // boot: Mars streams its surface through the same class outside Explore.
             this.satelliteTiles = (typeof SatelliteTiles !== 'undefined' && this.mesh)
@@ -544,50 +540,6 @@ class Earth extends Planet {
         this.mesh.material.uniforms.cloudMap.value = cloudsTexture;
     }
 
-    // Glowing additive marker fixed to SF, parented to the Earth mesh so it
-    // rotates with the globe. Rule 4: <=60 lines.
-    createMarker() {
-        console.assert(this.mesh, 'Earth.createMarker: mesh required');
-        console.assert(typeof GlobeMath !== 'undefined', 'Earth.createMarker: GlobeMath required');
-        if (typeof GlobeMath === 'undefined') {
-            console.error('Earth.createMarker: GlobeMath missing, skipping marker');
-            return;
-        }
-
-        const surfacePos = GlobeMath.latLngToVector3(
-            this.markerCoords.lat, this.markerCoords.lng, this.data.radius);
-        // Smaller base dot; SpaceEnvironment scales it per-frame by camera distance
-        // (userData.distanceScale) so it stays ~constant on screen while exploring.
-        const markerSize = this.data.radius * 0.022;
-
-        // G7: a thin dark rim halo behind the core so the marker stays legible
-        // against bright day-side terrain. depthTest stays on so the far side
-        // stays occluded.
-        const haloGeometry = new THREE.SphereGeometry(markerSize * 1.7, 16, 16);
-        const haloMaterial = new THREE.MeshBasicMaterial({
-            color: 0x001018,
-            transparent: true,
-            opacity: 0.55,
-            depthWrite: false
-        });
-        const halo = new THREE.Mesh(haloGeometry, haloMaterial);
-
-        const geometry = new THREE.SphereGeometry(markerSize, 16, 16);
-        const material = new THREE.MeshBasicMaterial({
-            color: 0x66e8ff,
-            transparent: true,
-            opacity: 1.0,
-            depthWrite: false
-        });
-        this.marker = new THREE.Mesh(geometry, material);
-        this.markerHalo = halo;
-        this.marker.add(halo);
-        // Lift slightly off the surface so it reads against day and night sides.
-        this.marker.position.copy(surfacePos).multiplyScalar(1.02);
-        this.marker.userData.baseScale = 1.0;
-        this.mesh.add(this.marker);
-    }
-
     /**
      * Lazily build a lat/long graticule (meridians + parallels every 15°) as ONE
      * THREE.LineSegments child of this.mesh (one draw call). Sampled via
@@ -785,8 +737,8 @@ class Earth extends Planet {
 
     /**
      * Freeze/unfreeze Earth for explore mode. Frozen => no solar orbit / axis
-     * spin (update() skips the motion block), but the day/night shader + marker
-     * pulse still refresh so the globe stays lit and the marker findable.
+     * spin (update() skips the motion block), but the day/night shader still
+     * refreshes so the globe stays lit.
      * Rule 5: 2 asserts, return value used by caller.
      * @param {boolean} value
      * @returns {boolean} the new frozen state
@@ -800,7 +752,7 @@ class Earth extends Planet {
 
     // Merged update: preserves Vite time-sync (j2000Days) rotation + orbital
     // position + J2000 moon sync, gated by the explore-mode freeze, then refreshes
-    // the day/night sun direction + atmosphere glow + marker pulse every frame.
+    // the day/night sun direction + atmosphere glow every frame.
     update(deltaTime, j2000Days = null) {
         if (!this.mesh) return;
 
@@ -895,19 +847,6 @@ class Earth extends Planet {
         if (this.atmosphereMesh && this.atmosphereMesh.material &&
             this.atmosphereMesh.material.uniforms) {
             this.atmosphereMesh.material.uniforms.sunDirection.value = this._sunDir;
-        }
-
-        // Marker scale = distance-based base (set by the explore camera each frame so
-        // the dot stays ~constant on screen — smaller zoomed in, larger zoomed out)
-        // × a subtle pulse (pulse disabled under reduced-motion).
-        if (this.marker) {
-            const base = this.marker.userData.distanceScale || 1;
-            let pulse = 1;
-            if (!this.reducedMotion) {
-                this.markerPulse += deltaTime * 3.0;
-                pulse = 1 + Math.sin(this.markerPulse) * 0.18;
-            }
-            this.marker.scale.setScalar(base * pulse);
         }
     }
 
@@ -1035,7 +974,6 @@ class Earth extends Planet {
         const mk = this._ensureMarkers();
         if (!mk) return null;
         const places = [
-            { name: 'San Francisco', lat: 37.7749, lng: -122.4194, info: 'Based here · open to work' },
             { name: 'London', lat: 51.5074, lng: -0.1278, info: 'Open to remote / relocation' },
             { name: 'Tokyo', lat: 35.6762, lng: 139.6503, info: 'Open to remote / relocation' },
             { name: 'New York', lat: 40.7128, lng: -74.0060, info: 'Open to remote / relocation' }
@@ -1503,8 +1441,6 @@ class Earth extends Planet {
         // FIX 5: do NOT dispose dayTexture/nightTexture/specularMap here — they come
         // from the shared ResourceLoader cache and ResourceLoader owns their
         // lifecycle. Only Earth-owned GPU resources are disposed below.
-        Earth.disposeMesh(this.markerHalo);
-        Earth.disposeMesh(this.marker);
         Earth.disposeMesh(this.atmosphereMesh);
         // Explore overlays: BufferGeometry + LineBasicMaterial, no textures.
         Earth.disposeMesh(this.graticule);

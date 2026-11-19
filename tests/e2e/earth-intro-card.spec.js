@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * The San Francisco intro card (roast R3 #11).
+ * The Explore intro card (roast R3 #11; F2: a neutral hint, no home city).
  *
- * #explore-detail shows "San Francisco · Based here · open to work" on entering Explore.
+ * #explore-detail shows "Explore Earth · Drag to spin · click a place" on entering Explore.
  * It used to stay forever (still up at 1.02R street level, over the globe on a phone), had
  * no close button, and was an aria-live region re-announced on every marker click.
  *
@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test';
  *   #planet-live-region; the same marker clicked again rewrites and announces nothing.
  *
  * Every feed is answered here (nothing reaches USGS / wheretheiss.at / CelesTrak). The quake
- * and the ISS sit on the San Francisco side, so they are on screen after entry.
+ * and the ISS sit on the North American west side; the test turns the globe there first.
  */
 
 test.use({ viewport: { width: 1280, height: 900 }, serviceWorkers: 'block' });
@@ -60,8 +60,9 @@ const closeBtn = (page) => page.locator('#explore-detail .ed-close');
 
 async function expectIntro(page) {
     await expect(card(page)).toBeVisible();
-    await expect(card(page)).toContainText('San Francisco');
-    await expect(card(page)).toContainText('Based here · open to work');
+    await expect(card(page)).toContainText('Explore Earth');
+    await expect(card(page)).toContainText('Drag to spin · click a place');
+    await expect(card(page)).not.toContainText('Based here');
     await expect(closeBtn(page)).toHaveAttribute('aria-label', 'Close details');
 }
 
@@ -155,8 +156,8 @@ test('quake and ISS cards still open after the intro, close with ✕, and announ
     await expectIntro(page);
     await closeBtn(page).click();
     await expect(card(page)).toBeHidden();
-    // Face the San Francisco side (the entry view can face elsewhere), then let it settle.
-    await page.locator('#explore-center-sf').click();
+    // Face the quake/ISS side (the entry view faces a neutral point), then let it settle.
+    await page.evaluate(() => window.spaceEnvironment.centerOnLatLng(38, -125));
     await page.waitForTimeout(4000);
     await watchAnnouncer(page);
 

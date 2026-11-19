@@ -517,6 +517,7 @@ Satellites.FETCH_GAP_MS = 2.25 * 3600000;   // CelesTrak: 1 fetch per 2 h per IP
 // Element sets older than these are dropped and the layer waits for live data. Rebuild the
 // bundled snapshot (src/data/satellites-snapshot.json) at least every two weeks, or the
 // low-orbit groups (stations, weather) disappear from every host but the live one.
+// One command: python deploy/build_sat_snapshot.py (then deploy/stamp.py --write).
 Satellites.LEO_MIN_MEAN_MOTION = 11.25;     // rev/day: period under ~128 min = below ~2000 km
 Satellites.MAX_AGE_LEO_MS = 14 * 86400000;  // drag moves a LEO object km per day
 Satellites.MAX_AGE_HIGH_MS = 60 * 86400000; // GPS (MEO) and GEO stay close for months

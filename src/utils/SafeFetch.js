@@ -43,6 +43,23 @@ class SafeFetch {
         }
     }
 
+    // When the network last answered this URL (ms, 0 = never). json() serves its cache on a
+    // failure, so callers compare this to tell fresh data from stale (roast R3 #5).
+    static fetchedAt(url) {
+        console.assert(typeof url === 'string', 'SafeFetch.fetchedAt: url required');
+        SafeFetch._init();
+        const c = SafeFetch._cache.get(url);
+        return c ? c.t : 0;
+    }
+
+    // True while the last request to this URL failed (the breaker may also be open).
+    static failing(url) {
+        console.assert(typeof url === 'string', 'SafeFetch.failing: url required');
+        SafeFetch._init();
+        const b = SafeFetch._breaker.get(url);
+        return !!(b && b.fails > 0);
+    }
+
     static _init() {
         if (!SafeFetch._cache) {
             SafeFetch._cache = new Map();

@@ -149,7 +149,7 @@ class Satellites {
             if (this.visible) this._refreshOneGroup();      // hidden mid-load: keep the slot
             return true;
         }
-        // Everything aged out (see MAX_EPOCH_AGE_MS): only a live fetch can help now.
+        // Everything aged out (see MAX_AGE_LEO_MS / MAX_AGE_HIGH_MS): only a live fetch can help now.
         if (!(await this._refreshOneGroup())) throw new Error('no fresh orbital data');
         return true;
     }
@@ -213,13 +213,54 @@ class Satellites {
     // Every record, not just the first: an absurd epoch makes SGP4 integrate for seconds on
     // each tick, a bad cache would come back on every reload, and old elements are both
     // wrong on the map and slower (3 ms a pass at a year, 13 ms at five, 0.2 ms when fresh).
+    // (Called from some()/filter-style loops, so it takes the record only.)
     static _usableRecord(rec) {
-        console.assert(Satellites.MAX_EPOCH_AGE_MS > 0, 'Satellites._usableRecord: bound required');
         console.assert(rec === null || typeof rec === 'object', 'Satellites._usableRecord: bad record');
+        console.assert(typeof Date.now === 'function', 'Satellites._usableRecord: clock required');
+        return Satellites.recordUsableAt(rec, Date.now());
+    }
+
+    /**
+     * Age limit by orbit class (roast R1 #7): a low orbit drifts by drag, so an element
+     * set a couple of weeks old is already far off; GPS/GEO stay good for months.
+     * @param {Object} rec - OMM record
+     * @param {number} now - ms
+     * @returns {boolean}
+     */
+    static recordUsableAt(rec, now) {
+        console.assert(Number.isFinite(now), 'Satellites.recordUsableAt: time required');
+        console.assert(Satellites.MAX_AGE_LEO_MS > 0 && Satellites.MAX_AGE_HIGH_MS > 0,
+            'Satellites.recordUsableAt: bounds required');
         if (!rec || !Number.isFinite(rec.MEAN_MOTION)) return false;
         if (rec.MEAN_MOTION < 0.1 || rec.MEAN_MOTION > 20) return false;
-        const age = Math.abs(Date.now() - Date.parse(rec.EPOCH));
-        return age < Satellites.MAX_EPOCH_AGE_MS;     // NaN fails this too
+        const limit = rec.MEAN_MOTION >= Satellites.LEO_MIN_MEAN_MOTION
+            ? Satellites.MAX_AGE_LEO_MS : Satellites.MAX_AGE_HIGH_MS;
+        const age = Math.abs(now - Date.parse(rec.EPOCH));
+        return age < limit;     // NaN fails this too
+    }
+
+    /** @returns {number} ms time of the oldest data that is drawn (0 = none) */
+    asOf() {
+        console.assert(this.perGroup && this.dataTime, 'Satellites.asOf: state required');
+        console.assert(Satellites.GROUPS.length > 0, 'Satellites.asOf: groups required');
+        let t = 0;
+        for (let i = 0; i < Satellites.GROUPS.length; i++) {
+            const id = Satellites.GROUPS[i].id;
+            if (!this.perGroup[id] || !this.dataTime[id]) continue;
+            if (!t || this.dataTime[id] < t) t = this.dataTime[id];
+        }
+        return t;
+    }
+
+    /** @returns {string[]} labels of groups with nothing drawn (no orbits young enough) */
+    agedOutGroups() {
+        console.assert(this.perGroup, 'Satellites.agedOutGroups: state required');
+        console.assert(Satellites.GROUPS.length > 0, 'Satellites.agedOutGroups: groups required');
+        const out = [];
+        for (let i = 0; i < Satellites.GROUPS.length; i++) {
+            if (!this.perGroup[Satellites.GROUPS[i].id]) out.push(Satellites.GROUPS[i].label);
+        }
+        return out;
     }
 
     static _readCache(id) {
@@ -473,9 +514,12 @@ Satellites.STACK_KM = 25;               // closer than this to a drawn object = 
 Satellites.ISS_NORAD = 25544;           // ISS (ZARYA); the ISS marker layer owns it when on
 Satellites.TICK_REDUCED_MS = 10000;     // reduced motion: an occasional step, no glide
 Satellites.FETCH_GAP_MS = 2.25 * 3600000;   // CelesTrak: 1 fetch per 2 h per IP, plus margin
-// A snapshot older than this is dropped and the layer waits for live data. Rebuild it from
-// time to time: src/data/satellites-snapshot.json.
-Satellites.MAX_EPOCH_AGE_MS = 90 * 86400000;
+// Element sets older than these are dropped and the layer waits for live data. Rebuild the
+// bundled snapshot (src/data/satellites-snapshot.json) at least every two weeks, or the
+// low-orbit groups (stations, weather) disappear from every host but the live one.
+Satellites.LEO_MIN_MEAN_MOTION = 11.25;     // rev/day: period under ~128 min = below ~2000 km
+Satellites.MAX_AGE_LEO_MS = 14 * 86400000;  // drag moves a LEO object km per day
+Satellites.MAX_AGE_HIGH_MS = 60 * 86400000; // GPS (MEO) and GEO stay close for months
 Satellites.LIVE_HOST = 'mrcargon.github.io';
 Satellites.TEST_FLAG = 'mrcargon-sats-allow-live';
 Satellites.API_URL = 'https://celestrak.org/NORAD/elements/gp.php';

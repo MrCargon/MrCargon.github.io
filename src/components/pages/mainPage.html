@@ -549,13 +549,19 @@
                             <button type="button" class="ep-switch" id="explore-toggle-borders" aria-pressed="false" aria-label="Toggle country borders">🗺️ Borders</button>
                             <button type="button" class="ep-switch" id="explore-toggle-grid" aria-pressed="false" aria-label="Toggle latitude and longitude grid">🌐 Grid</button>
                             <button type="button" class="ep-switch" id="explore-toggle-places" aria-pressed="false" aria-label="Toggle places of interest">📍 Places</button>
-                            <button type="button" class="ep-switch" id="explore-toggle-iss" aria-pressed="false" aria-label="Toggle the live ISS marker">🛰️ ISS</button>
-                            <button type="button" class="ep-switch" id="explore-toggle-quakes" aria-pressed="false" aria-label="Toggle live earthquakes">🌋 Quakes</button>
-                            <button type="button" class="ep-switch" id="explore-toggle-sats" aria-pressed="false" aria-label="Toggle real satellites: GPS, weather and crewed stations">🛰️ Sats</button>
+                            <button type="button" class="ep-switch" id="explore-toggle-iss" aria-pressed="false" aria-label="Toggle the live ISS marker" aria-describedby="ep-feed-iss">🛰️ ISS</button>
+                            <button type="button" class="ep-switch" id="explore-toggle-quakes" aria-pressed="false" aria-label="Toggle live earthquakes" aria-describedby="ep-feed-quakes">🌋 Quakes</button>
+                            <button type="button" class="ep-switch" id="explore-toggle-sats" aria-pressed="false" aria-label="Toggle real satellites: GPS, weather and crewed stations" aria-describedby="ep-feed-sats">🛰️ Sats</button>
+                        </div>
+                        <!-- Live feed status (roast R3 #5): filled by SpaceEnvironment._renderFeedStatus. -->
+                        <div class="ep-feeds" id="ep-feed-status">
+                            <div class="ep-feed" id="ep-feed-iss" data-state="off" hidden></div>
+                            <div class="ep-feed" id="ep-feed-quakes" data-state="off" hidden></div>
+                            <div class="ep-feed" id="ep-feed-sats" data-state="off" hidden></div>
                         </div>
                         <div class="ep-empty"><span style="color:#7dffb0;">●</span> GPS <span style="color:#5cb4ff;">●</span> Weather <span style="color:#ff6ad3;">●</span> Stations · orbits: CelesTrak</div>
                         <!-- Map key (roast R1 #3/#4): one hue per meaning, quake scale by colour + size. -->
-                        <div class="ep-empty ep-legend" id="ep-quake-legend">Quakes, last 24 h (USGS): colour + size = magnitude, number = count<br><span class="ep-li"><span class="ep-lq" style="width:5px;height:5px;background:#ffa64d;"></span>M2.5</span> <span class="ep-li"><span class="ep-lq" style="width:7px;height:7px;background:#ff7a1a;"></span>M4</span> <span class="ep-li"><span class="ep-lq" style="width:8px;height:8px;background:#f03a23;"></span>M5</span> <span class="ep-li"><span class="ep-lq" style="width:10px;height:10px;background:#c4126e;"></span>M6</span> <span class="ep-li"><span class="ep-lq" style="width:11px;height:11px;background:#8a1ab8;"></span>M7+</span></div>
+                        <div class="ep-empty ep-legend" id="ep-quake-legend">Quakes, last 24 h (USGS): colour + size = magnitude, number = count<br><span class="ep-li"><span class="ep-lq" style="width:5px;height:5px;background:#ffa64d;"></span>M2.5</span> <span class="ep-li"><span class="ep-lq" style="width:7px;height:7px;background:#ff7a1a;"></span>M4</span> <span class="ep-li"><span class="ep-lq" style="width:8px;height:8px;background:#f03a23;"></span>M5</span> <span class="ep-li"><span class="ep-lq" style="width:10px;height:10px;background:#c4126e;"></span>M6</span> <span class="ep-li"><span class="ep-lq" style="width:11px;height:11px;background:#8a1ab8;"></span>M7+</span> <span class="ep-li"><span class="ep-lq" style="width:5px;height:5px;background:#9aa3ad;"></span>M? (not reported)</span></div>
                         <div class="ep-empty ep-legend" id="ep-line-legend"><span class="ep-li"><span class="ep-lp"></span>Places</span> <span class="ep-li"><span class="ep-ll" style="border-top:2px solid #8fe3ff;"></span>Borders</span> <span class="ep-li"><span class="ep-ll" style="border-top:2px dashed #5f8fc8;"></span>States</span> <span class="ep-li"><span class="ep-ll" style="border-top:2px solid #ffb85c;"></span>SF districts</span> <span class="ep-li"><span class="ep-ll" style="border-top:1px solid #b4bcc6;opacity:0.7;"></span>Grid</span></div>
                     </div>
                 </section>

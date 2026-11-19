@@ -19,9 +19,18 @@ test.setTimeout(90000);
 const snapshot = JSON.parse(readFileSync('src/data/satellites-snapshot.json', 'utf8'));
 const NAMES = ['ISS (ZARYA)', 'GOES 19'];
 
+// Low orbits are dropped after MAX_AGE_LEO_MS (14 d, roast R1 #7), so the bundled stations
+// would age out of these tests two weeks after each snapshot rebuild. Seed the cache with
+// the same stations re-dated to yesterday: the orbits keep their shape and speed.
+const FRESH_STATIONS = snapshot.groups.stations.map((r) => Object.assign({}, r,
+    { EPOCH: new Date(Date.now() - 86400000).toISOString().replace('Z', '') }));
+
 async function stubCelesTrak(page) {
     const calls = [];
-    await page.addInitScript(() => localStorage.setItem('mrcargon-sats-allow-live', '1'));
+    await page.addInitScript((stations) => {
+        localStorage.setItem('mrcargon-sats-allow-live', '1');
+        localStorage.setItem('mrcargon-sats-gp-stations', JSON.stringify({ t: Date.now() - 60000, data: stations }));
+    }, FRESH_STATIONS);
     await page.route('**celestrak.org/**', (route) => {
         const group = new URL(route.request().url()).searchParams.get('GROUP');
         calls.push(group);

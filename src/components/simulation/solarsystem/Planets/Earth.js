@@ -116,6 +116,14 @@ class Earth extends Planet {
         this.satsWanted = false;        // saved on/off state; a failed start keeps it
         this._satsActive = false;       // inside Explore with the layer on
         this._satsScript = null;
+        this._satsState = 'idle';       // idle | loading | ok | failed (the Layers status line)
+        // Live feeds (roast R3 #5): what the user asked for, and when each feed last answered.
+        this.quakesWanted = false;
+        this.issWanted = false;
+        this.feeds = { quakes: { okAt: 0, failAt: 0, count: 0 }, iss: { okAt: 0, failAt: 0 } };
+        this._quakesInFlight = null;
+        this._quakeLoopOn = false;
+        this._quakeTimer = null;
         // User-managed saved map pins (dot/area), persisted to localStorage.
         this.explorePins = null;
     }
@@ -720,14 +728,18 @@ class Earth extends Planet {
         console.assert(this.data.radius > 0, 'Earth.startSatellites: bad radius');
         this.satsWanted = true;
         this._satsActive = true;
+        if (this._satsState !== 'ok') this._satsState = 'loading';
         try {
             await this._loadSatellitesScript();
             // Explore may have ended, or the layer been turned off, during the load.
             if (!this._satsActive || !this.mesh) return false;
             if (!this.satellites) this.satellites = new Satellites(this.mesh, this.data.radius);
-            return await this.satellites.start();
+            const ok = await this.satellites.start();
+            if (this._satsActive) this._satsState = ok ? 'ok' : 'failed';
+            return ok;
         } catch (err) {
             console.warn('Earth: satellites unavailable:', err && err.message);
+            this._satsState = 'failed';
             return false;
         }
     }
@@ -1028,60 +1040,157 @@ class Earth extends Planet {
     }
 
     // Live earthquakes (USGS, keyless + CORS). Colour + size by magnitude, clustered
-    // on screen where they pile up (Pacific ring at far zoom).
+    // on screen where they pile up (Pacific ring at far zoom). Builds on the first good
+    // reply; refreshQuakes() keeps it current while Explore runs (startQuakeRefresh).
     async buildQuakes() {
         console.assert(this.mesh, 'Earth.buildQuakes: mesh required');
+        console.assert(this.feeds && this.feeds.quakes, 'Earth.buildQuakes: feed state required');
         if (this.layers.quakes) return this.layers.quakes;
-        if (typeof SafeFetch === 'undefined') return null;
-        const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson';
-        const data = await SafeFetch.json(url, { ttl: 300000 });
-        if (!data || !Array.isArray(data.features)) {
-            console.error('Earth.buildQuakes: no USGS data');
-            return null;
-        }
-        if (this.layers.quakes) return this.layers.quakes;   // a parallel call finished first
-        const mk = this._ensureMarkers();
-        if (!mk) return null;
+        await this.refreshQuakes();
+        return this.layers.quakes || null;
+    }
+
+    /**
+     * Fetch the USGS day feed and (re)draw the layer. A failure keeps the last drawn
+     * quakes and is recorded in feeds.quakes, so the panel can say "stale" or "offline"
+     * (roast R3 #5, R1 #7). Never rejects. Rule 5: 2 asserts.
+     * @returns {Promise<boolean>} true when the layer holds data from the last reply
+     */
+    refreshQuakes() {
+        console.assert(this.mesh, 'Earth.refreshQuakes: mesh required');
+        console.assert(this.feeds && this.feeds.quakes, 'Earth.refreshQuakes: feed state required');
+        if (this._quakesInFlight) return this._quakesInFlight;
+        if (typeof SafeFetch === 'undefined') return Promise.resolve(false);
+        const st = this.feeds.quakes;
+        const url = Earth.QUAKES_URL;
+        this._quakesInFlight = (async () => {
+            const data = await SafeFetch.json(url, { ttl: Earth.QUAKE_REFRESH_MS - 30000 });
+            const at = SafeFetch.fetchedAt(url);
+            if (!data || !Array.isArray(data.features) || SafeFetch.failing(url)) {
+                st.failAt = Date.now();
+                console.warn('Earth.refreshQuakes: no fresh USGS data');
+                return false;
+            }
+            if (this.layers.quakes && at === st.okAt) return true;   // cache hit, nothing new
+            const mk = this._ensureMarkers();
+            if (!mk) return false;
+            const items = Earth.quakeItems(data.features);
+            if (!this.layers.quakes) {
+                this.layers.quakes = mk.addLayer('quakes', { clusterPx: 14, clusterNoun: 'earthquakes' });
+                this.layers.quakes.visible = !!this.quakesWanted;
+            }
+            mk.setItems('quakes', items);
+            st.okAt = at || Date.now();
+            st.failAt = 0;
+            st.count = items.length;
+            return true;
+        })().finally(() => { this._quakesInFlight = null; });
+        return this._quakesInFlight;
+    }
+
+    /**
+     * USGS features -> marker items. A quake with no reported magnitude is "M?" with a
+     * neutral grey marker, never an invented M2.5 (R1 #7). Rule 2: bounded.
+     * @param {Array} features
+     * @returns {Array}
+     */
+    static quakeItems(features) {
+        console.assert(Array.isArray(features), 'Earth.quakeItems: features required');
+        console.assert(typeof GlobeMarkers !== 'undefined', 'Earth.quakeItems: GlobeMarkers required');
         const items = [];
-        const max = Math.min(data.features.length, 250);   // Rule 2: bounded
+        const max = Math.min(features.length, 250);   // Rule 2: bounded
         for (let i = 0; i < max; i++) {
-            const f = data.features[i];
+            const f = features[i];
             if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) continue;
-            const lng = Number(f.geometry.coordinates[0]), lat = Number(f.geometry.coordinates[1]);
+            const c = f.geometry.coordinates;
+            const lng = Number(c[0]), lat = Number(c[1]);
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-            const m = Number(f.properties && f.properties.mag);
-            const mag = Number.isFinite(m) ? m : 2.5;
-            items.push({ lat: lat, lng: lng, alt: 1.0009, color: GlobeMarkers.quakeColor(mag),
-                size: GlobeMarkers.quakeSize(mag), rank: mag,
-                data: { type: 'quake', name: 'M' + mag.toFixed(1) + ' earthquake',
-                    info: (f.properties && f.properties.place) || '' } });
+            const p = f.properties || {};
+            // Number(null) is 0, so test for a real number first.
+            const known = typeof p.mag === 'number' && Number.isFinite(p.mag);
+            const mag = known ? p.mag : 2.5;              // size only; the label says "M?"
+            const info = [p.place || 'Location not given'];
+            if (Number.isFinite(p.time)) info.push(new Date(p.time).toISOString().slice(11, 16) + ' UTC');
+            if (typeof c[2] === 'number' && Number.isFinite(c[2])) info.push(Math.round(c[2]) + ' km deep');
+            if (!known) info.push('magnitude not reported');
+            items.push({ lat: lat, lng: lng, alt: 1.0009,
+                color: known ? GlobeMarkers.quakeColor(mag) : Earth.QUAKE_UNKNOWN_COLOR,
+                size: GlobeMarkers.quakeSize(mag), rank: known ? mag : 0,
+                data: { type: 'quake', name: known ? 'M' + mag.toFixed(1) + ' earthquake' : 'M? earthquake',
+                    info: info.join(' · ') } });
         }
-        const group = mk.addLayer('quakes', { clusterPx: 14, clusterNoun: 'earthquakes' });
-        mk.setItems('quakes', items);
-        this.layers.quakes = group;
-        return group;
+        return items;
+    }
+
+    // Refresh the quakes every QUAKE_REFRESH_MS while Explore runs (USGS updates the feed
+    // each minute), sooner after a failure. Explore calls stopQuakeRefresh on exit.
+    startQuakeRefresh() {
+        console.assert(this.feeds && this.feeds.quakes, 'Earth.startQuakeRefresh: feed state required');
+        console.assert(Earth.QUAKE_REFRESH_MS >= 60000, 'Earth.startQuakeRefresh: cadence too fast');
+        if (this._quakeLoopOn) return;
+        this._quakeLoopOn = true;
+        const st = this.feeds.quakes;
+        const delay = () => (st.failAt > st.okAt ? Earth.QUAKE_RETRY_MS : Earth.QUAKE_REFRESH_MS);
+        const step = async () => {
+            if (!this._quakeLoopOn) return;
+            const hidden = typeof document !== 'undefined' && document.hidden;
+            if (this.quakesWanted && !hidden) await this.refreshQuakes();
+            if (this._quakeLoopOn) this._quakeTimer = setTimeout(step, delay());
+        };
+        this._quakeTimer = setTimeout(step, delay());
+    }
+
+    stopQuakeRefresh() {
+        this._quakeLoopOn = false;
+        if (this._quakeTimer) { clearTimeout(this._quakeTimer); this._quakeTimer = null; }
     }
 
     // ISS live position (wheretheiss.at, keyless + CORS). Polls while shown.
     // One ISS on the globe: while this marker is on and placed, Satellites.js skips its ISS
     // dot (SpaceEnvironment passes issMarkerShown() to Satellites.setView each frame).
+    // A fix older than ISS_STALE_MS hides the marker, so a dead feed never leaves a frozen
+    // ISS on the globe; the SGP4 dot comes back instead (R1 #7).
     startISS() {
         console.assert(this.mesh, 'Earth.startISS: mesh required');
+        console.assert(this.feeds && this.feeds.iss, 'Earth.startISS: feed state required');
         if (this._issTimer) return;
         this._ensureIssMarker();
+        const st = this.feeds.iss;
+        const url = Earth.ISS_URL;
         const poll = async () => {
+            this._issStaleCheck(Date.now());
             if (typeof document !== 'undefined' && document.hidden) return;   // pause when hidden
             if (typeof SafeFetch === 'undefined') return;
-            const d = await SafeFetch.json('https://api.wheretheiss.at/v1/satellites/25544', { ttl: 4000 });
-            if (d && this.markers && this.layers.iss && typeof d.latitude === 'number') {
-                const altF = 1 + ((d.altitude || 420) / 6371);
-                this.markers.setItemPosition('iss', 0, d.latitude, d.longitude, altF);
+            const d = await SafeFetch.json(url, { ttl: 4000 });
+            const ok = d && Number.isFinite(d.latitude) && Number.isFinite(d.longitude)
+                && !SafeFetch.failing(url);
+            if (!ok) st.failAt = Date.now();
+            else if (this.markers && this.layers.iss && SafeFetch.fetchedAt(url) > st.okAt) {
+                st.okAt = SafeFetch.fetchedAt(url);
+                st.failAt = 0;
+                const altKm = (Number.isFinite(d.altitude) && d.altitude > 100) ? d.altitude : 420;
+                this.markers.setItemPosition('iss', 0, d.latitude, d.longitude, 1 + altKm / 6371);
                 const info = this.markers.itemData('iss', 0);
-                if (info) info.info = 'Alt ' + Math.round(d.altitude) + ' km · ' + Math.round(d.velocity) + ' km/h';
+                const parts = [];
+                if (Number.isFinite(d.altitude)) parts.push('Alt ' + Math.round(d.altitude) + ' km');
+                if (Number.isFinite(d.velocity)) parts.push(Math.round(d.velocity) + ' km/h');
+                if (info) info.info = parts.length ? parts.join(' · ') : 'International Space Station';
             }
+            this._issStaleCheck(Date.now());
         };
         poll();
         this._issTimer = setInterval(poll, 5000);   // 5s cadence
+    }
+
+    // Hide the ISS marker once its last fix is older than ISS_STALE_MS. Rule 5: 2 asserts.
+    _issStaleCheck(now) {
+        console.assert(Number.isFinite(now), 'Earth._issStaleCheck: time required');
+        console.assert(this.feeds && this.feeds.iss, 'Earth._issStaleCheck: feed state required');
+        const L = this.markers && this.markers.layers && this.markers.layers.iss;
+        if (!L || !L.items[0]) return false;
+        const stale = now - this.feeds.iss.okAt > Earth.ISS_STALE_MS;
+        if (stale) L.items[0].hidden = true;
+        return stale;
     }
 
     _ensureIssMarker() {
@@ -1095,17 +1204,62 @@ class Earth extends Planet {
         this.layers.iss = group;
     }
 
-    // True while the ISS marker is on AND has a position fix: only then does it replace the
+    // True while the ISS marker is on AND has a fresh fix: only then does it replace the
     // satellite layer's ISS dot (a dead wheretheiss.at feed leaves the SGP4 dot). Rule 5.
     issMarkerShown() {
         console.assert(this.layers, 'Earth.issMarkerShown: layers required');
         const L = this.markers && this.markers.layers && this.markers.layers.iss;
         console.assert(!L || Array.isArray(L.items), 'Earth.issMarkerShown: bad layer');
-        return !!(this.layers.iss && this.layers.iss.visible && L && L.items[0] && !L.items[0].hidden);
+        return !!(this.layers.iss && this.layers.iss.visible && L && L.items[0] && !L.items[0].hidden
+            && Date.now() - this.feeds.iss.okAt <= Earth.ISS_STALE_MS);
     }
 
     stopISS() {
         if (this._issTimer) { clearInterval(this._issTimer); this._issTimer = null; }
+    }
+
+    /**
+     * One short status line per live layer for the Layers tab (roast R3 #5): what the
+     * user sees on the globe and how old it is. Rule 5: 2 asserts.
+     * @param {string} name - 'iss' | 'quakes' | 'sats'
+     * @param {number} [now]
+     * @returns {{state:string, text:string}} state: off | loading | live | stale | offline
+     */
+    feedStatus(name, now) {
+        console.assert(name === 'iss' || name === 'quakes' || name === 'sats', 'Earth.feedStatus: bad name');
+        console.assert(this.feeds, 'Earth.feedStatus: feed state required');
+        if (name === 'sats') return this._satsStatus();
+        const t = Number.isFinite(now) ? now : Date.now();
+        const hm = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const wanted = name === 'iss' ? this.issWanted : this.quakesWanted;
+        if (!wanted) return { state: 'off', text: 'off' };
+        const st = this.feeds[name];
+        const maxAge = name === 'iss' ? Earth.ISS_STALE_MS : 2 * Earth.QUAKE_REFRESH_MS + 60000;
+        if (!st.okAt && !st.failAt) return { state: 'loading', text: 'loading…' };
+        if (!st.okAt) return { state: 'offline', text: 'offline - retrying' };
+        if (st.failAt > st.okAt || t - st.okAt > maxAge) {
+            const sgp4 = name === 'iss' && this.satellites && this.satellites.visible;
+            const what = name === 'iss' ? 'signal lost since ' : 'stale since ';
+            return { state: 'stale', text: what + hm(st.okAt) + ' - retrying' + (sgp4 ? ' · orbit estimate shown' : '') };
+        }
+        const tail = name === 'quakes' ? ' · ' + st.count + ' in 24 h' : '';
+        return { state: 'live', text: 'live · updated ' + hm(st.okAt) + tail };
+    }
+
+    // Satellites: orbits come from the bundled snapshot or the cache, refreshed only on the
+    // live host once per FETCH_GAP_MS, so the line says how old they are. Rule 5: 2 asserts.
+    _satsStatus() {
+        console.assert(typeof this.satsWanted === 'boolean', 'Earth._satsStatus: wanted flag required');
+        const s = this.satellites;
+        console.assert(s === null || typeof s === 'object', 'Earth._satsStatus: bad layer');
+        if (!this.satsWanted) return { state: 'off', text: 'off' };
+        if (this._satsState === 'failed') return { state: 'offline', text: 'unavailable - no recent orbit data' };
+        if (!s || !s.count || this._satsState !== 'ok') return { state: 'loading', text: 'loading…' };
+        const asOf = s.asOf();
+        const day = asOf ? new Date(asOf).toLocaleDateString([], { day: 'numeric', month: 'short' }) : '?';
+        const old = s.agedOutGroups();
+        const text = s.count + ' objects · orbits as of ' + day + (old.length ? ' · no recent orbits: ' + old.join(', ') : '');
+        return { state: old.length ? 'stale' : 'live', text: text };
     }
 
     // Toggle a built layer's visibility. Rule 5: 2 asserts.
@@ -1393,6 +1547,14 @@ Earth.REGION_TIER_DEFS = [
 // The globe palette lives in GlobeMarkers.PALETTE (loaded first, see index.html).
 Earth.PALETTE = (typeof GlobeMarkers !== 'undefined' && GlobeMarkers.PALETTE) ? GlobeMarkers.PALETTE
     : { place: 0xffe14a, border: 0x8fe3ff, grid: 0xb4bcc6 };
+
+// Live feeds. USGS rebuilds its day feed every minute; five minutes is plenty for a globe.
+Earth.QUAKES_URL = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson';
+Earth.QUAKE_REFRESH_MS = 300000;
+Earth.QUAKE_RETRY_MS = 60000;          // after a failure (SafeFetch's breaker also cools 60 s)
+Earth.QUAKE_UNKNOWN_COLOR = 0x9aa3ad;  // neutral grey: magnitude not reported ("M?")
+Earth.ISS_URL = 'https://api.wheretheiss.at/v1/satellites/25544';
+Earth.ISS_STALE_MS = 30000;            // older fix = marker hidden, SGP4 dot shown instead
 
 // Make globally available (matches the rest of the codebase).
 if (typeof window !== 'undefined') {

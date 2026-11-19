@@ -2021,8 +2021,10 @@ class SpaceEnvironment {
         const state = {
             borders: !!(earth.borders && earth.borders.visible),
             graticule: !!(earth.graticule && earth.graticule.visible),
-            iss: !!(L.iss && L.iss.visible),
-            quakes: !!(L.quakes && L.quakes.visible),
+            // Live feeds save what the user chose, not what loaded (R3 #5: a dead feed
+            // used to save the layer as off).
+            iss: !!earth.issWanted,
+            quakes: !!earth.quakesWanted,
             pois: !!(L.pois && L.pois.visible),
             sats: !!earth.satsWanted,
             lod: !!this._lodEnabled,
@@ -2254,14 +2256,18 @@ class SpaceEnvironment {
             if (typeof earth.setLayerVisible === 'function') earth.setLayerVisible('pois', want('pois'));
         }
         if (typeof earth.buildQuakes === 'function') {
+            earth.quakesWanted = want('quakes');
             earth.buildQuakes().then((q) => {
                 if (q && this.exploreMode && typeof earth.setLayerVisible === 'function') {
-                    earth.setLayerVisible('quakes', want('quakes'));
+                    earth.setLayerVisible('quakes', earth.quakesWanted);
                 }
                 this._syncExploreToggleButtons();
             });
+            // R1 #7: the day feed is refreshed while Explore runs, not loaded once.
+            if (typeof earth.startQuakeRefresh === 'function') earth.startQuakeRefresh();
         }
-        if (want('iss') && typeof earth.startISS === 'function') {
+        earth.issWanted = want('iss');
+        if (earth.issWanted && typeof earth.startISS === 'function') {
             earth.startISS();
             earth.setLayerVisible('iss', true);
         }
@@ -2283,6 +2289,55 @@ class SpaceEnvironment {
             this._detailLayers[k] = (k in savedDetail) ? !!savedDetail[k] : true;
         });
         this._applyDetailLayers(earth);
+        this._startFeedStatus();
+        return true;
+    }
+
+    /**
+     * Keep the Layers tab's live-feed status lines current while Explore is open (roast R3
+     * #5). One 1 s timer, text only; exitExploreMode/teardownExplorePanel stop it.
+     * Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _startFeedStatus() {
+        console.assert(this.exploreMode, '_startFeedStatus: only in Explore');
+        console.assert(typeof setInterval === 'function', '_startFeedStatus: timers required');
+        if (this._feedStatusTimer) return false;
+        this._renderFeedStatus();
+        this._feedStatusTimer = setInterval(() => this._renderFeedStatus(), 1000);
+        return true;
+    }
+
+    _stopFeedStatus() {
+        if (this._feedStatusTimer) { clearInterval(this._feedStatusTimer); this._feedStatusTimer = null; }
+    }
+
+    /**
+     * One line per live layer: "ISS: live · updated 14:05", "Quakes: offline - retrying",
+     * "Sats: 240 objects · orbits as of 7 Nov". The switch keeps the user's choice and
+     * carries the state in data-feed (styled as a warning). Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _renderFeedStatus() {
+        if (typeof document === 'undefined') return false;
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_renderFeedStatus: bad earth');
+        if (!earth || typeof earth.feedStatus !== 'function') return false;
+        const now = Date.now();
+        const rows = [['iss', 'ISS'], ['quakes', 'Quakes'], ['sats', 'Sats']];
+        console.assert(rows.length === 3, '_renderFeedStatus: three live layers');
+        rows.forEach((r) => {
+            const s = earth.feedStatus(r[0], now);
+            const el = document.getElementById('ep-feed-' + r[0]);
+            const btn = document.getElementById('explore-toggle-' + r[0]);
+            if (el) {
+                const text = r[1] + ': ' + s.text;
+                if (el.textContent !== text) el.textContent = text;
+                if (el.dataset.state !== s.state) el.dataset.state = s.state;
+                el.hidden = s.state === 'off';
+            }
+            if (btn && btn.dataset.feed !== s.state) btn.dataset.feed = s.state;
+        });
         return true;
     }
 
@@ -2365,6 +2420,7 @@ class SpaceEnvironment {
         // survive to the next entry.
         this._writeExploreLayerState();
         this.exploreMode = false;
+        this._stopFeedStatus();
         this._releaseExploreClock();
 
         const earth = this.getEarthObject();
@@ -2381,6 +2437,7 @@ class SpaceEnvironment {
             }
             // Stop ISS polling + hide all live data layers.
             if (typeof earth.stopISS === 'function') earth.stopISS();
+            if (typeof earth.stopQuakeRefresh === 'function') earth.stopQuakeRefresh();
             ['iss', 'quakes', 'pois'].forEach((k) => {
                 if (typeof earth.setLayerVisible === 'function') earth.setLayerVisible(k, false);
             });
@@ -3792,13 +3849,45 @@ class SpaceEnvironment {
         console.assert(typeof name === 'string', '_toggleDataLayer: name required');
         const earth = this.getEarthObject();
         console.assert(earth === null || typeof earth === 'object', '_toggleDataLayer: bad earth');
-        if (!earth || !earth.layers || !earth.layers[name]) return false;
+        if (!earth || !earth.layers) return false;
+        if (name === 'iss' || name === 'quakes') return this._toggleLiveFeed(name, earth);
+        if (!earth.layers[name]) return false;
         const obj = earth.layers[name];
         obj.visible = !obj.visible;
         if (btn) {
             btn.classList.toggle('active', obj.visible);
             btn.setAttribute('aria-pressed', obj.visible ? 'true' : 'false');
         }
+        this._writeExploreLayerState();
+        return true;
+    }
+
+    /**
+     * Toggle a live feed (iss|quakes) by the user's choice, which a dead feed never
+     * changes (R3 #5). Turning one on starts it even when it never loaded.
+     * Rule 5: 2 asserts.
+     * @param {string} name
+     * @param {Object} earth
+     * @returns {boolean}
+     */
+    _toggleLiveFeed(name, earth) {
+        console.assert(name === 'iss' || name === 'quakes', '_toggleLiveFeed: bad name');
+        console.assert(earth && typeof earth === 'object', '_toggleLiveFeed: earth required');
+        const key = name + 'Wanted';
+        earth[key] = !earth[key];
+        const on = earth[key];
+        if (name === 'iss') {
+            if (on && typeof earth.startISS === 'function') earth.startISS();
+            if (!on && typeof earth.stopISS === 'function') earth.stopISS();
+        } else if (on && !earth.layers.quakes && typeof earth.buildQuakes === 'function') {
+            earth.buildQuakes().then(() => {
+                if (this.exploreMode) earth.setLayerVisible('quakes', !!earth.quakesWanted);
+                this._syncExploreToggleButtons();
+            });
+        }
+        earth.setLayerVisible(name, on);
+        this._syncExploreToggleButtons();
+        this._renderFeedStatus();
         this._writeExploreLayerState();
         return true;
     }
@@ -3815,9 +3904,11 @@ class SpaceEnvironment {
         const earth = this.getEarthObject();
         console.assert(earth === null || typeof earth === 'object', '_toggleSatellites: bad earth');
         if (!earth) return false;
-        if (earth.satellites && earth.satellites.visible) earth.hideSatellites(true);
+        // By the user's choice (satsWanted), so a layer that failed to load still turns off.
+        if (earth.satsWanted) earth.hideSatellites(true);
         else earth.startSatellites().then(() => this._syncExploreToggleButtons());
         this._syncExploreToggleButtons();
+        this._renderFeedStatus();
         this._writeExploreLayerState();
         return true;
     }
@@ -4057,10 +4148,12 @@ class SpaceEnvironment {
         set('explore-toggle-grid', earth.graticule && earth.graticule.visible);
         set('explore-toggle-borders', earth.borders && earth.borders.visible);
         const L = earth.layers || {};
-        set('explore-toggle-iss', L.iss && L.iss.visible);
-        set('explore-toggle-quakes', L.quakes && L.quakes.visible);
+        // Live feeds show the user's choice; a dead feed shows in its status line instead
+        // of flipping the switch (R3 #5).
+        set('explore-toggle-iss', earth.issWanted);
+        set('explore-toggle-quakes', earth.quakesWanted);
         set('explore-toggle-places', L.pois && L.pois.visible);
-        set('explore-toggle-sats', earth.satellites && earth.satellites.visible);
+        set('explore-toggle-sats', earth.satsWanted);
         set('explore-toggle-lod', this._lodEnabled);
         return true;
     }
@@ -4076,6 +4169,7 @@ class SpaceEnvironment {
         // disposed instance. The pointerdown stays on the panel (dies with the element);
         // a later setup re-attaches the window listeners via _makePanelDraggable.
         this._detachPanelWindowListeners();
+        this._stopFeedStatus();
         this._applyExploreChrome(false); // F7: planet bar, action row, full nav/footer back
         const panel = document.getElementById('explore-panel');
         console.assert(panel === null || panel.nodeType === 1, 'teardownExplorePanel: bad panel');

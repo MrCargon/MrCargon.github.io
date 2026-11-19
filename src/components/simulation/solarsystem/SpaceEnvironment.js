@@ -3157,7 +3157,7 @@ class SpaceEnvironment {
         console.assert(typeof this === 'object', '_styleDefaults: instance');
         console.assert(true, '_styleDefaults: ok');
         return {
-            streets:   { color: 0x9fd8ff, opacity: 0.65, width: 2 },
+            streets:   { color: 0xf2dcb0, opacity: 0.6, width: 2 },    // F4: soft sand; StreetTiles scales by zoom
             states:    { color: 0x6fb0e0, opacity: 1.0 },
             cities:    { color: 0xffd24a, opacity: 1.0 },
             districts: { color: 0x8fe3ff, opacity: 1.0 }
@@ -3201,7 +3201,7 @@ class SpaceEnvironment {
         this._styleKey = 'mrcargon.explore.style';
         this._style = this._readStyleState();
         this._styleLayer = 'streets';
-        this._stylePalette = [0x9fd8ff, 0xffffff, 0xff5a4a, 0xffc24a, 0x6ad36a, 0xc08bff, 0xff6ad3, 0x8fe3ff, 0x66e8ff];
+        this._stylePalette = [0xf2dcb0, 0xffffff, 0xff5a4a, 0xffc24a, 0x6ad36a, 0xc08bff, 0xff6ad3, 0x8fe3ff, 0x66e8ff];
         this._buildStyleSwatches();
         const layers = document.getElementById('ep-style-layers');
         if (layers) layers.addEventListener('click', (e) => {

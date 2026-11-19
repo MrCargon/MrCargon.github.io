@@ -82,3 +82,61 @@ test('labels carry each layer\'s altitude and note', async ({ page }) => {
     expect(info[0]).toMatch(/^Troposphere, 0.12 km/);
     expect(info[4]).toMatch(/^Exosphere/);
 });
+
+// R3 #10: the five labels used to be five Tab stops BEFORE the Explore panel. Now the
+// panel comes right after the nav/credits, the ladder is one stop after it, and the
+// arrow keys (plus Home/End) reach every label, each still showing its note on focus.
+test('Tab reaches the panel before the ladder; arrows walk all five labels', async ({ page }) => {
+    await enterExplore(page);
+    await place(page, 3);
+    await page.waitForTimeout(2000);
+    await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+    const walk = [];
+    for (let i = 0; i < 40; i++) {
+        await page.keyboard.press('Tab');
+        walk.push(await page.evaluate(() => {
+            const a = document.activeElement;
+            if (!a || a === document.body) return 'BODY';
+            if (a.classList.contains('atmo-label')) return 'atmo';
+            if (a.closest('#explore-panel')) return 'panel';
+            if (a.closest('#header-container, #footer-container')) return 'chrome';
+            return 'other';
+        }));
+        if (walk[walk.length - 1] === 'BODY') break;
+    }
+    const firstPanel = walk.indexOf('panel'), firstAtmo = walk.indexOf('atmo');
+    expect(firstPanel, 'panel reachable by Tab').toBeGreaterThan(0);
+    expect(walk.slice(0, firstPanel).every((w) => w === 'chrome'), walk.join(',')).toBe(true);
+    expect(walk.filter((w) => w === 'atmo'), 'the ladder is ONE Tab stop').toHaveLength(1);
+    expect(firstAtmo, 'ladder comes after the panel').toBeGreaterThan(walk.lastIndexOf('panel'));
+
+    // Land on the ladder, then walk it with the arrow keys.
+    await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+    for (let i = 0; i <= firstAtmo; i++) await page.keyboard.press('Tab');
+    const here = () => page.evaluate(() => {
+        const a = document.activeElement;
+        return { label: a.getAttribute('aria-label') || '', note: getComputedStyle(a.lastChild).display,
+            stops: Array.from(document.querySelectorAll('.atmo-label')).filter((l) => l.tabIndex === 0).length };
+    });
+    const seen = [];
+    let r = await here();
+    seen.push(r.label.split(',')[0]);
+    expect(r.note, 'focus shows the note').toBe('inline');
+    for (let i = 0; i < 4; i++) {
+        await page.keyboard.press('ArrowUp');
+        r = await here();
+        seen.push(r.label.split(',')[0]);
+        expect(r.note).toBe('inline');
+        expect(r.stops, 'roving: exactly one label is tabbable').toBe(1);
+    }
+    expect(seen).toEqual(['Troposphere', 'Stratosphere', 'Mesosphere', 'Thermosphere', 'Exosphere']);
+    await page.keyboard.press('Home');
+    expect((await here()).label).toMatch(/^Troposphere/);
+    await page.keyboard.press('End');
+    expect((await here()).label).toMatch(/^Exosphere/);
+    await page.keyboard.press('ArrowDown');
+    expect((await here()).label).toMatch(/^Thermosphere/);
+    // Shift+Tab from the ladder goes back into the panel.
+    await page.keyboard.press('Shift+Tab');
+    expect(await page.evaluate(() => !!document.activeElement.closest('#explore-panel'))).toBe(true);
+});

@@ -35,7 +35,11 @@ class StringTheory {
             camera: options.camera || null,
             frameDistance: options.frameDistance || 55,
             stringRadius: options.stringRadius || 0.5,
-            pointSize: options.pointSize || 0.4
+            pointSize: options.pointSize || 0.7, // P35: 0.4 -> 0.7 so the round dots read as round (~4 px)
+            // P35: framed dead centre, the strings and the cloud sat ON the Sun's disc
+            // (busy). The group now slides this far to the right of the view centre
+            // (camera-local units), clamped so the layout stays inside the view.
+            frameSideOffset: options.frameSideOffset || 31
         };
 
         // Everything this feature draws hangs off this group, so one transform places it
@@ -293,6 +297,14 @@ ${StringTheory.DISCLAIMER}
         camera.getWorldPosition(this._framePos);
         this.group.position.copy(this._framePos).addScaledVector(this._frameDir, this.options.frameDistance);
         camera.getWorldQuaternion(this.group.quaternion);
+        // Slide right, off the Sun at the view centre. Half the visible width at the frame
+        // distance, minus the layout's half-width (strings at +-15, amplitude ~2) and a margin;
+        // a narrow (portrait) view gets less or no offset rather than cutting strings off.
+        const fov = Number.isFinite(camera.fov) ? camera.fov : 60;
+        const aspect = Number.isFinite(camera.aspect) ? camera.aspect : 1;
+        const halfW = Math.tan(THREE.MathUtils.degToRad(fov / 2)) * this.options.frameDistance * aspect;
+        const side = Math.max(0, Math.min(this.options.frameSideOffset, halfW - 19));
+        this.group.translateX(side);
         return true;
     }
 

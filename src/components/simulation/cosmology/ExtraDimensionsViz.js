@@ -14,6 +14,8 @@
 // Reference: Hanson, A. J. (1994). "A Construction for Computer
 // Visualization of Certain Complex Curves." Notices of the AMS.
 
+/* global RoundPoints */
+
 class ExtraDimensionsViz {
     constructor(scene, options = {}) {
         // NASA Rule 5: Assertions
@@ -133,7 +135,12 @@ Visualization of Certain Complex Curves." Notices of the AMS.
             sizeAttenuation: true
         });
 
+        // P35: round, soft points (shared RoundPoints patch) instead of squares.
+        const rounded = (typeof RoundPoints !== 'undefined');
+        if (rounded) RoundPoints.apply(this.material, { soft: 0.4, minPx: 2, maxPx: 7 });
+
         this.mesh = new THREE.Points(geometry, this.material);
+        if (rounded) RoundPoints.attach(this.mesh);
         this.scene.add(this.mesh);
 
         return this;

@@ -149,7 +149,7 @@ class AtmosphereLayers {
             var el = document.createElement('div');
             el.className = 'atmo-label';
             el.setAttribute('role', 'listitem');
-            el.tabIndex = 0;
+            el.tabIndex = i === 0 ? 0 : -1;                         // R3 #10: one Tab stop (roving)
             el.title = d.name + ' · ' + d.alt + ' · ' + d.info;
             el.setAttribute('aria-label', d.name + ', ' + d.alt + ': ' + d.info);
             el.innerHTML = '<span class="atmo-name"></span><span class="atmo-info"></span>';
@@ -165,8 +165,10 @@ class AtmosphereLayers {
             this._ladder.appendChild(el);
             this.labels.push(el);
         }
+        this._ladder.addEventListener('keydown', this._onLadderKey.bind(this));
         document.body.appendChild(this._svg);
         document.body.appendChild(this._ladder);
+        this._orderAfterPanel();
         this._buildScaleNote();
         this._onPointer = this._trackPointer.bind(this);
         window.addEventListener('pointermove', this._onPointer, { passive: true });
@@ -193,6 +195,39 @@ class AtmosphereLayers {
             'color:#aab3dd; text-shadow:0 0 5px rgba(8,14,40,0.95); will-change:transform;';
         document.body.appendChild(el);
         this._scale = el;
+        return true;
+    }
+
+    // R3 #10: the ladder is ONE Tab stop (roving tabindex); arrows / Home / End move
+    // between the five labels, so a keyboard user is not walked through them one by one.
+    _onLadderKey(ev) {
+        console.assert(ev && typeof ev.key === 'string', '_onLadderKey: key event required');
+        console.assert(Array.isArray(this.labels), '_onLadderKey: labels expected');
+        var n = this.labels.length, at = this.labels.indexOf(document.activeElement);
+        if (at < 0 || !n) return false;
+        var to = at;
+        if (ev.key === 'ArrowUp' || ev.key === 'ArrowRight') to = Math.min(n - 1, at + 1);
+        else if (ev.key === 'ArrowDown' || ev.key === 'ArrowLeft') to = Math.max(0, at - 1);
+        else if (ev.key === 'Home') to = 0;
+        else if (ev.key === 'End') to = n - 1;
+        else return false;
+        ev.preventDefault();
+        for (var i = 0; i < n; i++) this.labels[i].tabIndex = i === to ? 0 : -1;   // Rule 2: bounded (5)
+        this.labels[to].focus();
+        return true;
+    }
+
+    // R3 #10: keep the ladder AFTER the Explore panel in the DOM, so Tab reaches the
+    // panel first. The panel is moved to <body> on entering Explore (after the ladder was
+    // built), so this re-checks; both are position:fixed body children, so nothing moves
+    // on screen. Never moves the ladder while it holds focus (a move would blur it).
+    _orderAfterPanel() {
+        console.assert(typeof document !== 'undefined', '_orderAfterPanel: document required');
+        console.assert(this._ladder, '_orderAfterPanel: ladder required');
+        var panel = document.getElementById('explore-panel'), lad = this._ladder;
+        if (!panel || panel.parentNode !== document.body || lad.contains(document.activeElement)) return false;
+        if (panel.compareDocumentPosition(lad) & Node.DOCUMENT_POSITION_FOLLOWING) return false;
+        panel.after(lad);
         return true;
     }
 
@@ -224,6 +259,7 @@ class AtmosphereLayers {
         if (now - this._obstAt < 500) return false;
         this._obstAt = now;
         this._obst.length = 0;
+        this._orderAfterPanel();
         var nodes = document.querySelectorAll(AtmosphereLayers.AVOID);
         for (var i = 0; i < nodes.length && i < 40; i++) {
             var el = nodes[i];

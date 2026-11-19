@@ -625,6 +625,10 @@ class SpaceEnvironment {
             return;
         }
 
+        // Drawing buffer at device pixels, capped by the GPU tier (R2 #9). Set before
+        // setSize so the first buffer is already the right size. Rect/raycast/label
+        // maths stay in CSS px; only the buffer grows.
+        this._initPixelRatio();
         this.renderer.setSize(this.width, this.height);
         // Transparent clear so the page's own layers show through and govern the
         // backdrop: html paints the opaque black floor, body adds its slight tint
@@ -986,8 +990,83 @@ class SpaceEnvironment {
         this.camera.aspect = this.width / this.height;
         this.camera.updateProjectionMatrix();
         
+        this._refreshPixelRatioCap(); // devicePixelRatio changes with browser zoom / monitor
         this.renderer.setSize(this.width, this.height);
         this._cachedCanvasRect = null; // invalidate - see _getCanvasRect()
+    }
+
+    /**
+     * R2 #9: pick the pixel-ratio cap from the performance tier and apply it.
+     * HIGH -> 2, MEDIUM -> 1.5, LOW -> 1, never above devicePixelRatio.
+     * Rule 5: 2 asserts.
+     */
+    _initPixelRatio() {
+        console.assert(this.renderer, '_initPixelRatio: renderer required');
+        console.assert(!this._dpr, '_initPixelRatio: once');
+        const tier = this.determinePerformanceTier();
+        const capByTier = SpaceEnvironment.DPR_TIER_CAP[tier] || 1;
+        this._dpr = {
+            tier, capByTier, cap: 1, current: 1, dropped: false, restores: 0,
+            frames: new Float32Array(SpaceEnvironment.DPR_WINDOW), sorted: new Float32Array(SpaceEnvironment.DPR_WINDOW),
+            n: 0, last: 0, bad: 0, good: 0, lastP95: 0
+        };
+        this._refreshPixelRatioCap();
+    }
+
+    /** Recompute the cap (devicePixelRatio may have changed) and apply it unless dropped. Rule 5. */
+    _refreshPixelRatioCap() {
+        const d = this._dpr;
+        console.assert(this.renderer, '_refreshPixelRatioCap: renderer required');
+        if (!d) return;
+        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio > 0) ? window.devicePixelRatio : 1;
+        d.cap = Math.max(1, Math.min(dpr, d.capByTier));
+        this._setPixelRatio(d.dropped ? 1 : d.cap);
+    }
+
+    _setPixelRatio(pr) {
+        console.assert(Number.isFinite(pr) && pr >= 1, '_setPixelRatio: pr >= 1 required');
+        console.assert(this.renderer, '_setPixelRatio: renderer required');
+        if (this._dpr) this._dpr.current = pr;
+        if (this.renderer.getPixelRatio() !== pr) this.renderer.setPixelRatio(pr);
+    }
+
+    /**
+     * Frame-time governor for the pixel ratio, fed once per visible foreground frame.
+     * Every DPR_WINDOW frames: p95 > DPR_BAD_MS for DPR_BAD_WINDOWS windows in a row
+     * -> drop to 1x; p95 < DPR_GOOD_MS for DPR_GOOD_WINDOWS windows in a row -> back
+     * to the cap, at most DPR_MAX_RESTORES times a session, then 1x stays (no flapping).
+     * Rule 4: <=60 lines. Rule 5: 2 asserts.
+     * @param {number} now - performance.now()
+     */
+    _samplePixelRatioFrame(now) {
+        const d = this._dpr;
+        console.assert(Number.isFinite(now), '_samplePixelRatioFrame: time required');
+        if (!d || d.cap <= 1) return;
+        const ms = d.last ? now - d.last : 0;
+        d.last = now;
+        // Tab switch, sleep, first frame: not a frame time. Window restarts.
+        if (!(ms > 0) || ms > SpaceEnvironment.DPR_GAP_MS) { d.n = 0; return; }
+        d.frames[d.n++] = ms;
+        if (d.n < d.frames.length) return;
+        d.n = 0;
+        d.sorted.set(d.frames);
+        d.sorted.sort();
+        const p95 = d.sorted[Math.floor(0.95 * (d.sorted.length - 1))];
+        d.lastP95 = p95;
+        console.assert(Number.isFinite(p95), '_samplePixelRatioFrame: p95 finite');
+        if (!d.dropped) {
+            d.bad = p95 > SpaceEnvironment.DPR_BAD_MS ? d.bad + 1 : 0;
+            if (d.bad >= SpaceEnvironment.DPR_BAD_WINDOWS) {
+                d.dropped = true; d.bad = 0; d.good = 0;
+                this._setPixelRatio(1);
+            }
+        } else if (d.restores < SpaceEnvironment.DPR_MAX_RESTORES) {
+            d.good = p95 < SpaceEnvironment.DPR_GOOD_MS ? d.good + 1 : 0;
+            if (d.good >= SpaceEnvironment.DPR_GOOD_WINDOWS) {
+                d.dropped = false; d.good = 0; d.bad = 0; d.restores++;
+                this._setPixelRatio(d.cap);
+            }
+        }
     }
 
     /**
@@ -4473,6 +4552,11 @@ class SpaceEnvironment {
             return; // Skip frame entirely when not visible
         }
 
+        // R2 #9 pixel-ratio governor: foreground frames only (the background
+        // scene is throttled and a content page's own work is not ours to judge).
+        if (!this.backgroundMode) this._samplePixelRatioFrame(performance.now());
+        else if (this._dpr) this._dpr.last = 0;
+
         // Update FPS monitor (Roaster Fix #2)
         if (this.fpsMonitor) {
             const currentTime = performance.now();
@@ -5722,6 +5806,17 @@ SpaceEnvironment.BACKGROUND_FPS = 20;
 // and planet tracking that must feel immediate. Nothing in the other three responds to
 // input, so half the frames buys back half the cost.
 SpaceEnvironment.SCENE_FPS = 30;
+
+// R2 #9 drawing-buffer pixel ratio: cap per performance tier, and the frame-time
+// governor that drops to 1x when the GPU cannot keep up (p95 over a window of frames).
+SpaceEnvironment.DPR_TIER_CAP = { HIGH: 2, MEDIUM: 1.5, LOW: 1 };
+SpaceEnvironment.DPR_WINDOW = 90; // frames per p95 window (~1.5 s at 60 Hz)
+SpaceEnvironment.DPR_BAD_MS = 20; // p95 above this = too slow
+SpaceEnvironment.DPR_GOOD_MS = 15; // p95 below this = room to go back up (hysteresis gap)
+SpaceEnvironment.DPR_BAD_WINDOWS = 2; // consecutive slow windows before dropping
+SpaceEnvironment.DPR_GOOD_WINDOWS = 5; // consecutive fast windows before restoring
+SpaceEnvironment.DPR_MAX_RESTORES = 2; // after this many restores 1x stays for the session
+SpaceEnvironment.DPR_GAP_MS = 250; // a gap longer than this is not a frame
 
 // The longest step the simulation will accept, in seconds. Anything larger did not
 // happen as a frame — it is a tab switch, a sleep, or a stall — and feeding it in as one

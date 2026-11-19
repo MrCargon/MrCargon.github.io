@@ -62,11 +62,12 @@ async function enterExplore(page) {
     }, null, { timeout: 20000 });
 }
 
-// Position of a named object, in km from Earth's centre, plus the time it was read.
+// Position of a named object, in km from Earth's centre, plus the time it is for: the last
+// SGP4 step (R2 #8: far out the layer steps at 1 Hz, so the read time can be 1 s later).
 const sample = (page) => page.evaluate((names) => {
     const s = window.spaceEnvironment.getEarthObject().satellites;
     const a = s.points.geometry.attributes.position;
-    const out = { t: Date.now() };
+    const out = { t: s._lastTick };
     names.forEach((n) => {
         const i = s._records.findIndex((r) => r.name === n);
         out[n] = [a.getX(i) / s.kmToUnits, a.getY(i) / s.kmToUnits, a.getZ(i) / s.kmToUnits];

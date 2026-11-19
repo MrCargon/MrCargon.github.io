@@ -254,6 +254,9 @@ class Sun {
         });
         
         this.mesh = new THREE.Mesh(geometry, material);
+        // R2 #8: three.js calls this only when the frustum test passes, so a false
+        // _sunDrawn on the next update means the Sun was off screen last frame.
+        this.mesh.onBeforeRender = () => { this._sunDrawn = true; };
         this.scene.add(this.mesh);
     }
     
@@ -896,19 +899,30 @@ class Sun {
     }
     
     updateSunspotRotation(deltaTime) {
+        // R2 #8: skipped while the Sun is not drawn (off screen) or in Explore. The skipped
+        // time is kept and applied on the next pass: a Y rotation keeps the latitude, so one
+        // step of the summed time lands where the per-frame steps would have.
+        this._spotDt = (this._spotDt || 0) + deltaTime;
+        const drawn = this._sunDrawn;
+        this._sunDrawn = false;
+        if (this.spotsPaused || drawn === false) return;
+        const dt = this._spotDt;
+        this._spotDt = 0;
+        const pos = this._spotPos || (this._spotPos = new THREE.Vector3());
+        const rotMatrix = this._spotRot || (this._spotRot = new THREE.Matrix4());
         // Implement differential rotation for sunspots
         for (const spot of this.sunspots) {
             // Extract current position
-            const pos = spot.position.clone().normalize();
+            pos.copy(spot.position).normalize();
             
             // Calculate latitude (0 at equator, PI/2 at poles)
             const latitude = Math.asin(pos.y / this.data.radius);
             
             // Differential rotation equation (faster at equator, slower at poles)
-            const rotationOffset = Math.cos(latitude) * Math.cos(latitude) * 0.0001 * deltaTime;
+            const rotationOffset = Math.cos(latitude) * Math.cos(latitude) * 0.0001 * dt;
             
             // Apply additional rotation based on latitude
-            const rotMatrix = new THREE.Matrix4().makeRotationY(rotationOffset);
+            rotMatrix.makeRotationY(rotationOffset);
             spot.position.applyMatrix4(rotMatrix);
             
             // Keep spots facing outward

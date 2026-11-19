@@ -2103,6 +2103,17 @@ class SpaceEnvironment {
         return live;
     }
 
+    // R2 #8: Sun.updateSunspotRotation keeps the time but does no work while paused.
+    // Rule 5: 2 asserts.
+    _pauseSunspots(on) {
+        console.assert(typeof on === 'boolean', '_pauseSunspots: boolean required');
+        const sun = this.solarSystem && this.solarSystem.objects ? this.solarSystem.objects.get('sun') : null;
+        console.assert(!sun || typeof sun === 'object', '_pauseSunspots: bad sun');
+        if (!sun) return false;
+        sun.spotsPaused = on;
+        return true;
+    }
+
     /**
      * Enter free-look Explore mode on Earth: freeze the globe, hand control to the
      * user, lock controls.target to Earth, set close zoom bounds, build/show the
@@ -2124,6 +2135,7 @@ class SpaceEnvironment {
         // Freeze the globe so the marker holds still for inspection.
         if (typeof earth.setFrozen === 'function') earth.setFrozen(true);
         this._pinExploreClock();   // Sun/Moon on the same clock as satellites, ISS, quakes
+        this._pauseSunspots(true);  // R2 #8: no sunspot pass in Explore (the time is kept)
 
         // Hand control to the user, pivoting around Earth's (now static) centre.
         const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
@@ -2422,6 +2434,7 @@ class SpaceEnvironment {
         this.exploreMode = false;
         this._stopFeedStatus();
         this._releaseExploreClock();
+        this._pauseSunspots(false);
 
         const earth = this.getEarthObject();
         if (earth) {
@@ -2787,6 +2800,7 @@ class SpaceEnvironment {
         const markerRect = earth.markers ? this._getCanvasRect() : null;
         if (markerRect) {
             earth.markers.update(this.camera, markerRect, pinFade, this.renderer.getPixelRatio());
+            if (typeof earth.issPollIfResumed === 'function') earth.issPollIfResumed();
         }
         // Country borders recede as the camera approaches the surface so they don't
         // compete with the satellite imagery + street lines at close zoom (full at
@@ -2820,7 +2834,11 @@ class SpaceEnvironment {
         // (click card), so the satellite layer skips it: one ISS on the globe (audit F8).
         if (earth.satellites) {
             earth.satellites.reducedMotion = rm;                  // reduce: a correct SGP4 step every 10 s
-            earth.satellites.setView(rr, typeof earth.issMarkerShown === 'function' && earth.issMarkerShown());
+            // R2 #8: px per radian at the view centre, so the layer can step at 1 Hz when
+            // no dot would move a whole pixel (cached rect: no layout read).
+            const satRect = this._getCanvasRect();
+            const pxPerRad = satRect ? satRect.height * 0.5 / Math.tan(this.camera.fov * Math.PI / 360) : 0;
+            earth.satellites.setView(rr, typeof earth.issMarkerShown === 'function' && earth.issMarkerShown(), pxPerRad);
             earth.satellites.update();
         }
         // Distance-scale the user pin markers so they hold ~constant screen size.

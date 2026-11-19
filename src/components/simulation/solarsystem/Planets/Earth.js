@@ -1160,6 +1160,10 @@ class Earth extends Planet {
         const poll = async () => {
             this._issStaleCheck(Date.now());
             if (typeof document !== 'undefined' && document.hidden) return;   // pause when hidden
+            // R2 #8: no request while the marker is not drawn (zoomed in past the pin fade,
+            // or its layer hidden). issPollIfResumed() fetches at once when it shows again.
+            if (this._issMarkerFaded()) { st.paused = true; return; }
+            st.paused = false;
             if (typeof SafeFetch === 'undefined') return;
             const d = await SafeFetch.json(url, { ttl: 4000 });
             const ok = d && Number.isFinite(d.latitude) && Number.isFinite(d.longitude)
@@ -1178,8 +1182,32 @@ class Earth extends Planet {
             }
             this._issStaleCheck(Date.now());
         };
+        this._issPoll = poll;
         poll();
         this._issTimer = setInterval(poll, 5000);   // 5s cadence
+    }
+
+    // True while the ISS marker is not drawn: its layer is hidden, or the zoom fade put it
+    // out (GlobeMarkers.update draws nothing at fade <= 0.01). Rule 5: 2 asserts.
+    _issMarkerFaded() {
+        console.assert(this.layers, 'Earth._issMarkerFaded: layers required');
+        console.assert(!this.markers || Number.isFinite(this.markers.fade), 'Earth._issMarkerFaded: bad fade');
+        if (!this.layers.iss || !this.layers.iss.visible) return true;
+        return !!(this.markers && this.markers.fade <= 0.01);
+    }
+
+    /**
+     * Per frame from Explore, after markers.update: polling was paused while the marker
+     * was not drawn; once it shows again, fetch now instead of waiting up to 5 s. Rule 5.
+     * @returns {boolean} true when a poll was started
+     */
+    issPollIfResumed() {
+        console.assert(this.feeds && this.feeds.iss, 'Earth.issPollIfResumed: feed state required');
+        console.assert(!this._issPoll || typeof this._issPoll === 'function', 'Earth.issPollIfResumed: bad poll');
+        if (!this._issTimer || !this._issPoll || !this.feeds.iss.paused || this._issMarkerFaded()) return false;
+        this.feeds.iss.paused = false;
+        this._issPoll();
+        return true;
     }
 
     // Hide the ISS marker once its last fix is older than ISS_STALE_MS. Rule 5: 2 asserts.
@@ -1216,6 +1244,7 @@ class Earth extends Planet {
 
     stopISS() {
         if (this._issTimer) { clearInterval(this._issTimer); this._issTimer = null; }
+        if (this.feeds && this.feeds.iss) this.feeds.iss.paused = false;
     }
 
     /**
@@ -1237,7 +1266,9 @@ class Earth extends Planet {
         const maxAge = name === 'iss' ? Earth.ISS_STALE_MS : 2 * Earth.QUAKE_REFRESH_MS + 60000;
         if (!st.okAt && !st.failAt) return { state: 'loading', text: 'loading…' };
         if (!st.okAt) return { state: 'offline', text: 'offline - retrying' };
-        if (st.failAt > st.okAt || t - st.okAt > maxAge) {
+        // R2 #8: a paused ISS poll (marker zoomed out of view) is not a lost signal.
+        const paused = name === 'iss' && st.paused && st.failAt <= st.okAt;
+        if (!paused && (st.failAt > st.okAt || t - st.okAt > maxAge)) {
             const sgp4 = name === 'iss' && this.satellites && this.satellites.visible;
             const what = name === 'iss' ? 'signal lost since ' : 'stale since ';
             return { state: 'stale', text: what + hm(st.okAt) + ' - retrying' + (sgp4 ? ' · orbit estimate shown' : '') };

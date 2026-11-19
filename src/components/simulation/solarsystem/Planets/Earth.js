@@ -983,7 +983,8 @@ class Earth extends Planet {
     }
 
     // ISS live position (wheretheiss.at, keyless + CORS). Polls while shown.
-    // NOTE: Satellites.js also draws the ISS as one of its dots (piece F8 merges them).
+    // One ISS on the globe: while this marker is on and placed, Satellites.js skips its ISS
+    // dot (SpaceEnvironment passes issMarkerShown() to Satellites.setView each frame).
     startISS() {
         console.assert(this.mesh, 'Earth.startISS: mesh required');
         if (this._issTimer) return;
@@ -1012,6 +1013,15 @@ class Earth extends Planet {
         mk.setItems('iss', [{ lat: 0, lng: 0, alt: 1.06, color: 0x66ffcc, size: 9, rank: 2, hidden: true,
             data: { type: 'iss', name: 'ISS (Zarya)', info: 'International Space Station' } }]);
         this.layers.iss = group;
+    }
+
+    // True while the ISS marker is on AND has a position fix: only then does it replace the
+    // satellite layer's ISS dot (a dead wheretheiss.at feed leaves the SGP4 dot). Rule 5.
+    issMarkerShown() {
+        console.assert(this.layers, 'Earth.issMarkerShown: layers required');
+        const L = this.markers && this.markers.layers && this.markers.layers.iss;
+        console.assert(!L || Array.isArray(L.items), 'Earth.issMarkerShown: bad layer');
+        return !!(this.layers.iss && this.layers.iss.visible && L && L.items[0] && !L.items[0].hidden);
     }
 
     stopISS() {

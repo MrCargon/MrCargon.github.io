@@ -19,6 +19,8 @@
 // says where the satellites are now, whatever the simulation clock is doing.
 //
 // global THREE (r184, republished from an ES module by index.html), classic script (no modules).
+// Dots are RoundPoints (src/utils/RoundPoints.js, loaded by index.html) when present.
+/* global RoundPoints */
 // NASA Power-of-10 style: bounded counts, >=2 asserts/method, methods <=60 lines, no
 // per-frame allocation in our own code, graceful dispose, reduced-motion aware.
 class Satellites {
@@ -40,6 +42,9 @@ class Satellites {
         this._groups = {};          // group id -> raw OMM records
         this._records = [];         // { satrec, group } flat, bounded by MAX_OBJECTS
         this._lastTick = -Infinity;
+        this._fade = 1;             // zoom fade (setView): 1 far out, 0 below ~1.4R
+        this.hideIss = false;       // true while the ISS marker layer draws the ISS
+        this.hiddenCount = 0;       // records not drawn (stacked, or the ISS by marker)
         this._starting = null;
         this._disposed = false;
         this.reducedMotion = (typeof window !== 'undefined' && window.matchMedia)
@@ -55,7 +60,7 @@ class Satellites {
         console.assert(!this._disposed, 'Satellites.start: disposed');
         console.assert(this.earthMesh, 'Satellites.start: earthMesh required');
         this.visible = true;
-        if (this.points) this.points.visible = true;
+        if (this.points) this.points.visible = this._fade > Satellites.FADE_MIN;
         if (!this._starting) {
             this._starting = this._load().catch((err) => {
                 console.warn('Satellites: could not start:', err && err.message);
@@ -72,8 +77,62 @@ class Satellites {
         console.assert(typeof on === 'boolean', 'Satellites.setVisible: boolean required');
         console.assert(!this._disposed, 'Satellites.setVisible: disposed');
         this.visible = on;
-        if (this.points) this.points.visible = on;
+        if (this.points) this.points.visible = on && this._fade > Satellites.FADE_MIN;
         return on;
+    }
+
+    /**
+     * Per-frame view state from Explore. Dots clutter close views (they sat over the
+     * ground at 1.08R), so they fade out between FADE_FAR_R and FADE_NEAR_R and are not
+     * drawn below it. hideIss: the ISS marker layer is on, so this layer skips the ISS.
+     * @param {number} rr - camera distance / Earth radius
+     * @param {boolean} hideIss
+     * @returns {number} the fade in [0,1]
+     */
+    setView(rr, hideIss) {
+        console.assert(Number.isFinite(rr) && rr > 0, 'Satellites.setView: bad rr');
+        console.assert(typeof hideIss === 'boolean', 'Satellites.setView: boolean required');
+        const t = Math.max(0, Math.min(1, (rr - Satellites.FADE_NEAR_R) / (Satellites.FADE_FAR_R - Satellites.FADE_NEAR_R)));
+        this._fade = t * t * (3 - 2 * t);
+        if (hideIss !== this.hideIss) {
+            this.hideIss = hideIss;
+            if (this.points) this._markHidden();
+        }
+        if (this.points) {
+            this.points.material.opacity = Satellites.OPACITY * this._fade;
+            this.points.visible = this.visible && this._fade > Satellites.FADE_MIN;
+        }
+        return this._fade;
+    }
+
+    // Rank 1 (not drawn) for the ISS while its marker shows it, and for any object within
+    // STACK_KM of an earlier drawn one (docked modules/vehicles). O(n^2) on <=300 objects,
+    // ~45k adds, run on the position tick only.
+    _markHidden() {
+        console.assert(this._ranks && this._positions, 'Satellites._markHidden: buffers required');
+        console.assert(Satellites.STACK_KM > 0, 'Satellites._markHidden: bound required');
+        const pos = this._positions;
+        const lim = Satellites.STACK_KM * this.kmToUnits;
+        const lim2 = lim * lim;
+        const n = this._records.length;
+        const lead = this._lead || (this._lead = new Uint8Array(Satellites.MAX_OBJECTS));
+        let hidden = 0;
+        for (let i = 0; i < n; i++) {
+            let stacked = false;
+            for (let j = 0; j < i && !stacked; j++) {
+                if (!lead[j]) continue;     // compare against stack leads only
+                const dx = pos[i * 3] - pos[j * 3], dy = pos[i * 3 + 1] - pos[j * 3 + 1], dz = pos[i * 3 + 2] - pos[j * 3 + 2];
+                stacked = (dx * dx + dy * dy + dz * dz) < lim2;
+            }
+            // A parked (failed) object sits at the centre: never a lead, never drawn usefully.
+            lead[i] = stacked ? 0 : 1;
+            const issByMarker = this.hideIss && this._records[i].norad === Satellites.ISS_NORAD;
+            this._ranks[i] = (stacked || issByMarker) ? 1 : 0;
+            if (this._ranks[i]) hidden++;
+        }
+        this.hiddenCount = hidden;
+        this.points.geometry.attributes.rpRank.needsUpdate = true;
+        return hidden;
     }
 
     // Script, then snapshot + cache, then draw; the one live fetch runs last and unawaited
@@ -194,7 +253,8 @@ class Satellites {
                     satrec = null;
                 }
                 if (satrec && !satrec.error) {
-                    out.push({ satrec: satrec, group: group, name: list[i].OBJECT_NAME });
+                    out.push({ satrec: satrec, group: group, name: list[i].OBJECT_NAME,
+                        norad: Number(list[i].NORAD_CAT_ID) });
                     n++;
                 }
             }
@@ -214,22 +274,31 @@ class Satellites {
         this._colors = new Float32Array(max * 3);
         geometry.setAttribute('position', new THREE.BufferAttribute(this._positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(this._colors, 3));
+        // rpRank 1 = not drawn: a docked module or vehicle stacked on another object (the
+        // ISS alone was ~9 records on one spot), or the ISS itself while the ISS marker
+        // layer shows it (audit F8: one ISS, the marker with its click card).
+        this._ranks = new Float32Array(max);
+        geometry.setAttribute('rpRank', new THREE.BufferAttribute(this._ranks, 1));
+        const rounded = (typeof RoundPoints !== 'undefined');
         const material = new THREE.PointsMaterial({
-            size: 5,
+            size: Satellites.DOT_PX,
             sizeAttenuation: false,     // real sizes would be invisible; keep a steady dot
             vertexColors: true,
             transparent: true,
-            opacity: 0.95,
+            opacity: Satellites.OPACITY,
             depthWrite: false,
-            map: Satellites._dotTexture(),
-            alphaTest: 0.2,
+            map: rounded ? null : Satellites._dotTexture(),
+            alphaTest: rounded ? 0 : 0.2,
             toneMapped: false           // tone mapping washed the three group colours to cream
         });
+        // Round analytic 3 px disc (no texture, ~1 px AA rim), clamped 2-4 CSS px.
+        if (rounded) RoundPoints.apply(material, { minPx: 2, maxPx: 4, soft: 0, rank: true }).uRankCut.value = 0.5;
         this.points = new THREE.Points(geometry, material);
+        if (rounded) RoundPoints.attach(this.points);
         this.points.name = 'satellites';
         this.points.frustumCulled = false;       // positions change without a bounding sphere
         this.points.raycast = () => {};          // the planet picker recurses into children
-        this.points.visible = this.visible;
+        this.points.visible = this.visible && this._fade > Satellites.FADE_MIN;
         this.earthMesh.add(this.points);
         this._paintColors();
         this._propagate(Date.now());
@@ -273,7 +342,7 @@ class Satellites {
     update(nowMs) {
         console.assert(nowMs === undefined || Number.isFinite(nowMs), 'Satellites.update: bad time');
         console.assert(!this._disposed, 'Satellites.update: disposed');
-        if (!this.points || !this.visible) return false;
+        if (!this.points || !this.visible || !this.points.visible) return false;   // off or zoomed past
         const now = nowMs === undefined ? Date.now() : nowMs;
         const gap = this.reducedMotion ? Satellites.TICK_REDUCED_MS : Satellites.TICK_MS;
         // abs: after the clock moves back, the plain difference would stay negative and
@@ -311,6 +380,7 @@ class Satellites {
             pos[i * 3 + 2] = z;
         }
         this.points.geometry.attributes.position.needsUpdate = true;
+        this._markHidden();
     }
 
     // The single live request of this window of FETCH_GAP_MS, for the stalest group.
@@ -394,6 +464,13 @@ class Satellites {
 Satellites.EARTH_RADIUS_KM = 6371;
 Satellites.MAX_OBJECTS = 300;           // the buffers are this big; extras are dropped
 Satellites.TICK_MS = 250;
+Satellites.DOT_PX = 3;                  // CSS px, round (RoundPoints)
+Satellites.OPACITY = 0.95;
+Satellites.FADE_FAR_R = 1.6;            // full above this camera distance (Earth radii)
+Satellites.FADE_NEAR_R = 1.4;           // gone below this one (audit F8: ~1.5R)
+Satellites.FADE_MIN = 0.02;
+Satellites.STACK_KM = 25;               // closer than this to a drawn object = docked/stacked
+Satellites.ISS_NORAD = 25544;           // ISS (ZARYA); the ISS marker layer owns it when on
 Satellites.TICK_REDUCED_MS = 10000;     // reduced motion: an occasional step, no glide
 Satellites.FETCH_GAP_MS = 2.25 * 3600000;   // CelesTrak: 1 fetch per 2 h per IP, plus margin
 // A snapshot older than this is dropped and the layer waits for live data. Rebuild it from

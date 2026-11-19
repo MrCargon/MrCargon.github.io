@@ -2615,15 +2615,12 @@ class SpaceEnvironment {
             if (earth.markerHalo && earth.markerHalo.material) earth.markerHalo.material.opacity = 0.55 * pinFade;
             earth.marker.visible = pinFade > 0.02;
         }
-        // All live-marker layers (ISS, quakes, POIs) are fixed-world-size spheres
-        // that balloon up close (a big M5 quake dot or a POI pin covers the map at
-        // street zoom). Fade them by the same pinFade; the toggle still owns .visible.
-        if (earth.layers) {
-            ['iss', 'quakes', 'pois'].forEach((k) => {
-                const layer = earth.layers[k];
-                if (!layer || !layer.traverse) return;
-                layer.traverse((o) => { if (o.isMesh && o.material) o.material.opacity = 0.95 * pinFade; });
-            });
+        // Live-marker layers (ISS, quakes, POIs): constant-pixel Points (GlobeMarkers).
+        // Same pinFade; once it reaches 0 they are not drawn at all. The toggle still
+        // owns the layer group's .visible. Quakes cluster on screen with a count badge.
+        const markerRect = earth.markers ? this._getCanvasRect() : null;
+        if (markerRect) {
+            earth.markers.update(this.camera, markerRect, pinFade, this.renderer.getPixelRatio());
         }
         // Country borders recede as the camera approaches the surface so they don't
         // compete with the satellite imagery + street lines at close zoom (full at
@@ -3680,18 +3677,25 @@ class SpaceEnvironment {
     _handleExploreClick(event) {
         if (!this.exploreMode || !this.camera || !this._detailEl) return;
         const earth = this.getEarthObject();
-        if (!earth || !earth.pickables || !earth.pickables.length) return;
+        if (!earth) return;
         const rect = this._getCanvasRect();
         if (!rect) return;
-        this._ndc.set(
-            ((event.clientX - rect.left) / rect.width) * 2 - 1,
-            -((event.clientY - rect.top) / rect.height) * 2 + 1
-        );
-        this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
-        const pick = earth.pickables.filter((m) => m.visible && (!m.parent || m.parent.visible));
-        const hits = this._exploreRaycaster.intersectObjects(pick, false);
-        if (hits.length) {
-            const u = hits[0].object.userData || {};
+        // Live markers are constant-pixel Points: pick them in screen space (a cluster
+        // returns "N earthquakes here" + its strongest member). Meshes in pickables
+        // still go through the raycaster.
+        let u = (earth.markers && typeof earth.markers.pick === 'function')
+            ? earth.markers.pick(event.clientX, event.clientY, rect) : null;
+        if (!u && earth.pickables && earth.pickables.length) {
+            this._ndc.set(
+                ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                -((event.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
+            const pick = earth.pickables.filter((m) => m.visible && (!m.parent || m.parent.visible));
+            const hits = this._exploreRaycaster.intersectObjects(pick, false);
+            if (hits.length) u = hits[0].object.userData || {};
+        }
+        if (u) {
             // textContent (not innerHTML): marker info can come from live feeds
             // (e.g. USGS quake "place" strings), so never inject feed text as HTML.
             this._detailEl.textContent = '';

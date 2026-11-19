@@ -65,6 +65,15 @@ wherever the street basemap is rendered. The rest are courtesy credits.
 - **URL:** https://www.naturalearthdata.com/downloads/
 - **Mirror:** https://github.com/nvkelso/natural-earth-vector
 
+### `country-pop.json` — Country population estimates (place card)
+
+- **Source:** Natural Earth — Admin 0 Countries, 1:110m scale (`POP_EST` + `POP_YEAR` fields), the same layer as `country_shapes.json`
+- **License:** Public Domain (Natural Earth terms)
+- **Mirror file:** https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson
+- **Processing:** keyed by the exact `ADMIN` name used in `country_shapes.json` (177 of 177 matched, no aliases needed); `year` is the most common `POP_YEAR` (2019), `yearOverride` lists the countries whose estimate is from another year.
+- **Shape:** `{ "source": "...", "year": 2019, "pop": { "Latvia": 1912789, ... }, "yearOverride": { "Taiwan": 2020, ... } }`
+- **Regions:** Natural Earth Admin-1 has no population field, so region cards show none.
+
 ### `admin1-50m.json` — State / province boundary lines (1:50m)
 
 - **Source:** Natural Earth — Admin 1 States/Provinces (boundary lines), 1:50m scale

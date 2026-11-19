@@ -4800,6 +4800,12 @@ class SpaceEnvironment {
             lat: c ? c.lat : ll.lat, lng: c ? c.lng : ll.lng, spanKm: c ? c.spanKm : 0, rings: f ? f.rings : null };
         console.assert(Number.isFinite(e.lat), '_placeCardAtClick: entry centre');
         this._lastPlace = e;
+        // Country population lives in a small lazy file: fetch it on the first country click
+        // and redraw this card if it is still the one shown.
+        const ps = this._placeSearch;
+        if (e.kind === 'country' && !ps.countryPop) {
+            ps.loadPop().then((ok) => { if (ok && this._lastPlace === e) this._showPlaceCard(e); });
+        }
         return this._showPlaceCard(e);
     }
 

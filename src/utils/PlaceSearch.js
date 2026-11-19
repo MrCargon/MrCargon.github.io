@@ -15,7 +15,9 @@
  * population.
  *
  * describe(entry, ctx) builds the card lines: kind, approximate local solar time, Sun up
- * or down at the sim clock, population, quakes in the last 24 h (in the polygon, or within
+ * or down at the sim clock, population (cities: POP_MAX; countries: Natural Earth admin-0
+ * POP_EST with its year, from country-pop.json; regions: none, admin-1 has no population),
+ * quakes in the last 24 h (in the polygon, or within
  * ~300 km of a point) and whether the ISS is near, both from data Explore already holds.
  */
 class PlaceSearch {
@@ -24,6 +26,8 @@ class PlaceSearch {
         console.assert(Array.isArray(PlaceSearch.CONTINENTS), 'PlaceSearch: continents array');
         this.entries = null;       // built index (null until ensureIndex resolves)
         this.countries = null;     // [{name, rings}] for parent lookups
+        this.countryPop = null;    // country-pop.json {year, pop, yearOverride} once loaded
+        this._popLoad = null;
         this._building = null;
     }
 
@@ -126,11 +130,48 @@ class PlaceSearch {
         if (this.entries) return Promise.resolve(true);
         if (this._building) return this._building;
         const get = (u) => SafeFetch.json(PlaceSearch.GEO + u, { ttl: 3600000 }).catch(() => null);
-        this._building = Promise.all(PlaceSearch.FILES.map(get)).then((d) => {
+        this._building = Promise.all(PlaceSearch.FILES.map(get).concat([this.loadPop()])).then((d) => {
             this._build(d[0], d[1], [d[2], d[3], d[4]]);
             return true;
         }).catch((e) => { console.error('PlaceSearch.ensureIndex:', e); this._building = null; return false; });
         return this._building;
+    }
+
+    /**
+     * Load country-pop.json once (also used alone by a globe click before the index exists).
+     * Never rejects; a bad or missing file leaves countryPop null. Rule 5: 2 asserts.
+     * @returns {Promise<boolean>}
+     */
+    loadPop() {
+        console.assert(typeof SafeFetch !== 'undefined', 'loadPop: SafeFetch required');
+        if (this._popLoad) return this._popLoad;
+        this._popLoad = SafeFetch.json(PlaceSearch.GEO + PlaceSearch.POP_FILE, { ttl: 3600000 }).then((d) => {
+            const ok = d && typeof d === 'object' && Number.isInteger(d.year) && d.pop && typeof d.pop === 'object';
+            if (ok) this.countryPop = d;
+            console.assert(this.countryPop === null || typeof this.countryPop.pop === 'object', 'loadPop: shape');
+            return !!ok;
+        }).catch(() => { this._popLoad = null; return false; });
+        return this._popLoad;
+    }
+
+    /** {pop, year} for a country entry from country-pop.json, or null. Regions have none. */
+    countryPopOf(e) {
+        console.assert(e && typeof e === 'object', 'countryPopOf: entry');
+        const d = this.countryPop;
+        if (!d || e.kind !== 'country' || typeof e.name !== 'string') return null;
+        const n = d.pop[e.name];
+        if (!Number.isFinite(n) || n <= 0) return null;
+        const y = d.yearOverride && Number.isInteger(d.yearOverride[e.name]) ? d.yearOverride[e.name] : d.year;
+        console.assert(Number.isInteger(y), 'countryPopOf: year');
+        return { pop: n, year: y };
+    }
+
+    /** 1912789 -> "1.91 M", 1.4e9 -> "1.40 B", 4490 -> "4,490". */
+    static formatPop(n) {
+        console.assert(Number.isFinite(n) && n >= 0, 'formatPop: number');
+        if (n >= 1e9) return (n / 1e9).toFixed(2) + ' B';
+        if (n >= 1e6) return (n / 1e6).toFixed(2) + ' M';
+        return Math.round(n).toLocaleString('en-US');
     }
 
     /** Build entries from the loaded files. Rule 2: bounded | Rule 5: 2 asserts. */
@@ -142,8 +183,12 @@ class PlaceSearch {
         const addShape = (s, kind) => {
             if (!s || typeof s.name !== 'string' || !Array.isArray(s.rings)) return;
             const c = PlaceSearch.ringCentre(s.rings);
-            if (c) out.push({ name: s.name, f: PlaceSearch.fold(s.name), kind: kind, lat: c.lat, lng: c.lng,
-                spanKm: c.spanKm, rings: s.rings, pop: 0 });
+            if (!c) return;
+            const e = { name: s.name, f: PlaceSearch.fold(s.name), kind: kind, lat: c.lat, lng: c.lng,
+                spanKm: c.spanKm, rings: s.rings, pop: 0 };
+            const cp = this.countryPopOf(e);
+            if (cp) e.pop = cp.pop;
+            out.push(e);
         };
         this.countries.slice(0, 400).forEach((s) => addShape(s, 'country'));
         const feats = (states && Array.isArray(states.features)) ? states.features : [];
@@ -278,7 +323,9 @@ class PlaceSearch {
         lines.push('Local time ≈ ' + PlaceSearch.solarTime(e.lng, ms) + ' (approx., solar time)');
         const sun = PlaceSearch.sunUp(e.lat, e.lng, ms);
         if (sun !== null) lines.push(sun ? 'Sun: up ☀' : 'Sun: down ☾');
-        if (e.pop > 0) lines.push('Population: ' + Math.round(e.pop).toLocaleString('en-US'));
+        const cp = this.countryPopOf(e);
+        if (cp) lines.push('Population ≈ ' + PlaceSearch.formatPop(cp.pop) + ' (' + cp.year + ' est.)');
+        else if (e.pop > 0 && e.kind !== 'country') lines.push('Population: ' + Math.round(e.pop).toLocaleString('en-US'));
         lines.push(this._quakeLine(e, c.quakes));
         lines.push(PlaceSearch._issLine(e, c.iss));
         console.assert(lines.length >= 3, 'describe: lines built');
@@ -354,6 +401,7 @@ PlaceSearch.CONTINENTS = [
 PlaceSearch.GEO = 'src/assets/geo/';
 PlaceSearch.FILES = ['country_shapes.json', 'states-named.json', 'capitals-named.json',
     'populated-places.json', 'towns-named.json'];
+PlaceSearch.POP_FILE = 'country-pop.json';
 PlaceSearch.KIND_RANK = { point: 0, continent: 0, country: 1, region: 3, city: 4 };
 PlaceSearch.FOLD_MAP = { 'ø': 'o', 'œ': 'oe', 'æ': 'ae', 'ß': 'ss', 'ł': 'l', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ı': 'i' };
 PlaceSearch.LATLNG_RE = /^([-+]?\d{1,3}(?:\.\d+)?)\s*°?\s*([NSns])?\s*[,;\s]\s*([-+]?\d{1,3}(?:\.\d+)?)\s*°?\s*([EWew])?$/;

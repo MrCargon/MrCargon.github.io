@@ -7,7 +7,8 @@ import { mkdirSync } from 'node:fs';
  * solar time, Sun up/down, quakes and ISS from data Explore already holds). Clicking a country
  * on the globe opens the same card; a double-click still drops a pin.
  *
- * - "Latvia" -> Country card, the camera ends facing Latvia;
+ * - "Latvia" -> Country card with "Population ≈ 1.91 M (2019 est.)" (Natural Earth POP_EST + year),
+ *   the camera ends facing Latvia; a globe click on France also gets its population line;
  * - "Jūrmala" and "jurmala" both find the region (diacritic-insensitive), "Region of Latvia";
  * - "37.77, -122.42" flies there and the card shows the typed coordinates;
  * - "Africa" -> Continent;
@@ -97,6 +98,7 @@ test('search: country, region (with and without diacritics), point, continent', 
     await expect(card(page)).toContainText(/Local time ≈ \d\d:\d\d \(approx\./);
     await expect(card(page)).toContainText(/Sun: (up|down)/);
     await expect(card(page)).toContainText('Quakes (24 h): no data loaded');
+    await expect(card(page), 'country population with its year').toContainText(/Population ≈ \d+\.\d\d M \((19|20)\d\d est\.\)/);
     await expect(page.locator('#ep-search-input')).toHaveAttribute('aria-expanded', 'false');
     await page.waitForTimeout(3000);
     expect(await facing(page, 56.8, 24.8), 'the camera faces Latvia').toBeLessThan(6);
@@ -180,6 +182,7 @@ test('click a country opens its card, double-click still drops a pin, quakes cou
     await page.mouse.click(cx, cy);
     await expect(card(page)).toContainText('France');
     await expect(card(page)).toContainText('Country');
+    await expect(card(page), 'globe click: country population loads lazily').toContainText(/Population ≈ \d+\.\d\d M \((19|20)\d\d est\.\)/);
     // A double-click on the same spot still drops a pin.
     const pinsBefore = await page.evaluate(() => window.spaceEnvironment.getEarthObject().explorePins.pins.length);
     await page.mouse.dblclick(cx, cy);

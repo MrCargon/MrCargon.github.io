@@ -578,6 +578,12 @@ body {
 }
 /* The ID rule above out-ranks the UA [hidden] rule, so restore hide-when-hidden. */
 #explore-panel[hidden] { display: none; }
+/* The [hidden] attribute must always win inside the panel: author rules such as
+   .ep-editor{display:flex} otherwise override the UA [hidden]{display:none}, which
+   left the empty pin editor open with no pin selected. Empty containers collapse
+   so they leave no gap (the pin list is empty until the first pin exists). */
+#explore-panel [hidden] { display: none !important; }
+#explore-panel .ep-pin-list:empty, #explore-panel .ep-count:empty { display: none; }
 .ep-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 9px 12px; cursor: grab; border-bottom: 1px solid rgba(90, 150, 220, 0.25);

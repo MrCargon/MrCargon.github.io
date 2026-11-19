@@ -95,13 +95,31 @@ class SatelliteTiles {
         // every uncached key's TextureLoader.load() was dispatched in the same
         // tick, competing for the browser's ~6-connections-per-origin limit.
         // Skipped builds just retry next update() tick (already throttled).
-        // THREE.TextureLoader has no AbortController support, unlike
-        // StreetTiles' raw fetch(), so a genuinely stale build (its key fell out
-        // of the covering set before the texture finished loading) can't be
-        // network-cancelled here - _desiredKeys lets the commit step at least
-        // discard it instead of caching/showing tiles nobody wants anymore.
+        // R2 #6: imagery is fetched with fetch() + AbortController (not
+        // THREE.TextureLoader, which cannot be cancelled), so _abortStale() cancels a
+        // build whose key fell out of the covering set at the network level, exactly
+        // like StreetTiles. One 10 s zoom sweep used to let ~250 superseded Esri
+        // requests run to completion.
         this.maxConcurrentBuilds = Number.isFinite(opts.maxConcurrentBuilds) ? opts.maxConcurrentBuilds : 6;
         this._desiredKeys = new Set();
+        this._abortControllers = new Map();  // key -> AbortController
+        // R2 #6: SETTLE before requesting a NEW zoom level. A zoom sweep crosses a level
+        // every ~100 ms; requesting each one in passing downloads covering sets nobody
+        // ever sees. A new level is only requested once it has held for settleMs; the
+        // tiles already on screen stay up meanwhile (same fallback as a loading level).
+        this.settleMs = Number.isFinite(opts.settleMs) ? opts.settleMs : 180;
+        this._pendingZ = NaN;
+        this._pendingT = 0;
+        // R2 #6: mipmaps for COARSE levels only. At z <= mipMaxZoom (about 1.15R and
+        // further out) the 256 px tiles are heavily minified and shimmered without mips;
+        // finer levels render near 1:1, where the mip chain is wasted memory.
+        this.mipMaxZoom = Number.isFinite(opts.mipMaxZoom) ? opts.mipMaxZoom : 8;
+        // R2 #5: after the layer goes idle (Explore exit / out of range / toggled off) the
+        // LRU kept up to lruCap textures (~60 MB GPU) forever. trimDelayMs after it goes
+        // idle the cache is trimmed to the warmKeep most recently used tiles.
+        this.trimDelayMs = Number.isFinite(opts.trimDelayMs) ? opts.trimDelayMs : 60000;
+        this.warmKeep = Number.isFinite(opts.warmKeep) ? opts.warmKeep : 24;
+        this._trimTimer = null;
         this._retryAttempts = new Map();     // key -> consecutive failures, for backoff
         this.failed = 0;
         this.visible = true;
@@ -314,9 +332,12 @@ class SatelliteTiles {
         if (!this.visible || cameraDistInRadii >= this.activateBelow) {
             this._showTiles(false);
             this._lastAllReady = false;   // hidden now → re-entering range must re-show
+            this._armTrim();              // idle: free the cache if it stays idle
             return false;
         }
+        this._cancelTrim();
         var fetchZ = this.zoomForDistance(cameraDistInRadii);
+        if (this._holdNewLevel(fetchZ)) return true;   // R2 #6: let a new level settle first
         var n = this._cols(fetchZ);          // horizontal wrap modulus
         var nRows = this._rows(fetchZ);      // vertical clamp
         // _buildCoveringKeys receives `n` for the horizontal wrap; rows differ from
@@ -346,6 +367,7 @@ class SatelliteTiles {
         this._setFeather(c.x, c.y, n, fetchZ);
         this._desiredKeys.clear();
         for (var dk = 0; dk < keys.length; dk++) this._desiredKeys.add(keys[dk]);
+        this._abortStale();                  // R2 #6: cancel fetches nobody wants any more
         var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
         // Show the covering set (built tiles become visible + get t=now; missing ones
         // dispatch a build). allReady = the whole covering set is built THIS frame.
@@ -360,10 +382,129 @@ class SatelliteTiles {
         // Tiles touched this frame have rec.t === now; everything else is stale.
         this._lastAllReady = allReady;   // gates the steady-state early-out above
         if (allReady) {
-            this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = (rec.t === now); });
+            var self = this;
+            this.tiles.forEach(function (rec) { if (rec.mesh) self._setMeshVisible(rec.mesh, rec.t === now); });
         }
         this._evict();
         return true;
+    }
+
+    // R2 #6: hold a NEW zoom level until it has been the wanted level for settleMs.
+    // Returns true while holding (update() then leaves the current tiles as they are).
+    // The very first level, and a return to the level already shown, never wait.
+    // Rule 5: 2 asserts.
+    _holdNewLevel(fetchZ) {
+        console.assert(Number.isFinite(fetchZ), '_holdNewLevel: zoom required');
+        console.assert(Number.isFinite(this.settleMs), '_holdNewLevel: settleMs required');
+        if (!Number.isFinite(this._lastZ) || fetchZ === this._lastZ || this.settleMs <= 0) {
+            this._pendingZ = NaN;
+            return false;
+        }
+        var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+        if (this._pendingZ !== fetchZ) { this._pendingZ = fetchZ; this._pendingT = now; return true; }
+        if (now - this._pendingT < this.settleMs) return true;
+        this._pendingZ = NaN;
+        return false;
+    }
+
+    // Abort in-flight fetches whose keys fell out of the desired covering set - real
+    // network cancellation, mirroring StreetTiles._abortStale. Rule 5: 2 asserts.
+    _abortStale() {
+        console.assert(this._building instanceof Set, '_abortStale: building set required');
+        console.assert(this._abortControllers instanceof Map, '_abortStale: controllers map required');
+        var self = this;
+        this._building.forEach(function (key) {
+            if (self._desiredKeys.has(key)) return;
+            var ctrl = self._abortControllers.get(key);
+            if (ctrl) { ctrl.abort(); self._abortControllers.delete(key); }
+            self._building.delete(key);
+        });
+        return true;
+    }
+
+    // Release a build's in-flight bookkeeping, unless the key was aborted and already
+    // re-dispatched (a newer controller owns it - leave that build alone). Rule 5: 2 asserts.
+    _finishBuild(key, controller) {
+        console.assert(typeof key === 'string', '_finishBuild: key required');
+        console.assert(this._abortControllers instanceof Map, '_finishBuild: controllers map required');
+        var cur = this._abortControllers.get(key);
+        if (controller && cur && cur !== controller) return false;
+        this._building.delete(key);
+        this._abortControllers.delete(key);
+        return true;
+    }
+
+    // Abort EVERY in-flight fetch (explore exit, basemap switch, dispose). Rule 5: 2 asserts.
+    _abortAll() {
+        console.assert(this._building instanceof Set, '_abortAll: building set required');
+        console.assert(this._abortControllers instanceof Map, '_abortAll: controllers map required');
+        this._abortControllers.forEach(function (ctrl) { ctrl.abort(); });
+        this._abortControllers.clear();
+        this._building.clear();
+        return true;
+    }
+
+    // R2 #5: show/hide one patch AND attach/detach it. A hidden patch is not rendered,
+    // but while parented it was still walked by every updateMatrixWorld (render's and
+    // GlobeMarkers') - ~450 hidden tiles every frame. Detached tiles cost nothing; the
+    // matrix is identity in globe-local space (matrixAutoUpdate off), so re-attaching
+    // needs no recompute. Rule 5: 2 asserts.
+    _setMeshVisible(mesh, vis) {
+        console.assert(mesh && typeof mesh === 'object', '_setMeshVisible: mesh required');
+        console.assert(this.earthMesh, '_setMeshVisible: earthMesh required');
+        mesh.visible = !!vis;
+        if (vis) { if (mesh.parent !== this.earthMesh) this.earthMesh.add(mesh); }
+        else if (mesh.parent) mesh.parent.remove(mesh);
+        return mesh.visible;
+    }
+
+    // R2 #5: start the idle-trim timer once (idempotent). Rule 5: 2 asserts.
+    _armTrim() {
+        console.assert(Number.isFinite(this.trimDelayMs), '_armTrim: delay required');
+        console.assert(this.tiles instanceof Map, '_armTrim: tiles map required');
+        if (this._trimTimer || this._disposed || typeof setTimeout === 'undefined') return false;
+        if (this.tiles.size <= this.warmKeep && this._building.size === 0) return false;
+        var self = this;
+        this._trimTimer = setTimeout(function () {
+            self._trimTimer = null;
+            if (!self._disposed) self.trimCache(self.warmKeep);
+        }, this.trimDelayMs);
+        return true;
+    }
+
+    // Rule 5: 2 asserts.
+    _cancelTrim() {
+        console.assert(this !== undefined, '_cancelTrim: instance');
+        console.assert(this.tiles instanceof Map, '_cancelTrim: tiles map required');
+        if (!this._trimTimer) return false;
+        clearTimeout(this._trimTimer);
+        this._trimTimer = null;
+        return true;
+    }
+
+    /**
+     * R2 #5: shrink the cache to the `keep` most recently used built tiles, disposing
+     * the rest (geometry + material + texture) and dropping failed records. Called by
+     * the idle timer; safe any time (the next update() refetches what it needs).
+     * @returns {number} tiles disposed. Rule 4: <=60 lines.
+     */
+    trimCache(keep) {
+        console.assert(Number.isFinite(keep) && keep >= 0, 'trimCache: keep count required');
+        console.assert(this.tiles instanceof Map, 'trimCache: tiles map required');
+        this._abortAll();
+        var entries = [];
+        this.tiles.forEach(function (rec, key) { entries.push([key, rec.mesh ? rec.t : -Infinity]); });
+        entries.sort(function (p, q) { return q[1] - p[1]; });              // newest first
+        var removed = 0;
+        for (var i = 0; i < entries.length; i++) {                           // Rule 2: bounded
+            var rec = this.tiles.get(entries[i][0]);
+            if (i < keep && rec && rec.mesh) continue;
+            if (rec && rec.mesh) { this._disposeMesh(rec.mesh); removed++; }
+            this.tiles.delete(entries[i][0]);
+        }
+        this._retryAttempts.clear();
+        this._lastAllReady = false;          // next update() must run the full path
+        return removed;
     }
 
     // Enumerate the bounded ring of covering tiles, sort by Chebyshev distance from
@@ -444,7 +585,7 @@ class SatelliteTiles {
                 return false;                 // do not refresh t → stays evictable
             }
             rec.t = now;
-            if (rec.mesh) rec.mesh.visible = true;
+            if (rec.mesh) this._setMeshVisible(rec.mesh, true);
             return true;
         }
         // Concurrency gate: skip dispatching if already at the in-flight budget -
@@ -464,25 +605,25 @@ class SatelliteTiles {
         var z = parseInt(p[0], 10), x = parseInt(p[1], 10), y = parseInt(p[2], 10);
         if (!Number.isFinite(z) || !Number.isFinite(x) || !Number.isFinite(y)) return;
         this._building.add(key);
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        if (controller) this._abortControllers.set(key, controller);
         var self = this;
-        this._buildTile(z, x, y).then(function (mesh) {
-            self._building.delete(key);
+        this._buildTile(z, x, y, controller ? controller.signal : undefined).then(function (mesh) {
+            self._finishBuild(key, controller);
             // A2: disposed mid-flight → never re-add an orphan; dispose it instead.
             if (self._disposed) { if (mesh) self._disposeMesh(mesh); return; }
             if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
-            // 2026-08-15: TextureLoader can't be network-aborted (see constructor
-            // note), so a fast zoom/pan can still let this resolve after the key
-            // is no longer wanted. Discard rather than adding to the scene/cache -
-            // the fetch+decode cost is already spent either way, but this at
-            // least avoids polluting the LRU cache and an extra scene-graph add
-            // for a tile nobody will see.
-            if (!self._desiredKeys.has(key)) { self._disposeMesh(mesh); return; }
-            self.earthMesh.add(mesh);
+            // The decode can still finish just after the key left the covering set (or on
+            // the TextureLoader fallback, which cannot abort): discard instead of caching.
+            if (!self._desiredKeys.has(key) || (controller && controller.signal.aborted)) { self._disposeMesh(mesh); return; }
+            // Not parented yet: the next update() attaches it when it is shown (R2 #5).
             self._retryAttempts.delete(key);   // recovered → next failure starts at attempt 1
             self.tiles.set(key, { mesh: mesh, t: now, state: 'built' });
             self._evict();
         }).catch(function (e) {
-            self._building.delete(key);
+            self._finishBuild(key, controller);
+            // Cancelled on purpose (_abortStale / _abortAll): not a failure, no backoff.
+            if (e && e.name === 'AbortError') return;
             self.failed++;
             self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) });
             console.warn('SatelliteTiles: tile ' + key + ' failed:', e && e.message);
@@ -492,53 +633,99 @@ class SatelliteTiles {
     /**
      * Build the curved PATCH geometry for one slippy tile, then load the Esri
      * raster (z/y/x!) onto it. Resolves with a THREE.Mesh once the texture loads,
-     * or null on load error (fail-soft). Rule 4: <=60 lines.
+     * or null on load error (fail-soft). Rejects with an AbortError when `signal`
+     * cancels it (R2 #6). Rule 4: <=60 lines.
      * @returns {Promise<THREE.Mesh|null>}
      */
-    _buildTile(z, x, y) {
+    _buildTile(z, x, y, signal) {
         console.assert(typeof GlobeMath !== 'undefined', '_buildTile: GlobeMath required');
-        console.assert(this._loader, '_buildTile: TextureLoader required');
-        if (typeof GlobeMath === 'undefined' || !this._loader) return Promise.resolve(null);
-        var geometry = this._buildPatchGeometry(z, x, y);
+        console.assert(Number.isFinite(z) && Number.isFinite(x) && Number.isFinite(y), '_buildTile: zxy required');
+        if (typeof GlobeMath === 'undefined' || typeof THREE === 'undefined') return Promise.resolve(null);
         // Esri ORDER is {z}/{y}/{x} — row(y) before col(x). Build the URL explicitly.
         var url = this.urlTemplate.replace('{z}', z).replace('{y}', y).replace('{x}', x);
         var self = this;
-        var loader = this._loader;
-        return new Promise(function (resolve) {
-            loader.load(url, function (texture) {
-                if (self._disposed) { if (texture) texture.dispose(); geometry.dispose(); resolve(null); return; }
-                self._configureTexture(texture);
-                var material = new THREE.MeshBasicMaterial({
-                    map: texture, transparent: true, opacity: 0.0, depthWrite: false, depthTest: true,
-                    // Push the imagery slightly BACK in the depth buffer so the vector
-                    // overlays (streets/borders/regions) can sit at the SAME radius
-                    // (coplanar — "roads IN the map", not floating above it) and still
-                    // win the depth test without z-fighting. Only bites once the patch
-                    // turns opaque (depthWrite flips true after fade-in).
-                    polygonOffset: true, polygonOffsetFactor: 1.2, polygonOffsetUnits: 1.2
-                });
-                // MeshBasicMaterial is unlit (full-bright). Tint by the current sun
-                // factor so patches on the night hemisphere don't glow over the dark
-                // globe (the base Earth uses a day/night shader). New tiles match.
-                if (material.color) material.color.setScalar(self._lightFactor);
-                self._applyFeather(material, z, x, y);
-                var mesh = new THREE.Mesh(geometry, material);
-                // Start hidden: update()/_touchOrBuild shows it next frame IF the layer
-                // is active and this tile is still covering. Without this, a build that
-                // resolves AFTER hide() (explore exit) would add a visible=true patch
-                // that lingers on the globe in solar-system view (no update() to hide it).
-                mesh.visible = false;
-                mesh.renderOrder = -1;                 // draw before the vector overlays
-                mesh.userData.fadeTarget = 1.0;
-                mesh.userData.fade = 0.0;
-                self._startFade(mesh);
-                resolve(mesh);
-            }, undefined, function (err) {
-                geometry.dispose();
-                console.warn('SatelliteTiles: texture load failed ' + url, err && err.message);
-                resolve(null);
+        return this._loadTexture(url, signal).then(function (texture) {
+            if (!texture) return null;
+            if (self._disposed) { self._disposeTexture(texture); return null; }
+            self._configureTexture(texture, z);
+            var geometry = self._buildPatchGeometry(z, x, y);
+            var material = new THREE.MeshBasicMaterial({
+                map: texture, transparent: true, opacity: 0.0, depthWrite: false, depthTest: true,
+                // Push the imagery slightly BACK in the depth buffer so the vector
+                // overlays (streets/borders/regions) can sit at the SAME radius
+                // (coplanar — "roads IN the map", not floating above it) and still
+                // win the depth test without z-fighting. Only bites once the patch
+                // turns opaque (depthWrite flips true after fade-in).
+                polygonOffset: true, polygonOffsetFactor: 1.2, polygonOffsetUnits: 1.2
             });
+            // MeshBasicMaterial is unlit (full-bright). Tint by the current sun
+            // factor so patches on the night hemisphere don't glow over the dark
+            // globe (the base Earth uses a day/night shader). New tiles match.
+            if (material.color) material.color.setScalar(self._lightFactor);
+            self._applyFeather(material, z, x, y);
+            var mesh = new THREE.Mesh(geometry, material);
+            // Start hidden AND unparented: update()/_touchOrBuild shows + attaches it next
+            // tick IF the layer is active and this tile is still covering, so a build that
+            // resolves AFTER hide() (explore exit) can never linger on the globe.
+            mesh.visible = false;
+            mesh.matrixAutoUpdate = false;         // identity in globe-local space: never recompose
+            mesh.renderOrder = -1;                 // draw before the vector overlays
+            mesh.userData.fadeTarget = 1.0;
+            mesh.userData.fade = 0.0;
+            self._startFade(mesh);
+            return mesh;
         });
+    }
+
+    /**
+     * R2 #6: fetch one image tile as a THREE.Texture with fetch() + createImageBitmap,
+     * so the request can be ABORTED (THREE.TextureLoader cannot be). The bitmap is
+     * decoded flipped (imageOrientation 'flipY', texture.flipY false - WebGL ignores
+     * UNPACK_FLIP_Y for ImageBitmap) so the patch UVs map exactly as with <img>+flipY.
+     * Falls back to TextureLoader where fetch/createImageBitmap is missing. Resolves
+     * null on HTTP/decode failure; rejects with AbortError when cancelled. Rule 4.
+     * @returns {Promise<THREE.Texture|null>}
+     */
+    _loadTexture(url, signal) {
+        console.assert(typeof url === 'string' && url.length > 0, '_loadTexture: url required');
+        console.assert(signal === undefined || typeof signal === 'object', '_loadTexture: bad signal');
+        if (typeof fetch !== 'function' || typeof createImageBitmap !== 'function') {
+            var loader = this._loader;
+            if (!loader) return Promise.resolve(null);
+            return new Promise(function (resolve) {
+                loader.load(url, resolve, undefined, function (err) {
+                    console.warn('SatelliteTiles: texture load failed ' + url, err && err.message);
+                    resolve(null);
+                });
+            });
+        }
+        var abortErr = function () { var e = new Error('aborted'); e.name = 'AbortError'; return e; };
+        return fetch(url, { signal: signal, mode: 'cors', credentials: 'omit' }).then(function (res) {
+            if (!res.ok) { console.warn('SatelliteTiles: HTTP ' + res.status + ' ' + url); return null; }
+            return res.blob().then(function (blob) {
+                return createImageBitmap(blob, { imageOrientation: 'flipY', premultiplyAlpha: 'none' });
+            }).then(function (bitmap) {
+                if (signal && signal.aborted) { bitmap.close(); throw abortErr(); }
+                var tex = new THREE.Texture(bitmap);
+                tex.flipY = false;                 // already flipped at decode
+                return tex;
+            });
+        }).catch(function (e) {
+            if ((e && e.name === 'AbortError') || (signal && signal.aborted)) throw abortErr();
+            console.warn('SatelliteTiles: texture load failed ' + url, e && e.message);
+            return null;
+        });
+    }
+
+    // Free a texture and, for an ImageBitmap source, its decoded bitmap. Rule 5: 2 asserts.
+    _disposeTexture(tex) {
+        console.assert(tex === null || typeof tex === 'object', '_disposeTexture: bad arg');
+        console.assert(this !== undefined, '_disposeTexture: instance');
+        if (!tex) return false;
+        var img = tex.image;
+        if (tex.dispose) tex.dispose();
+        if (img && typeof img.close === 'function') img.close();
+        return true;
     }
 
     // Build a curved grid patch spanning the tile's lon/lat bbox. Rows go N→S
@@ -578,8 +765,8 @@ class SatelliteTiles {
         return geometry;
     }
 
-    // Apply sRGB color space + anisotropy. Rule 5: 2 asserts.
-    _configureTexture(texture) {
+    // Apply sRGB color space + anisotropy + filtering. Rule 5: 2 asserts.
+    _configureTexture(texture, z) {
         console.assert(texture && typeof texture === 'object', '_configureTexture: texture required');
         console.assert(typeof THREE !== 'undefined', '_configureTexture: THREE required');
         // r184: colorSpace is the API. The old `texture.encoding = THREE.sRGBEncoding`
@@ -587,11 +774,13 @@ class SatelliteTiles {
         // fallback would only ever be dead code hiding a future silent regression.
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = 4;
-        // No mipmaps: tiles render near 1:1, so the mip chain is wasted GPU memory
-        // (~25% per texture). With up to 72 cached tiles this is a real saving on
-        // integrated/mobile GPUs. LinearFilter avoids the mipmap requirement.
-        texture.generateMipmaps = false;
-        if (THREE.LinearFilter) texture.minFilter = THREE.LinearFilter;
+        // R2 #6: mipmaps for COARSE levels only (z <= mipMaxZoom, ~1.15R and out), where
+        // the 256 px tiles are heavily minified (121 tiles at 1.8-2.8R) and shimmered.
+        // Finer levels render near 1:1, where the chain (+33% memory) is wasted.
+        var mips = Number.isFinite(z) && z <= this.mipMaxZoom && !!THREE.LinearMipmapLinearFilter;
+        texture.generateMipmaps = mips;
+        if (mips) texture.minFilter = THREE.LinearMipmapLinearFilter;
+        else if (THREE.LinearFilter) texture.minFilter = THREE.LinearFilter;
         texture.needsUpdate = true;
         return true;
     }
@@ -686,7 +875,7 @@ class SatelliteTiles {
         if (!mesh) return false;
         if (mesh.geometry && mesh.geometry.dispose) mesh.geometry.dispose();
         if (mesh.material) {
-            if (mesh.material.map && mesh.material.map.dispose) mesh.material.map.dispose();
+            if (mesh.material.map) this._disposeTexture(mesh.material.map);
             if (mesh.material.dispose) mesh.material.dispose();
         }
         // A3: null material AFTER disposing so a pending _startFade rAF step hits its
@@ -720,7 +909,8 @@ class SatelliteTiles {
         var self = this;
         this.tiles.forEach(function (rec) { if (rec.mesh) self._disposeMesh(rec.mesh); });
         this.tiles.clear();
-        this._building.clear();
+        this._abortAll();                    // in-flight tiles are the OLD map: cancel them
+        this._lastAllReady = false;
         this.failed = 0;
         return this.mode;
     }
@@ -737,7 +927,8 @@ class SatelliteTiles {
     _showTiles(vis) {
         console.assert(typeof vis === 'boolean', '_showTiles: boolean required');
         console.assert(this.tiles instanceof Map, '_showTiles: tiles map required');
-        this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = vis; });
+        var self = this;
+        this.tiles.forEach(function (rec) { if (rec.mesh) self._setMeshVisible(rec.mesh, vis); });
         return vis;
     }
 
@@ -762,11 +953,15 @@ class SatelliteTiles {
     }
 
     // Hide all built patches WITHOUT disabling the engine (preserves this.visible
-    // so a later re-entry shows them). Used on explore exit. Rule 5: 2 asserts.
+    // so a later re-entry shows them). Used on explore exit: also cancels in-flight
+    // fetches and arms the idle trim (R2 #5). Rule 5: 2 asserts.
     hide() {
         console.assert(this.tiles instanceof Map, 'SatelliteTiles.hide: tiles map required');
         console.assert(typeof this._showTiles === 'function', 'SatelliteTiles.hide: _showTiles required');
         this._showTiles(false);
+        this._abortAll();
+        this._lastAllReady = false;
+        this._armTrim();
         return true;
     }
 
@@ -788,10 +983,11 @@ class SatelliteTiles {
         console.assert(this.tiles instanceof Map, 'dispose: tiles map required');
         console.assert(this.earthMesh !== undefined, 'dispose: earthMesh field expected');
         this._disposed = true;   // A2: block any in-flight build from re-adding a mesh
+        this._cancelTrim();
         var self = this;
         this.tiles.forEach(function (rec) { if (rec.mesh) self._disposeMesh(rec.mesh); });
         this.tiles.clear();
-        this._building.clear();
+        this._abortAll();
         this._scratchKeys.length = 0;
         return true;
     }

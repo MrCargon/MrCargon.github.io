@@ -129,7 +129,10 @@ class GlobeMarkers {
         console.assert(rect && Number.isFinite(rect.width), 'GlobeMarkers.update: rect required');
         this.fade = Math.max(0, Math.min(1, fade));
         const pr = pixelRatio || 1;
-        this.parent.updateMatrixWorld();
+        // R2 #5: ancestors + the globe only. updateMatrixWorld() also walked the whole
+        // globe subtree (every tile patch) a second time per frame; _layout reads just
+        // parent.matrixWorld, and render() updates the children anyway.
+        this.parent.updateWorldMatrix(true, false);
         this.parent.getWorldPosition(this._c);
         this._cam.setFromMatrixPosition(camera.matrixWorld);
         for (let k = 0; k < this.order.length; k++) {

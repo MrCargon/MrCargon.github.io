@@ -100,6 +100,12 @@ class StreetTiles {
         this._abortControllers = new Map();  // key -> AbortController
         this._retryAttempts = new Map();     // key -> consecutive failures, for backoff
         this._desiredKeys = new Set();       // this frame's covering set, for abort checks
+        // R2 #5: after the layer goes idle (Explore exit / out of range / toggled off) the
+        // LRU kept up to lruCap fat-line geometries forever. trimDelayMs after it goes
+        // idle the cache is trimmed to the warmKeep most recently used tiles.
+        this.trimDelayMs = Number.isFinite(opts.trimDelayMs) ? opts.trimDelayMs : 60000;
+        this.warmKeep = Number.isFinite(opts.warmKeep) ? opts.warmKeep : 12;
+        this._trimTimer = null;
         this.failed = 0;
         this.visible = true;
         // User-stylable appearance (color, opacity, pixel width), applied to all line
@@ -240,8 +246,10 @@ class StreetTiles {
             // Invalidate the early-out: these tiles are now hidden, so re-entering
             // range at the SAME z/cx/cy must run the full path to show them again.
             this._lastAllReady = false;
+            this._armTrim();              // idle: free the cache if it stays idle
             return false;
         }
+        this._cancelTrim();
         // Resolve the OpenFreeMap tile template once (keyless discovery). A7: after a
         // resolve failure, back off so we don't storm requests during an outage.
         if (!this.tileTemplate) {
@@ -293,15 +301,16 @@ class StreetTiles {
         // as a "fallback": measured 104 tiles of z9-z12 stacked at 1.02R (1.26 M street
         // triangles, the white fill). A failed tile now leaves a hole until its retry
         // lands instead of pinning all the old levels on screen.
+        var self = this;
         if (allReady || settled) {
-            this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = (rec.t === now); });
+            this.tiles.forEach(function (rec) { if (rec.mesh) self._setMeshVisible(rec.mesh, rec.t === now); });
         } else {
             // F4: while the new set loads, the previous tiles stay up as a fallback - but
             // never ones FINER than this level. A z13/z14 tile carries minor roads and
             // footpaths; shown from z9-z11 height it shrinks to a few dozen pixels of
             // solid line, i.e. a white square. Coarser fallbacks are sparse and fine.
             this.tiles.forEach(function (rec) {
-                if (rec.mesh && rec.t !== now && rec.z > fetchZ + 1) rec.mesh.visible = false;
+                if (rec.mesh && rec.t !== now && rec.z > fetchZ + 1) self._setMeshVisible(rec.mesh, false);
             });
         }
         this._evict();
@@ -507,7 +516,7 @@ class StreetTiles {
                 return false;                 // do not refresh t → stays evictable
             }
             rec.t = now;
-            if (rec.mesh) rec.mesh.visible = true;
+            if (rec.mesh) this._setMeshVisible(rec.mesh, true);
             return true;
         }
         // Concurrency gate: skip dispatching if already at the in-flight budget -
@@ -567,7 +576,7 @@ class StreetTiles {
                 return;
             }
             if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
-            self.earthMesh.add(mesh);
+            // Not parented yet: the next update() attaches it when it is shown (R2 #5).
             self._retryAttempts.delete(key);   // recovered → next failure starts at attempt 1
             self.tiles.set(key, { mesh: mesh, t: now, state: 'built', z: z });
             self._evict();
@@ -634,6 +643,7 @@ class StreetTiles {
         // Start hidden: update()/_touchOrBuild shows it next frame. Prevents a build
         // that resolves AFTER hide() (explore exit) from lingering visible on the globe.
         mesh.visible = false;
+        mesh.matrixAutoUpdate = false;       // identity in globe-local space: never recompose
         return mesh;
     }
 
@@ -832,8 +842,74 @@ class StreetTiles {
     _showTiles(vis) {
         console.assert(typeof vis === 'boolean', '_showTiles: boolean required');
         console.assert(this.tiles instanceof Map, '_showTiles: tiles map required');
-        this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = vis; });
+        var self = this;
+        this.tiles.forEach(function (rec) { if (rec.mesh) self._setMeshVisible(rec.mesh, vis); });
         return vis;
+    }
+
+    // R2 #5: show/hide one tile AND attach/detach it. A hidden tile is not rendered,
+    // but while parented it was still walked by every updateMatrixWorld (render's and
+    // GlobeMarkers') each frame. Detached tiles cost nothing; the matrix is identity in
+    // globe-local space (matrixAutoUpdate off), so re-attaching needs no recompute.
+    // Rule 5: 2 asserts.
+    _setMeshVisible(mesh, vis) {
+        console.assert(mesh && typeof mesh === 'object', '_setMeshVisible: mesh required');
+        console.assert(this.earthMesh, '_setMeshVisible: earthMesh required');
+        mesh.visible = !!vis;
+        if (vis) { if (mesh.parent !== this.earthMesh) this.earthMesh.add(mesh); }
+        else if (mesh.parent) mesh.parent.remove(mesh);
+        return mesh.visible;
+    }
+
+    // R2 #5: start the idle-trim timer once (idempotent). Rule 5: 2 asserts.
+    _armTrim() {
+        console.assert(Number.isFinite(this.trimDelayMs), '_armTrim: delay required');
+        console.assert(this.tiles instanceof Map, '_armTrim: tiles map required');
+        if (this._trimTimer || this._disposed || typeof setTimeout === 'undefined') return false;
+        if (this.tiles.size <= this.warmKeep && this._building.size === 0) return false;
+        var self = this;
+        this._trimTimer = setTimeout(function () {
+            self._trimTimer = null;
+            if (!self._disposed) self.trimCache(self.warmKeep);
+        }, this.trimDelayMs);
+        return true;
+    }
+
+    // Rule 5: 2 asserts.
+    _cancelTrim() {
+        console.assert(this !== undefined, '_cancelTrim: instance');
+        console.assert(this.tiles instanceof Map, '_cancelTrim: tiles map required');
+        if (!this._trimTimer) return false;
+        clearTimeout(this._trimTimer);
+        this._trimTimer = null;
+        return true;
+    }
+
+    /**
+     * R2 #5: shrink the cache to the `keep` most recently used built tiles, disposing
+     * the rest and dropping failed/empty records; cancels in-flight fetches. Called by
+     * the idle timer; safe any time (the next update() refetches what it needs).
+     * @returns {number} tiles disposed. Rule 4: <=60 lines.
+     */
+    trimCache(keep) {
+        console.assert(Number.isFinite(keep) && keep >= 0, 'trimCache: keep count required');
+        console.assert(this.tiles instanceof Map, 'trimCache: tiles map required');
+        this._abortControllers.forEach(function (ctrl) { ctrl.abort(); });
+        this._abortControllers.clear();
+        this._building.clear();
+        var entries = [];
+        this.tiles.forEach(function (rec, key) { entries.push([key, rec.mesh ? rec.t : -Infinity]); });
+        entries.sort(function (p, q) { return q[1] - p[1]; });              // newest first
+        var removed = 0;
+        for (var i = 0; i < entries.length; i++) {                           // Rule 2: bounded
+            var rec = this.tiles.get(entries[i][0]);
+            if (i < keep && rec && rec.mesh) continue;
+            if (rec && rec.mesh) { this._disposeMesh(rec.mesh); removed++; }
+            this.tiles.delete(entries[i][0]);
+        }
+        this._retryAttempts.clear();
+        this._lastAllReady = false;          // next update() must run the full path
+        return removed;
     }
 
     // Hide all built tiles WITHOUT disabling the engine (preserves this.visible so a
@@ -844,6 +920,12 @@ class StreetTiles {
         console.assert(this.tiles instanceof Map, 'StreetTiles.hide: tiles map required');
         console.assert(typeof this._showTiles === 'function', 'StreetTiles.hide: _showTiles required');
         this._showTiles(false);
+        // R2 #5: nothing in flight is wanted after exit; arm the idle trim.
+        this._abortControllers.forEach(function (ctrl) { ctrl.abort(); });
+        this._abortControllers.clear();
+        this._building.clear();
+        this._lastAllReady = false;
+        this._armTrim();
         return true;
     }
 
@@ -865,6 +947,7 @@ class StreetTiles {
         console.assert(this.tiles instanceof Map, 'dispose: tiles map required');
         console.assert(this.earthMesh !== undefined, 'dispose: earthMesh field expected');
         this._disposed = true;   // A2: block any in-flight build from re-adding a mesh
+        this._cancelTrim();
         var self = this;
         this.tiles.forEach(function (rec) { if (rec.mesh) self._disposeMesh(rec.mesh); });
         this.tiles.clear();

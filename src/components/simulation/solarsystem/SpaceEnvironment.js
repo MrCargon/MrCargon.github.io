@@ -2573,7 +2573,12 @@ class SpaceEnvironment {
         const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
         const dist = this.camera.position.distanceTo(earthPos);
         // Live zoom readout — cached element, no per-frame DOM query/alloc.
-        if (this._distEl) this._distEl.textContent = (dist / radius).toFixed(2) + '× Earth radius';
+        // R2 perf #2: write only when the string changes; an unchanged textContent write
+        // still dirties style/layout every frame.
+        if (this._distEl) {
+            const distStr = (dist / radius).toFixed(2) + '× Earth radius';
+            if (distStr !== this._lastDistStr) { this._distEl.textContent = distStr; this._lastDistStr = distStr; }
+        }
         // The cloud shell is a soft 2k texture: from mid zoom down it smears over the sharp
         // imagery and streets, so it is gone before the imagery patch takes over (~1.5R).
         const fadeStart = radius * 2.6;   // full above here
@@ -2739,7 +2744,8 @@ class SpaceEnvironment {
         if (earth.atmosphereLayers && typeof earth.atmosphereLayers.update === 'function') {
             earth.atmosphereLayers.update(rr);
             if (this.renderer && this.renderer.domElement && typeof earth.atmosphereLayers.updateLabels === 'function') {
-                earth.atmosphereLayers.updateLabels(this.camera, this.renderer.domElement.getBoundingClientRect());
+                // R2 perf #2: cached rect (invalidated on resize), not a forced layout per frame.
+                earth.atmosphereLayers.updateLabels(this.camera, this._getCanvasRect());
             }
         }
         // Living troposphere objects (balloons/jets) fade in by their viewing band and
@@ -2791,12 +2797,17 @@ class SpaceEnvironment {
         const _rr = dist / radius;
         const yBias = 0.22 * Math.max(0, Math.min(1, (1.3 - _rr) / (1.3 - 1.0)));
         this._exploreRaycaster.setFromCamera(this._ndc.set(0, yBias), this.camera);
-        const hits = this._exploreRaycaster.intersectObject(mesh, false);
+        // R2 perf #4: the globe is a sphere, so intersect the ray with the analytic sphere
+        // (zero allocation) instead of triangle-raycasting the 8k-tri mesh 9x a second.
+        const sph = this._lookAtSphere || (this._lookAtSphere = new THREE.Sphere());
+        const hitPoint = this._lookAtHit || (this._lookAtHit = new THREE.Vector3());
+        mesh.getWorldPosition(sph.center);
+        sph.radius = radius * mesh.matrixWorld.getMaxScaleOnAxis();
         // A4: streets are only meaningful when the look-at actually hits the globe.
         // The old camera-position fallback fetched sub-camera tiles the user wasn't
         // looking at, so on a ray miss we simply skip this frame.
-        if (hits.length === 0) return false;
-        const local = mesh.worldToLocal(this._scratchCamPos.copy(hits[0].point));
+        if (this._exploreRaycaster.ray.intersectSphere(sph, hitPoint) === null) return false;
+        const local = mesh.worldToLocal(this._scratchCamPos.copy(hitPoint));
         const ll = GlobeMath.vector3ToLatLng(local, radius);
         if (ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng)) {
             if (earth.streetTiles) {
@@ -2811,7 +2822,7 @@ class SpaceEnvironment {
             // and dim it on the night hemisphere (unlit imagery would otherwise glow).
             if (earth.satelliteTiles) {
                 if (typeof earth.satelliteTiles.setSunLight === 'function') {
-                    earth.satelliteTiles.setSunLight(this._lookAtLit(earth, mesh, hits[0].point));
+                    earth.satelliteTiles.setSunLight(this._lookAtLit(earth, mesh, hitPoint));
                 }
                 earth.satelliteTiles.update(ll.lat, ll.lng, dist / radius);
             }
@@ -3026,6 +3037,7 @@ class SpaceEnvironment {
         panel.hidden = false;
         panel.style.display = 'flex';   // [hidden] alone overridden by inline display; toggle explicitly
         this._distEl = document.getElementById('explore-distance'); // cache (no per-frame query)
+        this._lastDistStr = null;
         document.addEventListener('keydown', this._onExploreKeydown);
 
         this._detailEl = document.getElementById('explore-detail');

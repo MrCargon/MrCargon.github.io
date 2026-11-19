@@ -136,7 +136,8 @@ class TroposphereObjects {
             var body = new THREE.Mesh(new THREE.ConeGeometry(size * 0.35, size * 1.6, 8), bodyMat);
             body.rotation.z = -Math.PI / 2;                       // point +X (travel dir)
             var trailMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true,
-                opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+                opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+                forceSinglePass: true });              // flat plane: one draw, no per-frame program re-check (R2 #3)
             trailMat._tropoScale = 0.45;                          // contrail fainter than the jet
             var trail = new THREE.Mesh(new THREE.PlaneGeometry(size * 4, size * 0.5), trailMat);
             trail.position.x = -size * 2.2;

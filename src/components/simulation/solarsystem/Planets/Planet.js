@@ -110,7 +110,8 @@ class Planet {
             color: 0xffffff,
             side: THREE.DoubleSide,
             transparent: true,
-            opacity: 0.8
+            opacity: 0.8,
+            forceSinglePass: true // flat ring: one draw, no per-frame program re-check (R2 #3)
         });
         
         if (ringsColorTexture) {

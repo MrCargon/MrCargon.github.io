@@ -120,8 +120,37 @@ class AsteroidBelt {
                 // periods), so advance by elapsed days directly.
                 scaledDelta = daysDelta;
             }
-            this.lastJ2000Days = j2000Days;
+        } else {
+            this._pendingDelta = (this._pendingDelta || 0) + deltaTime;
+            scaledDelta = this._pendingDelta;
         }
+
+        // R2 perf #1: skip the 1000-matrix rebuild + upload when nothing could visibly
+        // move (paused, hidden, beyond the far plane as in Explore, or < 0.1 px shift).
+        // Time is consumed only when the rebuild runs, so a skipped frame's delta is
+        // carried into the next real update and the belt never drifts. The first frame
+        // always rebuilds (it replaces the random spawn tumble, as before).
+        if (!this._firstPassDone) {
+            this._firstPassDone = true;
+        } else if (this.instancedMesh && typeof KuiperBelt !== 'undefined' && KuiperBelt.beltMotionInvisible) {
+            if (this._maxRadius === undefined) {
+                let minR = Infinity, maxR = 0, orb = 0, rot = 0;
+                for (let i = 0; i < this.count; i++) {
+                    const d = this.orbitData[i];
+                    minR = Math.min(minR, d.orbitRadius); maxR = Math.max(maxR, d.orbitRadius);
+                    orb = Math.max(orb, Math.abs(d.orbitSpeed));
+                    rot = Math.max(rot, Math.abs(d.rotationSpeed.x) + Math.abs(d.rotationSpeed.y) + Math.abs(d.rotationSpeed.z));
+                }
+                // farthest any rock surface point moves per unit delta: orbit + tumble (sphere r 0.2 * scale <= 2)
+                this._minRadius = minR; this._maxRadius = maxR; this._shiftPerDelta = (orb * maxR) + (rot * 0.4);
+            }
+            const shift = Math.abs(scaledDelta) * this._shiftPerDelta;
+            const camera = this.scene && this.scene.userData ? this.scene.userData.camera : null;
+            if (KuiperBelt.beltMotionInvisible(this.instancedMesh, camera, this._minRadius, this._maxRadius, shift, 1)) {
+                return;
+            }
+        }
+        if (j2000Days !== null) this.lastJ2000Days = j2000Days; else this._pendingDelta = 0;
 
         for (let i = 0; i < this.count; i++) {
             const data = this.orbitData[i];

@@ -301,6 +301,7 @@ class KuiperBelt {
         }
 
         this.belt.instanceMatrix.needsUpdate = true;
+        this._matricesDirty = true; // next updateInstancedBelt must recompose every matrix
         console.log(`KuiperBelt LOD changed to ${targetLOD} (${targetCount}/${maxCount} particles) at distance ${cameraDistance.toFixed(1)}`);
     }
 
@@ -326,7 +327,10 @@ class KuiperBelt {
 
         // Time-synchronized rotation (respects TimeScaleManager time scale)
         // NASA Rule 7: Check if time-synchronized mode is available
-        let scaledDelta = deltaTime;
+        // R2 perf: time is only CONSUMED when the matrices are rebuilt, so a skipped
+        // frame carries its delta into the next real update and positions never drift
+        // from what an every-frame update would have produced.
+        let scaledDelta;
         if (j2000Days !== null) {
             if (!this.lastJ2000Days) {
                 this.lastJ2000Days = j2000Days;
@@ -334,9 +338,38 @@ class KuiperBelt {
             const j2000Delta = j2000Days - this.lastJ2000Days;
             const secondsPerDay = 86400;
             scaledDelta = j2000Delta * secondsPerDay;
-            this.lastJ2000Days = j2000Days;
+        } else {
+            this._pendingDelta = (this._pendingDelta || 0) + deltaTime;
+            scaledDelta = this._pendingDelta;
         }
 
+        // R2 perf #1: skip the rebuild + 96 KB upload when nothing could visibly move
+        // (paused, belt hidden, beyond the camera's far plane as in Explore, or every
+        // rock would shift by < 0.1 px). An LOD rewrite (dirty) always rebuilds.
+        const dirty = this._matricesDirty === true;
+        if (!dirty) {
+            if (this._maxRadius === undefined) {
+                let minR = Infinity, maxR = 0, maxS = 0;
+                for (let i = 0; i < radii.length; i++) {
+                    minR = Math.min(minR, radii[i]); maxR = Math.max(maxR, radii[i]);
+                    maxS = Math.max(maxS, Math.abs(speeds[i]));
+                }
+                this._minRadius = minR; this._maxRadius = maxR; this._maxSpeed = maxS;
+            }
+            const shift = Math.abs(scaledDelta) * this._maxSpeed * this._maxRadius;
+            const camera = this.group && this.group.parent && this.group.parent.userData
+                ? this.group.parent.userData.camera : null;
+            if (KuiperBelt.beltMotionInvisible(this.group, camera, this._minRadius, this._maxRadius,
+                shift, this.maxParticleSize * 2)) {
+                return;
+            }
+        }
+        if (j2000Days !== null) this.lastJ2000Days = j2000Days; else this._pendingDelta = 0;
+
+        // The 3x3 part (rotation * scale) and the y translation never change while a
+        // rock orbits, so outside an LOD rewrite only x/z are written straight into the
+        // instance buffer; no Euler->quaternion->compose per particle per frame.
+        const arr = this.belt.instanceMatrix.array;
         for (let i = 0; i < this.particleCount; i++) {
             const position = positions[i];
             const speed = speeds[i];
@@ -348,16 +381,42 @@ class KuiperBelt {
             position.x = radius * Math.cos(angle);
             position.z = radius * Math.sin(angle);
 
-            // Update instance matrix
-            dummy.position.copy(position);
-            dummy.rotation.copy(rotations[i]);
-            dummy.scale.setScalar(scales[i]);
-            dummy.updateMatrix();
-
-            this.belt.setMatrixAt(i, dummy.matrix);
+            if (dirty) {
+                // Update instance matrix
+                dummy.position.copy(position);
+                dummy.rotation.copy(rotations[i]);
+                dummy.scale.setScalar(scales[i]);
+                dummy.updateMatrix();
+                this.belt.setMatrixAt(i, dummy.matrix);
+            } else {
+                arr[(i * 16) + 12] = position.x;
+                arr[(i * 16) + 14] = position.z;
+            }
         }
 
+        this._matricesDirty = false;
         this.belt.instanceMatrix.needsUpdate = true;
+    }
+
+    /**
+     * True when a belt update could not change a single visible pixel, so the CPU
+     * rebuild and GPU upload can be skipped. Conservative: the camera's horizontal gap
+     * to the belt annulus (minus `margin`) is a lower bound on its distance to any rock.
+     * Rule 5: 2 asserts.
+     */
+    static beltMotionInvisible(obj, camera, minR, maxR, shift, margin) {
+        console.assert(minR <= maxR, 'beltMotionInvisible: minR > maxR');
+        console.assert(shift >= 0, 'beltMotionInvisible: shift must be >= 0');
+        if (shift === 0) return true;                        // time paused
+        for (let o = obj; o; o = o.parent) if (!o.visible) return true;
+        if (!camera || !camera.isPerspectiveCamera) return false;
+        const p = camera.position;
+        const h = Math.sqrt((p.x * p.x) + (p.z * p.z));      // belts are centred on the Sun at the origin
+        const gap = Math.max(0, (h < minR ? minR - h : (h > maxR ? h - maxR : 0)) - margin);
+        if (gap > camera.far) return true;                   // e.g. Explore: far plane ~16-26 units
+        const screenPx = (typeof window !== 'undefined' ? (window.innerHeight || 1000) * (window.devicePixelRatio || 1) : 1000);
+        const worldPerPx = (2 * gap * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) / screenPx;
+        return shift < 0.1 * worldPerPx;
     }
 
     updateTraditionalBelt(deltaTime, j2000Days = null) {

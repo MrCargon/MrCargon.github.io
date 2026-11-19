@@ -35,7 +35,7 @@ class DarkMatterHalo {
             characteristicDensity: options.characteristicDensity || 1.0, // ρ₀
 
             // Visualization parameters (REVISED counts from ADR)
-            particleCount: this.getParticleCount(options.performanceTier),
+            particleCount: this.getTierParticleCount(options.performanceTier),
             opacity: options.opacity || 0.15, // Base transparency
             color: options.color || 0x4444ff, // Blue-purple hue
             particleSize: options.particleSize || 2.0, // Visual size
@@ -65,11 +65,14 @@ class DarkMatterHalo {
 
     /**
      * Get particle count based on performance tier
+     * Not named getParticleCount: a class keeps only the LAST method of a name, and the
+     * stats getter getParticleCount() below would replace this one, so the constructor
+     * read this.options before it existed.
      * NASA Rule 4: <= 60 lines | Rule 2: Fixed bounds
      * @param {string} tier - Performance tier (HIGH/MEDIUM/LOW)
      * @returns {number} Particle count
      */
-    getParticleCount(tier) {
+    getTierParticleCount(tier) {
         // NASA Rule 2: Fixed tier set
         const TIER_COUNTS = {
             'HIGH': 1500,

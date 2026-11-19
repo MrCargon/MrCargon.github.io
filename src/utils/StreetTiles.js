@@ -9,7 +9,7 @@
 // sphere's curvature instead of chording through it.
 //
 // General by construction: the covering tiles are computed from (lat,lng,zoom),
-// so it works anywhere — San Francisco is just the proof.
+// so it works anywhere — no place is special-cased.
 //
 // Patterns mirrored from Earth.js (buildBorders/buildGraticule): lazy build, one
 // draw call per unit, rOffset z-lift, opacity cross-fade, dispose, fail-soft.
@@ -27,7 +27,7 @@ class StreetTiles {
         var opts = options || {};
         this.earthMesh = earthMesh;
         this.radius = radius;
-        // Just above the districts layer (1.015) so streets sit on top, not z-fight.
+        // Just above the vector geography layers so streets sit on top, not z-fight.
         this.rOffset = Number.isFinite(opts.rOffset) ? opts.rOffset : 1.0006;   // COPLANAR with the satellite map (roads IN the map; satellite has polygonOffset)
         // Activate only when the camera is closer than this (in Earth radii).
         this.activateBelow = Number.isFinite(opts.activateBelow) ? opts.activateBelow : 1.3;

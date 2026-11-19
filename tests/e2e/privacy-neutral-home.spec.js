@@ -13,6 +13,12 @@ import { mkdirSync } from 'node:fs';
  * - after the Explore entry settles, the camera does NOT face 37.77, -122.42 (more than 30 deg off);
  * - the whole globe is in frame (its angular radius fits inside the narrower half field of view).
  *
+ * F3: no single-city map layers either. San Francisco had its own districts + ZIP layers and a
+ * "DataSF" credit, which narrowed the place down just as well. Every place gets the same detail:
+ * - no "DataSF" / "SF districts" text, no Districts toggle or style button;
+ * - no request for any *-sf*.json, even after zooming close in Explore;
+ * - neither the hover cascade nor the zoom detail has a district or ZIP tier.
+ *
  * F2_SHOT (optional): file path for a screenshot of the settled entry view.
  */
 
@@ -89,4 +95,48 @@ test('no "Based here", the identity line names the birthplace, and Explore does 
     if (process.env.F2_SHOT) await page.screenshot({ path: process.env.F2_SHOT });
     expect.soft(v.ang, 'the entry camera is not aimed at San Francisco').toBeGreaterThan(30);
     expect(v.globeHalf, 'the whole globe is in frame').toBeLessThan(v.viewHalf);
+});
+
+test('F3: no San Francisco-only layers, legend, toggle, credit or data request', async ({ page }) => {
+    const sfRequests = [];
+    page.on('request', (r) => { if (/-sf[^/]*\.json/i.test(r.url())) sfRequests.push(r.url()); });
+    await routeFeeds(page);
+    await page.goto('/#main');
+    await page.waitForFunction(() => {
+        const se = window.spaceEnvironment; const e = se && se.getEarthObject && se.getEarthObject();
+        return !!(e && e.mesh);
+    }, null, { timeout: 60000 });
+    await page.waitForTimeout(2000);
+    await page.evaluate(() => { const b = document.getElementById('tab-Earth'); if (b) b.click(); });
+    await page.waitForTimeout(2500);
+    const btn = page.locator('#explore-enter-btn');
+    await expect(btn).toBeVisible({ timeout: 15000 });
+    await btn.click();
+    await page.waitForFunction(() => window.spaceEnvironment.exploreMode === true, null, { timeout: 10000 });
+    await page.waitForTimeout(3000);
+    // Close in (1.25R) over a neutral spot so every zoom tier and hover tier would load.
+    await page.evaluate(() => {
+        const se = window.spaceEnvironment; const e = se.getEarthObject();
+        const ep = e.getMesh().getWorldPosition(se.camera.position.clone());
+        se.camera.position.sub(ep).setLength(e.data.radius * 1.25).add(ep);
+        se.controls.update();
+        se.centerOnLatLng(48.85, 2.35);
+    });
+    await page.waitForTimeout(6000);
+
+    const words = await pageWords(page);
+    expect.soft(words, 'no DataSF credit').not.toMatch(/DataSF/);
+    expect.soft(words, 'no "SF districts" legend item').not.toMatch(/SF districts/i);
+    expect.soft(await page.locator('#ep-toggle-districts, #ep-style-layers [data-layer="districts"]').count(),
+        'no Districts toggle or style button').toBe(0);
+    const tiers = await page.evaluate(() => {
+        const e = window.spaceEnvironment.getEarthObject();
+        return {
+            hover: (Earth.REGION_TIER_DEFS || []).map((d) => d.key + ' ' + d.url),
+            lod: e.geoLOD ? Array.from(e.geoLOD.tiers.keys()) : null
+        };
+    });
+    expect.soft(tiers.hover.join('\n'), 'hover cascade has no district/ZIP tier').not.toMatch(/district|zip|-sf/i);
+    expect.soft(tiers.lod, 'zoom detail tiers').toEqual(['states', 'cities']);
+    expect(sfRequests, 'no request for a San Francisco-only data file').toEqual([]);
 });

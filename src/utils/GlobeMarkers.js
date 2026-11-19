@@ -466,14 +466,13 @@ GlobeMarkers.MAX_BADGES = 40;
 // deuteranopia/protanopia (checked with a Machado 2009 simulation). sRGB hex.
 //   yellow  = places (diamond + white ring + name)   orange->purple = quakes (discs)
 //   cyan    = country borders (solid, brightest)     steel blue = states (dashed, dimmer)
-//   amber   = SF districts (solid)                   grey = lat/lng grid (faint, fades at poles)
+//   grey = lat/lng grid (faint, fades at poles)
 //   warm white = cities (small dots)                 mint/sky/pink = GPS/weather/station sats
 GlobeMarkers.PALETTE = Object.freeze({
     place: 0xffe14a,
     city: 0xfff0dc,
     border: 0x8fe3ff,
     state: 0x5f8fc8,
-    district: 0xffb85c,
     grid: 0xb4bcc6,
     satGps: 0x7dffb0,
     satWeather: 0x5cb4ff,

@@ -177,6 +177,10 @@ class SpaceEnvironment {
         this._onExploreClick = (e) => this._handleExploreClick(e);
         this._onExploreMove = (e) => this._handleExploreHover(e);
         this._onExploreDblClick = (e) => this._handleExploreDblClick(e);
+        // F1: where the last press started, so a drag that ends on the globe is not a click.
+        this._onExploreDown = (e) => { this._exploreDownXY = { x: e.clientX, y: e.clientY }; };
+        this._exploreDownXY = null;
+        this._placeSearch = null;       // F1 PlaceSearch index (built on first search focus)
         // R2 #7b: the first Explore entry waits for the 'explore' bundle; Esc cancels it.
         this._exploreLoad = null;
         this._onExploreLoadKey = (e) => { if (e.key === 'Escape') this._cancelExploreLoad(); };
@@ -2448,6 +2452,7 @@ class SpaceEnvironment {
         window.addEventListener('click', this._onExploreClick);
         window.addEventListener('mousemove', this._onExploreMove);
         window.addEventListener('dblclick', this._onExploreDblClick);   // double-click → re-center
+        window.addEventListener('pointerdown', this._onExploreDown, true);
 
         this.setupExplorePanel();
         this._setGlobeKeyboard(true);   // R3 #9a: the canvas is a Tab stop after the ladder
@@ -2487,7 +2492,7 @@ class SpaceEnvironment {
      * Rule 5: 2 asserts.
      * @returns {boolean} true when the camera was aimed at the neutral point
      */
-    _exploreEntryFlyIn(earth, earthPos, dist) {
+    _exploreEntryFlyIn(earth, earthPos, dist, at) {
         console.assert(earth && earthPos && earthPos.isVector3, '_exploreEntryFlyIn: Earth + centre required');
         console.assert(dist > 0, '_exploreEntryFlyIn: distance required');
         const centre = earthPos.clone();
@@ -2498,7 +2503,7 @@ class SpaceEnvironment {
         // before the fly-to Earth lands) the first frame would pass the 9R zoom-out exit.
         const fromDist = Math.min(this.camera.position.distanceTo(centre), dist * 2);
         const to = from.clone();
-        const c = SpaceEnvironment.EXPLORE_HOME;
+        const c = at || SpaceEnvironment.EXPLORE_HOME;   // F1: search flies to any place the same way
         const ok = !!(c && typeof GlobeMath !== 'undefined' && earth.data);
         if (ok) {
             const mesh = earth.getMesh();
@@ -3085,6 +3090,7 @@ class SpaceEnvironment {
         window.removeEventListener('click', this._onExploreClick);
         window.removeEventListener('mousemove', this._onExploreMove);
         window.removeEventListener('dblclick', this._onExploreDblClick);
+        window.removeEventListener('pointerdown', this._onExploreDown, true);
         this._setGlobeKeyboard(false);   // R3 #9a: no Tab stop, back to its old place
         // Restore canvas z-index + content pointer-events + the hidden side panels.
         if (this.container) this.container.style.zIndex = (this._prevContainerZ != null ? this._prevContainerZ : '-5');
@@ -3734,6 +3740,7 @@ class SpaceEnvironment {
             this._wireZoomSlider();               // panel zoom slider (camera distance)
             this._wireStyleEditor();              // per-layer colour/opacity customiser
             this._wireMarkerList();               // R3 #9b: Live markers list (ISS + quakes)
+            this._wirePlaceSearch();              // F1: find any place, fly there, open its card
             panel.dataset.wired = '1';
         }
         this._applyExploreChrome(true);
@@ -4541,7 +4548,7 @@ class SpaceEnvironment {
         // 0,0, where the not-yet-projected markers sit) and clicks on the card itself
         // (its ✕) are not globe clicks.
         const t = event && event.target;
-        if (t && typeof t.closest === 'function' && t.closest('#explore-enter-btn, #explore-detail, #ep-marker-list')) return;
+        if (t && typeof t.closest === 'function' && t.closest('#explore-enter-btn, #explore-detail, #ep-marker-list, #explore-panel')) return;   // F1: panel clicks are not globe clicks
         const earth = this.getEarthObject();
         if (!earth) return;
         const rect = this._getCanvasRect();
@@ -4562,7 +4569,238 @@ class SpaceEnvironment {
             if (hits.length) u = hits[0].object.userData || {};
         }
         if (u) this._showDetail(u.name || 'Marker', u.info || '', false);
+        else if (!this._exploreWasDrag(event) && this._placeCardAtClick(earth, event, rect)) return;
         else this._hideDetail();
+    }
+
+    // ---- F1: focus anywhere (search + fly + place card) ----------------------------
+
+    /**
+     * Wire the place search combobox (ARIA 1.2 combobox + listbox): typing lists up to 8
+     * places, arrows move, Enter flies there and opens the card, Esc closes the list (then
+     * clears the field). The index loads on the first focus, never at page start.
+     * Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _wirePlaceSearch() {
+        console.assert(typeof document !== 'undefined', '_wirePlaceSearch: document required');
+        const input = document.getElementById('ep-search-input');
+        const list = document.getElementById('ep-search-list');
+        console.assert(input === null || input.nodeType === 1, '_wirePlaceSearch: bad input');
+        if (!input || !list || typeof PlaceSearch === 'undefined') return false;
+        this._searchResults = [];
+        this._searchActive = -1;
+        input.addEventListener('focus', () => this._ensurePlaceIndex());
+        input.addEventListener('input', () => this._runPlaceSearch(input.value));
+        input.addEventListener('keydown', (e) => this._placeSearchKey(e, input));
+        input.addEventListener('blur', () => setTimeout(() => this._closePlaceList(), 150));
+        // mousedown (not click) so the field keeps focus; the pick then closes the list.
+        list.addEventListener('mousedown', (e) => {
+            const li = e.target && e.target.closest ? e.target.closest('[role="option"]') : null;
+            if (!li) return;
+            e.preventDefault();
+            this._pickPlace(Number(li.dataset.i));
+        });
+        return true;
+    }
+
+    /** Build the search index once (lazy). Rule 5: 2 asserts. @returns {Promise<boolean>} */
+    _ensurePlaceIndex() {
+        console.assert(typeof PlaceSearch === 'function', '_ensurePlaceIndex: PlaceSearch loaded');
+        if (!this._placeSearch) this._placeSearch = new PlaceSearch();
+        console.assert(this._placeSearch, '_ensurePlaceIndex: instance');
+        const status = document.getElementById('ep-search-status');
+        if (!this._placeSearch.entries && status) status.textContent = 'Loading places…';
+        return this._placeSearch.ensureIndex().then((ok) => {
+            if (status && status.textContent === 'Loading places…') status.textContent = ok ? '' : 'Places could not load. Typed "lat, lng" still works.';
+            const input = document.getElementById('ep-search-input');
+            if (ok && input && input.value && document.activeElement === input) this._runPlaceSearch(input.value);
+            return ok;
+        });
+    }
+
+    /** Fill the listbox for a query. Rule 2: bounded | Rule 5: 2 asserts. */
+    _runPlaceSearch(query) {
+        console.assert(typeof query === 'string', '_runPlaceSearch: query string');
+        const list = document.getElementById('ep-search-list');
+        const input = document.getElementById('ep-search-input');
+        const status = document.getElementById('ep-search-status');
+        if (!list || !input) return false;
+        if (!this._placeSearch) this._placeSearch = new PlaceSearch();
+        const ps = this._placeSearch;
+        const res = query.trim() ? ps.search(query, PlaceSearch.LIMIT) : [];
+        this._searchResults = res;
+        this._searchActive = res.length ? 0 : -1;
+        list.textContent = '';
+        res.forEach((e, i) => {
+            const li = document.createElement('li');
+            li.id = 'ep-search-opt-' + i;
+            li.className = 'ep-search-opt';
+            li.setAttribute('role', 'option');
+            li.dataset.i = String(i);
+            const nm = document.createElement('span');
+            nm.textContent = e.name;
+            const kd = document.createElement('span');
+            kd.className = 'ep-so-kind';
+            kd.textContent = ps.kindLabel(e);
+            li.appendChild(nm); li.appendChild(kd);
+            list.appendChild(li);
+        });
+        list.hidden = !res.length;
+        input.setAttribute('aria-expanded', res.length ? 'true' : 'false');
+        this._markActiveOption();
+        if (status && ps.entries) status.textContent = (query.trim() && !res.length) ? 'No place found' : '';
+        console.assert(list.children.length === res.length, '_runPlaceSearch: one option per result');
+        return true;
+    }
+
+    /** aria-selected + aria-activedescendant follow the active option. Rule 5: 2 asserts. */
+    _markActiveOption() {
+        const list = document.getElementById('ep-search-list');
+        const input = document.getElementById('ep-search-input');
+        console.assert(Number.isInteger(this._searchActive), '_markActiveOption: index');
+        if (!list || !input) return false;
+        const opts = list.querySelectorAll('[role="option"]');
+        opts.forEach((o, i) => o.setAttribute('aria-selected', i === this._searchActive ? 'true' : 'false'));
+        const act = opts[this._searchActive];
+        if (act) { input.setAttribute('aria-activedescendant', act.id); act.scrollIntoView({ block: 'nearest' }); }
+        else input.removeAttribute('aria-activedescendant');
+        console.assert(opts.length === this._searchResults.length, '_markActiveOption: in sync');
+        return true;
+    }
+
+    /** Keys in the search field. Rule 5: 2 asserts. */
+    _placeSearchKey(e, input) {
+        console.assert(e && typeof e.key === 'string', '_placeSearchKey: key event');
+        console.assert(input && input.nodeType === 1, '_placeSearchKey: input');
+        const n = this._searchResults.length;
+        const open = input.getAttribute('aria-expanded') === 'true';
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!open) { this._runPlaceSearch(input.value); return; }
+            if (!n) return;
+            const d = e.key === 'ArrowDown' ? 1 : -1;
+            this._searchActive = (this._searchActive + d + n) % n;
+            this._markActiveOption();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (!n && input.value.trim()) this._runPlaceSearch(input.value);
+            if (this._searchResults.length) this._pickPlace(Math.max(0, this._searchActive));
+        } else if (e.key === 'Escape') {
+            // Esc closes the list, then clears the field; only an empty, closed field lets
+            // it through to the Explore Esc (exit).
+            if (open) { e.preventDefault(); e.stopPropagation(); this._closePlaceList(); }
+            else if (input.value) { e.preventDefault(); e.stopPropagation(); input.value = ''; }
+        }
+    }
+
+    _closePlaceList() {
+        const list = document.getElementById('ep-search-list');
+        const input = document.getElementById('ep-search-input');
+        console.assert(list === null || list.nodeType === 1, '_closePlaceList: bad list');
+        if (list) list.hidden = true;
+        if (input) { input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+        return true;
+    }
+
+    /** Fly to result i and open its card; the field keeps the chosen name. Rule 5: 2 asserts. */
+    _pickPlace(i) {
+        console.assert(Number.isInteger(i), '_pickPlace: index');
+        const e = this._searchResults && this._searchResults[i];
+        if (!e) return false;
+        const input = document.getElementById('ep-search-input');
+        if (input && e.kind !== 'point') input.value = e.name;
+        this._closePlaceList();
+        this._flyToPlace(e.lat, e.lng, PlaceSearch.flyDistance(e));
+        this._lastPlace = e;
+        console.assert(typeof this._showPlaceCard === 'function', '_pickPlace: card');
+        return this._showPlaceCard(e);
+    }
+
+    /**
+     * Fly so (lat,lng) faces the camera at distR Earth radii, on the same slerp path as the
+     * entry fly-in (never through the globe; a drag stops it). Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _flyToPlace(lat, lng, distR) {
+        console.assert(Number.isFinite(lat) && Number.isFinite(lng), '_flyToPlace: coords');
+        console.assert(distR > 1, '_flyToPlace: distance above the surface');
+        const earth = this.getEarthObject();
+        if (!earth || !earth.getMesh || !this.camera || !this.controls || !this.exploreMode) return false;
+        const R = (earth.data && earth.data.radius) || 2;
+        const earthPos = earth.getMesh().getWorldPosition(new THREE.Vector3());
+        const min = this._exploreMinDistance || R * 1.0013;
+        const dist = Math.max(min, Math.min(R * distR, this._exploreMaxDistance || R * 12));
+        this.controls.target.copy(earthPos);
+        return this._exploreEntryFlyIn(earth, earthPos, dist, { lat: lat, lng: lng });
+    }
+
+    /** Clock, quakes and ISS for a place card, from data Explore already holds. */
+    _placeCardContext() {
+        const earth = this.getEarthObject();
+        console.assert(earth === null || typeof earth === 'object', '_placeCardContext: bad earth');
+        let ms = Date.now();
+        if (this.timeManager && typeof this.timeManager.getJ2000Days === 'function') {
+            const d = this.timeManager.getJ2000Days();
+            if (Number.isFinite(d)) ms = Date.UTC(2000, 0, 1, 12) + d * 86400000;
+        }
+        const layers = (earth && earth.markers && earth.markers.layers) || {};
+        const q = layers.quakes && Array.isArray(layers.quakes.items) && earth.feeds && earth.feeds.quakes
+            && earth.feeds.quakes.okAt ? layers.quakes.items : null;
+        const it = layers.iss && Array.isArray(layers.iss.items) ? layers.iss.items[0] : null;
+        const iss = (it && !it.hidden && Number.isFinite(it.lat)) ? { lat: it.lat, lng: it.lng } : null;
+        console.assert(Number.isFinite(ms), '_placeCardContext: clock');
+        return { ms: ms, quakes: q, iss: iss };
+    }
+
+    /** Open the one place card for an index entry. Rule 5: 2 asserts. */
+    _showPlaceCard(e) {
+        console.assert(e && typeof e.name === 'string', '_showPlaceCard: entry');
+        if (!this._placeSearch) this._placeSearch = new PlaceSearch();
+        const d = this._placeSearch.describe(e, this._placeCardContext());
+        console.assert(Array.isArray(d.lines), '_showPlaceCard: lines');
+        return this._showDetail(d.title, d.lines.join('\n'), false);
+    }
+
+    /** True when the press that ended in this click moved more than a few pixels. */
+    _exploreWasDrag(event) {
+        console.assert(event && typeof event === 'object', '_exploreWasDrag: event');
+        const p = this._exploreDownXY;
+        if (!p || !Number.isFinite(event.clientX)) return false;
+        console.assert(Number.isFinite(p.x), '_exploreWasDrag: press point');
+        return Math.hypot(event.clientX - p.x, event.clientY - p.y) > 5;
+    }
+
+    /**
+     * A click on the globe (no marker): the region or country under the cursor opens the
+     * place card, using the same tier cascade as the hover tooltip. Ocean: false.
+     * Aims the raycaster from the click itself. Rule 5: 2 asserts.
+     * @returns {boolean} true when a card was shown
+     */
+    _placeCardAtClick(earth, event, rect) {
+        console.assert(earth && typeof earth === 'object', '_placeCardAtClick: Earth required');
+        if (typeof PlaceSearch === 'undefined' || typeof earth.regionAt !== 'function') return false;
+        this.camera.updateMatrixWorld();
+        this._ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+        this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
+        const ll = this._pickGlobeLatLng(earth, 1.00063);
+        if (!ll) return false;
+        const rr = this.camera.position.distanceTo(earth.getMesh().getWorldPosition(this._scratchEarthPos)) / (earth.data.radius || 2);
+        let tier = typeof earth.cascadeTierForDistance === 'function' ? earth.cascadeTierForDistance(rr) : 'country';
+        let name = earth.regionAt(tier, ll.lat, ll.lng);
+        if (!name && tier !== 'country') { tier = 'country'; name = earth.regionAt('country', ll.lat, ll.lng); }
+        if (!name && earth.countryAt) { tier = 'country'; name = earth.countryAt(ll.lat, ll.lng); }
+        if (!name) return false;
+        const feats = (earth.regionTiers && earth.regionTiers[tier]) || (tier === 'country' ? earth.countryShapes : null) || [];
+        const f = feats.find((x) => x && x.name === name);
+        const c = f && Array.isArray(f.rings) ? PlaceSearch.ringCentre(f.rings) : null;
+        if (!this._placeSearch) this._placeSearch = new PlaceSearch();
+        if (!this._placeSearch.countries && earth.countryShapes) this._placeSearch.countries = earth.countryShapes;
+        const e = { name: name, kind: tier === 'country' ? 'country' : 'region', pop: 0,
+            lat: c ? c.lat : ll.lat, lng: c ? c.lng : ll.lng, spanKm: c ? c.spanKm : 0, rings: f ? f.rings : null };
+        console.assert(Number.isFinite(e.lat), '_placeCardAtClick: entry centre');
+        this._lastPlace = e;
+        return this._showPlaceCard(e);
     }
 
     /**

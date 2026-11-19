@@ -544,6 +544,17 @@
                 <!-- LAYERS -->
                 <section class="ep-section" data-section="layers">
                     <div class="ep-sec-body" id="ep-layers-body" role="tabpanel" aria-labelledby="ep-tab-layers" tabindex="0">
+                        <!-- F1 focus anywhere: search any continent / country / region / city / "lat, lng".
+                             ARIA combobox + listbox, wired by SpaceEnvironment._wirePlaceSearch. The index
+                             (src/utils/PlaceSearch.js) is built on the first focus of the field. -->
+                        <div class="ep-search">
+                            <input type="search" id="ep-search-input" class="ep-search-input" autocomplete="off" spellcheck="false"
+                                   role="combobox" aria-expanded="false" aria-controls="ep-search-list" aria-autocomplete="list"
+                                   aria-label="Find a place: continent, country, region, city, or lat, lng"
+                                   placeholder="🔍 Find a place or lat, lng">
+                            <ul id="ep-search-list" class="ep-search-list" role="listbox" aria-label="Places found" hidden></ul>
+                            <div id="ep-search-status" class="ep-search-status" role="status" aria-live="polite"></div>
+                        </div>
                         <button type="button" class="ep-btn ep-btn--accent" id="explore-reset-view" aria-label="Reset the view to the whole Earth">🌍 Reset view</button>
                         <div class="ep-grid3">
                             <button type="button" class="ep-switch" id="explore-toggle-borders" aria-pressed="false" aria-label="Toggle country borders">🗺️ Borders</button>

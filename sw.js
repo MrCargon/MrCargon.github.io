@@ -59,6 +59,7 @@ const LAZY_CODE = [
     './src/utils/AtmosphereLayers.js',
     './src/utils/TroposphereObjects.js',
     './src/utils/ExplorePins.js',
+    './src/utils/PlaceSearch.js',
     './src/utils/PresencePins.js',
     './src/utils/PresenceConfig.js',
     './src/utils/Presence.js',

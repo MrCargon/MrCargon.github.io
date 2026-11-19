@@ -1,11 +1,16 @@
 <!-- Simplified Footer -->
 <footer class="main-footer">
     <div class="footer-bottom">
-        <p>&copy; <time datetime="2026">2026</time> Andrejs K. All rights reserved.</p>
-        <p class="footer-attribution" style="font-size:0.7rem; opacity:0.6; margin-top:4px;">
-            Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:inherit;">OpenStreetMap contributors</a> (ODbL),
-            tiles by <a href="https://openfreemap.org" target="_blank" rel="noopener" style="color:inherit;">OpenFreeMap</a> &middot;
-            Natural Earth &middot; DataSF &middot; Imagery &copy; Esri, Maxar, Earthstar Geographics
+        <p class="footer-copy">&copy; <time datetime="2026">2026</time> Andrejs K. All rights reserved.</p>
+        <!-- R3 #3/#4 (2026-11-19): styles moved to footer.css (the inline opacity:0.6 put this
+             text at 4.0:1 even over black). The imagery provider now leads, and in Explore
+             the strip wraps instead of ending in an ellipsis, so the Esri/Maxar credit is
+             always fully on screen, touch included (no hover needed). -->
+        <p class="footer-attribution">
+            Imagery &copy; Esri, Maxar, Earthstar Geographics &middot;
+            Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL),
+            tiles by <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &middot;
+            Natural Earth &middot; DataSF
         </p>
     </div>
 </footer>

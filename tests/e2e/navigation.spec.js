@@ -96,10 +96,12 @@ test.describe('Page Navigation', () => {
   });
 
   test('should have working header navigation', async ({ page }) => {
-    // Verify all header links exist
-    const homeLink = page.locator('a[href="#main"]');
-    const aboutLink = page.locator('a[href="#about"]');
-    const projectsLink = page.locator('a[href="#projects"]');
+    // Verify all header links exist. Scoped to the header: the landing identity card
+    // (R3 #1) carries its own "About / CV" link to #about, so a page-wide locator is ambiguous.
+    const header = page.locator('.main-header');
+    const homeLink = header.locator('a[href="#main"]');
+    const aboutLink = header.locator('a[href="#about"]');
+    const projectsLink = header.locator('a[href="#projects"]');
     const contactLink = page.locator('a[href="#contact"]');
 
     await expect(homeLink).toBeVisible();

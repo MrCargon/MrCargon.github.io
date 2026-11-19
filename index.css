@@ -593,13 +593,15 @@ body {
 }
 .ep-header strong { color: #66e8ff; font-size: 13px; white-space: nowrap; }
 .ep-close {
-  cursor: pointer; width: 26px; height: 26px; border-radius: 6px; line-height: 1;
+  cursor: pointer; width: 32px; height: 32px; border-radius: 6px; line-height: 1;
   border: 1px solid rgba(200, 120, 120, 0.5); background: rgba(120, 40, 40, 0.55); color: #fff;
 }
-.ep-info { padding: 4px 10px; font-size: 11px; line-height: 1.35; opacity: 0.78; border-bottom: 1px solid rgba(90, 150, 220, 0.15);
+/* R3 #3: was opacity 0.78 x 0.6 at 9 px for the hint (4.1:1). Small text stays >= 11 px
+   and the faded steps are gentle enough to keep every line above 4.5:1 on the panel. */
+.ep-info { padding: 4px 10px; font-size: 11px; line-height: 1.35; opacity: 0.92; border-bottom: 1px solid rgba(90, 150, 220, 0.15);
   display: flex; flex-wrap: wrap; column-gap: 6px; }
-.ep-info .ep-dist { opacity: 0.75; font-size: 10px; }
-.ep-info .ep-hint { flex-basis: 100%; opacity: 0.6; font-size: 9px; }
+.ep-info .ep-dist { opacity: 0.85; font-size: 11px; }
+.ep-info .ep-hint { flex-basis: 100%; opacity: 0.82; font-size: 11px; }
 .ep-zoom { display: flex; align-items: center; gap: 8px; padding: 3px 10px; border-bottom: 1px solid rgba(90, 150, 220, 0.15); }
 .ep-zoom input[type="range"] { flex: 1 1 auto; accent-color: var(--primary-color); cursor: pointer; }
 #explore-panel input[type="range"] { accent-color: var(--primary-color); cursor: pointer; }
@@ -643,7 +645,19 @@ body {
 .ep-iconbtn { cursor: pointer; width: 24px; height: 24px; flex: 0 0 auto; border-radius: 5px; line-height: 1;
   border: 1px solid rgba(120, 180, 255, 0.35); background: rgba(40, 70, 120, 0.5); color: #dce8ff; font-size: 12px; }
 .ep-iconbtn:hover { background: rgba(60, 100, 160, 0.65); }
-.ep-empty { opacity: 0.5; font-size: 11px; padding: 4px 2px; }
+.ep-empty { opacity: 0.8; font-size: 11px; padding: 4px 2px; }   /* R3 #3: was 0.5 (4.1:1) */
+/* R3 #2: Live tab in demo mode (Presence.js sets html[data-presence]). Default = live
+   wording; in demo the sample wording + chip show and the visitor count is hidden. */
+.presence-demo-only { display: none; }
+html[data-presence="demo"] .presence-live-only { display: none; }
+html[data-presence="demo"] span.presence-demo-only { display: inline; }
+html[data-presence="demo"] div.presence-demo-only { display: block; }
+html[data-presence="demo"] #explore-presence-count { display: none !important; }
+.ep-tab .ep-demo-chip { font-size: 9px; line-height: 1; padding: 2px 3px; border-radius: 5px;
+  background: rgba(255, 194, 74, 0.22); color: #ffe3a6; }
+/* "Live" + chip needs more room than one fifth of the 254 px strip. */
+html[data-presence="demo"] #ep-tab-presence { flex-grow: 1.6; }
+.ep-demo-note { color: #ffe3a6; }
 /* inline pin editor */
 .ep-editor { display: flex; flex-direction: column; gap: 6px; padding: 8px; margin-top: 4px;
   border: 1px solid rgba(120, 180, 255, 0.3); border-radius: 8px; background: rgba(16, 26, 48, 0.7); }
@@ -670,11 +684,14 @@ body {
 #explore-panel.ep-collapsed { height: auto; min-height: 0; max-height: none; resize: none; width: auto; min-width: 0; }
 #explore-panel.ep-collapsed .ep-header { border-bottom: 0; }
 
+/* R3 #8: was a bare 14 px glyph at opacity 0.75 in a 24x22 box (below the 24x24 AA
+   minimum, easy to miss). Now a bordered 32x32 button at full strength. */
 .ep-collapse {
-  background: none; border: 0; color: inherit; cursor: pointer;
-  font-size: 14px; line-height: 1; padding: 4px 6px; margin-left: auto; opacity: 0.75;
+  background: rgba(30, 50, 90, 0.6); border: 1px solid rgba(120, 180, 255, 0.45); border-radius: 6px;
+  color: #e6f0ff; cursor: pointer; font-size: 15px; line-height: 1; padding: 0; margin-left: auto;
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
 }
-.ep-collapse:hover { opacity: 1; }
+.ep-collapse:hover { background: rgba(45, 80, 140, 0.75); }
 /* The close button used to be pushed right by margin-left:auto on itself; the
    collapse button now owns that, so they sit together at the right edge. */
 #explore-panel .ep-header .ep-close { margin-left: 0; }
@@ -690,10 +707,10 @@ body {
   #explore-panel .ep-body { -webkit-overflow-scrolling: touch; }
   /* Collapsed on a phone: a small handle at the bottom-right, not a full-width bar. */
   #explore-panel.ep-collapsed { left: auto; }
-  .ep-tab { padding: 10px 2px 9px; font-size: 12px; }
+  .ep-tab { padding: 10px 2px 9px; font-size: 12px; min-height: 44px; }
   /* Bigger tap targets — 14px glyphs are below the ~44px accessible minimum. */
   #explore-panel .ep-collapse, #explore-panel .ep-close {
-    font-size: 18px; padding: 0; width: 40px; height: 40px;   /* fixed box: the glyph overflowed the 26 px button */
+    font-size: 18px; padding: 0; width: 44px; height: 44px;   /* fixed box: the glyph overflowed the 26 px button */
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -712,41 +729,54 @@ body {
 body.explore-active .planet-selector-wrapper,
 body.explore-active .selection-progress,
 body.explore-active .action-buttons-row,
-body.explore-active .time-panel-container { display: none !important; }
+body.explore-active .time-panel-container,
+body.explore-active .identity-card { display: none !important; }
 
+/* R3 #3 (2026-11-19): the pill used to be dimmed with opacity:0.72 on the WHOLE header,
+   so the links faded with their background: 2.0:1 over bright desert at 1.08R. Now only
+   the background is see-through-ish (dark + blur) and the text stays at full strength. */
 body.explore-active .main-header {
   width: fit-content; max-width: calc(100vw - 300px); margin: 6px auto; top: 6px;
-  padding: 0 8px; opacity: 0.72; pointer-events: auto;
-  transition: opacity 0.2s ease;
+  padding: 0 8px; pointer-events: auto;
+  background-color: rgba(10, 12, 20, 0.8);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
-body.explore-active .main-header:hover,
-body.explore-active .main-header:focus-within { opacity: 1; }
+body.explore-active .main-header .nav-link,
+body.explore-active .main-header .logo { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85); }
 body.explore-active .main-header .main-nav ul { gap: 2px; }
 body.explore-active .main-header .nav-link { padding: 4px 12px; font-size: 0.9rem; }
 body.explore-active .main-header .logo { font-size: 1rem; }
 
+/* R3 #4: the credits WRAP (two lines on desktop) instead of ending in an ellipsis that
+   only hover/focus could open: touch users never saw "Imagery © Esri, Maxar…", which the
+   comment above promised. Dark pill so 11 px text clears 4.5:1 over bright imagery (#3). */
 body.explore-active .main-footer {
   position: fixed; left: 8px; bottom: 4px; margin: 0; width: auto;
-  max-width: min(560px, calc(100vw - 290px)); padding: 2px 8px;
+  max-width: min(600px, calc(100vw - 290px)); padding: 3px 9px;
   border-radius: 8px; box-shadow: none; pointer-events: auto; text-align: left;
+  background-color: rgba(10, 12, 20, 0.82);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-body.explore-active .main-footer .footer-bottom { padding: 0; font-size: 10px; text-align: left; }
+body.explore-active .main-footer .footer-bottom { padding: 0; font-size: 11px; text-align: left; }
 body.explore-active .main-footer .footer-bottom > p:first-child { display: none; }
 body.explore-active .main-footer .footer-attribution {
-  margin: 0 !important; font-size: 10px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin: 0; font-size: 11px; line-height: 1.35; white-space: normal; color: rgba(255, 255, 255, 0.88);
 }
 body.explore-active .main-footer:hover .footer-bottom > p:first-child,
 body.explore-active .main-footer:focus-within .footer-bottom > p:first-child { display: block; }
-body.explore-active .main-footer:hover .footer-attribution,
-body.explore-active .main-footer:focus-within .footer-attribution { white-space: normal; }
 
 @media (max-width: 835px) {
   body.explore-active .main-header { width: 95%; max-width: none; padding: 2px 8px; top: 4px; margin: 4px auto; }
-  body.explore-active .main-header .mobile-menu-toggle { width: 36px; height: 36px; }
+  /* R3 #8: was 36x36; 44 is the phone guideline. */
+  body.explore-active .main-header .mobile-menu-toggle { width: 44px; height: 44px; }
 }
 @media (max-width: 600px) {
-  /* The panel is a bottom sheet here; the credit strip sits under it, full width. */
+  /* The panel is a bottom sheet here; the credit strip sits under it, full width.
+     The strip now wraps (3 lines at 390 px), so the sheet sits above it, not on it. */
   body.explore-active .main-footer { left: 8px; right: 8px; max-width: none; }
+  body.explore-active #explore-panel { bottom: 62px; }
+  /* The marker card (inline bottom:96px) would now sit on the raised panel handle. */
+  body.explore-active #explore-detail { bottom: 132px !important; }
 }
 
 .bubble-container {

@@ -11,7 +11,7 @@ visible attribution.** The credits below are surfaced in the site footer.
 ## Footer credit (short form — REQUIRED visible)
 
 > Map data © OpenStreetMap contributors (ODbL), tiles by OpenFreeMap · Natural
-> Earth (public domain) · SF neighborhoods: DataSF.
+> Earth (public domain).
 
 The OpenStreetMap line is a license obligation (ODbL §4.3) and must stay visible
 wherever the street basemap is rendered. The rest are courtesy credits.
@@ -91,26 +91,6 @@ wherever the street basemap is rendered. The rest are courtesy credits.
 - **Processing:** sorted by `POP_MAX` descending, capped to the top 2000, coordinates rounded to 4 decimals.
 - **Shape:** `{ "places": [ { "name": "...", "lat": <num>, "lng": <num>, "pop": <int> }, ... ] }` (sorted by `pop` descending)
 
-### `districts-sf.json` — San Francisco neighborhood boundary lines
-
-- **Source:** DataSF — Analysis Neighborhoods (41 official SF neighborhoods)
-- **License:** Public Domain (DataSF datasets are released under the Public Domain Dedication and License / open data terms — free for any use, including commercial)
-- **URL:** https://data.sfgov.org/Geographic-Locations-and-Boundaries/Analysis-Neighborhoods/j2bu-swwd
-- **API endpoint used:** https://data.sfgov.org/resource/j2bu-swwd.geojson
-- **Processing:** simplified with mapshaper (`-simplify 12% keep-shapes`), coordinates rounded to 5 decimals (~1 m), converted from MultiPolygon boundaries to flat rings.
-- **Shape:** `{ "rings": [ [ [lng, lat], ... ], ... ] }` (neighborhood boundary rings; renders with the same loop as the other line layers)
-
-### `districts-sf-named.json` — San Francisco neighborhoods (named, point-in-polygon)
-
-- **Source:** DataSF — Analysis Neighborhoods (41 official SF neighborhoods)
-- **License:** Public Domain (DataSF datasets are released under the Public Domain Dedication and License / PDDL — free for any use, including commercial; no attribution required)
-- **URL:** https://data.sfgov.org/Geographic-Locations-and-Boundaries/Analysis-Neighborhoods/j2bu-swwd
-- **API endpoint used:** https://data.sfgov.org/resource/j2bu-swwd.geojson
-- **`name` field:** the `nhood` property (e.g. "Mission", "Castro/Upper Market", "Sunset/Parkside")
-- **Processing:** simplified with mapshaper (`-simplify 12% keep-shapes`), coordinates rounded to 5 decimals (~1 m), MultiPolygon flattened to filled rings.
-- **Shape:** `{ "features": [ { "name": "<nhood>", "rings": [ [ [lng, lat], ... ], ... ] }, ... ] }` (named fill polygons for point-in-polygon hover lookup)
-- **Stats:** 41 features, ~138 KB.
-
 ### `counties-us-named.json` — US counties (named, point-in-polygon "areas" tier)
 
 - **Source:** US Census Bureau TIGER / cartographic county boundaries (public domain), via the Plotly datasets mirror.
@@ -122,17 +102,6 @@ wherever the street basemap is rendered. The rest are courtesy credits.
 - **Shape:** `{ "features": [ { "name": "<County>, <ST>", "rings": [ [ [lng, lat], ... ], ... ] }, ... ] }`
 - **Stats:** 3221 features, ~567 KB.
 
-### `zip-sf-named.json` — San Francisco Bay Area ZIP codes / ZCTA (named, point-in-polygon)
-
-- **Source:** US Census Bureau ZIP Code Tabulation Areas (ZCTA, 2010 series, public domain), California subset via the OpenDataDE state ZIP GeoJSON mirror, clipped to the Bay Area.
-- **License:** Public Domain (US Census ZCTA products are not subject to copyright)
-- **URL:** https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ca_california_zip_codes_geo.min.json
-- **Upstream:** https://www.census.gov/geographies/reference-files/time-series/geo/zcta.html
-- **`name` field:** the `ZCTA5CE10` property = the 5-digit ZIP string (e.g. "94110", "94103", "94122")
-- **Processing:** clipped to the Bay Area bbox (`-clip bbox=-123.2,36.9,-121.5,38.5`), simplified with mapshaper (`-simplify 6% keep-shapes`), coordinates rounded to 3 decimals, Polygon/MultiPolygon flattened to filled rings.
-- **Shape:** `{ "features": [ { "name": "<ZIP5>", "rings": [ [ [lng, lat], ... ], ... ] }, ... ] }`
-- **Stats:** 326 features, ~391 KB.
-
 ---
 
 ## Notes on sourcing decisions
@@ -141,9 +110,4 @@ wherever the street basemap is rendered. The rest are courtesy credits.
   public domain (zero attribution obligation), whereas GeoNames is CC BY 4.0
   (attribution required). Natural Earth's `POP_MAX` gave a clean top-2000 with
   real populations, so no keyed source was needed.
-- **Why DataSF for SF** instead of OSM/Overture: DataSF "Analysis Neighborhoods"
-  is the city's own official 41-neighborhood layer, public domain, no key, and
-  far cleaner than scraping OSM relations. (OSM/Overture would be ODbL/CC0 and
-  also acceptable, but lower quality for this specific cut.)
-- All sources were fetched live from public GitHub mirrors / the Socrata open
-  data API; none required an API key.
+- All sources were fetched live from public GitHub mirrors; none required an API key.

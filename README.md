@@ -15,7 +15,7 @@ What is actually in the code, with the file and function for each point, so any 
 
 ### 2. Level of detail and a map-tile engine on the globe
 
-- **`GeoLOD`** (`src/utils/GeoLOD.js`) - states, cities and districts each fade in inside a camera-distance band, with hysteresis (`showBelow` < `hideAbove`) so a tier does not flicker at its edge. One draw call per tier; `update()` walks a pre-built list, so there is no per-frame allocation.
+- **`GeoLOD`** (`src/utils/GeoLOD.js`) - states and cities each fade in inside a camera-distance band, with hysteresis (`showBelow` < `hideAbove`) so a tier does not flicker at its edge. One draw call per tier; `update()` walks a pre-built list, so there is no per-frame allocation.
 - **`StreetTiles`** (vector, OpenFreeMap) and **`SatelliteTiles`** (Esri imagery) in `src/utils/`. `zoomForDistance()` picks the zoom from how much ground the camera sees (altitude and field of view), then holds the level inside a 0.25-level deadband. Before that deadband, a camera parked on a level boundary flipped levels 116 times in 200 ticks and re-downloaded the whole tile set each time (measured during development; the numbers are in the code comment).
 - `StreetTiles.update()` does no work when the covering set of tiles has not changed, keeps the old tiles visible until the new set has fully loaded (no blank flash while zooming), and `_abortStale()` cancels in-flight downloads with `AbortController` when the camera has already moved on.
 - Tile memory is bounded: `_evict()` drops the least recently used tiles past a cap and `_disposeMesh()` frees their GPU geometry, material and texture. Failed tiles retry with exponential backoff and full jitter, 30 s up to 5 min (`_scheduleRetry()`).

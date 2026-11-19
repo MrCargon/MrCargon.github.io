@@ -40,9 +40,8 @@ class TroposphereObjects {
         this.weather = [];          // { mesh, lat, lng, baseR, phase }
         // Pre-seeded placements (bounded). Hot-air balloons cluster over scenic spots;
         // jets cruise common corridors; weather balloons scatter. lat/lng + colour.
-        // Spread across the globe (NOT clustered over SF, where they overlapped the
-        // "Based in SF" marker and read as floating pins). One near the Bay, the rest
-        // on other continents.
+        // Spread across the globe (not clustered over any one city, where they read as
+        // floating pins), on several continents.
         this.balloonSeeds = opts.balloonSeeds || [
             { lat: 38.6, lng: -121.5, color: 0xff5a4a }, { lat: 45.5, lng: -98.0, color: 0x4aa3ff },
             // R1 #5: these two sat exactly on the London and Rome pins and hid them; moved

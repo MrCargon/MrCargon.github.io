@@ -136,12 +136,12 @@ class SpaceEnvironment {
         this.bordersUrl = 'src/assets/geo/country_borders.json';
         // localStorage key for persisting which explore layers were toggled on.
         this._exploreLayersKey = 'mrcargon.explore.layers';
-        // Zoom level-of-detail auto-reveal (states/cities/districts). Default ON.
+        // Zoom level-of-detail auto-reveal (states/cities). Default ON.
         this._lodEnabled = true;
         // Individual Detail sub-toggles (under the master). Default all on; persisted
-        // inside the layer state. satellite/streets use setVisible; states/cities/
-        // districts drive geoLOD tier visibility.
-        this._detailLayers = { satellite: true, streets: true, states: true, cities: true, districts: true };
+        // inside the layer state. satellite/streets use setVisible; states/cities
+        // drive geoLOD tier visibility.
+        this._detailLayers = { satellite: true, streets: true, states: true, cities: true };
         // Pin editor state: which pin id is being edited + whether a globe click
         // should relocate it (Move mode).
         this._editingPinId = null;
@@ -2428,7 +2428,7 @@ class SpaceEnvironment {
 
         this._restoreExploreLayers(earth);
         // Click a marker → detail card; hover the surface → cascade region highlight +
-        // name (country→state→county→district→zip, finest loaded tier for the zoom).
+        // name (country→state→county, finest loaded tier for the zoom).
         if (typeof earth.buildRegionTiers === 'function') earth.buildRegionTiers();
         if (typeof earth.buildCountryHover === 'function') earth.buildCountryHover();
         // Cloud shadows + 4k day map: first use is here, never before Explore.
@@ -2935,7 +2935,7 @@ class SpaceEnvironment {
         console.assert(typeof enabled === 'boolean', '_applyLodState: enabled must be boolean');
         const lod = earth && earth.geoLOD;
         // "Detail" governs BOTH the LOD geography AND the street basemap so the one
-        // toggle is coherent (off = no states/cities/districts AND no streets).
+        // toggle is coherent (off = no states/cities AND no streets).
         if (earth && earth.streetTiles && typeof earth.streetTiles.setVisible === 'function') {
             earth.streetTiles.setVisible(enabled);
         }
@@ -2945,7 +2945,7 @@ class SpaceEnvironment {
         if (!lod) return !!(earth && earth.streetTiles);
         if (typeof lod.setAuto === 'function') lod.setAuto(enabled);
         if (!enabled && typeof lod.setTierVisible === 'function') {
-            ['states', 'cities', 'districts'].forEach((t) => lod.setTierVisible(t, false));
+            ['states', 'cities'].forEach((t) => lod.setTierVisible(t, false));
         }
         return true;
     }
@@ -3131,7 +3131,7 @@ class SpaceEnvironment {
     /**
      * Re-orient the globe so a chosen (lat,lng) faces the camera, keeping the
      * centre-orbit pivot (you then spin the globe around it). Used by clicking any
-     * place / region / zip. Holds the current zoom distance.
+     * place / region. Holds the current zoom distance.
      * Rule 4: <=60 lines | Rule 5: 2 asserts.
      * @returns {boolean}
      */
@@ -3264,7 +3264,7 @@ class SpaceEnvironment {
     }
 
     /**
-     * Drive the zoom level-of-detail geography (states → cities → districts) from
+     * Drive the zoom level-of-detail geography (states → cities) from
      * the camera distance while exploring. GeoLOD lazily builds + cross-fades each
      * tier; safe no-op if absent. Called per-frame only while exploreMode.
      * Rule 4: <=60 lines.
@@ -3312,7 +3312,7 @@ class SpaceEnvironment {
         // its centre — like Google Earth's globe view — rather than tilting the camera
         // around a fixed surface point (the surface-pivot version felt wrong). Fine
         // close-up control comes from scaling rotate speed with ALTITUDE (rr-1): tiny
-        // near the surface, normal far. "Center on <place/zip>" re-orients which point
+        // near the surface, normal far. "Center on <place>" re-orients which point
         // faces you; you then spin the globe around it. Pivot gently held at centre.
         if (this.controls) {
             if (!this.cameraTransitioning) this.controls.target.lerp(earthPos, 0.2);
@@ -3506,8 +3506,8 @@ class SpaceEnvironment {
     }
 
     /**
-     * Show + wire the explore location panel (SF info, distance readout, Center-
-     * on-SF, Borders/Grid/ISS/Quakes/Places toggles). Idempotent. Rule 4: <=60.
+     * Show + wire the explore location panel (info, distance readout, Center-
+     * on, Borders/Grid/ISS/Quakes/Places toggles). Idempotent. Rule 4: <=60.
      * @returns {boolean}
      */
     /**
@@ -3729,7 +3729,7 @@ class SpaceEnvironment {
             const collapse = document.getElementById('explore-collapse');
             if (collapse) collapse.addEventListener('click', () => this._onExploreCollapseClick());
             this._wireExploreSections(panel);     // collapsible section headers
-            this._wireDetailSubToggles();         // satellite/streets/states/cities/districts
+            this._wireDetailSubToggles();         // satellite/streets/states/cities
             this._wirePinControls();              // add / editor / list delegation
             this._wireZoomSlider();               // panel zoom slider (camera distance)
             this._wireStyleEditor();              // per-layer colour/opacity customiser
@@ -3862,13 +3862,13 @@ class SpaceEnvironment {
         return true;
     }
 
-    // Wire the five Detail sub-toggles (satellite/streets/states/cities/districts).
+    // Wire the four Detail sub-toggles (satellite/streets/states/cities).
     // Rule 4: <=60 lines.
     _wireDetailSubToggles() {
         console.assert(typeof document !== 'undefined', '_wireDetailSubToggles: document required');
         console.assert(this._detailLayers, '_wireDetailSubToggles: state required');
         const map = { satellite: 'ep-toggle-satellite', streets: 'ep-toggle-streets',
-            states: 'ep-toggle-states', cities: 'ep-toggle-cities', districts: 'ep-toggle-districts' };
+            states: 'ep-toggle-states', cities: 'ep-toggle-cities' };
         Object.keys(map).forEach((key) => {
             const btn = document.getElementById(map[key]);
             if (btn) btn.addEventListener('click', () => this._toggleDetailSub(key, btn));
@@ -3888,8 +3888,8 @@ class SpaceEnvironment {
         return true;
     }
 
-    // Apply the five Detail sub-flags to their engines, gated by the master (_lodEnabled).
-    // satellite/streets via setVisible; states/cities/districts via geoLOD (auto-reveal
+    // Apply the four Detail sub-flags to their engines, gated by the master (_lodEnabled).
+    // satellite/streets via setVisible; states/cities via geoLOD (auto-reveal
     // when ALL geo tiers on + master on, else manual per-tier). Rule 4: <=60 lines.
     _applyDetailLayers(earth) {
         console.assert(earth === null || typeof earth === 'object', '_applyDetailLayers: bad earth');
@@ -3904,12 +3904,11 @@ class SpaceEnvironment {
         }
         const lod = earth.geoLOD;
         if (lod && typeof lod.setTierVisible === 'function') {
-            const allTiers = d.states && d.cities && d.districts;
+            const allTiers = d.states && d.cities;
             if (typeof lod.setAuto === 'function') lod.setAuto(on && allTiers);
             if (!(on && allTiers)) {
                 lod.setTierVisible('states', on && d.states);
                 lod.setTierVisible('cities', on && d.cities);
-                lod.setTierVisible('districts', on && d.districts);
             }
         }
         return true;
@@ -3980,14 +3979,13 @@ class SpaceEnvironment {
         console.assert(typeof this === 'object', '_styleDefaults: instance');
         console.assert(true, '_styleDefaults: ok');
         // Globe palette (GlobeMarkers.PALETTE, roast R1 #3/#4): cities warm white at 60%
-        // (yellow is the places'), states steel blue, districts amber (not border cyan).
+        // (yellow is the places'), states steel blue.
         const P = (typeof GlobeMarkers !== 'undefined' && GlobeMarkers.PALETTE) ? GlobeMarkers.PALETTE
-            : { state: 0x5f8fc8, city: 0xfff0dc, district: 0xffb85c };
+            : { state: 0x5f8fc8, city: 0xfff0dc };
         return {
             streets:   { color: 0xf2dcb0, opacity: 0.6, width: 2 },    // F4: soft sand; StreetTiles scales by zoom
             states:    { color: P.state, opacity: 1.0 },
-            cities:    { color: P.city, opacity: 0.6 },
-            districts: { color: P.district, opacity: 1.0 }
+            cities:    { color: P.city, opacity: 0.6 }
         };
     }
 
@@ -4141,12 +4139,12 @@ class SpaceEnvironment {
         return true;
     }
 
-    // Sync the five sub-toggle buttons' aria-pressed to the flags. Rule 5: 2 asserts.
+    // Sync the four sub-toggle buttons' aria-pressed to the flags. Rule 5: 2 asserts.
     _syncDetailSubToggles() {
         console.assert(this._detailLayers, '_syncDetailSubToggles: state required');
         console.assert(typeof document !== 'undefined', '_syncDetailSubToggles: document required');
         const map = { satellite: 'ep-toggle-satellite', streets: 'ep-toggle-streets',
-            states: 'ep-toggle-states', cities: 'ep-toggle-cities', districts: 'ep-toggle-districts' };
+            states: 'ep-toggle-states', cities: 'ep-toggle-cities' };
         Object.keys(map).forEach((k) => {
             const btn = document.getElementById(map[k]);
             if (btn) btn.setAttribute('aria-pressed', this._detailLayers[k] ? 'true' : 'false');
@@ -4491,7 +4489,7 @@ class SpaceEnvironment {
     }
 
     /**
-     * Toggle zoom level-of-detail auto-reveal (states/cities/districts). When turned
+     * Toggle zoom level-of-detail auto-reveal (states/cities). When turned
      * off, stops auto-reveal and hides all tiers; when on, resumes auto-reveal.
      * No-ops if geoLOD is absent. Rule 5: 2 asserts.
      * @param {HTMLElement} btn
@@ -4662,9 +4660,9 @@ class SpaceEnvironment {
 
     /**
      * Pick a lat/lng by intersecting the current camera ray with the OVERLAY SHELL
-     * (rMult × globe radius), not the base sphere. The map/streets/districts render a
+     * (rMult × globe radius), not the base sphere. The map/streets/borders render a
      * few hundred metres ABOVE the base surface, so a base-sphere pick is parallax-
-     * shifted from what the user sees (hovering one district selected another). Picking
+     * shifted from what the user sees (hovering one region selected another). Picking
      * at the shell the overlays live on makes the pick match the visual. Analytic ray↔
      * sphere (caller must have called raycaster.setFromCamera). Rule 4: <=60 lines.
      * @returns {{lat:number,lng:number}|null}
@@ -4691,7 +4689,7 @@ class SpaceEnvironment {
     }
 
     /**
-     * Double-click a point on the globe (or a hovered region / zip) to RE-CENTER the
+     * Double-click a point on the globe (or a hovered region) to RE-CENTER the
      * view there — the globe rotates so that point faces you, then you spin around it
      * (centre-orbit). The "set other surface points" interaction. Rule 4: <=60 lines.
      * @param {MouseEvent} event
@@ -4754,9 +4752,9 @@ class SpaceEnvironment {
         this.camera.updateMatrixWorld();
         earth.mesh.updateMatrixWorld();
         this._exploreRaycaster.setFromCamera(this._ndc, this.camera);
-        // Pick at the OVERLAY shell (where districts/streets render), not the base
+        // Pick at the OVERLAY shell (where borders/streets render), not the base
         // sphere — otherwise parallax selects a neighbouring region (the reported
-        // "hover one district, select another"). 1.0007 ≈ the tight overlay band.
+        // "hover one region, select another"). 1.0007 ≈ the tight overlay band.
         const ll = this._pickGlobeLatLng(earth, 1.00063);
         if (!ll) {
             if (typeof earth.highlightRegion === 'function') earth.highlightRegion(null, null);
@@ -4765,7 +4763,7 @@ class SpaceEnvironment {
             return;
         }
         // CASCADE: pick the finest loaded tier for the current zoom (country→state→
-        // county→district→zip); if it has no region under the cursor, fall back to
+        // county); if it has no region under the cursor, fall back to
         // country so there's always a name. Name + tier label in the tooltip.
         const rr = this.camera.position.distanceTo(
             earth.getMesh().getWorldPosition(this._scratchEarthPos)) / (earth.data.radius || 2);

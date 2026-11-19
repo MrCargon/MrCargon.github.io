@@ -1,7 +1,7 @@
 // GeoLOD.js - zoom level-of-detail subsystem for the portfolio explore globe.
 // Progressively reveals geographic detail as the camera zooms toward Earth:
-//   countries (already exist as Earth.borders) -> states/provinces -> cities ->
-//   city districts. Each NEW tier cross-fades by camera distance (in Earth radii)
+//   countries (already exist as Earth.borders) -> states/provinces -> cities
+//   (no single-city layers; every place gets the same detail). Each NEW tier cross-fades by camera distance (in Earth radii)
 //   with hysteresis (showBelow < hideAbove) so it does not flicker at the boundary.
 //
 // Pattern mirrors Earth.buildBorders/buildGraticule: ONE draw call per tier
@@ -31,20 +31,20 @@ class GeoLOD {
         this.tiers = new Map();
         // rOffset stack sits ABOVE the existing Earth overlays (borders 1.006,
         // country-highlight 1.007) and is ordered more-detail = higher offset so
-        // the tiers never z-fight each other or the highlight: states<cities<districts.
+        // the tiers never z-fight each other or the highlight: states<cities.
         // showBelow/hideAbove = the upper (appear) edge; fadeOutBelow = the lower
-        // edge where a COARSER tier hands off to finer detail (streets/satellite/
-        // districts) so close-up isn't a 6-layer pile-up. fadeOutBelow=0 means the
-        // tier stays to the surface (districts, the finest vector for SF).
+        // edge where a COARSER tier hands off to finer detail (streets/satellite)
+        // so close-up isn't a 6-layer pile-up. fadeOutBelow=0 means the tier stays
+        // to the surface. No single-city tier: the globe treats every place alike (F3).
         // rOffsets hug the satellite map (1.0006) — COPLANAR like the streets ("in the
         // map", not floating). Tiny increments keep the draw order (finer on top) while
         // the gaps (<30m) are imperceptible; the satellite's polygonOffset lets these
         // lines win the depth test without z-fighting.
         // Colours come from the one globe palette (GlobeMarkers.PALETTE, roast R1 #3/#4):
         // states = dashed steel blue under the solid cyan borders, cities = small
-        // warm-white dots (yellow is the places'), districts = amber (not border cyan).
+        // warm-white dots (yellow is the places').
         const P = (typeof GlobeMarkers !== 'undefined' && GlobeMarkers.PALETTE) ? GlobeMarkers.PALETTE
-            : { state: 0x5f8fc8, city: 0xfff0dc, district: 0xffb85c };
+            : { state: 0x5f8fc8, city: 0xfff0dc };
         const defs = [
             { name: 'states', url: 'src/assets/geo/admin1-50m.json', kind: 'lines', dash: true,
                 color: P.state, rOffset: 1.00060, showBelow: 2.4, hideAbove: 2.7, fadeOutBelow: 1.45 },
@@ -52,9 +52,7 @@ class GeoLOD {
                 color: P.city, rOffset: 1.00062, showBelow: 1.7, hideAbove: 1.95, fadeOutBelow: 1.2,
                 // Declutter: places are sorted by population; only the biggest ~15%
                 // show at the top of the band (1.75R), all of them by 1.25R.
-                declutter: [1.75, 1.25, 0.15] },
-            { name: 'districts', url: 'src/assets/geo/districts-sf.json', kind: 'lines-or-points',
-                color: P.district, rOffset: 1.00064, showBelow: 1.3, hideAbove: 1.5, fadeOutBelow: 0 }
+                declutter: [1.75, 1.25, 0.15] }
         ];
         for (let i = 0; i < defs.length; i++) {
             const d = defs[i];

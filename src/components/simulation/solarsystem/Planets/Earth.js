@@ -90,14 +90,14 @@ class Earth extends Planet {
         this.countryHighlight = null;
         this._hoverCountry = null;
 
-        // Cascade hover: named-polygon tiers (country→state→county→district→zip),
+        // Cascade hover: named-polygon tiers (country→state→county),
         // lazily loaded from src/assets/geo/*. Each entry is [{name, rings}]. Missing
         // tier files are skipped so deeper tiers light up when their data lands.
         this.regionTiers = {};
         this.regionHighlight = null;
         this._hoverRegionKey = null;
 
-        // Zoom level-of-detail geography (states/cities/districts), revealed by
+        // Zoom level-of-detail geography (states/cities), revealed by
         // camera distance in explore mode. Created in init() once mesh exists.
         this.geoLOD = null;
         // High-zoom OpenStreetMap street tiles projected on the globe (lazy).
@@ -1322,7 +1322,7 @@ class Earth extends Planet {
         return name;
     }
 
-    // ---- Cascade hover: country → state → county → district → zip ----
+    // ---- Cascade hover: country → state → county ----
 
     // Fetch JSON via SafeFetch (fallback fetch). Never throws. Rule 5: 2 asserts.
     static async _fetchJson(url) {
@@ -1510,15 +1510,13 @@ class Earth extends Planet {
 
 // Cascade-hover tier definitions (coarsest → finest). `showTo` = the max camera
 // distance (Earth radii) at which the tier is the active hover layer; the hover
-// picks the FINEST loaded tier whose showTo covers the current distance. county/
-// district/zip files may not exist yet — they auto-enable once added (buildRegionTiers
-// skips missing files). Classic-script static (defined after the class, not a field).
+// picks the FINEST loaded tier whose showTo covers the current distance. A missing
+// file is skipped (buildRegionTiers). No single-city tiers (F3, privacy): every
+// place on the globe gets the same detail. Classic-script static (defined after the class, not a field).
 Earth.REGION_TIER_DEFS = [
     { key: 'country',  url: 'src/assets/geo/country_shapes.json',     color: 0xffe680, rOffset: 1.00061, showTo: Infinity },
     { key: 'state',    url: 'src/assets/geo/states-named.json',       color: 0x9fe0ff, rOffset: 1.00062, showTo: 2.4 },
-    { key: 'county',   url: 'src/assets/geo/counties-us-named.json',  color: 0xb6ffd0, rOffset: 1.00063, showTo: 1.7 },
-    { key: 'district', url: 'src/assets/geo/districts-sf-named.json', color: 0xffc6f0, rOffset: 1.00065, showTo: 1.35 },
-    { key: 'zip',      url: 'src/assets/geo/zip-sf-named.json',       color: 0xffd2a6, rOffset: 1.00066, showTo: 1.22 }
+    { key: 'county',   url: 'src/assets/geo/counties-us-named.json',  color: 0xb6ffd0, rOffset: 1.00063, showTo: 1.7 }
 ];
 
 // The globe palette lives in GlobeMarkers.PALETTE (loaded first, see index.html).

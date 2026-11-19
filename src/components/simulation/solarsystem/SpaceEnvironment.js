@@ -152,6 +152,7 @@ class SpaceEnvironment {
         this._scratchCamPos = new THREE.Vector3();
         this._scratchSurf = new THREE.Vector3();      // surface look-at point (orbit pivot)
         this._scratchTarget = new THREE.Vector3();     // blended orbit target
+        this._entryFlyId = 0;                          // P28: bumping it cancels the entry fly-in
         this._exploreRaycaster = new THREE.Raycaster();
         this._ndc = new THREE.Vector2();
         // Throttle for _updateStreets (2026-08-14 perf fix): it was running
@@ -2223,11 +2224,10 @@ class SpaceEnvironment {
         this.controls.enabled = true;
         this.controls.minDistance = this._exploreMinDistance;
         this.controls.maxDistance = this._exploreMaxDistance;
-        // Dolly to a close initial framing (~3x radius). Reuses scratch (no alloc).
-        const camDir = this._scratchCamPos.copy(this.camera.position).sub(earthPos).normalize();
-        if (camDir.lengthSq() < 1e-6) camDir.set(0, 0, 1);
-        this.camera.position.copy(earthPos).addScaledVector(camDir, radius * 3.0);
+        // Fly in to a close framing (~3x radius) that faces San Francisco (P28): keeping the
+        // old camera direction showed whatever the clock's GMST spin put there.
         this.controls.target.copy(earthPos);
+        this._exploreEntryFlyIn(earth, earthPos, radius * 3.0);
         this.controls.enablePan = false; // pan would drift off the globe
         // Inertial damping for smooth, consistent drag/zoom (the animate loop already
         // calls controls.update() every frame, which damping requires). Restored on exit.
@@ -2242,6 +2242,7 @@ class SpaceEnvironment {
         // (far, fast) speed and flung the view off the city. The 'start' event fires on
         // pointer-down, before any rotation is applied.
         this._onExploreControlStart = () => {
+            this._entryFlyId++;        // P28: a drag during the entry fly-in takes over from it
             this._endExploreIntro();   // R3 #11: first drag / wheel / pinch hides the intro
             const e = this.getEarthObject();
             if (!e || !this.controls) return;
@@ -2296,6 +2297,58 @@ class SpaceEnvironment {
         this._updateExploreButton();   // hides the opt-in button while exploring
         console.log('Entered Explore Earth mode');
         return true;
+    }
+
+    /**
+     * The Explore entry fly-in (P28). It ends on the ray from Earth's centre through San
+     * Francisco, the view "Center on SF" gives, at `dist`. The path swings the direction
+     * round the globe (a quaternion slerp) while the distance eases in, so it never cuts
+     * through the Earth even when SF starts on the far side. A drag (controls 'start') or
+     * exit bumps _entryFlyId and the flight stops where it is. Reduced motion: no flight,
+     * the camera is placed (as centerOnLatLng does, P23). Rule 5: 2 asserts.
+     * @returns {boolean} true when the camera was aimed at SF
+     */
+    _exploreEntryFlyIn(earth, earthPos, dist) {
+        console.assert(earth && earthPos && earthPos.isVector3, '_exploreEntryFlyIn: Earth + centre required');
+        console.assert(dist > 0, '_exploreEntryFlyIn: distance required');
+        const centre = earthPos.clone();
+        const from = this.camera.position.clone().sub(centre);
+        from.divideScalar(Math.max(from.length(), 1e-6));
+        if (from.lengthSq() < 0.5) from.set(0, 0, 1);
+        // Start no further out than 2x the end (6R): entered from far away (a script, or
+        // before the fly-to Earth lands) the first frame would pass the 9R zoom-out exit.
+        const fromDist = Math.min(this.camera.position.distanceTo(centre), dist * 2);
+        const to = from.clone();
+        const c = earth.markerCoords;
+        const ok = !!(c && typeof GlobeMath !== 'undefined' && earth.data);
+        if (ok) {
+            const mesh = earth.getMesh();
+            mesh.updateWorldMatrix(true, false);
+            mesh.localToWorld(to.copy(GlobeMath.latLngToVector3(c.lat, c.lng, earth.data.radius)));
+            to.sub(centre).normalize();
+        }
+        const id = ++this._entryFlyId;
+        const place = (dir, d) => {
+            this.camera.position.copy(centre).addScaledVector(dir, d);
+            this.controls.target.copy(centre);
+            this.controls.update();
+        };
+        if (this.prefersReducedMotion()) { place(to, dist); return ok; }
+        const turn = new THREE.Quaternion().setFromUnitVectors(from, to);
+        const q = new THREE.Quaternion();
+        const dir = new THREE.Vector3();
+        const t0 = performance.now();
+        const ms = this.transitionDuration * 1000;
+        const step = () => {
+            if (id !== this._entryFlyId || !this.exploreMode) return;
+            const k = Math.min((performance.now() - t0) / ms, 1);
+            const e = this.easeInOutCubic(k);
+            q.identity().slerp(turn, e);
+            place(dir.copy(from).applyQuaternion(q), fromDist + (dist - fromDist) * e);
+            if (k < 1) requestAnimationFrame(step);
+        };
+        step();
+        return ok;
     }
 
     /**
@@ -2513,6 +2566,7 @@ class SpaceEnvironment {
         // survive to the next entry.
         this._writeExploreLayerState();
         this.exploreMode = false;
+        this._entryFlyId++;   // P28: stop an entry fly-in still under way
         this._stopFeedStatus();
         this._releaseExploreClock();
         this._pauseSunspots(false);

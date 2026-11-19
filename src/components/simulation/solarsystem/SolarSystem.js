@@ -101,8 +101,9 @@ class SolarSystem {
                         eccentricity: 0.2056, // e (NASA JPL Horizons)
                         perihelion: 27.8, // 35 * (1 - 0.2056)
                         aphelion: 42.2, // 35 * (1 + 0.2056)
-                        argumentOfPeriapsis: 29.1, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 29.1, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: 77.45779628, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: 252.2503235 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Mercury]
                     }
                 },
                 {
@@ -124,8 +125,9 @@ class SolarSystem {
                         eccentricity: 0.0068, // e (NASA JPL Horizons)
                         perihelion: 44.7, // 45 * (1 - 0.0068)
                         aphelion: 45.3, // 45 * (1 + 0.0068)
-                        argumentOfPeriapsis: 54.9, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 54.9, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: 131.60246718, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: 181.9790995 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Venus]
                     }
                 },
                 {
@@ -152,8 +154,9 @@ class SolarSystem {
                         eccentricity: 0.0167, // e (NASA JPL Horizons)
                         perihelion: 59.0, // 60 * (1 - 0.0167)
                         aphelion: 61.0, // 60 * (1 + 0.0167)
-                        argumentOfPeriapsis: 288.1, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 288.1, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: 102.93768193, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: 100.46457166 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Earth]
                     }
                 },
                 {
@@ -173,8 +176,9 @@ class SolarSystem {
                         eccentricity: 0.0934, // e (NASA JPL Horizons)
                         perihelion: 83.4, // 92 * (1 - 0.0934)
                         aphelion: 100.6, // 92 * (1 + 0.0934)
-                        argumentOfPeriapsis: 286.5, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 286.5, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: -23.94362959, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: -4.55343205 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Mars]
                     }
                 },
                 {
@@ -194,8 +198,9 @@ class SolarSystem {
                         eccentricity: 0.0489, // e (NASA JPL Horizons)
                         perihelion: 297.0, // 312 * (1 - 0.0489)
                         aphelion: 327.0, // 312 * (1 + 0.0489)
-                        argumentOfPeriapsis: 273.9, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 273.9, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: 14.72847983, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: 34.39644051 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Jupiter]
                     }
                 },
                 {
@@ -217,8 +222,9 @@ class SolarSystem {
                         eccentricity: 0.0565, // e (NASA JPL Horizons)
                         perihelion: 540.0, // 572 * (1 - 0.0565)
                         aphelion: 604.0, // 572 * (1 + 0.0565)
-                        argumentOfPeriapsis: 339.4, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 339.4, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: 92.59887831, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: 49.95424423 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Saturn]
                     }
                 },
                 {
@@ -240,8 +246,9 @@ class SolarSystem {
                         eccentricity: 0.0473, // e (NASA JPL Horizons)
                         perihelion: 1096.6, // 1151 * (1 - 0.0473)
                         aphelion: 1205.4, // 1151 * (1 + 0.0473)
-                        argumentOfPeriapsis: 96.7, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 96.7, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: 170.9542763, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: 313.23810451 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Uranus]
                     }
                 },
                 {
@@ -261,8 +268,9 @@ class SolarSystem {
                         eccentricity: 0.0086, // e (NASA JPL Horizons)
                         perihelion: 1789.5, // 1804 * (1 - 0.0086)
                         aphelion: 1818.5, // 1804 * (1 + 0.0086)
-                        argumentOfPeriapsis: 273.2, // ω (degrees, ellipse orientation)
-                        meanAnomalyAtEpoch: 0 // M₀ at J2000 (radians)
+                        argumentOfPeriapsis: 273.2, // ω, argument of perihelion (degrees; informational, NOT the orientation)
+                        longitudeOfPerihelion: 44.96476227, // ϖ = Ω + ω (degrees), Standish J2000 - orients the ellipse
+                        meanLongitudeAtEpoch: -55.12002969 // L0 at J2000 (degrees); mean anomaly M0 = L0 - ϖ  [Neptune]
                     }
                 }
             ]
@@ -398,10 +406,15 @@ class SolarSystem {
 
         // Check if elliptical orbits enabled
         if (planetData.orbitalElements) {
-            const { semiMajorAxis, eccentricity, argumentOfPeriapsis } = planetData.orbitalElements;
+            const { semiMajorAxis, eccentricity, argumentOfPeriapsis, longitudeOfPerihelion } = planetData.orbitalElements;
 
-            // Precompute rotation matrix components for argument of periapsis
-            const omega = THREE.MathUtils.degToRad(argumentOfPeriapsis || 0);
+            // Same convention as Planet.updatePosition, or the line and the planet part
+            // ways: with longitudeOfPerihelion (the eight planets) the ellipse is turned by
+            // ϖ and runs counter-clockwise seen from +y (ecliptic longitude 90 = -z).
+            // Without it (dwarf planets, own solver in DwarfPlanet.js) the old layout stays.
+            const prograde = typeof longitudeOfPerihelion === 'number';
+            const zSign = prograde ? -1 : 1;
+            const omega = THREE.MathUtils.degToRad(prograde ? longitudeOfPerihelion : (argumentOfPeriapsis || 0));
             const cosOmega = Math.cos(omega);
             const sinOmega = Math.sin(omega);
 
@@ -420,7 +433,7 @@ class SolarSystem {
 
                 // Apply argument of periapsis rotation
                 const x = (xOrbital * cosOmega) - (zOrbital * sinOmega);
-                const z = (xOrbital * sinOmega) + (zOrbital * cosOmega);
+                const z = zSign * ((xOrbital * sinOmega) + (zOrbital * cosOmega));
 
                 positions[i * 3] = x;
                 positions[(i * 3) + 1] = 0;

@@ -2034,6 +2034,70 @@ class SpaceEnvironment {
     }
 
     /**
+     * R1 "two clocks": Explore shows live layers (satellites, ISS, quakes) that run on
+     * the wall clock, so the Sun and Moon must too. On entry the sim clock jumps to now
+     * at 1x; the user's speed and pause are restored on exit. Rule 5: 2 asserts.
+     * @returns {boolean} true when the clock was pinned
+     */
+    _pinExploreClock() {
+        console.assert(this.exploreMode, '_pinExploreClock: only in Explore');
+        console.assert(typeof Date.now === 'function', '_pinExploreClock: wall clock required');
+        const tm = this.timeManager;
+        if (!tm) return false;
+        if (!this._preExploreClock) {
+            this._preExploreClock = { scale: tm.getTimeScale(), paused: tm.isPaused() };
+        }
+        tm.reset(new Date());          // also unpauses: Explore is live
+        tm.setTimeScale(1);
+        this._exploreClockShownAt = 0;
+        return true;
+    }
+
+    /** Give the Time panel back the user's speed and pause. Rule 5: 2 asserts. */
+    _releaseExploreClock() {
+        console.assert(!this.exploreMode, '_releaseExploreClock: Explore must be over');
+        console.assert(this._preExploreClock === undefined || this._preExploreClock === null ||
+            typeof this._preExploreClock === 'object', '_releaseExploreClock: bad saved state');
+        const tm = this.timeManager;
+        const saved = this._preExploreClock;
+        this._preExploreClock = null;
+        if (!tm || !saved) return false;
+        tm.setTimeScale(saved.scale);
+        if (saved.paused) tm.pause();
+        return true;
+    }
+
+    /**
+     * Per frame in Explore. At 1x and running, keep the sim clock ON the wall clock: the
+     * time manager caps each frame at 100 ms, so a hidden tab would leave the Sun behind
+     * the satellites. If the user has set another speed (or paused), the clock is left
+     * alone and the panel says plainly that Sun and Moon are at sim time while the live
+     * layers are at now. Rule 5: 2 asserts.
+     * @returns {boolean} true when Sun/Moon are live
+     */
+    _tickExploreClock() {
+        console.assert(this.exploreMode, '_tickExploreClock: only in Explore');
+        const tm = this.timeManager;
+        console.assert(tm, '_tickExploreClock: timeManager required');
+        if (!tm) return false;
+        const now = Date.now();
+        const live = tm.getTimeScale() === 1 && !tm.isPaused();
+        if (live && Math.abs(tm.getCurrentDate().getTime() - now) > 2000) tm.reset(new Date(now));
+        if (now - (this._exploreClockShownAt || 0) < 1000) return live;
+        this._exploreClockShownAt = now;
+        const el = document.getElementById('explore-clock');
+        if (!el) return live;
+        const iso = tm.getCurrentDate().toISOString();
+        const text = live
+            ? '☀ Sun & Moon: live · ' + iso.slice(11, 16) + ' UTC'
+            : '☀ Sun & Moon: sim ×' + tm.getTimeScale() + (tm.isPaused() ? ' (paused)' : '') + ' · '
+                + iso.slice(0, 10) + ' ' + iso.slice(11, 16) + ' UTC · live layers show now';
+        if (el.textContent !== text) el.textContent = text;
+        el.dataset.live = String(live);
+        return live;
+    }
+
+    /**
      * Enter free-look Explore mode on Earth: freeze the globe, hand control to the
      * user, lock controls.target to Earth, set close zoom bounds, build/show the
      * graticule + borders, and show the location panel. Rule 4: <=60 lines.
@@ -2053,6 +2117,7 @@ class SpaceEnvironment {
 
         // Freeze the globe so the marker holds still for inspection.
         if (typeof earth.setFrozen === 'function') earth.setFrozen(true);
+        this._pinExploreClock();   // Sun/Moon on the same clock as satellites, ISS, quakes
 
         // Hand control to the user, pivoting around Earth's (now static) centre.
         const earthPos = earth.getMesh().getWorldPosition(this._scratchEarthPos);
@@ -2296,6 +2361,7 @@ class SpaceEnvironment {
         // survive to the next entry.
         this._writeExploreLayerState();
         this.exploreMode = false;
+        this._releaseExploreClock();
 
         const earth = this.getEarthObject();
         if (earth) {
@@ -4320,6 +4386,7 @@ class SpaceEnvironment {
             let j2000Days = null;
             if (this.timeManager) {
                 this.timeManager.update(deltaTime * 1000); // Convert seconds to milliseconds
+                if (this.exploreMode) this._tickExploreClock();   // one clock: sim = wall in Explore
                 j2000Days = this.timeManager.getJ2000Days();
             }
 

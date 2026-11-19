@@ -19,8 +19,14 @@ class Earth extends Planet {
         console.assert(data && data.radius > 0, 'Earth.constructor: bad radius');
 
         this.moonData = {
+            // SCALE CHOICE (R1 #2): the Moon's SIZE is true (0.5 = 0.25 Earth radii, real
+            // 0.27), its DISTANCE is not: 15 units = 7.5 Earth radii, the real one is 60.
+            // At 60R it would sit 120 units out, past Venus's and Mars's drawn orbits.
+            // 7.5R keeps it readable from Explore (shown above 4R, hand-off at 9R) and
+            // puts it OUTSIDE the true-scale satellite shells (GPS 4.2R, geostationary
+            // 6.6R) - at the old 2.5R it was drawn inside both. Its DIRECTION is real.
             radius: 0.5,
-            distance: 5,
+            distance: 15,
             rotationSpeed: 0.02,
             orbitSpeed: 0.05,
             texturePath: 'src/assets/textures/planets/earth/moon/moon_map.jpg',
@@ -272,8 +278,11 @@ class Earth extends Planet {
 
         this._dayLow = dayMap;
         this.mesh = new THREE.Mesh(geometry, material);
-        // Preserve axial tilt + orbit phase from the Vite migration.
-        this.mesh.rotation.x = THREE.MathUtils.degToRad(this.data.axialTilt || 0);
+        // Axial tilt about world +x = the vernal-equinox direction (OrbitalCalculator's
+        // scene frame). NEGATIVE so the north pole leans toward ecliptic longitude 90
+        // (world -z), where the Sun is seen from Earth at the June solstice. The old +23.4
+        // leaned it the other way, which swapped the seasons (R1 #1). rotation.y is GMST.
+        this.mesh.rotation.x = -THREE.MathUtils.degToRad(this.data.axialTilt || 0);
         this.orbit = this.orbit || { angle: Math.random() * Math.PI * 2 };
         this.updatePosition();
         this.scene.add(this.mesh);
@@ -677,6 +686,24 @@ class Earth extends Planet {
     }
 
     /**
+     * World direction of the Sun from the subsolar point at a given sim time, through
+     * the globe's CURRENT rotation (correct even while the globe is frozen).
+     * Globe-local axes follow GlobeMath: lng 0 = +x, lng 90E = -z, north = +y.
+     * @param {number} j2000Days - days since J2000.0
+     * @param {THREE.Vector3} target
+     * @returns {THREE.Vector3} target, unit length
+     */
+    getEarthFixedSunDirection(j2000Days, target) {
+        console.assert(Number.isFinite(j2000Days), 'Earth.getEarthFixedSunDirection: days required');
+        console.assert(target && target.isVector3 && this.mesh, 'Earth.getEarthFixedSunDirection: Vector3 + mesh required');
+        const p = OrbitalCalculator.subsolarPoint(j2000Days);
+        const lat = THREE.MathUtils.degToRad(p.lat);
+        const lng = THREE.MathUtils.degToRad(p.lng);
+        target.set(Math.cos(lat) * Math.cos(lng), Math.sin(lat), -Math.cos(lat) * Math.sin(lng));
+        return target.applyQuaternion(this.mesh.quaternion).normalize();
+    }
+
+    /**
      * Show the satellites, loading their code on first use. Never rejects.
      * @returns {Promise<boolean>} true when the layer is drawn
      */
@@ -753,16 +780,34 @@ class Earth extends Planet {
         // while the other eight lined up. Returning early (rather than relying on
         // `frozen`) keeps the two modes independent: `frozen` is explore mode's flag and
         // is cleared on explore exit, which would silently release Earth mid-lineup.
-        if (this.freezePosition) return;
+        // The Moon is no longer a child of the globe, so it would stay behind at Earth's
+        // orbital position while Earth stands in the lineup: hide it for that time.
+        if (this.freezePosition) {
+            if (this.moonGroup && this.moonGroup.visible) {
+                this.moonGroup.visible = false;
+                this._moonHiddenForScale = true;
+            }
+            return;
+        }
+        if (this._moonHiddenForScale && this.moonGroup) {
+            this.moonGroup.visible = true;
+            this._moonHiddenForScale = false;
+        }
 
         // Frozen (explore mode): skip orbit/spin/clouds/moon so the globe holds
         // still for inspection. Sun + marker refresh below still run.
         if (!this.frozen) {
             // Time-synchronized rotation (respects TimeScaleManager via j2000Days).
+            // R1 #1: the spin angle IS Greenwich sidereal time, so the Greenwich meridian
+            // faces the equinox direction at the right instant. The old count of sidereal
+            // turns since J2000 had no anchor (GMST at J2000 is 280.46 deg) and set noon
+            // over Baja California at 06:33Z.
             if (j2000Days !== null && this.data.rotationPeriodHours) {
                 const rotationsPerJ2000Day = 24 / this.data.rotationPeriodHours;
                 const totalRotations = j2000Days * rotationsPerJ2000Day;
-                this.mesh.rotation.y = (totalRotations * Math.PI * 2) % (Math.PI * 2);
+                this.mesh.rotation.y = (typeof OrbitalCalculator !== 'undefined')
+                    ? THREE.MathUtils.degToRad(OrbitalCalculator.gmstDeg(j2000Days))
+                    : (totalRotations * Math.PI * 2) % (Math.PI * 2);
                 if (this.cloudsMesh) {
                     this.cloudsMesh.rotation.y = (totalRotations * 0.98 * Math.PI * 2) % (Math.PI * 2);
                 }
@@ -775,7 +820,8 @@ class Earth extends Planet {
 
             // Orbital position from real time (falls back to constant speed).
             if (j2000Days !== null && this.data.orbitalPeriodDays && typeof OrbitalCalculator !== 'undefined') {
-                const epochAnomaly = (this.data.orbitalElements && this.data.orbitalElements.meanAnomalyAtEpoch) || 0;
+                const epochAnomaly = (typeof this.epochAnomaly === 'number') ? this.epochAnomaly
+                    : ((this.data.orbitalElements && this.data.orbitalElements.meanAnomalyAtEpoch) || 0);
                 const meanAnomaly = OrbitalCalculator.calculateMeanAnomaly(
                     j2000Days, this.data.orbitalPeriodDays, epochAnomaly);
                 if (isFinite(meanAnomaly)) {
@@ -787,16 +833,30 @@ class Earth extends Planet {
                 this.orbit.angle += this.data.orbitSpeed * deltaTime;
             }
             this.updatePosition();
+        }
 
-            for (let i = 0; i < this.moons.length; i++) {
-                if (this.moons[i].update) {
-                    this.moons[i].update(deltaTime, j2000Days);
-                }
+        // The Moon runs on the sim clock even in Explore: it is not part of the frozen
+        // globe (R1 #2), so freezing the globe for inspection must not stop it.
+        this._lastJ2000Days = j2000Days;
+        if (this.moonGroup) this.moonGroup.position.copy(this.mesh.position);
+        for (let i = 0; i < this.moons.length; i++) {
+            if (this.moons[i].update) {
+                this.moons[i].update(deltaTime, j2000Days);
             }
         }
 
         // Refresh sun direction for the day/night shader (no per-frame alloc).
-        this.getSunDirection(this._sunDir);
+        // Free-running: the direction to the Sun at the origin - true, because the orbit
+        // and the GMST spin are. Frozen (Explore): the globe holds still for inspection,
+        // so the Sun is moved instead - the Earth-fixed subsolar point at the sim clock
+        // (pinned to the wall clock in Explore, see SpaceEnvironment._pinExploreClock),
+        // turned into world space by the frozen globe's own rotation. The terminator then
+        // keeps time with the satellites, which also run on the wall clock.
+        if (this.frozen && j2000Days !== null && typeof OrbitalCalculator !== 'undefined') {
+            this.getEarthFixedSunDirection(j2000Days, this._sunDir);
+        } else {
+            this.getSunDirection(this._sunDir);
+        }
         if (this.mesh.material && this.mesh.material.uniforms) {
             this.mesh.material.uniforms.sunDirection.value = this._sunDir;
         }
@@ -822,8 +882,13 @@ class Earth extends Planet {
     }
 
     async createMoon() {
+        // R1 #2: the Moon's pivot is NOT a child of the globe. As a child it inherited
+        // one full turn per sidereal day from the spin (measured -97 deg in 6 h; the real
+        // Moon moves ~3.3) and orbited in the tilted equator plane. The pivot sits in the
+        // scene and follows Earth's centre each frame (Earth.update); it never rotates.
         this.moonGroup = new THREE.Group();
-        this.mesh.add(this.moonGroup);
+        this.scene.add(this.moonGroup);
+        this.moonGroup.position.copy(this.mesh.position);
 
         const moonTexture = await this.resourceLoader.loadTexture(this.moonData.texturePath)
             .catch(() => null);
@@ -845,26 +910,31 @@ class Earth extends Planet {
         moonMesh.position.set(this.moonData.distance, 0, 0);
         this.moonGroup.add(moonMesh);
 
-        this.moons.push({
-            mesh: moonMesh,
-            orbit: { angle: 0 },
-            data: this.moonData,
-            // Preserve Vite's J2000-synced lunar orbit (falls back to constant speed).
-            update: (dt, j2000Days = null) => {
-                moonMesh.rotation.y += this.moonData.rotationSpeed * dt;
-                if (j2000Days !== null && typeof OrbitalCalculator !== 'undefined') {
-                    const lunarPeriod = 27.32166;   // sidereal month (days)
-                    const moonAngle = OrbitalCalculator.calculateMeanAnomaly(j2000Days, lunarPeriod, 0);
-                    if (isFinite(moonAngle)) {
-                        this.moonGroup.rotation.y = moonAngle;
-                    } else {
-                        this.moonGroup.rotation.y += this.moonData.orbitSpeed * dt;
-                    }
-                } else {
-                    this.moonGroup.rotation.y += this.moonData.orbitSpeed * dt;
-                }
+        const moonState = { mesh: moonMesh, orbit: { angle: 0 }, data: this.moonData };
+        // Geocentric ecliptic longitude/latitude from the sim clock (~13.2 deg/day, the
+        // real 5 deg tilt to the ecliptic), placed in the scene frame of
+        // OrbitalCalculator (lon 0 = +x, lon 90 = -z, ecliptic north = +y). Tidally
+        // locked: the texture's lng 0 (local +x) - the near side - always faces Earth.
+        // Without a clock it falls back to a constant-speed ecliptic circle.
+        moonState.update = (dt, j2000Days = null) => {
+            let lon = moonState.orbit.angle;
+            let lat = 0;
+            if (j2000Days !== null && typeof OrbitalCalculator !== 'undefined') {
+                const m = OrbitalCalculator.moonEcliptic(j2000Days);
+                lon = THREE.MathUtils.degToRad(m.lon);
+                lat = THREE.MathUtils.degToRad(m.lat);
+            } else {
+                lon += this.moonData.orbitSpeed * dt;
             }
-        });
+            moonState.orbit.angle = lon;
+            const r = this.moonData.distance;
+            moonMesh.position.set(r * Math.cos(lat) * Math.cos(lon), r * Math.sin(lat),
+                -r * Math.cos(lat) * Math.sin(lon));
+            moonMesh.rotation.y = lon + Math.PI;
+            return lon;
+        };
+        this.moons.push(moonState);
+        moonState.update(0, this._lastJ2000Days === undefined ? null : this._lastJ2000Days);
     }
 
     /**

@@ -12,6 +12,8 @@
 // - Planck Collaboration (2018). "Planck 2018 results. VI.
 //   Cosmological parameters." A&A, 641, A6.
 
+/* global RoundPoints */
+
 class DarkMatterHalo {
     /**
      * Constructor for Dark Matter Halo visualization
@@ -284,8 +286,17 @@ class DarkMatterHalo {
                 sizeAttenuation: true
             });
 
+            // P35: untextured points draw as SQUARES (up to ~30 px near the camera).
+            // The shared RoundPoints patch makes them soft round motes, clamps their
+            // screen size and fades the few that sit right at the camera.
+            const rounded = (typeof RoundPoints !== 'undefined');
+            if (rounded) {
+                RoundPoints.apply(this.material, { soft: 0.6, minPx: 2, maxPx: 16, nearFade: [4, 20] });
+            }
+
             // Create Points system
             this.particleSystem = new THREE.Points(this.geometry, this.material);
+            if (rounded) RoundPoints.attach(this.particleSystem);
             this.particleSystem.name = 'DarkMatterHalo';
 
             // Add to scene

@@ -104,10 +104,20 @@ class StreetTiles {
         this.visible = true;
         // User-stylable appearance (color, opacity, pixel width), applied to all line
         // tiles via a shared fat-line material. setStyle() updates them; host persists.
-        this.styleColor = Number.isFinite(opts.styleColor) ? opts.styleColor : 0x9fd8ff;
-        this.styleOpacity = Number.isFinite(opts.styleOpacity) ? opts.styleOpacity : 0.65;
+        // 2026-11-19 (F4): the user values are now the CEILING at the closest zoom; the
+        // zoom style (_applyZoomStyle) scales width and opacity down from there. Default
+        // colour was a bright 0x9fd8ff at 0.65 that read as a white web over the imagery;
+        // a soft sand tone at 0.6 reads like a map overlay instead of paint.
+        this.styleColor = Number.isFinite(opts.styleColor) ? opts.styleColor : 0xf2dcb0;
+        this.styleOpacity = Number.isFinite(opts.styleOpacity) ? opts.styleOpacity : 0.6;
         this.styleWidth = Number.isFinite(opts.styleWidth) ? opts.styleWidth : 2;   // px (fat lines)
         this._sharedMat = null;   // shared LineMaterial (lazy)
+        // Zoom style factors last applied (multiply the user ceiling). 0 = not yet drawn.
+        this._zoomOpacity = 0;
+        this._zoomWidth = 1;
+        // Fade-in band: streets reach full strength at fadeFullBelow and are invisible at
+        // activateBelow, so they ease in instead of switching on at 1.3R.
+        this.fadeFullBelow = Number.isFinite(opts.fadeFullBelow) ? opts.fadeFullBelow : 1.2;
 
         // Line layers we care about (OpenMapTiles schema).
         this.lineLayers = opts.lineLayers || ['transportation', 'waterway'];
@@ -168,7 +178,10 @@ class StreetTiles {
         var altKm = Math.max(1, (distInRadii - 1) * (EARTH_KM / (2 * Math.PI)));
         var fovDeg = this.viewFovDeg || 45;                    // set by the caller each tick
         var viewKm = Math.max(1, 2 * altKm * Math.tan((fovDeg * Math.PI / 180) / 2));
-        var raw = Math.log2(EARTH_KM * span / viewKm);
+        // F4: a mercator tile is 40075*cos(lat)/2^z km wide ON THE GROUND, so at 49N
+        // (Europe) the same z covered only 0.66 of the view the formula assumed.
+        var latCos = Number.isFinite(this._latCos) ? this._latCos : 1;
+        var raw = Math.log2(EARTH_KM * latCos * span / viewKm);
         // Never sharper than the data, never coarser than the floor.
         raw = Math.max(this.minZoom, Math.min(this.maxZoom, raw));
         // 2026-08-22 HYSTERESIS. Plain Math.round() has zero deadband at the level
@@ -236,8 +249,10 @@ class StreetTiles {
             return true;
         }
 
+        this._latCos = Math.max(0.1, Math.cos(centerLat * Math.PI / 180));
         var z = this.zoomForDistance(cameraDistInRadii);
         var fetchZ = Math.min(z, this.dataMaxZoom);
+        this._applyZoomStyle(cameraDistInRadii, fetchZ);
         var n = Math.pow(2, fetchZ);
         var c = StreetTiles.lngLatToTile(centerLng, centerLat, fetchZ);
         this._applyLead(c, fetchZ);          // stream AHEAD of the camera, not behind it
@@ -265,15 +280,70 @@ class StreetTiles {
         this._desiredKeys.clear();
         for (var k = 0; k < keys.length; k++) this._desiredKeys.add(keys[k]);
         this._abortStale();
-        var allReady = true;
+        var allReady = true, settled = true;
         for (var i = 0; i < keys.length; i++) {
-            if (!this._touchOrBuild(keys[i], now)) allReady = false;
+            if (this._touchOrBuild(keys[i], now)) continue;
+            allReady = false;
+            var r0 = this.tiles.get(keys[i]);
+            if (!r0 || r0.state !== 'failed') settled = false;   // still loading
         }
         this._lastAllReady = allReady;   // gates the steady-state early-out above
-        if (allReady) {
+        // F4: `settled` = every key is built OR failed (waiting on its backoff). Before,
+        // one failed tile kept allReady false forever, so EVERY earlier level stayed up
+        // as a "fallback": measured 104 tiles of z9-z12 stacked at 1.02R (1.26 M street
+        // triangles, the white fill). A failed tile now leaves a hole until its retry
+        // lands instead of pinning all the old levels on screen.
+        if (allReady || settled) {
             this.tiles.forEach(function (rec) { if (rec.mesh) rec.mesh.visible = (rec.t === now); });
+        } else {
+            // F4: while the new set loads, the previous tiles stay up as a fallback - but
+            // never ones FINER than this level. A z13/z14 tile carries minor roads and
+            // footpaths; shown from z9-z11 height it shrinks to a few dozen pixels of
+            // solid line, i.e. a white square. Coarser fallbacks are sparse and fine.
+            this.tiles.forEach(function (rec) {
+                if (rec.mesh && rec.t !== now && rec.z > fetchZ + 1) rec.mesh.visible = false;
+            });
         }
         this._evict();
+        return true;
+    }
+
+    // F4 STYLE BY ZOOM. Three factors multiply the user's ceiling (styleOpacity/Width):
+    //   1. fade-in band: 0 at activateBelow (1.3R) -> 1 at fadeFullBelow (1.2R), so the
+    //      layer eases in instead of popping on;
+    //   2. coverage: the covering set is a fixed 7x7 square clamped at minZoom 9. From
+    //      high up it covers only a small square in the middle of the view - the audit's
+    //      "white square" (~280 px of dense lines at 1.3R over Europe). Its strength now
+    //      follows how much of the view the set actually covers;
+    //   3. a per-level ramp: thin and faint at z9-10, full only at z14.
+    // Touches the material only when a factor moved. Rule 4: <=60. Rule 5: 2 asserts.
+    _applyZoomStyle(distInRadii, fetchZ) {
+        console.assert(Number.isFinite(distInRadii), '_applyZoomStyle: distance required');
+        console.assert(Number.isFinite(fetchZ), '_applyZoomStyle: zoom required');
+        var smooth = function (e0, e1, v) { var t = Math.max(0, Math.min(1, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+        var band = smooth(this.activateBelow, this.fadeFullBelow, distInRadii);
+        var EARTH_KM = 40075;
+        var span = Math.max(3, Math.sqrt(this.maxVisibleTiles));
+        var altKm = Math.max(1, (distInRadii - 1) * (EARTH_KM / (2 * Math.PI)));
+        var fovDeg = this.viewFovDeg || 45;
+        var viewKm = Math.max(1, 2 * altKm * Math.tan((fovDeg * Math.PI / 180) / 2));
+        var coverKm = span * EARTH_KM * (Number.isFinite(this._latCos) ? this._latCos : 1) / Math.pow(2, fetchZ);
+        this._lastCover = coverKm / viewKm;   // exposed for tests / debugging
+        var cover = smooth(0.45, 0.9, this._lastCover);
+        var lvl = Math.max(0, Math.min(5, fetchZ - this.minZoom));          // 0..5 for z9..z14
+        var OP = [0.55, 0.62, 0.72, 0.82, 0.92, 1.0], WD = [0.5, 0.55, 0.62, 0.72, 0.85, 1.0];
+        var op = band * cover * OP[lvl];
+        var wd = WD[lvl];
+        if (Math.abs(op - this._zoomOpacity) < 0.004 && wd === this._zoomWidth) return false;
+        this._zoomOpacity = op; this._zoomWidth = wd;
+        var m = this._sharedMat;
+        // material.visible=false while faded out: no draw calls for invisible lines.
+        if (m) { m.opacity = this.styleOpacity * op; m.linewidth = Math.max(0.75, this.styleWidth * wd); m.visible = op > 0.005; }
+        var fop = this.styleOpacity * op;
+        this.tiles.forEach(function (rec) {           // fallback per-tile materials
+            var mm = rec.mesh && rec.mesh.userData && rec.mesh.userData.ownMat;
+            if (mm) { mm.opacity = fop; mm.visible = op > 0.005; }
+        });
         return true;
     }
 
@@ -485,13 +555,21 @@ class StreetTiles {
             self._abortControllers.delete(key);
             // A2: instance was disposed while this fetch was in flight — never re-add an
             // orphan mesh to the disposed engine; dispose the just-built mesh instead.
-            if (self._disposed) { if (mesh) self._disposeMesh(mesh); return; }
+            if (self._disposed) { if (mesh && mesh !== StreetTiles.EMPTY) self._disposeMesh(mesh); return; }
             // A1: failed records keep an old t + failedAt so they stay evictable and
             // can retry after the backoff (see _touchOrBuild).
+            // F4: an EMPTY tile (open sea, or no road of a class drawn at this zoom) is a
+            // finished tile, not a failure. It used to be counted as failed, retried with
+            // backoff forever, and it kept the covering set from ever being complete.
+            if (mesh === StreetTiles.EMPTY) {
+                self._retryAttempts.delete(key);
+                self.tiles.set(key, { mesh: null, t: now, state: 'empty', z: z });
+                return;
+            }
             if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
             self.earthMesh.add(mesh);
             self._retryAttempts.delete(key);   // recovered → next failure starts at attempt 1
-            self.tiles.set(key, { mesh: mesh, t: now, state: 'built' });
+            self.tiles.set(key, { mesh: mesh, t: now, state: 'built', z: z });
             self._evict();
         }).catch(function (e) {
             self._building.delete(key);
@@ -522,30 +600,34 @@ class StreetTiles {
         var res = await fetch(url, signal ? { signal: signal } : undefined);
         if (!res || !res.ok) throw new Error('HTTP ' + (res && res.status));
         var bytes = new Uint8Array(await res.arrayBuffer());
-        if (!bytes.length) return null;
+        if (!bytes.length) return StreetTiles.EMPTY;
         var layers = MVT.decode(bytes);
-        var verts = [];
+        var verts = [], cols = [];
         for (var li = 0; li < this.lineLayers.length; li++) {
             var layer = layers[this.lineLayers[li]];
             if (!layer || !layer.features) continue;
-            this._appendLayer(layer, z, x, y, verts);
+            this._appendLayer(layer, this.lineLayers[li], z, x, y, verts, cols);
         }
-        if (!verts.length) return null;
+        if (!verts.length) return StreetTiles.EMPTY;   // ocean, or no road of a drawn class
         var mesh;
         if (this._fatOK()) {
             // Fat lines: real PIXEL-width streets via a SHARED LineMaterial (colour/
             // opacity/linewidth + viewport resolution all live on the one material).
             var fatGeo = new THREE.LineSegmentsGeometry();
             fatGeo.setPositions(verts);
+            fatGeo.setColors(cols);          // per-class weight (see roadWeight)
             mesh = new THREE.LineSegments2(fatGeo, this._ensureLineMat());
             mesh.userData.ownGeo = fatGeo;   // dispose per-tile; material is shared
         } else {
             // Graceful fallback (1px) if the fat-line classes didn't load.
             var geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
             var material = new THREE.LineBasicMaterial({
-                color: this.styleColor, transparent: true, opacity: this.styleOpacity, depthWrite: false, depthTest: true
+                color: this.styleColor, transparent: true, opacity: this.styleOpacity * this._zoomOpacity,
+                depthWrite: false, depthTest: true, vertexColors: true
             });
+            material.visible = this._zoomOpacity > 0.005;
             mesh = new THREE.LineSegments(geometry, material);
             mesh.userData.ownMat = material;
         }
@@ -555,17 +637,38 @@ class StreetTiles {
         return mesh;
     }
 
-    // Append one decoded layer's line features as sphere-projected segment pairs.
-    // Subdivides long chords so straight roads bend with the globe. Rule 4: <=60.
-    _appendLayer(layer, z, x, y, verts) {
+    // F4 ROAD-CLASS HIERARCHY. Before this every line in the tile was drawn at one
+    // width and brightness: at z9 a single Stuttgart tile is ~10.5k segments, 4.8k of
+    // them secondary roads, so 49 tiles painted the view white. Classes now appear by
+    // zoom the way map styles do (motorways first, minor roads only when close), and
+    // each class has a weight that dims its colour, so the hierarchy reads at a glance.
+    // Weight 0 (a class missing from the table, or below its first zoom) = not drawn.
+    // Pure. Rule 5: 2 asserts.
+    static roadWeight(layerName, cls, z) {
+        console.assert(typeof layerName === 'string', 'roadWeight: layer name required');
+        console.assert(Number.isFinite(z), 'roadWeight: zoom required');
+        var t = StreetTiles.ROAD_CLASSES[layerName];
+        var c = t && t[String(cls || '').replace(/_construction$/, '')];
+        if (!c || z < c[0]) return 0;
+        return c[1];
+    }
+
+    // Append one decoded layer's line features as sphere-projected segment pairs, with
+    // a per-vertex colour weight per road class (cols, 3 floats per vertex). Long chords
+    // are subdivided so straight roads bend with the globe. Rule 4: <=60.
+    _appendLayer(layer, layerName, z, x, y, verts, cols) {
         console.assert(layer && layer.features, '_appendLayer: layer required');
-        console.assert(Array.isArray(verts), '_appendLayer: verts array required');
+        console.assert(Array.isArray(verts) && Array.isArray(cols), '_appendLayer: output arrays required');
         var extent = layer.extent || 4096;
         var r = this.radius * this.rOffset;
         var fmax = Math.min(layer.features.length, 4000);     // Rule 2: bounded
+        var tint = (layerName === 'waterway') ? [0.62, 0.8, 1.0] : [1, 1, 1];
         for (var fi = 0; fi < fmax; fi++) {
             var f = layer.features[fi];
             if (!f || f.type !== MVT.GEOM_LINESTRING || !f.geometry) continue;
+            var w = StreetTiles.roadWeight(layerName, f.properties && f.properties.class, z);
+            if (w <= 0) continue;
+            var before = verts.length;
             for (var ri = 0; ri < f.geometry.length; ri++) {
                 var ring = f.geometry[ri];
                 if (!ring || ring.length < 2) continue;
@@ -573,6 +676,7 @@ class StreetTiles {
                     this._emitSegment(ring[pi], ring[pi + 1], extent, z, x, y, r, verts);
                 }
             }
+            for (var vi = before; vi < verts.length; vi += 3) cols.push(tint[0] * w, tint[1] * w, tint[2] * w);
         }
     }
 
@@ -664,7 +768,12 @@ class StreetTiles {
         console.assert(typeof vis === 'boolean', 'setVisible: boolean required');
         console.assert(this.tiles instanceof Map, 'setVisible: tiles map required');
         this.visible = !!vis;
-        this._showTiles(this.visible);
+        // F4: switching ON used to show EVERY cached tile (up to lruCap, any zoom, any
+        // place), and the steady-state early-out then kept them all up - fine z13/14
+        // tiles over a z9 view are exactly the dense white squares. Hide on off; on on,
+        // let the next update() pick the current covering set.
+        if (!this.visible) this._showTiles(false);
+        this._lastAllReady = false;
         return this.visible;
     }
 
@@ -684,9 +793,11 @@ class StreetTiles {
         var w = (typeof window !== 'undefined') ? window.innerWidth : 1280;
         var h = (typeof window !== 'undefined') ? window.innerHeight : 800;
         this._sharedMat = new THREE.LineMaterial({
-            color: this.styleColor, linewidth: this.styleWidth, transparent: true,
-            opacity: this.styleOpacity, depthTest: true, depthWrite: false, dashed: false
+            color: this.styleColor, linewidth: Math.max(0.75, this.styleWidth * this._zoomWidth), transparent: true,
+            opacity: this.styleOpacity * this._zoomOpacity, depthTest: true, depthWrite: false, dashed: false,
+            vertexColors: true
         });
+        this._sharedMat.visible = this._zoomOpacity > 0.005;
         this._sharedMat.resolution.set(w, h);
         var self = this;
         this._onResize = function () { if (self._sharedMat && typeof window !== 'undefined') self._sharedMat.resolution.set(window.innerWidth, window.innerHeight); };
@@ -705,11 +816,11 @@ class StreetTiles {
         if (Number.isFinite(opts.width)) this.styleWidth = Math.max(0.5, Math.min(12, opts.width));
         if (this._sharedMat) {
             if (this._sharedMat.color) this._sharedMat.color.setHex(this.styleColor);
-            this._sharedMat.opacity = this.styleOpacity;
-            if ('linewidth' in this._sharedMat) this._sharedMat.linewidth = this.styleWidth;
+            this._sharedMat.opacity = this.styleOpacity * this._zoomOpacity;
+            if ('linewidth' in this._sharedMat) this._sharedMat.linewidth = Math.max(0.75, this.styleWidth * this._zoomWidth);
             this._sharedMat.needsUpdate = true;
         }
-        var col = this.styleColor, op = this.styleOpacity;
+        var col = this.styleColor, op = this.styleOpacity * this._zoomOpacity;
         this.tiles.forEach(function (rec) {           // fallback per-tile materials
             var m = rec.mesh && rec.mesh.userData && rec.mesh.userData.ownMat;
             if (m) { if (m.color) m.color.setHex(col); m.opacity = op; }
@@ -771,6 +882,24 @@ class StreetTiles {
         return true;
     }
 }
+
+// Sentinel _buildTile returns for a tile that decoded fine but has nothing to draw.
+StreetTiles.EMPTY = 'empty';
+
+// F4 road-class table (OpenMapTiles schema): class -> [first zoom drawn, colour weight].
+// Majors show first and brightest; minor and service roads only when close.
+// `_construction` variants map to their base class. Rail/transit and waterways stay (they
+// are part of the street map) but enter later and dimmer. Footpaths and tracks (over half
+// of a city z14 tile), ferry, pier, aerialway and raceway lines are left out: over
+// imagery they read as a grey mesh or stray strokes, not as streets.
+StreetTiles.ROAD_CLASSES = {
+    transportation: {
+        motorway: [9, 1.0], trunk: [9, 0.95], primary: [10, 0.85], secondary: [11, 0.75],
+        tertiary: [12, 0.66], minor: [13, 0.56], busway: [13, 0.5], service: [14, 0.44],
+        rail: [12, 0.5], transit: [13, 0.42]
+    },
+    waterway: { river: [11, 0.6], canal: [12, 0.55], stream: [14, 0.4] }
+};
 
 // Make globally available (matches GlobeMath / SafeFetch / Earth pattern).
 if (typeof window !== 'undefined') {

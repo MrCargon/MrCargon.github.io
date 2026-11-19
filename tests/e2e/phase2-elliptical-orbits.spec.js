@@ -7,7 +7,7 @@
  * - 5.1: Orbital element accuracy (NASA JPL data validation)
  * - 5.1: Kepler's 1st Law (elliptical orbit shape)
  * - 5.1: Kepler's 2nd Law (speed variation with distance)
- * - 5.1: Argument of periapsis (ellipse orientation)
+ * - 5.1: Perihelion direction (longitude of perihelion) and passage time vs JPL Horizons
  * - 5.2: Performance validation (desktop and mobile targets)
  * - 5.4: Backward compatibility (circular orbit fallback)
  * - 5.4: Error handling (invalid orbital elements)
@@ -282,7 +282,33 @@ test.describe('Step 5.1: Kepler\'s 2nd Law Verification', () => {
     });
 });
 
-test.describe('Step 5.1: Argument of Periapsis Verification', () => {
+test.describe('Step 5.1: Perihelion Direction and Time (JPL Horizons)', () => {
+
+    // What this block used to check was wrong physics. It placed the perihelion at the
+    // ARGUMENT of perihelion ω (Mercury 29.1, Earth 288.1) measured clockwise from +x.
+    // ω is measured from the ascending node INSIDE the orbit plane; the direction of the
+    // perihelion in the ecliptic is the LONGITUDE of perihelion ϖ = Ω + ω. R1 (3b75bc2)
+    // fixed the scene to ϖ and to the scene frame shared by the Sun, the Moon and Earth's
+    // spin (OrbitalCalculator: ecliptic longitude 0 = +x, 90 = -z, prograde =
+    // counter-clockwise seen from +y), so the old pins failed by ~50 deg (Mercury) and
+    // ~185 deg (Earth) against a sky that is now right.
+    //
+    // The pins below come from JPL Horizons, not from this code: heliocentric osculating
+    // elements, ecliptic J2000 frame, epoch 2026-01-01 00:00 TDB (fetched 2026-11-19).
+    //   Mercury (199):              Ω 48.2988 + ω 29.1988 = ϖ 77.4976, Tp JD 2461002.97660 TDB
+    //   Earth-Moon barycentre (3):  Ω 174.9687 + ω 288.0618 = ϖ 103.0306, Tp JD 2461044.26965 TDB
+    // The scene runs fixed Standish J2000 mean elements (ϖ 77.458 / 102.938, no apsidal
+    // precession), so by 2026 it trails Horizons by 0.04 deg (Mercury) / 0.09 deg (Earth)
+    // and the perihelion passage by ~0.04 / ~0.09 day. Tolerances: 0.15 deg and 0.25 day.
+    // Earth is checked against the barycentre because the Standish "Earth" elements ARE
+    // the barycentre's; the geocentre's own perihelion wobbles about a day with the Moon.
+    // The old test allowed +-5 deg and had no time check at all.
+    const HORIZONS = {
+        Mercury: { varpi: 77.4976, tpJ2000Days: 2461002.97660 - 2451545.0 },
+        Earth: { varpi: 103.0306, tpJ2000Days: 2461044.26965 - 2451545.0 }
+    };
+    const TOL_DIRECTION_DEG = 0.15;
+    const TOL_TIME_DAYS = 0.25;
 
     test.beforeEach(async ({ page }) => {
         await page.goto(BASE_URL);
@@ -293,71 +319,86 @@ test.describe('Step 5.1: Argument of Periapsis Verification', () => {
         // actual planet instead.
         await page.waitForFunction(
             () => !!(window.solarSystem && window.solarSystem.getPlanetByName
+                && window.solarSystem.getPlanetByName('Earth')
                 && window.solarSystem.getPlanetByName('Mercury')),
             null, { timeout: 40000 });
     });
 
-    test('Mercury perihelion oriented at 29.1 degrees', async ({ page }) => {
-        const perihelionAngle = await page.evaluate(() => {
-            const mercury = window.solarSystem.getPlanetByName('Mercury');
-            const positions = [];
-
-            // Find position with minimum distance (perihelion)
-            for (let i = 0; i < 360; i++) {
-                mercury.orbit.angle = (i / 360) * Math.PI * 2;
-                mercury.updatePosition();
-
-                const pos = mercury.getMesh().position;
-                positions.push({
-                    angle: i,
-                    distance: Math.sqrt(pos.x * pos.x + pos.z * pos.z),
-                    x: pos.x,
-                    z: pos.z
-                });
+    /**
+     * Direction: sweep the mean anomaly over the whole orbit in 0.05 deg steps through
+     * the real solver (orbit.angle -> updatePosition) and read the ecliptic longitude of
+     * the closest point, atan2(-z, x) in the scene frame. Also returns the closest
+     * distance and the position at M = 0, which by definition IS the perihelion.
+     */
+    async function perihelionDirection(page, name) {
+        return page.evaluate((planetName) => {
+            const p = window.solarSystem.getPlanetByName(planetName);
+            const saved = p.orbit.angle;
+            const steps = 7200;
+            let best = null;
+            for (let i = 0; i < steps; i++) {
+                p.orbit.angle = (i / steps) * Math.PI * 2;
+                p.updatePosition();
+                const pos = p.getMesh().position;
+                const r = Math.hypot(pos.x, pos.z);
+                if (!best || r < best.r) best = { r, x: pos.x, z: pos.z };
             }
+            p.orbit.angle = 0;
+            p.updatePosition();
+            const m0 = p.getMesh().position;
+            const atM0 = { x: m0.x, z: m0.z };
+            p.orbit.angle = saved;
+            p.updatePosition();
+            let lon = Math.atan2(-best.z, best.x) * 180 / Math.PI;
+            if (lon < 0) lon += 360;
+            const oe = p.data.orbitalElements;
+            return { lon, r: best.r, atM0, q: oe.semiMajorAxis * (1 - oe.eccentricity) };
+        }, name);
+    }
 
-            // Find perihelion position
-            const perihelion = positions.reduce((min, p) => p.distance < min.distance ? p : min);
+    /**
+     * Time: drive the planet through its own time-synced update(deltaTime, j2000Days)
+     * path - the one the sim clock uses - across +-3 days of the Horizons perihelion in
+     * 0.01-day steps and return the day of the closest approach.
+     */
+    async function perihelionTime(page, name, tp) {
+        return page.evaluate(({ planetName, t0 }) => {
+            const p = window.solarSystem.getPlanetByName(planetName);
+            let best = null;
+            for (let i = -300; i <= 300; i++) {
+                const d = t0 + (i * 0.01);
+                p.update(0, d);
+                const pos = p.getMesh().position;
+                const r = Math.hypot(pos.x, pos.z);
+                if (!best || r < best.r) best = { r, d };
+            }
+            return { day: best.d, hasCalculator: typeof window.OrbitalCalculator === 'function' };
+        }, { planetName: name, t0: tp });
+    }
 
-            // Calculate angle from +X axis
-            const angleRad = Math.atan2(perihelion.z, perihelion.x);
-            const angleDeg = angleRad * 180 / Math.PI;
+    for (const name of ['Mercury', 'Earth']) {
+        const h = HORIZONS[name];
 
-            return angleDeg;
+        test(`${name} perihelion points at ecliptic longitude ${h.varpi} (JPL Horizons)`, async ({ page }) => {
+            const got = await perihelionDirection(page, name);
+            const diff = Math.abs(((got.lon - h.varpi + 540) % 360) - 180);
+            within(diff, 0, TOL_DIRECTION_DEG, `${name} perihelion longitude ${got.lon.toFixed(3)} vs Horizons ${h.varpi}`);
+            // The closest point is at perihelion distance q = a(1 - e) ...
+            within(got.r, got.q, 1e-3, `${name} closest distance`);
+            // ... and mean anomaly 0 lands exactly on it (the solver's own zero).
+            within(Math.hypot(got.atM0.x, got.atM0.z), got.q, 1e-9, `${name} distance at M = 0`);
+            let lonM0 = Math.atan2(-got.atM0.z, got.atM0.x) * 180 / Math.PI;
+            if (lonM0 < 0) lonM0 += 360;
+            within(Math.abs(((lonM0 - h.varpi + 540) % 360) - 180), 0, TOL_DIRECTION_DEG,
+                `${name} longitude at M = 0 (${lonM0.toFixed(3)}) vs Horizons ${h.varpi}`);
         });
 
-        // Verify perihelion angle matches argument of periapsis (±5°)
-        within(perihelionAngle, 29.1, TOLERANCE_ANGLE, 'Mercury argument of periapsis');
-    });
-
-    test('Earth perihelion oriented at 288.1 degrees', async ({ page }) => {
-        const perihelionAngle = await page.evaluate(() => {
-            const earth = window.solarSystem.getPlanetByName('Earth');
-            const positions = [];
-
-            for (let i = 0; i < 360; i++) {
-                earth.orbit.angle = (i / 360) * Math.PI * 2;
-                earth.updatePosition();
-
-                const pos = earth.getMesh().position;
-                positions.push({
-                    distance: Math.sqrt(pos.x * pos.x + pos.z * pos.z),
-                    x: pos.x,
-                    z: pos.z
-                });
-            }
-
-            const perihelion = positions.reduce((min, p) => p.distance < min.distance ? p : min);
-            let angleDeg = Math.atan2(perihelion.z, perihelion.x) * 180 / Math.PI;
-
-            // Normalize to 0-360 range
-            if (angleDeg < 0) angleDeg += 360;
-
-            return angleDeg;
+        test(`${name} passes perihelion at the JPL Horizons time`, async ({ page }) => {
+            const got = await perihelionTime(page, name, h.tpJ2000Days);
+            expect(got.hasCalculator, 'OrbitalCalculator must be loaded for time-synced orbits').toBe(true);
+            within(got.day, h.tpJ2000Days, TOL_TIME_DAYS, `${name} perihelion passage (days after J2000)`);
         });
-
-        within(perihelionAngle, 288.1, TOLERANCE_ANGLE, 'Earth argument of periapsis');
-    });
+    }
 });
 
 test.describe('Step 5.2: Performance Validation Tests', () => {

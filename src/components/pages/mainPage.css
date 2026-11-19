@@ -1601,6 +1601,38 @@ html {
     .identity-card:not(.idc-collapsed) .idc-role,
     .identity-card:not(.idc-collapsed) .idc-status { display: none; }
 }
+/* Phone landscape (P19, 2026-11-19): the hero is only ~150 px tall (667x375: planet bar
+   116-178, action row 199-251), so the stacked card sat ON the planet tabs and the
+   I/C/T/R row - layout-audit measured "Hide intro card covered by tab-Earth", "View
+   projects covered by action-buttons-row". Here the card becomes one row in the action
+   band (name, toggle, the two links), bottom-left, and the action row moves to the right
+   end of the same band, so the two share it side by side and nothing overlaps. */
+@media (max-height: 520px) and (orientation: landscape) {
+    .identity-card {
+        right: auto;
+        bottom: 0;
+        width: auto;
+        max-width: calc(100% - 220px);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 8px 5px 12px;
+    }
+    .identity-card.idc-collapsed { right: auto; padding: 5px 8px 5px 12px; }
+    .identity-card .idc-handle,
+    .identity-card .idc-role,
+    .identity-card .idc-status { display: none; }
+    .identity-card .idc-name,
+    .identity-card.idc-collapsed .idc-name { font-size: 1rem; white-space: nowrap; }
+    .identity-card .idc-body { display: flex; align-items: center; }
+    .identity-card .idc-actions { margin-top: 0; gap: 6px; }
+    .identity-card .idc-btn { min-height: 40px; padding: 4px 10px; font-size: 0.8rem; }
+    .identity-card .idc-toggle { width: 40px; height: 40px; }
+    /* The row is a full-width strip: its empty left part would sit over the card and
+       swallow its taps, so only the buttons themselves take pointers here. */
+    .action-buttons-row { justify-content: flex-end; pointer-events: none; }
+    .action-buttons-row > * { pointer-events: auto; }
+}
 
 /* ========================================
    TOUCH TARGETS (R3 #8, 2026-11-19)

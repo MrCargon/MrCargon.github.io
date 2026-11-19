@@ -24,7 +24,7 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-da09c7d226f0';
+const CACHE_NAME = 'mrcargon-hub-51af07e95fbb';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 // How long a /src/data/ request waits on the network before a cached copy answers.
 const DATA_WAIT_MS = 3500;

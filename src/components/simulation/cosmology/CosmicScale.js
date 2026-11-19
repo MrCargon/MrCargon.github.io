@@ -641,7 +641,12 @@ class CosmicScale {
     }
 
     dispose() {
-        console.assert(this.initialized, 'CosmicScale.dispose: not initialized');
+        // A failed init() (bad data, timeout) is disposed by the caller's error path,
+        // and its level arrays were never allocated: nothing was built, so nothing to undo.
+        if (!this.initialized) {
+            this.enabled = false;
+            return;
+        }
 
         this.hideAllLevels();
 

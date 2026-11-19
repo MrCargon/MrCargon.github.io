@@ -14,55 +14,55 @@
           "name": "Sun",
           "distance": 0,
           "size": 10,
-          "color": 0xfdb813
+          "color": 16627731
         },
         {
           "name": "Mercury",
           "distance": 39,
           "size": 2,
-          "color": 0x8c7853
+          "color": 9205843
         },
         {
           "name": "Venus",
           "distance": 72,
           "size": 3.8,
-          "color": 0xffc649
+          "color": 16762441
         },
         {
           "name": "Earth",
           "distance": 100,
           "size": 4,
-          "color": 0x2233ff
+          "color": 2241535
         },
         {
           "name": "Mars",
           "distance": 152,
           "size": 2.1,
-          "color": 0xdc143c
+          "color": 14423100
         },
         {
           "name": "Jupiter",
           "distance": 260,
           "size": 8,
-          "color": 0xdaa520
+          "color": 14329120
         },
         {
           "name": "Saturn",
           "distance": 380,
           "size": 7,
-          "color": 0xfad5a5
+          "color": 16438693
         },
         {
           "name": "Uranus",
           "distance": 480,
           "size": 5,
-          "color": 0x4fd0e0
+          "color": 5230816
         },
         {
           "name": "Neptune",
           "distance": 560,
           "size": 5,
-          "color": 0x4169e1
+          "color": 4286945
         }
       ],
       "labels": [
@@ -90,14 +90,14 @@
           "name": "Solar System",
           "distance": 0,
           "size": 20,
-          "color": 0xfdb813,
+          "color": 16627731,
           "isCenter": true
         },
         {
           "name": "Oort Cloud Inner Edge",
           "distance": 1000,
           "size": 5,
-          "color": 0x888888,
+          "color": 8947848,
           "isRing": true,
           "ringInner": 1000,
           "ringOuter": 1200
@@ -106,7 +106,7 @@
           "name": "Oort Cloud Outer Edge",
           "distance": 2500,
           "size": 5,
-          "color": 0x666666,
+          "color": 6710886,
           "isRing": true,
           "ringInner": 2400,
           "ringOuter": 2500
@@ -137,38 +137,38 @@
           "name": "Sun",
           "distance": 0,
           "size": 30,
-          "color": 0xfdb813,
+          "color": 16627731,
           "isCenter": true
         },
         {
           "name": "Alpha Centauri A",
           "distance": 2700,
           "size": 28,
-          "color": 0xffdd44
+          "color": 16768324
         },
         {
           "name": "Alpha Centauri B",
           "distance": 2750,
           "size": 24,
-          "color": 0xffaa44
+          "color": 16755268
         },
         {
           "name": "Proxima Centauri",
           "distance": 2680,
           "size": 16,
-          "color": 0xff6633
+          "color": 16737843
         },
         {
           "name": "Barnard's Star",
           "distance": 3800,
           "size": 18,
-          "color": 0xff5522
+          "color": 16733474
         },
         {
           "name": "Sirius A",
           "distance": 5200,
           "size": 32,
-          "color": 0xaaddff
+          "color": 11197951
         }
       ],
       "labels": [
@@ -196,7 +196,7 @@
           "name": "Sun",
           "distance": 0,
           "size": 50,
-          "color": 0xfdb813,
+          "color": 16627731,
           "isCenter": true
         }
       ],
@@ -205,7 +205,7 @@
         "maxDistance": 15000,
         "minDistance": 500,
         "size": 3,
-        "color": 0xffffff,
+        "color": 16777215,
         "opacity": 0.8
       },
       "labels": [
@@ -233,7 +233,7 @@
           "name": "Galactic Core",
           "distance": 0,
           "size": 200,
-          "color": 0xffeeaa,
+          "color": 16772778,
           "isCenter": true,
           "glow": true
         }
@@ -246,7 +246,7 @@
         "twist": 1.2,
         "particlesPerArm": 200,
         "particleSize": 5,
-        "color": 0xccddff,
+        "color": 13426175,
         "opacity": 0.6
       },
       "particleField": {
@@ -254,7 +254,7 @@
         "maxDistance": 50000,
         "minDistance": 5000,
         "size": 4,
-        "color": 0xffffff,
+        "color": 16777215,
         "opacity": 0.5
       },
       "labels": [
@@ -286,7 +286,7 @@
           "name": "Milky Way",
           "distance": 0,
           "size": 500,
-          "color": 0xccddff,
+          "color": 13426175,
           "isCenter": true,
           "isGalaxy": true,
           "glow": true
@@ -295,7 +295,7 @@
           "name": "Andromeda (M31)",
           "distance": 25000,
           "size": 600,
-          "color": 0xaaccff,
+          "color": 11193599,
           "isGalaxy": true,
           "glow": true
         },
@@ -303,7 +303,7 @@
           "name": "Triangulum (M33)",
           "distance": 30000,
           "size": 300,
-          "color": 0xbbddff,
+          "color": 12312063,
           "isGalaxy": true,
           "glow": true
         },
@@ -311,14 +311,14 @@
           "name": "Large Magellanic Cloud",
           "distance": 18000,
           "size": 200,
-          "color": 0xddddff,
+          "color": 14540287,
           "isGalaxy": true
         },
         {
           "name": "Small Magellanic Cloud",
           "distance": 20000,
           "size": 150,
-          "color": 0xddddff,
+          "color": 14540287,
           "isGalaxy": true
         }
       ],

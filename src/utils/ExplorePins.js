@@ -44,8 +44,7 @@ class ExplorePins {
         catch (e) { raw = null; }
         var arr = null;
         if (raw) { try { arr = JSON.parse(raw); } catch (e) { arr = null; } }
-        // No default pin: the globe already shows the "Based in San Francisco" marker,
-        // so a seeded SF pin would just duplicate it. Start empty; the user adds pins.
+        // No default pin (F2: the globe marks no home city). Start empty; the user adds pins.
         if (!Array.isArray(arr)) arr = [];
         var max = Math.min(arr.length, this.maxPins);             // Rule 2: bounded
         for (var i = 0; i < max; i++) this._addRecord(arr[i], false);

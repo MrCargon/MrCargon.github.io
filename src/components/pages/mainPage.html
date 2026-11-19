@@ -17,7 +17,7 @@
             </div>
             <div class="idc-body" id="idc-body">
                 <p class="idc-role">Creative Developer and 3D Designer</p>
-                <p class="idc-status"><span class="idc-dot" aria-hidden="true"></span>Based in San Francisco · Open to work</p>
+                <p class="idc-status"><span class="idc-dot" aria-hidden="true"></span>Born in Jūrmala, Latvia · based in San Francisco · Open to work</p>
                 <div class="idc-actions">
                     <a class="idc-btn idc-btn--primary" href="#projects">View projects</a>
                     <a class="idc-btn" href="#about">About / CV</a>
@@ -470,7 +470,7 @@
                 <button type="button" class="ep-close" id="explore-exit" aria-label="Exit Explore Earth mode">✕</button>
             </div>
             <div class="ep-info">
-                <span>📍 Based in San Francisco · Open to work</span>
+                <span>📍 Born in Jūrmala, Latvia · based in San Francisco · Open to work</span>
                 <span id="explore-distance" class="ep-dist">—</span>
                 <span id="explore-clock" class="ep-dist" title="Day and night, the Moon and the live layers all use this clock">☀ Sun &amp; Moon: live</span>
                 <span class="ep-hint" aria-hidden="true">drag · scroll · arrows · +/− · dbl-click globe to drop a pin · Esc exits</span>
@@ -544,7 +544,7 @@
                 <!-- LAYERS -->
                 <section class="ep-section" data-section="layers">
                     <div class="ep-sec-body" id="ep-layers-body" role="tabpanel" aria-labelledby="ep-tab-layers" tabindex="0">
-                        <button type="button" class="ep-btn ep-btn--accent" id="explore-center-sf" aria-label="Center the globe on San Francisco">🎯 Center on SF</button>
+                        <button type="button" class="ep-btn ep-btn--accent" id="explore-reset-view" aria-label="Reset the view to the whole Earth">🌍 Reset view</button>
                         <div class="ep-grid3">
                             <button type="button" class="ep-switch" id="explore-toggle-borders" aria-pressed="false" aria-label="Toggle country borders">🗺️ Borders</button>
                             <button type="button" class="ep-switch" id="explore-toggle-grid" aria-pressed="false" aria-label="Toggle latitude and longitude grid">🌐 Grid</button>
@@ -624,7 +624,7 @@
              style="position:fixed; z-index:42; pointer-events:none; padding:3px 8px; background:rgba(8,12,24,0.92); border:1px solid rgba(255,230,128,0.6); border-radius:6px; color:#ffe680; font:12px/1.3 system-ui,-apple-system,sans-serif; white-space:nowrap;"></div>
 
         <!-- Marker detail card — shown when a live marker is clicked (raycast), and briefly
-             as the San Francisco intro on entering Explore (hides after 6 s or on the first
+             as a one-line hint on entering Explore (hides after 6 s or on the first
              drag/zoom). Not a live region: a changed card is announced once through
              #planet-live-region (R3 #11), so clicking the same marker again stays quiet. -->
         <div id="explore-detail" hidden role="group" aria-label="Marker details"

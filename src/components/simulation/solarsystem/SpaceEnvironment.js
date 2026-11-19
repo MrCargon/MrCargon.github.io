@@ -2242,6 +2242,7 @@ class SpaceEnvironment {
         // (far, fast) speed and flung the view off the city. The 'start' event fires on
         // pointer-down, before any rotation is applied.
         this._onExploreControlStart = () => {
+            this._endExploreIntro();   // R3 #11: first drag / wheel / pinch hides the intro
             const e = this.getEarthObject();
             if (!e || !this.controls) return;
             const rad = (e.data && e.data.radius) || 2;
@@ -2291,6 +2292,7 @@ class SpaceEnvironment {
         this.setupExplorePanel();
         this._syncExploreToggleButtons();
         this.announceExplore('Explore Earth mode. Drag to rotate, scroll to zoom. Click markers for details.');
+        this._showExploreIntro();      // R3 #11: brief San Francisco card, then it gets out of the way
         this._updateExploreButton();   // hides the opt-in button while exploring
         console.log('Entered Explore Earth mode');
         return true;
@@ -2603,7 +2605,7 @@ class SpaceEnvironment {
         const content = document.getElementById('content');
         if (content) content.style.pointerEvents = (this._prevContentPE || '');
         document.querySelectorAll('.side-popup').forEach((p) => { p.style.display = ''; });
-        if (this._detailEl) this._detailEl.hidden = true;
+        this._hideDetail();   // also stops a pending intro timer
         if (earth && typeof earth.highlightRegion === 'function') earth.highlightRegion(null, null);
         if (earth && typeof earth.highlightCountry === 'function') earth.highlightCountry(null);
         if (this._tooltipEl) this._tooltipEl.hidden = true;
@@ -3453,7 +3455,7 @@ class SpaceEnvironment {
         if (!s) return false;
         this._zoomSliderEl = s;
         this._zoomSliderDragging = false;
-        s.addEventListener('input', () => this._applyZoomFromSlider(Number(s.value)));
+        s.addEventListener('input', () => { this._endExploreIntro(); this._applyZoomFromSlider(Number(s.value)); });
         s.addEventListener('pointerdown', () => { this._zoomSliderDragging = true; });
         s.addEventListener('pointerup', () => { this._zoomSliderDragging = false; });
         window.addEventListener('pointerup', () => { this._zoomSliderDragging = false; });
@@ -4067,6 +4069,11 @@ class SpaceEnvironment {
      */
     _handleExploreClick(event) {
         if (!this.exploreMode || !this.camera || !this._detailEl) return;
+        // R3 #11: the click that ENTERED Explore (Enter/Space on the button fires it at
+        // 0,0, where the not-yet-projected markers sit) and clicks on the card itself
+        // (its ✕) are not globe clicks.
+        const t = event && event.target;
+        if (t && typeof t.closest === 'function' && t.closest('#explore-enter-btn, #explore-detail')) return;
         const earth = this.getEarthObject();
         if (!earth) return;
         const rect = this._getCanvasRect();
@@ -4086,21 +4093,101 @@ class SpaceEnvironment {
             const hits = this._exploreRaycaster.intersectObjects(pick, false);
             if (hits.length) u = hits[0].object.userData || {};
         }
-        if (u) {
-            // textContent (not innerHTML): marker info can come from live feeds
-            // (e.g. USGS quake "place" strings), so never inject feed text as HTML.
-            this._detailEl.textContent = '';
-            const strong = document.createElement('strong');
-            strong.textContent = u.name || 'Marker';
-            this._detailEl.appendChild(strong);
-            if (u.info) {
-                this._detailEl.appendChild(document.createElement('br'));
-                this._detailEl.appendChild(document.createTextNode(u.info));
-            }
-            this._detailEl.hidden = false;
-        } else {
-            this._detailEl.hidden = true;
+        if (u) this._showDetail(u.name || 'Marker', u.info || '', false);
+        else this._hideDetail();
+    }
+
+    /**
+     * Fill + show the detail card (R3 #11). Announced once through the page live region,
+     * and only when the visible card really changes: the same marker clicked again while
+     * its card is up rewrites nothing and says nothing. The intro card is not announced
+     * (entry already announces; the panel header carries the same identity). Rule 5.
+     * @returns {boolean}
+     */
+    _showDetail(name, info, isIntro) {
+        console.assert(typeof name === 'string' && typeof info === 'string', '_showDetail: strings required');
+        const el = this._detailEl;
+        console.assert(el === null || el === undefined || el.nodeType === 1, '_showDetail: bad card');
+        if (!el) return false;
+        this._clearExploreIntro();
+        this._detailIsIntro = !!isIntro;
+        const key = name + '\n' + info;
+        const body = el.querySelector('.ed-body') || el;
+        const close = el.querySelector('.ed-close');
+        if (close) close.onclick = () => this._hideDetail(true);   // re-bound per show: never a stale instance
+        if (!el.hidden && this._detailKey === key) return true;  // unchanged: no rewrite, no re-announce
+        // textContent (not innerHTML): marker info can come from live feeds
+        // (e.g. USGS quake "place" strings), so never inject feed text as HTML.
+        body.textContent = '';
+        const strong = document.createElement('strong');
+        strong.textContent = name;
+        body.appendChild(strong);
+        if (info) {
+            body.appendChild(document.createElement('br'));
+            body.appendChild(document.createTextNode(info));
         }
+        this._detailKey = key;
+        el.hidden = false;
+        if (!isIntro) this.announceExplore(info ? name + '. ' + info : name);
+        return true;
+    }
+
+    /**
+     * Hide the detail card. fromClose (the ✕) hands focus back to the panel if it was
+     * inside the card, so a keyboard user is not dropped onto <body>. Rule 5: 2 asserts.
+     * @returns {boolean}
+     */
+    _hideDetail(fromClose) {
+        const el = this._detailEl;
+        console.assert(el === null || el === undefined || el.nodeType === 1, '_hideDetail: bad card');
+        console.assert(fromClose === undefined || typeof fromClose === 'boolean', '_hideDetail: bad flag');
+        this._clearExploreIntro();
+        this._detailIsIntro = false;
+        if (!el) return false;
+        const hadFocus = el.contains(document.activeElement);
+        el.hidden = true;
+        if (fromClose && hadFocus) {
+            const back = document.getElementById('explore-collapse');
+            if (back && typeof back.focus === 'function') back.focus();
+        }
+        return true;
+    }
+
+    /**
+     * The San Francisco intro card on entering Explore (R3 #11): up for 6 s, or until the
+     * first drag / wheel / pinch / zoom-slider move, or the ✕ — whichever comes first.
+     * @returns {boolean}
+     */
+    _showExploreIntro() {
+        console.assert(typeof this._showDetail === 'function', '_showExploreIntro: card required');
+        console.assert(SpaceEnvironment.INTRO_MS > 0, '_showExploreIntro: bad timeout');
+        if (!this._showDetail('San Francisco', 'Based here · open to work', true)) return false;
+        // Keyboard focus on the ✕ holds the card (it must not vanish under the focus);
+        // the timer re-arms and the card goes once focus has left it.
+        const tick = () => {
+            this._introTimer = null;
+            const el = this._detailEl;
+            if (this._detailIsIntro && el && el.contains(document.activeElement)) {
+                this._introTimer = setTimeout(tick, SpaceEnvironment.INTRO_MS);
+                return;
+            }
+            this._endExploreIntro();
+        };
+        this._introTimer = setTimeout(tick, SpaceEnvironment.INTRO_MS);
+        return true;
+    }
+
+    // Hide the card only if it is still the intro (a quake/ISS card the user opened stays).
+    _endExploreIntro() {
+        console.assert(typeof this._hideDetail === 'function', '_endExploreIntro: hide required');
+        if (!this._detailIsIntro) return false;
+        return this._hideDetail();
+    }
+
+    _clearExploreIntro() {
+        console.assert(typeof clearTimeout === 'function', '_clearExploreIntro: timers required');
+        if (this._introTimer) { clearTimeout(this._introTimer); this._introTimer = null; }
+        return true;
     }
 
     /**
@@ -5816,6 +5903,7 @@ SpaceEnvironment.DPR_GOOD_MS = 15; // p95 below this = room to go back up (hyste
 SpaceEnvironment.DPR_BAD_WINDOWS = 2; // consecutive slow windows before dropping
 SpaceEnvironment.DPR_GOOD_WINDOWS = 5; // consecutive fast windows before restoring
 SpaceEnvironment.DPR_MAX_RESTORES = 2; // after this many restores 1x stays for the session
+SpaceEnvironment.INTRO_MS = 6000; // R3 #11: the San Francisco intro card hides after this
 SpaceEnvironment.DPR_GAP_MS = 250; // a gap longer than this is not a frame
 
 // The longest step the simulation will accept, in seconds. Anything larger did not

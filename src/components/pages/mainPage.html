@@ -616,9 +616,13 @@
         <div id="country-tooltip" hidden aria-hidden="true"
              style="position:fixed; z-index:42; pointer-events:none; padding:3px 8px; background:rgba(8,12,24,0.92); border:1px solid rgba(255,230,128,0.6); border-radius:6px; color:#ffe680; font:12px/1.3 system-ui,-apple-system,sans-serif; white-space:nowrap;"></div>
 
-        <!-- Marker detail card — shown when a live marker is clicked (raycast) -->
-        <div id="explore-detail" hidden role="status" aria-live="polite"
-             style="position:fixed; left:50%; bottom:96px; transform:translateX(-50%); z-index:41; max-width:280px; padding:8px 12px; background:rgba(8,12,24,0.92); border:1px solid rgba(120,200,255,0.55); border-radius:8px; color:#dce8ff; font:13px/1.4 system-ui,-apple-system,sans-serif; text-align:center; box-shadow:0 6px 24px rgba(0,0,0,0.45);"></div>
+        <!-- Marker detail card — shown when a live marker is clicked (raycast), and briefly
+             as the San Francisco intro on entering Explore (hides after 6 s or on the first
+             drag/zoom). Not a live region: a changed card is announced once through
+             #planet-live-region (R3 #11), so clicking the same marker again stays quiet. -->
+        <div id="explore-detail" hidden role="group" aria-label="Marker details"
+             style="position:fixed; left:50%; bottom:96px; transform:translateX(-50%); z-index:41; max-width:280px; padding:8px 30px 8px 12px; background:rgba(8,12,24,0.92); border:1px solid rgba(120,200,255,0.55); border-radius:8px; color:#dce8ff; font:13px/1.4 system-ui,-apple-system,sans-serif; text-align:center; box-shadow:0 6px 24px rgba(0,0,0,0.45);"><span class="ed-body"></span><button type="button" class="ed-close" aria-label="Close details"
+             style="position:absolute; top:2px; right:2px; width:24px; height:24px; padding:0; cursor:pointer; border:0; border-radius:6px; background:transparent; color:#dce8ff; font:14px/24px system-ui,-apple-system,sans-serif;">✕</button></div>
 
         <!-- Opt-in Explore Earth button — shown by SpaceEnvironment only while Earth
              is the focused planet and not already exploring (replaces auto-enter) -->

@@ -2646,7 +2646,12 @@ class SpaceEnvironment {
         if (earth.troposphereObjects && typeof earth.troposphereObjects.update === 'function') {
             earth.troposphereObjects.update(rr);
         }
-        if (earth.satellites) earth.satellites.update();
+        // Satellites fade out below ~1.5R; while the ISS marker layer is on it owns the ISS
+        // (click card), so the satellite layer skips it: one ISS on the globe (audit F8).
+        if (earth.satellites) {
+            earth.satellites.setView(rr, typeof earth.issMarkerShown === 'function' && earth.issMarkerShown());
+            earth.satellites.update();
+        }
         // Distance-scale the user pin markers so they hold ~constant screen size.
         if (earth.explorePins && typeof earth.explorePins.update === 'function') {
             earth.explorePins.update(rr);

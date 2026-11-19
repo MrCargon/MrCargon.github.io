@@ -646,6 +646,12 @@ body {
   border: 1px solid rgba(120, 180, 255, 0.35); background: rgba(40, 70, 120, 0.5); color: #dce8ff; font-size: 12px; }
 .ep-iconbtn:hover { background: rgba(60, 100, 160, 0.65); }
 .ep-empty { opacity: 0.8; font-size: 11px; padding: 4px 2px; }   /* R3 #3: was 0.5 (4.1:1) */
+/* Map key (roast R1 #3/#4): quake dots at their real on-globe sizes, the place diamond, line styles. */
+.ep-legend { line-height: 16px; }
+.ep-li { white-space: nowrap; margin-right: 4px; }
+.ep-lq { display: inline-block; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,0.6); margin: 0 2px 0 4px; vertical-align: middle; }
+.ep-lp { display: inline-block; width: 8px; height: 8px; background: #ffe14a; border: 1.5px solid #fff; transform: rotate(45deg); margin: 0 4px 0 2px; vertical-align: middle; }
+.ep-ll { display: inline-block; width: 14px; height: 0; margin: 0 3px 0 6px; vertical-align: middle; }
 /* R3 #2: Live tab in demo mode (Presence.js sets html[data-presence]). Default = live
    wording; in demo the sample wording + chip show and the visitor count is hidden. */
 .presence-demo-only { display: none; }

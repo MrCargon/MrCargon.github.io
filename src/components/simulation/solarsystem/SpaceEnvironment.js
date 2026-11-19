@@ -2548,7 +2548,7 @@ class SpaceEnvironment {
         const g = earth.graticule;
         if (g && g.material) {
             const k = Math.max(0, Math.min(1, (rr - 1.35) / (2.0 - 1.35)));
-            g.material.opacity = 0.55 * k;
+            g.material.opacity = 0.32 * k;   // R1 #4: a faint grey reference, below every data line
             g.material.visible = k > 0.01;
         }
         const near = rr < 4;
@@ -2735,7 +2735,7 @@ class SpaceEnvironment {
         // ~2R, faint by ~1.2R). Only when the borders layer is actually shown.
         if (earth.borders && earth.borders.visible && earth.borders.material) {
             const k = Math.max(0, Math.min(1, (rr - 1.2) / (2.0 - 1.2)));
-            earth.borders.material.opacity = 0.15 + 0.55 * k;
+            earth.borders.material.opacity = 0.2 + 0.65 * k;   // R1 #4: the brightest line (max 0.85)
         }
         if (earth.geoLOD) earth.geoLOD.update(dist / radius);
         this._exploreZoomDeclutter(earth, rr);
@@ -3346,11 +3346,15 @@ class SpaceEnvironment {
     _styleDefaults() {
         console.assert(typeof this === 'object', '_styleDefaults: instance');
         console.assert(true, '_styleDefaults: ok');
+        // Globe palette (GlobeMarkers.PALETTE, roast R1 #3/#4): cities warm white at 60%
+        // (yellow is the places'), states steel blue, districts amber (not border cyan).
+        const P = (typeof GlobeMarkers !== 'undefined' && GlobeMarkers.PALETTE) ? GlobeMarkers.PALETTE
+            : { state: 0x5f8fc8, city: 0xfff0dc, district: 0xffb85c };
         return {
             streets:   { color: 0xf2dcb0, opacity: 0.6, width: 2 },    // F4: soft sand; StreetTiles scales by zoom
-            states:    { color: 0x6fb0e0, opacity: 1.0 },
-            cities:    { color: 0xffd24a, opacity: 1.0 },
-            districts: { color: 0x8fe3ff, opacity: 1.0 }
+            states:    { color: P.state, opacity: 1.0 },
+            cities:    { color: P.city, opacity: 0.6 },
+            districts: { color: P.district, opacity: 1.0 }
         };
     }
 

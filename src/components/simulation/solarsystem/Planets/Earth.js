@@ -586,34 +586,41 @@ class Earth extends Planet {
         const r = this.data.radius * 1.00060; // graticule — coplanar with the satellite map (in the map, not floating)
         const step = 15;          // degrees between grid lines
         const sample = 5;         // degrees between sampled points along a line
-        const verts = [];
-        const pushLine = (pts) => {
+        const verts = [], cols = [];
+        // Per-vertex alpha: full to 60 deg, then fading to 0 at the poles, so the meridians
+        // no longer meet in a bright starburst (roast R1 #4).
+        const fadeA = (lat) => Math.max(0, Math.min(1, (90 - Math.abs(lat)) / 30));
+        const pushLine = (pts, lats) => {
             for (let i = 0; i < pts.length - 1; i++) {
                 verts.push(pts[i].x, pts[i].y, pts[i].z);
                 verts.push(pts[i + 1].x, pts[i + 1].y, pts[i + 1].z);
+                cols.push(1, 1, 1, fadeA(lats[i]), 1, 1, 1, fadeA(lats[i + 1]));
             }
         };
-        // Meridians (constant lng, lat -90..90).
+        // Meridians (constant lng). Only 0/90/180/270 run to the poles; the rest stop at 80.
         for (let lng = -180; lng < 180; lng += step) {
-            const pts = [];
-            for (let lat = -90; lat <= 90; lat += sample) {
-                pts.push(GlobeMath.latLngToVector3(lat, lng, r));
+            const pts = [], lats = [];
+            const lim = (lng % 90 === 0) ? 90 : 80;
+            for (let lat = -lim; lat <= lim; lat += sample) {
+                pts.push(GlobeMath.latLngToVector3(lat, lng, r)); lats.push(lat);
             }
-            pushLine(pts);
+            pushLine(pts, lats);
         }
         // Parallels (constant lat, lng -180..180).
         for (let lat = -75; lat <= 75; lat += step) {
-            const pts = [];
+            const pts = [], lats = [];
             for (let lng = -180; lng <= 180; lng += sample) {
-                pts.push(GlobeMath.latLngToVector3(lat, lng, r));
+                pts.push(GlobeMath.latLngToVector3(lat, lng, r)); lats.push(lat);
             }
-            pushLine(pts);
+            pushLine(pts, lats);
         }
 
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(cols, 4));
+        // Neutral grey and faint: the grid is a reference, not data; blue is for borders.
         const material = new THREE.LineBasicMaterial({
-            color: 0x5aa0e0, transparent: true, opacity: 0.55, depthWrite: false
+            color: GlobeMarkers.color(Earth.PALETTE.grid), vertexColors: true, transparent: true, opacity: 0.32, depthWrite: false
         });
         this.graticule = new THREE.LineSegments(geometry, material);
         this.graticule.visible = false;
@@ -663,8 +670,9 @@ class Earth extends Planet {
         }
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+        // Country borders: the brightest, solid line on the globe (roast R1 #4).
         const material = new THREE.LineBasicMaterial({
-            color: 0x8fe3ff, transparent: true, opacity: 0.7,
+            color: GlobeMarkers.color(Earth.PALETTE.border), transparent: true, opacity: 0.85,
             depthWrite: false, depthTest: true
         });
         this.borders = new THREE.LineSegments(geometry, material);
@@ -1010,9 +1018,11 @@ class Earth extends Planet {
             { name: 'Tokyo', lat: 35.6762, lng: 139.6503, info: 'Open to remote / relocation' },
             { name: 'New York', lat: 40.7128, lng: -74.0060, info: 'Open to remote / relocation' }
         ];
-        const group = mk.addLayer('pois', { clusterPx: 0 });
-        mk.setItems('pois', places.map((p) => ({ lat: p.lat, lng: p.lng, alt: 1.0009, color: 0xffd24a,
-            size: 10, rank: 1, data: { type: 'place', name: p.name, info: p.info } })));
+        // Places own yellow and the diamond shape + a name label (quakes are orange-purple
+        // discs, cities warm-white dots), so a place never reads as a quake or a city.
+        const group = mk.addLayer('pois', { clusterPx: 0, labels: true });
+        mk.setItems('pois', places.map((p) => ({ lat: p.lat, lng: p.lng, alt: 1.0009, color: Earth.PALETTE.place,
+            size: 15, shape: 1, rank: 1, data: { type: 'place', name: p.name, info: p.info } })));
         this.layers.pois = group;
         return group;
     }
@@ -1379,6 +1389,10 @@ Earth.REGION_TIER_DEFS = [
     { key: 'district', url: 'src/assets/geo/districts-sf-named.json', color: 0xffc6f0, rOffset: 1.00065, showTo: 1.35 },
     { key: 'zip',      url: 'src/assets/geo/zip-sf-named.json',       color: 0xffd2a6, rOffset: 1.00066, showTo: 1.22 }
 ];
+
+// The globe palette lives in GlobeMarkers.PALETTE (loaded first, see index.html).
+Earth.PALETTE = (typeof GlobeMarkers !== 'undefined' && GlobeMarkers.PALETTE) ? GlobeMarkers.PALETTE
+    : { place: 0xffe14a, border: 0x8fe3ff, grid: 0xb4bcc6 };
 
 // Make globally available (matches the rest of the codebase).
 if (typeof window !== 'undefined') {

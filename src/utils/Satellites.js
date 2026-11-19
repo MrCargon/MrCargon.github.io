@@ -485,7 +485,7 @@ Satellites.CACHE_PREFIX = 'mrcargon-sats-gp-';
 Satellites.STAMP_KEY = 'mrcargon-sats-last-fetch';
 Satellites.GROUPS = [
     { id: 'gps-ops', label: 'GPS', color: 0x7dffb0 },
-    { id: 'weather', label: 'Weather', color: 0xffc24a },
+    { id: 'weather', label: 'Weather', color: 0x5cb4ff },   // sky blue: yellow is the places' (R1 #3)
     { id: 'stations', label: 'Stations', color: 0xff6ad3 }
 ];
 Satellites._libPromise = null;

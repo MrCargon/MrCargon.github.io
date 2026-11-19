@@ -40,23 +40,28 @@ class GeoLOD {
         // map", not floating). Tiny increments keep the draw order (finer on top) while
         // the gaps (<30m) are imperceptible; the satellite's polygonOffset lets these
         // lines win the depth test without z-fighting.
+        // Colours come from the one globe palette (GlobeMarkers.PALETTE, roast R1 #3/#4):
+        // states = dashed steel blue under the solid cyan borders, cities = small
+        // warm-white dots (yellow is the places'), districts = amber (not border cyan).
+        const P = (typeof GlobeMarkers !== 'undefined' && GlobeMarkers.PALETTE) ? GlobeMarkers.PALETTE
+            : { state: 0x5f8fc8, city: 0xfff0dc, district: 0xffb85c };
         const defs = [
-            { name: 'states', url: 'src/assets/geo/admin1-50m.json', kind: 'lines',
-                color: 0x6fb0e0, rOffset: 1.00060, showBelow: 2.4, hideAbove: 2.7, fadeOutBelow: 1.45 },
+            { name: 'states', url: 'src/assets/geo/admin1-50m.json', kind: 'lines', dash: true,
+                color: P.state, rOffset: 1.00060, showBelow: 2.4, hideAbove: 2.7, fadeOutBelow: 1.45 },
             { name: 'cities', url: 'src/assets/geo/populated-places.json', kind: 'points',
-                color: 0xffd24a, rOffset: 1.00062, showBelow: 1.7, hideAbove: 1.95, fadeOutBelow: 1.2,
+                color: P.city, rOffset: 1.00062, showBelow: 1.7, hideAbove: 1.95, fadeOutBelow: 1.2,
                 // Declutter: places are sorted by population; only the biggest ~15%
                 // show at the top of the band (1.75R), all of them by 1.25R.
                 declutter: [1.75, 1.25, 0.15] },
             { name: 'districts', url: 'src/assets/geo/districts-sf.json', kind: 'lines-or-points',
-                color: 0x8fe3ff, rOffset: 1.00064, showBelow: 1.3, hideAbove: 1.5, fadeOutBelow: 0 }
+                color: P.district, rOffset: 1.00064, showBelow: 1.3, hideAbove: 1.5, fadeOutBelow: 0 }
         ];
         for (let i = 0; i < defs.length; i++) {
             const d = defs[i];
             this.tiers.set(d.name, {
                 name: d.name, url: d.url, kind: d.kind, color: d.color, rOffset: d.rOffset,
                 showBelow: d.showBelow, hideAbove: d.hideAbove, fadeOutBelow: d.fadeOutBelow,
-                declutter: d.declutter || null,
+                declutter: d.declutter || null, dash: !!d.dash,
                 group: null, material: null, built: false, failed: false,
                 requested: false, opacity: 0, targetOpacity: 0
             });
@@ -171,7 +176,7 @@ class GeoLOD {
         if (!tier) return false;
         if (Number.isFinite(opts.color)) {
             tier.color = opts.color;
-            if (tier.material && tier.material.color) tier.material.color.setHex(opts.color);
+            if (tier.material && tier.material.color) tier.material.color.copy(GeoLOD._color(opts.color));
         }
         if (Number.isFinite(opts.opacity)) tier.styleOpacity = Math.max(0, Math.min(1, opts.opacity));
         return true;
@@ -235,23 +240,32 @@ class GeoLOD {
         console.assert(typeof GlobeMath !== 'undefined', 'GeoLOD._buildLines: GlobeMath required');
         if (!data || !Array.isArray(data.rings)) return null;
         const r = this.radius * tier.rOffset;
-        const verts = [];
+        const verts = [], dist = [];
         const maxRings = Math.min(data.rings.length, 20000);   // Rule 2: bounded
         for (let i = 0; i < maxRings; i++) {
             const ring = data.rings[i];
             if (!Array.isArray(ring) || ring.length < 2) continue;
+            let acc = 0;   // distance along the ring, so a dash runs across short segments
             for (let j = 0; j < ring.length - 1; j++) {
                 const a = GlobeMath.latLngToVector3(ring[j][1], ring[j][0], r);
                 const b = GlobeMath.latLngToVector3(ring[j + 1][1], ring[j + 1][0], r);
                 verts.push(a.x, a.y, a.z, b.x, b.y, b.z);
+                const len = a.distanceTo(b);
+                dist.push(acc, acc + len); acc += len;
             }
         }
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-        const material = new THREE.LineBasicMaterial({
-            color: tier.color, transparent: true, opacity: 0,
-            depthWrite: false, depthTest: true
-        });
+        const base = { color: GeoLOD._color(tier.color), transparent: true, opacity: 0, depthWrite: false, depthTest: true };
+        let material;
+        if (tier.dash) {
+            // Dashes ~6 px long at 1.8R, so a dashed state line never reads as a solid border.
+            geometry.setAttribute('lineDistance', new THREE.Float32BufferAttribute(dist, 1));
+            material = new THREE.LineDashedMaterial(Object.assign(base,
+                { dashSize: this.radius * 0.006, gapSize: this.radius * 0.0045 }));
+        } else {
+            material = new THREE.LineBasicMaterial(base);
+        }
         tier.material = material;
         return new THREE.LineSegments(geometry, material);
     }
@@ -277,7 +291,7 @@ class GeoLOD {
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geometry.setAttribute('rpRank', new THREE.Float32BufferAttribute(ranks, 1));
         const material = new THREE.PointsMaterial({
-            color: tier.color, size: this.radius * 0.01, sizeAttenuation: true,
+            color: GeoLOD._color(tier.color), size: this.radius * 0.01, sizeAttenuation: true,
             transparent: true, opacity: 0, depthWrite: false
         });
         // Round crisp dots (an untextured PointsMaterial draws squares), clamped
@@ -288,6 +302,14 @@ class GeoLOD {
         const pts = new THREE.Points(geometry, material);
         if (rounded) RoundPoints.attach(pts);
         return pts;
+    }
+
+    // A palette hex that SHOWS as that hex (ColorManagement is off site-wide, so a raw hex
+    // would be brightened by the sRGB output step). Same as GlobeMarkers.color.
+    static _color(hex) {
+        console.assert(Number.isFinite(hex), 'GeoLOD._color: hex required');
+        console.assert(typeof THREE !== 'undefined', 'GeoLOD._color: THREE required');
+        return new THREE.Color().setHex(hex).convertSRGBToLinear();
     }
 
     // Fetch JSON via SafeFetch (preferred) with a plain fetch() fallback. Never

@@ -44,7 +44,7 @@ class TroposphereObjects {
         // on other continents.
         this.balloonSeeds = opts.balloonSeeds || [
             { lat: 38.6, lng: -121.5, color: 0xff5a4a }, { lat: 45.5, lng: -98.0, color: 0x4aa3ff },
-            { lat: 51.5, lng: 0.1, color: 0xffc24a }, { lat: 41.9, lng: 12.5, color: 0x6ad36a },
+            { lat: 51.5, lng: 0.1, color: 0xc08bff }, { lat: 41.9, lng: 12.5, color: 0x6ad36a },
             { lat: -23.5, lng: -46.6, color: 0xff6ad3 }, { lat: -33.9, lng: 151.2, color: 0x4ad3d3 }
         ];
         this.jetSeeds = opts.jetSeeds || [

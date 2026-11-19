@@ -48,7 +48,7 @@ class GlobeMarkers {
         group.visible = false;
         const L = { name: name, group: group, points: null, items: [], clusterPx: o.clusterPx || 0,
             clusterNoun: o.clusterNoun || 'markers', rep: null, count: null, sx: null, sy: null,
-            badges: [] };
+            badges: [], labels: o.labels ? [] : null };
         this.layers[name] = L;
         this.order.push(name);
         this.parent.add(group);
@@ -57,7 +57,8 @@ class GlobeMarkers {
 
     /**
      * Replace a layer's markers.
-     * items: [{lat, lng, alt (radius factor), color (sRGB hex), size (px), rank, data:{name, info, ...}}]
+     * items: [{lat, lng, alt (radius factor), color (sRGB hex), size (px), rank, shape, data:{name, info, ...}}]
+     * shape: 0 = round disc (data: quakes, ISS), 1 = diamond with a white ring (places).
      */
     setItems(name, items) {
         const L = this.layers[name];
@@ -67,7 +68,7 @@ class GlobeMarkers {
         this._disposePoints(L);
         const n = Math.min(items.length, 1000);              // Rule 2: bounded
         const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
-        const size = new Float32Array(n), alpha = new Float32Array(n);
+        const size = new Float32Array(n), alpha = new Float32Array(n), shape = new Float32Array(n);
         const c = new THREE.Color();
         L.items = [];
         for (let i = 0; i < n; i++) {
@@ -78,7 +79,7 @@ class GlobeMarkers {
             // convert explicitly - the shader output step encodes linear -> sRGB.
             c.setHex(it.color).convertSRGBToLinear();
             col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
-            size[i] = it.size; alpha[i] = it.hidden ? 0 : 1;
+            size[i] = it.size; alpha[i] = it.hidden ? 0 : 1; shape[i] = it.shape === 1 ? 1 : 0;
             L.items.push({ size: it.size, rank: it.rank || 0, hidden: !!it.hidden, data: it.data || {} });
         }
         const g = new THREE.BufferGeometry();
@@ -86,6 +87,7 @@ class GlobeMarkers {
         g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
         g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
         g.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+        g.setAttribute('aShape', new THREE.BufferAttribute(shape, 1));
         g.computeBoundingSphere();
         L.points = new THREE.Points(g, GlobeMarkers.material());
         L.points.frustumCulled = false;       // a few points; the bound changes when the ISS moves
@@ -135,12 +137,17 @@ class GlobeMarkers {
         this.parent.updateWorldMatrix(true, false);
         this.parent.getWorldPosition(this._c);
         this._cam.setFromMatrixPosition(camera.matrixWorld);
+        // Name labels only once the globe is big on screen (camera nearer than LABEL_MAX_R
+        // globe radii); far out they crowd the small disc and the atmosphere labels.
+        const e = this.parent.matrixWorld.elements;
+        const worldR = this.radius * Math.hypot(e[0], e[1], e[2]);
+        this._labelsOn = this._cam.distanceTo(this._c) < GlobeMarkers.LABEL_MAX_R * worldR;
         for (let k = 0; k < this.order.length; k++) {
             const L = this.layers[this.order[k]];
             if (!L.points) continue;
             const on = L.group.visible && this.fade > 0.01;
             L.points.visible = on;                       // not drawn at all once faded out
-            if (!on) { this._hideBadges(L, 0); continue; }
+            if (!on) { this._hideBadges(L, 0); this._hideLabels(L); continue; }
             const u = L.points.material.uniforms;
             u.uOpacity.value = 0.95 * this.fade;
             u.uScale.value = pr;
@@ -203,6 +210,7 @@ class GlobeMarkers {
             if (c > 1 && badge < GlobeMarkers.MAX_BADGES) {
                 this._badge(L, badge++, rect.left + L.sx[i], rect.top + L.sy[i], aS.array[i], c);
             }
+            if (L.labels) this._label(L, i, (c > 0 && this._labelsOn) ? rect.left + L.sx[i] : NaN, rect.top + L.sy[i], aS.array[i]);
         }
         this._hideBadges(L, badge);
         aA.needsUpdate = true; aS.needsUpdate = true;
@@ -238,11 +246,44 @@ class GlobeMarkers {
         }
     }
 
+    // Hide a labelled layer's name labels (layer off or faded out).
+    _hideLabels(L) {
+        if (!L.labels) return;
+        for (let k = 0; k < L.labels.length; k++) {
+            if (L.labels[k] && L.labels[k].style.display !== 'none') L.labels[k].style.display = 'none';
+        }
+    }
+
+    // Always-on name label beside a labelled layer's marker (the 4 places). x NaN = hide.
+    // Rule 5: 2 asserts.
+    _label(L, i, x, y, sizePx) {
+        console.assert(Array.isArray(L.labels), 'GlobeMarkers._label: labelled layer required');
+        console.assert(Number.isInteger(i), 'GlobeMarkers._label: index required');
+        if (typeof document === 'undefined') return;
+        let el = L.labels[i];
+        if (!Number.isFinite(x)) { if (el && el.style.display !== 'none') el.style.display = 'none'; return; }
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'globe-marker-label';
+            el.setAttribute('aria-hidden', 'true');
+            el.style.cssText = 'position:fixed; z-index:34; pointer-events:none; white-space:nowrap; ' +
+                'font:600 11px/14px system-ui,-apple-system,sans-serif; color:#fff; padding:0 4px; ' +
+                'border-radius:3px; background:rgba(14,10,12,0.62); transform:translate(0,-50%); display:none;';
+            el.textContent = (L.items[i].data && L.items[i].data.name) || '';
+            document.body.appendChild(el);
+            L.labels[i] = el;
+        }
+        el.style.left = (x + sizePx * 0.5 + 4) + 'px';
+        el.style.top = y + 'px';
+        el.style.opacity = String(Math.min(1, this.fade * 1.2));
+        if (el.style.display !== 'block') el.style.display = 'block';
+    }
+
     // Hide the count badges of layers whose toggle is off (Explore exit / toggle).
     syncVisibility() {
         for (let k = 0; k < this.order.length; k++) {
             const L = this.layers[this.order[k]];
-            if (!L.group.visible) { this._hideBadges(L, 0); if (L.points) L.points.visible = false; }
+            if (!L.group.visible) { this._hideBadges(L, 0); this._hideLabels(L); if (L.points) L.points.visible = false; }
         }
         return true;
     }
@@ -296,6 +337,9 @@ class GlobeMarkers {
             this._disposePoints(L);
             for (let b = 0; b < L.badges.length; b++) { if (L.badges[b].parentNode) L.badges[b].parentNode.removeChild(L.badges[b]); }
             L.badges = [];
+            const lb = L.labels || [];
+            for (let b = 0; b < lb.length; b++) { if (lb[b] && lb[b].parentNode) lb[b].parentNode.removeChild(lb[b]); }
+            L.labels = L.labels ? [] : null;
             if (L.group.parent) L.group.parent.remove(L.group);
         }
         this.layers = {}; this.order = [];
@@ -342,13 +386,15 @@ class GlobeMarkers {
                 'attribute vec3 aColor;',
                 'attribute float aSize;',
                 'attribute float aAlpha;',
+                'attribute float aShape;',
                 'uniform float uScale;',
                 'uniform float uViewH;',
                 'varying vec3 vColor;',
                 'varying float vAlpha;',
                 'varying float vPx;',
+                'varying float vShape;',
                 'void main() {',
-                '  vColor = aColor; vAlpha = aAlpha;',
+                '  vColor = aColor; vAlpha = aAlpha; vShape = aShape;',
                 '  vPx = aSize * uScale;',
                 '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
                 // Pull the sprite toward the camera by ~1.5 of its own width (world units),
@@ -366,14 +412,21 @@ class GlobeMarkers {
                 'varying vec3 vColor;',
                 'varying float vAlpha;',
                 'varying float vPx;',
+                'varying float vShape;',
                 'void main() {',
                 '  vec2 p = gl_PointCoord * 2.0 - 1.0;',
-                '  float r = length(p);',
+                // Shape 1 (places) = a diamond (L1 distance), so a place never reads as a quake.
+                '  float r = vShape > 0.5 ? abs(p.x) + abs(p.y) : length(p);',
                 '  float px = 2.0 / max(vPx, 1.0);',              // one pixel in disc units
                 '  float disc = 1.0 - smoothstep(1.0 - px, 1.0, r);',
                 '  if (disc <= 0.0 || vAlpha <= 0.0) discard;',
                 '  float core = 1.0 - smoothstep(1.0 - 2.4 * px, 1.0 - 1.4 * px, r);',  // ~1 px dark rim
                 '  vec3 col = mix(vColor * 0.18, vColor, core);',
+                // Places: a ~1.5 px white ring inside the dark rim, colour core inside it.
+                '  if (vShape > 0.5) {',
+                '    float inner = 1.0 - smoothstep(1.0 - 5.6 * px, 1.0 - 4.4 * px, r);',
+                '    col = mix(vColor * 0.18, mix(vec3(1.0), vColor, inner), core);',
+                '  }',
                 '  gl_FragColor = vec4(col, disc * vAlpha * uOpacity);',
                 '  #include <colorspace_fragment>',
                 '}'
@@ -385,13 +438,43 @@ class GlobeMarkers {
     }
 }
 GlobeMarkers.MAX_BADGES = 40;
+
+// ONE globe palette (roast R1 #3/#4): each meaning owns one hue, and the pairs that can
+// sit side by side also differ in shape, dash or lightness, so they stay apart under
+// deuteranopia/protanopia (checked with a Machado 2009 simulation). sRGB hex.
+//   yellow  = places (diamond + white ring + name)   orange->purple = quakes (discs)
+//   cyan    = country borders (solid, brightest)     steel blue = states (dashed, dimmer)
+//   amber   = SF districts (solid)                   grey = lat/lng grid (faint, fades at poles)
+//   warm white = cities (small dots)                 mint/sky/pink = GPS/weather/station sats
+GlobeMarkers.PALETTE = Object.freeze({
+    place: 0xffe14a,
+    city: 0xfff0dc,
+    border: 0x8fe3ff,
+    state: 0x5f8fc8,
+    district: 0xffb85c,
+    grid: 0xb4bcc6,
+    satGps: 0x7dffb0,
+    satWeather: 0x5cb4ff,
+    satStation: 0xff6ad3
+});
+
+// A palette hex as a THREE.Color that SHOWS as that hex. ColorManagement is off site-wide,
+// so a raw setHex is treated as linear and the sRGB output step brightens it (amber
+// 0xffb85c came out cream). Converting first keeps the globe equal to the legend.
+GlobeMarkers.color = function (hex) {
+    console.assert(Number.isFinite(hex), 'GlobeMarkers.color: hex required');
+    return new THREE.Color().setHex(hex).convertSRGBToLinear();
+};
+GlobeMarkers.LABEL_MAX_R = 3.5;     // place-name labels show nearer than this (globe radii)
 GlobeMarkers.MAX_PX = 13;            // largest marker diameter on screen (CSS px)
 
 // Magnitude colour ramp for quakes (sRGB hex; GlobeMarkers converts to linear).
-// M2.5 yellow -> M4 orange -> M5 red -> M6+ magenta. Rule 5: 2 asserts.
+// M2.5 light orange -> M4 orange -> M5 red -> M6 magenta -> M7+ purple. It starts at
+// orange, not yellow: yellow belongs to the places (diamonds). Lightness falls with
+// magnitude, so the order holds for colour-blind readers too. Rule 5: 2 asserts.
 GlobeMarkers.quakeColor = function (mag) {
     console.assert(Number.isFinite(mag), 'GlobeMarkers.quakeColor: mag required');
-    const stops = [[2.5, 0xffd23f], [4.0, 0xff8c1a], [5.0, 0xf03a23], [6.0, 0xc4126e], [7.0, 0x8a1ab8]];
+    const stops = [[2.5, 0xffa64d], [4.0, 0xff7a1a], [5.0, 0xf03a23], [6.0, 0xc4126e], [7.0, 0x8a1ab8]];
     if (mag <= stops[0][0]) return stops[0][1];
     for (let i = 1; i < stops.length; i++) {
         if (mag <= stops[i][0]) {

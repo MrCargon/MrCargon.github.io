@@ -505,7 +505,7 @@ class ProjectsPageManager {
                     <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
                     <h3 style="margin: 0 0 1rem 0;">Loading Failed</h3>
                     <p style="opacity: 0.9; margin: 0 0 2rem 0;">${message}</p>
-                    <button onclick="location.reload()" style="
+                    <button type="button" data-reload-page style="
                         padding: 0.75rem 1.5rem;
                         background: white;
                         color: #dc2626;
@@ -517,6 +517,9 @@ class ProjectsPageManager {
                 </div>
             </div>
         `;
+        // addEventListener, not an inline onclick: the CSP has no 'unsafe-inline'.
+        const reloadBtn = this.gameContent.querySelector('[data-reload-page]');
+        if (reloadBtn) reloadBtn.addEventListener('click', () => location.reload());
     }
     
     /**

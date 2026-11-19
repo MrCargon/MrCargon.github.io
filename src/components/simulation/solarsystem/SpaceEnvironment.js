@@ -296,8 +296,10 @@ class SpaceEnvironment {
                 color: white;
                 cursor: pointer;
                 font-size: 12px;
-            " onclick="this.parentElement.remove()">Dismiss</button>
+            " data-dismiss>Dismiss</button>
         `;
+        // addEventListener, not an inline onclick: the CSP has no 'unsafe-inline'.
+        errorDiv.querySelector('[data-dismiss]').addEventListener('click', () => errorDiv.remove());
         errorDiv.style.cssText = `
             position: fixed;
             top: 20px;
@@ -358,8 +360,10 @@ class SpaceEnvironment {
                 cursor: pointer;
                 font-size: 12px;
                 display: block;
-            " onclick="this.parentElement.remove()">Continue Without 3D</button>
+            " data-dismiss>Continue Without 3D</button>
         `;
+        // addEventListener, not an inline onclick: the CSP has no 'unsafe-inline'.
+        errorDiv.querySelector('[data-dismiss]').addEventListener('click', () => errorDiv.remove());
         errorDiv.style.cssText = `
             position: fixed;
             top: 50%;

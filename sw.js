@@ -1,11 +1,20 @@
 /**
  * sw.js — service worker for the MrCargon portfolio hub (installable PWA).
  *
- * Strategy: stale-while-revalidate for SAME-ORIGIN GET requests — respond from cache
- * instantly when present, and refresh the cache from the network in the background so a
- * `git push` propagates on the next visit. Cross-origin requests (THREE CDNs, Unsplash,
- * the embedded game iframes on mrcargon.github.io/game-*) are passed straight through and
- * never cached. Navigations fall back to the app shell when offline.
+ * SCOPE: this file sits at the origin root, so on a GitHub *user* site its scope is the
+ * whole origin - including the games, which are separate repos published on the SAME
+ * origin (mrcargon.github.io/game-barista/, /game-snake/, /game-tictactoe/). The SW must
+ * not manage them: their big .pck/.wasm files would be served cache-first from the
+ * PORTFOLIO cache (stale game builds until this file's CACHE_NAME changed), and offline
+ * a game navigation would fall back to the portfolio index.html. So the fetch handler
+ * only touches the portfolio's OWN paths (isPortfolioPath below, an allow-list) and lets
+ * everything else - /game-*, any future page on the origin, every cross-origin request
+ * (three.js CDN, Unsplash, map tiles, live feeds) - go straight to the network: no
+ * respondWith, no caching. tests/verify-sw-scope.cjs pins this.
+ *
+ * Strategy for the portfolio's own GET requests: code + data network-first, immutable
+ * assets cache-first (details in the fetch handler). Navigations fall back to the app
+ * shell when offline.
  *
  * Bump CACHE_NAME to force a clean refresh of all cached assets.
  */
@@ -15,7 +24,7 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-f848c5571d7e';
+const CACHE_NAME = 'mrcargon-hub-db8d83e5b359';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 // How long a /src/data/ request waits on the network before a cached copy answers.
 const DATA_WAIT_MS = 3500;
@@ -39,13 +48,29 @@ self.addEventListener('activate', (event) => {
     );
 });
 
+// The portfolio's own paths, relative to this SW's scope (the origin root on the live
+// site). Anything else is NOT ours and is never intercepted. An allow-list rather than a
+// "/game-*" deny-list, so a page added to the origin later is left alone by default.
+const OWN_FILES = new Set(['', 'index.html', 'index.css', 'sw.js', 'manifest.webmanifest', 'icon.svg']);
+const OWN_DIRS = ['src/'];
+
+function isPortfolioPath(url) {
+    if (url.origin !== self.location.origin) return false;
+    const scopePath = new URL(self.registration ? self.registration.scope : './', self.location.href).pathname;
+    if (!url.pathname.startsWith(scopePath)) return false;
+    const rel = url.pathname.slice(scopePath.length);
+    return OWN_FILES.has(rel) || OWN_DIRS.some((d) => rel.startsWith(d));
+}
+
 self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
 
     const url = new URL(req.url);
-    // Only manage same-origin assets; let CDNs / Unsplash / game iframes pass through.
-    if (url.origin !== self.location.origin) return;
+    // Pass-through (no respondWith = the browser fetches normally, nothing cached) for
+    // every cross-origin request AND every same-origin path that is not the portfolio's:
+    // the /game-* sites, and anything else published on this origin.
+    if (!isPortfolioPath(url)) return;
 
     // CODE is network-first; ASSETS stay cache-first.
     //

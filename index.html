@@ -18,8 +18,20 @@
              #studio adds: player.twitch.tv (player), www.twitch.tv (chat embed lives there),
              www.youtube-nocookie.com (live player) to frame-src, and i.ytimg.com /
              static-cdn.jtvnw.net (video thumbnails) to img-src. Nothing loads from them until
-             the visitor clicks Load on the Studio page or real items exist in content.json. -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://i.ytimg.com https://static-cdn.jtvnw.net; font-src 'self'; frame-src 'self' https://mrcargon.github.io https://player.twitch.tv https://www.twitch.tv https://www.youtube-nocookie.com; connect-src 'self' https://celestrak.org https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'">
+             the visitor clicks Load on the Studio page or real items exist in content.json.
+             script-src (roast R3 #7): NO 'unsafe-inline'. The page's own scripts are files
+             ('self'); the one inline script left is the import map (browsers cannot load an
+             import map from src), allowed by its sha256 - any edit to the map, even
+             whitespace, changes that hash: re-run tests/verify-csp.cjs, it prints the new
+             one. jsDelivr is allowed only under /npm/three@0.184.0/, not the whole host, and
+             each of those files is pinned by sha384 in the import map's "integrity" block.
+             No inline on*= handlers anywhere (they would need 'unsafe-inline' too); use
+             addEventListener. style-src keeps 'unsafe-inline': hundreds of style="" attributes
+             and JS-built inline styles; style injection is far lower risk than script.
+             What a <meta> CSP CANNOT do (GitHub Pages sets no custom headers): frame-ancestors
+             (clickjacking), report-uri/report-to, sandbox; and it only covers what is parsed
+             after it, so it must stay the first thing in <head> after charset/viewport. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Fl+TmcXI5sFSwgB/UFZS3EpwzGC0Nvdf1WWlbeaQ83E=' https://cdn.jsdelivr.net/npm/three@0.184.0/; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://i.ytimg.com https://static-cdn.jtvnw.net; font-src 'self'; frame-src 'self' https://mrcargon.github.io https://player.twitch.tv https://www.twitch.tv https://www.youtube-nocookie.com; connect-src 'self' https://celestrak.org https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com; base-uri 'self'; object-src 'none'; form-action 'self'">
         <meta name="description" content="MrCargon - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
         <!-- Shown before the router runs, and by anything that reads the raw HTML.
              Was "MrCargo" — a typo for the name on the domain, the GitHub handle and
@@ -235,61 +247,21 @@
       "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.min.js",
         "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+      },
+      "integrity": {
+        "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.min.js": "sha384-35WaVqXNGvw49+RCXk67Ci9ebo55/5+CfirDbAVSG21KV8/7gO4xwIkhA5ZRcUHc",
+        "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.core.min.js": "sha384-/2vXInuUL2LKgd3n86c5RIzG+YC7vk3zYPTknaEkF2H2sauHtaOrS8swZ+MURxU6",
+        "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+        "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/lines/LineSegmentsGeometry.js": "sha384-c1W/XWY1D45CznDDaXT87QmzD1YKNwYHvQegG8dXjCyf5ZaKzaWqEUwHZTYfBw64",
+        "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/lines/LineMaterial.js": "sha384-8Um0dXKMKJBH05T/knjq7XGT8VQcEL9/pqss6E/fhjEUjoCL/XdSYq+cEesJOq6q",
+        "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/lines/LineSegments2.js": "sha384-n2jaM7+4eslyq1tO0fUEd4NE5Aaux4lCKN6+IUAAs00Wo49rmzxXm4pVNzA+wzjN"
       }
     }
     </script>
-    <script type="module">
-      import * as THREE_NS from 'three';
-      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-      import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
-      import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-      import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
-
-      // COLOUR MANAGEMENT OFF — deliberate, and the single most important line here.
-      //
-      // r152+ converts every material colour from sRGB to linear on input. r128 never
-      // did, so it effectively rendered every authored colour brighter than specified.
-      // This entire scene — sun, corona, chromosphere, flares, solar wind, orbit rings,
-      // planet tints — was hand-tuned by eye against that legacy behaviour over a long
-      // time. Turning colour management on made all of it render "correctly" and
-      // therefore visibly darker: measured 18.07 -> 15.86 mean screen luminance (-12%),
-      // well outside the +/-0.07 run-to-run noise, and the user spotted it immediately.
-      //
-      // Two ways out: re-tune dozens of materials by hand, or restore the colour
-      // pipeline the artwork was authored for. This is one documented line versus an
-      // open-ended re-tune with no reference to tune against, so: off.
-      // Measured with it off: 17.21 / 33.5% visible, back in line with the r128 look.
-      //
-      // If the scene is ever re-authored against correct colour, delete this line —
-      // but expect to re-tune every emissive and translucent material at the same time.
-      THREE_NS.ColorManagement.enabled = false;
-
-      // An ES module namespace object is immutable, so the addons cannot be hung off it
-      // directly the way examples/js used to. Spread into a plain object first.
-      const THREE = { ...THREE_NS };
-      THREE.OrbitControls = OrbitControls;
-      THREE.LineSegmentsGeometry = LineSegmentsGeometry;
-      THREE.LineMaterial = LineMaterial;
-      THREE.LineSegments2 = LineSegments2;
-      // NOTE: THREE.Timer needs NO import — it moved into CORE in r184 and already
-      // arrives via the namespace spread above. Importing it from
-      // 'three/addons/misc/Timer.js' 404s, and a failed import in this module aborts
-      // the whole bootstrap, so window.THREE is never set and the entire site dies
-      // silently. Verified the hard way.
-      window.THREE = THREE;
-      window.__threeReady = true;
-    </script>
-    <script>
-      // Fail-soft: if the module never ran (no import-map support, CDN blocked, offline),
-      // window.THREE is absent and the app shows its 3D-unavailable path instead of
-      // throwing. The old inline OrbitControls stub is gone - it silently produced a
-      // dead camera that looked like a bug rather than a load failure.
-      window.addEventListener('load', function () {
-        var ok = (typeof window.THREE !== 'undefined') && !!window.THREE.OrbitControls;
-        window.dispatchEvent(new CustomEvent(ok ? 'threejs-ready' : 'threejs-failed'));
-        if (!ok) console.error('THREE.js failed to load (import map / module blocked?)');
-      });
-    </script>
+    <script type="module" src="src/three-boot.js"></script>
+    <!-- Synchronous on purpose: the inline script it replaced ran here, during parsing,
+         so its 'load' listener is registered before every deferred script's. -->
+    <script src="src/boot.js"></script>
     
     <!-- 🌌 3D Simulation Components (load in dependency order) -->
     
@@ -349,15 +321,5 @@
     
     <script src="src/main.js" defer></script>
 
-    <!-- PWA: register the service worker so the whole portfolio is installable + works
-         offline. No-op on browsers without service-worker support. -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch((e) =>
-                    console.warn('[MrCargon] SW registration failed:', e));
-            });
-        }
-    </script>
     </body>
 </html>

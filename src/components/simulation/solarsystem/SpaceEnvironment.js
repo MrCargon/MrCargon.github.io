@@ -2595,7 +2595,8 @@ class SpaceEnvironment {
         console.assert(typeof setInterval === 'function', '_startFeedStatus: timers required');
         if (this._feedStatusTimer) return false;
         this._renderFeedStatus();
-        this._feedStatusTimer = setInterval(() => this._renderFeedStatus(), 1000);
+        this._renderMarkerList();
+        this._feedStatusTimer = setInterval(() => { this._renderFeedStatus(); this._renderMarkerList(); }, 1000);
         return true;
     }
 
@@ -2629,6 +2630,123 @@ class SpaceEnvironment {
             }
             if (btn && btn.dataset.feed !== s.state) btn.dataset.feed = s.state;
         });
+        return true;
+    }
+
+    /**
+     * The Live markers list (roast R3 #9b) as data: the ISS, then the 10 quakes nearest
+     * the view centre (the point on the globe under the camera), nearest first. A layer
+     * whose switch is off gives nothing. Rule 4: <=60 | Rule 5: 2 asserts.
+     * @param {Object} earth
+     * @returns {Array<{key:string, layer:string, lat:number, lng:number, data:Object}>}
+     */
+    _collectListedMarkers(earth) {
+        console.assert(earth === null || typeof earth === 'object', '_collectListedMarkers: bad earth');
+        const mk = earth && earth.markers;
+        if (!mk || typeof mk.listItems !== 'function' || !this.camera || typeof GlobeMath === 'undefined') return [];
+        const keyOf = (layer, it) => layer + ':' + it.lat.toFixed(3) + ',' + it.lng.toFixed(3) + ':' + (it.data.name || '');
+        const out = [];
+        const iss = mk.listItems('iss');
+        // The ISS moves: its key is the layer alone, so its button is never rebuilt.
+        if (iss.length) out.push({ key: 'iss', layer: 'iss', lat: iss[0].lat, lng: iss[0].lng, data: iss[0].data });
+        const quakes = mk.listItems('quakes');
+        if (quakes.length) {
+            const view = this._mkView || (this._mkView = new THREE.Vector3());
+            earth.getMesh().worldToLocal(view.copy(this.camera.position)).normalize();
+            const scored = quakes.map((q) => ({ q: q, d: GlobeMath.latLngToVector3(q.lat, q.lng, 1).normalize().dot(view) }));
+            scored.sort((a, b) => b.d - a.d);
+            const n = Math.min(scored.length, SpaceEnvironment.LIST_QUAKES);   // Rule 2: bounded
+            for (let i = 0; i < n; i++) {
+                const q = scored[i].q;
+                out.push({ key: keyOf('quakes', q), layer: 'quakes', lat: q.lat, lng: q.lng, data: q.data });
+            }
+        }
+        console.assert(out.length <= SpaceEnvironment.LIST_QUAKES + 1, '_collectListedMarkers: bounded');
+        return out;
+    }
+
+    /**
+     * Draw the Live markers list. Runs on the 1 s feed-status tick, so it follows the
+     * feeds and the view. It never moves keyboard focus: while focus is inside the list
+     * nothing is touched (the order freezes under the user), and buttons are kept by key,
+     * so an unchanged list writes nothing. The count in the summary always updates; the
+     * buttons only while the list is open. Rule 4: <=60 | Rule 5: 2 asserts.
+     * @returns {boolean} true when the buttons were (re)drawn
+     */
+    _renderMarkerList() {
+        if (typeof document === 'undefined') return false;
+        const ul = document.getElementById('ep-marker-list');
+        const box = document.getElementById('ep-markers');
+        console.assert(ul === null || ul.nodeType === 1, '_renderMarkerList: bad list');
+        if (!ul || !box) return false;
+        const items = this._collectListedMarkers(this.getEarthObject());
+        this._listedMarkers = new Map(items.map((m) => [m.key, m]));
+        const count = document.getElementById('ep-markers-count');
+        const ct = items.length ? String(items.length) : '';
+        if (count && count.textContent !== ct) count.textContent = ct;
+        const empty = document.getElementById('ep-markers-empty');
+        if (empty && empty.hidden !== items.length > 0) empty.hidden = items.length > 0;
+        if (!box.open || ul.contains(document.activeElement)) return false;
+        const sig = items.map((m) => m.key).join('|');
+        if (sig === ul.dataset.sig) return false;
+        const old = new Map();
+        ul.querySelectorAll('li[data-key]').forEach((li) => old.set(li.dataset.key, li));
+        const frag = document.createDocumentFragment();
+        items.forEach((m) => {
+            let li = old.get(m.key);
+            if (!li) {
+                li = document.createElement('li');
+                li.dataset.key = m.key;
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'ep-mk-btn';
+                b.dataset.key = m.key;
+                b.dataset.layer = m.layer;
+                const d = m.data || {};
+                // The card's own words: "M4.5" + the USGS place (textContent: feed text).
+                b.textContent = m.layer === 'quakes'
+                    ? (d.name || '').replace(/ earthquake$/, '') + ' · ' + String(d.info || '').split(' · ')[0]
+                    : (d.name || 'ISS');
+                b.title = 'Fly there and open its card';
+                li.appendChild(b);
+            }
+            frag.appendChild(li);
+        });
+        ul.textContent = '';
+        ul.appendChild(frag);
+        ul.dataset.sig = sig;
+        return true;
+    }
+
+    /**
+     * A Live markers button: fly to the marker and open its card through the same
+     * _showDetail a click on the globe uses (one live-region announcement, the ✕).
+     * Focus stays on the button. Rule 5: 2 asserts.
+     * @param {string} key
+     * @returns {boolean}
+     */
+    _openListedMarker(key) {
+        console.assert(typeof key === 'string', '_openListedMarker: key required');
+        console.assert(typeof this._showDetail === 'function', '_openListedMarker: card required');
+        // Fresh data (the ISS has moved since the button was drawn).
+        this._listedMarkers = new Map(this._collectListedMarkers(this.getEarthObject()).map((x) => [x.key, x]));
+        const m = this._listedMarkers.get(key);
+        if (!m) return false;
+        this.centerOnLatLng(m.lat, m.lng);
+        const d = m.data || {};
+        return this._showDetail(d.name || 'Marker', d.info || '', false);
+    }
+
+    /** Wire the Live markers list once: one delegated click, and draw on open. */
+    _wireMarkerList() {
+        const ul = document.getElementById('ep-marker-list');
+        const box = document.getElementById('ep-markers');
+        if (!ul || !box) return false;
+        ul.addEventListener('click', (e) => {
+            const b = e.target && e.target.closest ? e.target.closest('button[data-key]') : null;
+            if (b) this._openListedMarker(b.dataset.key);
+        });
+        box.addEventListener('toggle', () => this._renderMarkerList());
         return true;
     }
 
@@ -3465,6 +3583,7 @@ class SpaceEnvironment {
             this._wirePinControls();              // add / editor / list delegation
             this._wireZoomSlider();               // panel zoom slider (camera distance)
             this._wireStyleEditor();              // per-layer colour/opacity customiser
+            this._wireMarkerList();               // R3 #9b: Live markers list (ISS + quakes)
             panel.dataset.wired = '1';
         }
         this._applyExploreChrome(true);
@@ -4195,6 +4314,7 @@ class SpaceEnvironment {
         earth.setLayerVisible(name, on);
         this._syncExploreToggleButtons();
         this._renderFeedStatus();
+        this._renderMarkerList();   // R3 #9b: a layer switched off leaves the list at once
         this._writeExploreLayerState();
         return true;
     }
@@ -4273,7 +4393,7 @@ class SpaceEnvironment {
         // 0,0, where the not-yet-projected markers sit) and clicks on the card itself
         // (its ✕) are not globe clicks.
         const t = event && event.target;
-        if (t && typeof t.closest === 'function' && t.closest('#explore-enter-btn, #explore-detail')) return;
+        if (t && typeof t.closest === 'function' && t.closest('#explore-enter-btn, #explore-detail, #ep-marker-list')) return;
         const earth = this.getEarthObject();
         if (!earth) return;
         const rect = this._getCanvasRect();
@@ -6104,6 +6224,7 @@ SpaceEnvironment.DPR_BAD_WINDOWS = 2; // consecutive slow windows before droppin
 SpaceEnvironment.DPR_GOOD_WINDOWS = 5; // consecutive fast windows before restoring
 SpaceEnvironment.DPR_MAX_RESTORES = 2; // after this many restores 1x stays for the session
 SpaceEnvironment.INTRO_MS = 6000; // R3 #11: the San Francisco intro card hides after this
+SpaceEnvironment.LIST_QUAKES = 10; // R3 #9b: quakes in the Live markers list (nearest the view centre)
 SpaceEnvironment.DPR_GAP_MS = 250; // a gap longer than this is not a frame
 
 // The longest step the simulation will accept, in seconds. Anything larger did not

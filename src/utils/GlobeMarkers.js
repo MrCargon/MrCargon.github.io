@@ -80,7 +80,8 @@ class GlobeMarkers {
             c.setHex(it.color).convertSRGBToLinear();
             col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
             size[i] = it.size; alpha[i] = it.hidden ? 0 : 1; shape[i] = it.shape === 1 ? 1 : 0;
-            L.items.push({ size: it.size, rank: it.rank || 0, hidden: !!it.hidden, data: it.data || {} });
+            L.items.push({ size: it.size, rank: it.rank || 0, hidden: !!it.hidden, data: it.data || {},
+                lat: it.lat, lng: it.lng });   // R3 #9b: the Live markers list flies here
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -111,7 +112,28 @@ class GlobeMarkers {
         const a = L.points.geometry.attributes.position;
         a.setXYZ(i, p.x, p.y, p.z); a.needsUpdate = true;
         L.items[i].hidden = false;
+        L.items[i].lat = lat; L.items[i].lng = lng;
         return true;
+    }
+
+    /**
+     * The shown markers of one layer for the Live markers list (R3 #9b): the layer's
+     * toggle is on, the marker is not hidden (the ISS before its first fix or after a
+     * stale one). The zoom fade does not matter: the layer is still on. Rule 5: 2 asserts.
+     * @returns {Array<{i:number, lat:number, lng:number, data:Object}>}
+     */
+    listItems(name) {
+        console.assert(typeof name === 'string', 'GlobeMarkers.listItems: name required');
+        const L = this.layers[name];
+        console.assert(!L || Array.isArray(L.items), 'GlobeMarkers.listItems: bad layer');
+        if (!L || !L.group.visible || !L.points) return [];
+        const out = [];
+        for (let i = 0; i < L.items.length; i++) {
+            const it = L.items[i];
+            if (it.hidden || !Number.isFinite(it.lat) || !Number.isFinite(it.lng)) continue;
+            out.push({ i: i, lat: it.lat, lng: it.lng, data: it.data });
+        }
+        return out;
     }
 
     itemData(name, i) {

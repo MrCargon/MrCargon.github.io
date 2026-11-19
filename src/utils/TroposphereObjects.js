@@ -32,10 +32,11 @@ class TroposphereObjects {
         this._opacity = 0;          // current eased master opacity (0..1)
         this._target = 0;           // target master opacity
         this._t = 0;                // accumulated time (s) for bob/flight
+        this._lastAt = 0;           // wall clock (ms) of the last update, for a missing dt
         this.reducedMotion = (typeof window !== 'undefined' && window.matchMedia)
             ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
         this.balloons = [];         // { mesh, lat, lng, baseR, phase, bob }
-        this.jets = [];             // { mesh, lat, lng, heading, speed, contrail }
+        this.jets = [];             // { mesh, a, b, omega, f, dir, speed, rOff } (great-circle route)
         this.weather = [];          // { mesh, lat, lng, baseR, phase }
         // Pre-seeded placements (bounded). Hot-air balloons cluster over scenic spots;
         // jets cruise common corridors; weather balloons scatter. lat/lng + colour.
@@ -44,13 +45,21 @@ class TroposphereObjects {
         // on other continents.
         this.balloonSeeds = opts.balloonSeeds || [
             { lat: 38.6, lng: -121.5, color: 0xff5a4a }, { lat: 45.5, lng: -98.0, color: 0x4aa3ff },
-            { lat: 51.5, lng: 0.1, color: 0xc08bff }, { lat: 41.9, lng: 12.5, color: 0x6ad36a },
+            // R1 #5: these two sat exactly on the London and Rome pins and hid them; moved
+            // to real balloon-festival sites (Cappadocia, Albuquerque) away from every POI.
+            { lat: 38.6, lng: 34.8, color: 0xc08bff }, { lat: 35.1, lng: -106.6, color: 0x6ad36a },
             { lat: -23.5, lng: -46.6, color: 0xff6ad3 }, { lat: -33.9, lng: 151.2, color: 0x4ad3d3 }
         ];
+        // Jets fly great-circle routes between real hubs (none at a POI city), back and
+        // forth. speed = degrees of arc per SECOND (dt-scaled, so frame-rate independent),
+        // capped at JET_MAX_DEG_S: a believable on-screen pace, not the real 0.002 deg/s.
+        // f = starting fraction along the route. Illustrative, not live flight data.
         this.jetSeeds = opts.jetSeeds || [
-            { lat: 40, lng: -120, heading: 1, speed: 0.06 }, { lat: 20, lng: 0, heading: 1, speed: 0.05 },
-            { lat: 50, lng: 30, heading: -1, speed: 0.07 }, { lat: -10, lng: 120, heading: 1, speed: 0.055 },
-            { lat: 33, lng: -90, heading: -1, speed: 0.05 }
+            { from: [33.94, -118.41], to: [-33.95, 151.18], speed: 0.05, f: 0.35 },  // LAX-SYD
+            { from: [33.64, -84.43], to: [40.49, -3.57], speed: 0.045, f: 0.55 },    // ATL-MAD
+            { from: [25.25, 55.36], to: [1.36, 103.99], speed: 0.05, f: 0.2 },       // DXB-SIN
+            { from: [-23.43, -46.47], to: [-26.14, 28.25], speed: 0.04, f: 0.6 },    // GRU-JNB
+            { from: [41.26, 28.74], to: [28.56, 77.10], speed: 0.05, f: 0.3 }        // IST-DEL
         ];
         this.weatherSeeds = opts.weatherSeeds || [
             { lat: 10, lng: -50 }, { lat: -20, lng: 60 }, { lat: 60, lng: -100 }, { lat: 25, lng: 100 }
@@ -122,12 +131,12 @@ class TroposphereObjects {
         return true;
     }
 
-    // Jet = small bright wedge + a short tapered contrail, near the top of the
-    // troposphere (~1.02R), flying along its heading. Rule 4: <=60 lines.
+    // Jet = small bright wedge + a short tapered contrail, inside the drawn troposphere
+    // band (1.008R; it tops out at 1.012R), flying its great-circle route. Rule 4: <=60.
     _buildJets() {
         console.assert(Array.isArray(this.jetSeeds), '_buildJets: seeds required');
         console.assert(this.group, '_buildJets: group required');
-        var rOff = 1.02, size = this.radius * 0.01;
+        var rOff = TroposphereObjects.JET_R, size = this.radius * 0.01;
         for (var i = 0; i < this.jetSeeds.length; i++) {         // Rule 2: bounded by seeds
             var s = this.jetSeeds[i];
             var holder = new THREE.Group();
@@ -144,11 +153,49 @@ class TroposphereObjects {
             holder.add(body); holder.add(trail);
             body.onBeforeRender = this._captureCam;
             // extent = contrail tail to nose (~5 x size), for the px clamp.
-            this.jets.push({ mesh: holder, lat: s.lat, lng: s.lng, heading: s.heading,
-                speed: s.speed, rOff: rOff, mats: [bodyMat, trailMat],
-                extent: size * 5, maxPx: this.maxPx.jet });
+            var jet = TroposphereObjects._route(s);
+            jet.mesh = holder; jet.rOff = rOff; jet.mats = [bodyMat, trailMat];
+            jet.extent = size * 5; jet.maxPx = this.maxPx.jet;
+            this.jets.push(jet);
             this.group.add(holder);
+            this._placeJet(jet);
         }
+        return true;
+    }
+
+    // Route state for one jet seed: unit end vectors, arc angle (rad), speed capped at
+    // JET_MAX_DEG_S. Build-time only (allocates). Rule 5: 2 asserts.
+    static _route(s) {
+        console.assert(s && Array.isArray(s.from) && Array.isArray(s.to), '_route: from/to required');
+        console.assert(typeof GlobeMath !== 'undefined', '_route: GlobeMath required');
+        var a = GlobeMath.latLngToVector3(s.from[0], s.from[1], 1);
+        var b = GlobeMath.latLngToVector3(s.to[0], s.to[1], 1);
+        var A = new THREE.Vector3(a.x, a.y, a.z).normalize(), B = new THREE.Vector3(b.x, b.y, b.z).normalize();
+        var omega = Math.acos(Math.max(-1, Math.min(1, A.dot(B))));
+        var sp = Math.min(Number.isFinite(s.speed) ? s.speed : 0.05, TroposphereObjects.JET_MAX_DEG_S);
+        return { a: A, b: B, omega: Math.max(omega, 1e-4), f: Number.isFinite(s.f) ? s.f : 0.5,
+            dir: 1, speed: sp };
+    }
+
+    // Write the point at fraction f along a jet's great circle (slerp A->B) into out,
+    // at radius r. No allocation. Rule 5: 2 asserts.
+    static _slerp(j, f, r, out) {
+        console.assert(j && j.a && j.b, '_slerp: route required');
+        console.assert(out && out.isVector3, '_slerp: out vector required');
+        var so = Math.sin(j.omega), k0 = Math.sin((1 - f) * j.omega) / so, k1 = Math.sin(f * j.omega) / so;
+        out.set(j.a.x * k0 + j.b.x * k1, j.a.y * k0 + j.b.y * k1, j.a.z * k0 + j.b.z * k1);
+        return out.setLength(r);
+    }
+
+    // Place + orient one jet at its route fraction, nose along the direction of travel.
+    _placeJet(j) {
+        console.assert(j && j.mesh, '_placeJet: jet required');
+        console.assert(this._sAhead && this._sUp, '_placeJet: scratch required');
+        var r = j.rOff * this.radius, step = (0.5 * Math.PI / 180) / j.omega;   // 0.5 deg ahead
+        TroposphereObjects._slerp(j, j.f, r, j.mesh.position);
+        TroposphereObjects._slerp(j, j.f + j.dir * step, r, this._sAhead);
+        j.mesh.up.copy(this._sUp.copy(j.mesh.position).normalize());
+        j.mesh.lookAt(this._sAhead);                              // nose toward travel
         return true;
     }
 
@@ -189,7 +236,11 @@ class TroposphereObjects {
         console.assert(Number.isFinite(cameraDistInRadii), 'update: distance required');
         console.assert(this.group, 'update: group required');
         if (!this.built || this._disposed) return false;
-        var d = Number.isFinite(dt) ? Math.min(dt, 0.1) : 0.016;
+        // No dt passed: measure it from the wall clock, never assume a 60 Hz frame (R1 #5).
+        var now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+        var d = Number.isFinite(dt) ? dt : (this._lastAt ? (now - this._lastAt) / 1000 : 0);
+        this._lastAt = now;
+        d = Math.max(0, Math.min(d, 0.1));
         this._t += d;
         // Band: 0 at/below showNear, ramps up to 1 at showNear+m, 1 up to showFar, then
         // ramps to 0 at showFar+m. (The lower ramp used to start at showNear-m, which
@@ -265,19 +316,16 @@ class TroposphereObjects {
         return true;
     }
 
-    // Advance each jet along its heading (longitude drift) + re-place/orient. Rule 4: <=60.
+    // Advance each jet along its great-circle route by speed (deg/s) x dt (s); at either
+    // hub it turns round and flies back. Rule 4: <=60 | no per-frame allocation.
     _animJets(dt) {
         console.assert(Array.isArray(this.jets), '_animJets: array required');
-        console.assert(this._sAhead, '_animJets: scratch required');
+        console.assert(Number.isFinite(dt) && dt >= 0, '_animJets: dt (s) required');
         for (var i = 0; i < this.jets.length; i++) {             // Rule 2: bounded
             var j = this.jets[i];
-            j.lng += j.heading * j.speed * dt * 12;
-            if (j.lng > 180) j.lng -= 360; else if (j.lng < -180) j.lng += 360;
-            var p = GlobeMath.latLngToVector3(j.lat, j.lng, j.rOff * this.radius);
-            j.mesh.position.set(p.x, p.y, p.z);
-            var a = GlobeMath.latLngToVector3(j.lat, j.lng + j.heading * 0.5, j.rOff * this.radius);
-            j.mesh.up.copy(this._sUp.set(p.x, p.y, p.z).normalize());
-            j.mesh.lookAt(a.x, a.y, a.z);                         // nose toward travel
+            j.f += j.dir * (j.speed * Math.PI / 180) * dt / j.omega;
+            if (j.f >= 1) { j.f = 1; j.dir = -1; } else if (j.f <= 0) { j.f = 0; j.dir = 1; }
+            this._placeJet(j);
         }
         return true;
     }
@@ -319,6 +367,10 @@ class TroposphereObjects {
         return true;
     }
 }
+
+// Jet altitude (inside the drawn troposphere band, top 1.012R) and the on-screen pace cap.
+TroposphereObjects.JET_R = 1.008;
+TroposphereObjects.JET_MAX_DEG_S = 0.05;
 
 if (typeof window !== 'undefined') window.TroposphereObjects = TroposphereObjects;
 if (typeof module !== 'undefined' && module.exports) module.exports = TroposphereObjects;

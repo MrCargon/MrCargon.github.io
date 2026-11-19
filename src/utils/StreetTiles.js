@@ -808,6 +808,9 @@ class StreetTiles {
             vertexColors: true
         });
         this._sharedMat.visible = this._zoomOpacity > 0.005;
+        // CSS px on purpose, not device px: three's LineSegments2.onBeforeRender resets
+        // resolution to renderer.getViewport() (CSS px) every draw, so linewidth stays in
+        // CSS px and a pixel ratio > 1 only makes the same-width street sharper (R2 #9).
         this._sharedMat.resolution.set(w, h);
         var self = this;
         this._onResize = function () { if (self._sharedMat && typeof window !== 'undefined') self._sharedMat.resolution.set(window.innerWidth, window.innerHeight); };

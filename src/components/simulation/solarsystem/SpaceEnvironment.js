@@ -2809,12 +2809,17 @@ class SpaceEnvironment {
         // Living troposphere objects (balloons/jets) fade in by their viewing band and
         // animate (bob/fly). Real dt (R1 #5): without it every frame was 0.016 s, so the
         // jets' speed scaled with the frame rate (2.4x faster on a 144 Hz screen).
+        // R3 #13: the layers read the one live reduced-motion flag (this.reducedMotion, kept
+        // by the matchMedia listener), so an OS toggle mid-session reaches them next frame.
+        const rm = this.reducedMotion === true;
         if (earth.troposphereObjects && typeof earth.troposphereObjects.update === 'function') {
+            earth.troposphereObjects.reducedMotion = rm;          // reduce: balloons + jets hold still
             earth.troposphereObjects.update(rr, dt);
         }
         // Satellites fade out below ~1.5R; while the ISS marker layer is on it owns the ISS
         // (click card), so the satellite layer skips it: one ISS on the globe (audit F8).
         if (earth.satellites) {
+            earth.satellites.reducedMotion = rm;                  // reduce: a correct SGP4 step every 10 s
             earth.satellites.setView(rr, typeof earth.issMarkerShown === 'function' && earth.issMarkerShown());
             earth.satellites.update();
         }
@@ -2824,6 +2829,7 @@ class SpaceEnvironment {
         }
         // Live presence markers: distance-scale + time-driven pulse (ephemeral roster).
         if (earth.presencePins && typeof earth.presencePins.update === 'function') {
+            earth.presencePins.reducedMotion = rm;                // reduce: steady halo, no pulse
             earth.presencePins.update(rr, (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000);
         }
         if (earth.streetTiles || earth.satelliteTiles) {

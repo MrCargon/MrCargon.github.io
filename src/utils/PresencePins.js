@@ -25,6 +25,10 @@ class PresencePins {
         this.selfColor = o.selfColor || '#ffa500';
         this.peerColor = o.peerColor || '#5bd1ff';
         this._disposed = false;
+        // R3 #13: reduced motion holds the halo ring steady (no pulse); the pins stay.
+        // SpaceEnvironment keeps this live from its matchMedia listener.
+        this.reducedMotion = (typeof window !== 'undefined' && window.matchMedia)
+            ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
         this.markers = new Map();                        // id -> THREE.Object3D
         this.group = (typeof THREE !== 'undefined') ? new THREE.Group() : null;
         if (this.group) { this.group.name = 'presencePins'; this.group.visible = false; this.earthMesh.add(this.group); }
@@ -132,15 +136,17 @@ class PresencePins {
         if (!this.group.visible) return false;
         var s = Math.max(0.35, Math.min(4, distInRadii * 0.5));
         var t = Number.isFinite(elapsed) ? elapsed : 0;
+        var still = this.reducedMotion === true;
         this.markers.forEach(function (holder) {
             holder.scale.setScalar(s);
             var ud = holder.userData;
             if (ud && ud.ring && ud.ring.material) {
                 // Fade multiplies the pulse (the pulse rewrites opacity every frame,
                 // so a stashed base-opacity approach would be overwritten here).
-                var pulse = 0.35 + 0.35 * (1 + Math.sin(t * 3 + ud.phase)) * 0.5;
-                ud.ring.material.opacity = pulse * fade;
-                ud.ring.scale.setScalar(1 + 0.25 * (1 + Math.sin(t * 3 + ud.phase)) * 0.5);
+                // Reduced motion: the ring holds the pulse's mid value (k = 0.5).
+                var k = still ? 0.5 : (1 + Math.sin(t * 3 + ud.phase)) * 0.5;
+                ud.ring.material.opacity = (0.35 + 0.35 * k) * fade;
+                ud.ring.scale.setScalar(1 + 0.25 * k);
             }
             if (ud && ud.head && ud.head.material) {
                 var m = ud.head.material;

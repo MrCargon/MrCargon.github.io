@@ -241,7 +241,9 @@ class TroposphereObjects {
         var d = Number.isFinite(dt) ? dt : (this._lastAt ? (now - this._lastAt) / 1000 : 0);
         this._lastAt = now;
         d = Math.max(0, Math.min(d, 0.1));
-        this._t += d;
+        // The bob clock runs only while animating, so turning reduced motion off resumes
+        // the bob where it froze instead of jumping (R3 #13).
+        if (!this.reducedMotion) this._t += d;
         // Band: 0 at/below showNear, ramps up to 1 at showNear+m, 1 up to showFar, then
         // ramps to 0 at showFar+m. (The lower ramp used to start at showNear-m, which
         // left it at ~0.78 at the closest zoom, so the objects never faded out up close.)

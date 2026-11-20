@@ -139,6 +139,14 @@ test('the ✕ closes the intro with the mouse and with the keyboard', async ({ p
 
     await page.evaluate(() => window.spaceEnvironment.exitExploreMode(true));
     await page.waitForTimeout(500);
+    // The ✕ sits after ~15 panel stops, and headless WebGL makes each Tab cost ~0.4 s,
+    // so the 6 s auto-hide (tested on its own above) beat the walk. Hold the intro for
+    // this walk only; the walk itself, the Enter and the focus return are unchanged.
+    const introMs = await page.evaluate(() => {
+        const C = window.spaceEnvironment.constructor, was = C.INTRO_MS;
+        C.INTRO_MS = 120000;
+        return was;
+    });
     await page.locator('#explore-enter-btn').click();
     await expectIntro(page);
     // Real Tab walk: the ✕ is in the tab order.
@@ -148,6 +156,8 @@ test('the ✕ closes the intro with the mouse and with the keyboard', async ({ p
         reached = await page.evaluate(() => !!(document.activeElement && document.activeElement.classList.contains('ed-close')));
     }
     expect(reached, 'Tab reaches the ✕').toBe(true);
+    await expect(card(page), 'the intro is still up when the ✕ gets focus').toBeVisible();
+    await page.evaluate((ms) => { window.spaceEnvironment.constructor.INTRO_MS = ms; }, introMs);
     await page.keyboard.press('Enter');
     await expect(card(page)).toBeHidden();
     expect(await page.evaluate(() => document.activeElement && document.activeElement.id),

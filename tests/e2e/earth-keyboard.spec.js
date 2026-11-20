@@ -89,6 +89,9 @@ test('the canvas is a labelled Tab stop with a visible ring (NVIDIA renderer)', 
 });
 
 test('arrows orbit by a set step, +/- zoom within the limits', async ({ page }) => {
+    // ~7 s of entry waits, 8 timed key checks, 30 '+' and ~22 timed '-' presses
+    // (1.0013R -> 9R+ at 1.5x altitude a press): ~35 s measured, past the 30 s default.
+    test.setTimeout(90000);
     await enterExplore(page);
     await place(page, 3);
     await page.waitForTimeout(800);

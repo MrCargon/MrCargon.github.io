@@ -220,6 +220,7 @@ class GravitationalWaves {
             uniforms: this.uniforms,
             wireframe: false,
             side: THREE.DoubleSide,
+            forceSinglePass: true, // R2 #3: one sheet, no depth write: one draw, no per-frame program re-check
             transparent: true,
             depthWrite: false
         });

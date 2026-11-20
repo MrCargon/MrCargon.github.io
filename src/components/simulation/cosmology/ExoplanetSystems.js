@@ -467,7 +467,8 @@ class ExoplanetSystems {
             color: 0x00ff00,
             transparent: true,
             opacity: 0.15,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            forceSinglePass: true // flat ring: one draw, no per-frame program re-check (R2 #3)
         });
 
         this.habitableZone = new THREE.Mesh(geometry, material);

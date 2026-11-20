@@ -300,6 +300,7 @@ class CosmicScale {
         const material = new THREE.MeshBasicMaterial({
             color: objData.color,
             side: THREE.DoubleSide,
+            forceSinglePass: true, // flat ring: one draw, no per-frame program re-check (R2 #3)
             transparent: true,
             opacity: 0.3
         });
@@ -319,7 +320,8 @@ class CosmicScale {
             color: objData.color,
             transparent: true,
             opacity: 0.7,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            forceSinglePass: true // flat plane: one draw, no per-frame program re-check (R2 #3)
         });
 
         const mesh = new THREE.Mesh(geometry, material);

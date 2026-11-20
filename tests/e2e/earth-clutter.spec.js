@@ -73,3 +73,20 @@ test('F2: the pin editor stays hidden while no pin is selected', async ({ page }
     expect(ed.display).toBe('none');
     expect(ed.h).toBe(0);
 });
+
+test('F1: troposphere objects fade out up close and stay small on screen', async ({ page }) => {
+    await enterExplore(page);
+    // Control: inside the band (1.3R) the objects are drawn.
+    await placeCamera(page, 1.3, 37.7749, -122.4194);
+    await page.waitForTimeout(2500);
+    const mid = await tropoRead(page);
+    expect(mid.n).toBeGreaterThan(10);
+    expect(mid.visible).toBe(true);
+    expect(mid.maxPx).toBeLessThanOrEqual(36);  // largest cap is the jet's 34 px
+    // Up close (1.02R, below showNear 1.04R) the layer must be gone, not left at ~0.78.
+    await placeCamera(page, 1.02, 37.7749, -122.4194);
+    await page.waitForTimeout(2500);
+    const near = await tropoRead(page);
+    expect(near.visible).toBe(false);
+    expect(near.maxOp).toBe(0);
+});

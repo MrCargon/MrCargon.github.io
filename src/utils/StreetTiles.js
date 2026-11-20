@@ -107,6 +107,8 @@ class StreetTiles {
         this.warmKeep = Number.isFinite(opts.warmKeep) ? opts.warmKeep : 12;
         this._trimTimer = null;
         this.failed = 0;
+        // R3 #5 (P44): failures since the last tile that loaded (see SatelliteTiles).
+        this.failStreak = 0;
         this.visible = true;
         // User-stylable appearance (color, opacity, pixel width), applied to all line
         // tiles via a shared fat-line material. setStyle() updates them; host persists.
@@ -572,10 +574,12 @@ class StreetTiles {
             // backoff forever, and it kept the covering set from ever being complete.
             if (mesh === StreetTiles.EMPTY) {
                 self._retryAttempts.delete(key);
+                self.failStreak = 0;           // an empty tile is still an answer
                 self.tiles.set(key, { mesh: null, t: now, state: 'empty', z: z });
                 return;
             }
-            if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
+            if (!mesh) { self.failed++; self.failStreak++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
+            self.failStreak = 0;               // the host answered with a real tile
             // Not parented yet: the next update() attaches it when it is shown (R2 #5).
             self._retryAttempts.delete(key);   // recovered → next failure starts at attempt 1
             self.tiles.set(key, { mesh: mesh, t: now, state: 'built', z: z });
@@ -586,7 +590,7 @@ class StreetTiles {
             // Cancelled because the key fell out of the desired set mid-flight (see
             // _abortStale) - not a real failure, don't apply the 30s retry backoff.
             if (e && e.name === 'AbortError') return;
-            self.failed++;
+            self.failed++; self.failStreak++;
             self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) });
             console.warn('StreetTiles: tile ' + key + ' failed:', e && e.message);
         });
@@ -942,7 +946,9 @@ class StreetTiles {
             if (rec.mesh && rec.mesh.visible) vis++;
         });
         return { built: built, failed: this.failed, visible: vis, total: this.tiles.size,
-            template: this.tileTemplate, building: this._building.size };
+            template: this.tileTemplate, building: this._building.size, failStreak: this.failStreak,
+            // The TileJSON lookup failed and no template is known yet: no street tile can load.
+            templateDown: !this.tileTemplate && this._templateFailedAt > 0 };
     }
 
     // Free everything (all tiles + geometry/material). Rule 5: 2 asserts.

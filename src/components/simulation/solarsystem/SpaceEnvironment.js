@@ -3442,6 +3442,7 @@ class SpaceEnvironment {
             if (now - this._lastStreetsUpdateTime >= this._streetsUpdateIntervalMs) {
                 this._lastStreetsUpdateTime = now;
                 this._updateStreets(earth, radius, dist);
+                this._updateTileNotice(earth, dist / radius);
             }
         }
         this._syncZoomSlider(rr);   // reflect wheel/drag zoom onto the panel slider
@@ -3498,6 +3499,35 @@ class SpaceEnvironment {
             }
         }
         return true;
+    }
+
+    /**
+     * R3 #5 (P44): when the imagery (Esri) or street (OpenFreeMap) tile host is down, a
+     * zoom-in used to end on a dark, empty sphere with no hint. Show one quiet line,
+     * "Map tiles unavailable - showing the base globe", while a layer the camera is close
+     * enough to need has failed TILE_DOWN_STREAK times in a row (or the OpenFreeMap
+     * TileJSON lookup failed); hide it as soon as a tile loads or the camera leaves the
+     * tile range. The element is position:fixed and pointer-events:none, so it never
+     * moves the layout. Rule 5: 2 asserts.
+     * @param {object} earth
+     * @param {number} rr camera distance in Earth radii
+     * @returns {boolean} whether the notice is shown
+     */
+    _updateTileNotice(earth, rr) {
+        console.assert(earth, '_updateTileNotice: earth required');
+        console.assert(Number.isFinite(rr), '_updateTileNotice: distance required');
+        const TILE_DOWN_STREAK = 3;
+        const needs = (t) => !!(t && t.visible && rr < t.activateBelow);
+        const sat = earth.satelliteTiles, st = earth.streetTiles;
+        const satDown = needs(sat) && sat.failStreak >= TILE_DOWN_STREAK;
+        const stDown = needs(st) && (st.failStreak >= TILE_DOWN_STREAK
+            || (!st.tileTemplate && st._templateFailedAt > 0));
+        const down = !!(this.exploreMode && (satDown || stDown));
+        if (down === this._tileNoticeOn) return down;
+        this._tileNoticeOn = down;
+        const el = this._tileNoticeEl || ((typeof document !== 'undefined') && document.getElementById('explore-tile-notice'));
+        if (el) el.hidden = !down;
+        return down;
     }
 
     /**
@@ -3712,6 +3742,8 @@ class SpaceEnvironment {
 
         this._detailEl = document.getElementById('explore-detail');
         this._tooltipEl = document.getElementById('country-tooltip');
+        this._tileNoticeEl = document.getElementById('explore-tile-notice');   // P44
+        this._tileNoticeOn = undefined;   // a re-rendered page brings a fresh (hidden) notice
 
         // The canvas is raised to z-index 30 in explore; the panel's z is trapped
         // inside #content's stacking context (painted below the canvas → unclickable).
@@ -3726,9 +3758,9 @@ class SpaceEnvironment {
         // rendered at full size but were wired to a dead SpaceEnvironment, so they sat
         // on screen doing nothing — exactly the "second panel that does not respond"
         // the user reported. Duplicate IDs also mean getElementById is a coin flip.
-        this._purgeStaleExploreUI([panel, this._detailEl, this._tooltipEl]);
+        this._purgeStaleExploreUI([panel, this._detailEl, this._tooltipEl, this._tileNoticeEl]);
 
-        [panel, this._detailEl, this._tooltipEl].forEach((el) => {
+        [panel, this._detailEl, this._tooltipEl, this._tileNoticeEl].forEach((el) => {
             if (el && el.parentElement !== document.body) document.body.appendChild(el);
         });
         // #footer-container is position:relative z-index:200 in the root stacking
@@ -3737,6 +3769,7 @@ class SpaceEnvironment {
         if (panel) panel.style.zIndex = '210';
         if (this._detailEl) this._detailEl.style.zIndex = '211';
         if (this._tooltipEl) this._tooltipEl.style.zIndex = '212';
+        if (this._tileNoticeEl) this._tileNoticeEl.style.zIndex = '211';   // P44: above the raised canvas
         this._makePanelDraggable(panel);   // movable by its background; buttons still click
 
         if (!panel.dataset.wired) {

@@ -834,6 +834,22 @@ body.explore-active .main-footer:focus-within .footer-bottom > p:first-child { d
   body.explore-active #explore-detail { bottom: 132px !important; }
 }
 
+/* R3 #5 (P44): quiet "map tiles unavailable" line under the nav pill while a tile host is
+   down. Fixed and click-through, so showing or hiding it never moves anything. */
+.explore-tile-notice {
+  /* left/right 0 + auto margins, not left:50% + translate: that halves the shrink-to-fit
+     width, so the line wrapped in two on a 390 px phone. */
+  position: fixed; left: 0; right: 0; top: 56px; z-index: 40;
+  width: fit-content; margin: 0 auto; padding: 3px 10px; max-width: calc(100vw - 32px); box-sizing: border-box;
+  border-radius: 8px; background: rgba(10, 12, 20, 0.82); color: rgba(255, 255, 255, 0.88);
+  font: 12px/1.4 system-ui, -apple-system, sans-serif; text-align: center;
+}
+/* An id beats ".space-exploration-container > *", which hands pointers back to every child. */
+#explore-tile-notice { pointer-events: none; }
+.explore-tile-notice[hidden],
+body:not(.explore-active) .explore-tile-notice { display: none; }
+@media (max-width: 835px) { .explore-tile-notice { top: 68px; } }
+
 .bubble-container {
   width: 150px;
   height: 150px;

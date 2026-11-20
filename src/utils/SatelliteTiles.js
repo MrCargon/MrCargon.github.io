@@ -122,6 +122,9 @@ class SatelliteTiles {
         this._trimTimer = null;
         this._retryAttempts = new Map();     // key -> consecutive failures, for backoff
         this.failed = 0;
+        // R3 #5 (P44): failures since the last tile that loaded. SpaceEnvironment shows a
+        // quiet "map tiles unavailable" notice while this stays high (host down/blocked).
+        this.failStreak = 0;
         this.visible = true;
         this._lightFactor = 1;           // sun-lit dim factor (1=day, ~0.35=night)
 
@@ -612,7 +615,8 @@ class SatelliteTiles {
             self._finishBuild(key, controller);
             // A2: disposed mid-flight → never re-add an orphan; dispose it instead.
             if (self._disposed) { if (mesh) self._disposeMesh(mesh); return; }
-            if (!mesh) { self.failed++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
+            if (!mesh) { self.failed++; self.failStreak++; self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) }); return; }
+            self.failStreak = 0;               // the host answered with a real tile
             // The decode can still finish just after the key left the covering set (or on
             // the TextureLoader fallback, which cannot abort): discard instead of caching.
             if (!self._desiredKeys.has(key) || (controller && controller.signal.aborted)) { self._disposeMesh(mesh); return; }
@@ -624,7 +628,7 @@ class SatelliteTiles {
             self._finishBuild(key, controller);
             // Cancelled on purpose (_abortStale / _abortAll): not a failure, no backoff.
             if (e && e.name === 'AbortError') return;
-            self.failed++;
+            self.failed++; self.failStreak++;
             self.tiles.set(key, { mesh: null, t: now, state: 'failed', retryAt: self._scheduleRetry(key, now) });
             console.warn('SatelliteTiles: tile ' + key + ' failed:', e && e.message);
         });
@@ -912,6 +916,7 @@ class SatelliteTiles {
         this._abortAll();                    // in-flight tiles are the OLD map: cancel them
         this._lastAllReady = false;
         this.failed = 0;
+        this.failStreak = 0;
         return this.mode;
     }
 
@@ -975,7 +980,7 @@ class SatelliteTiles {
             if (rec.mesh && rec.mesh.visible) vis++;
         });
         return { built: built, failed: this.failed, visible: vis, total: this.tiles.size,
-            building: this._building.size, template: this.urlTemplate };
+            building: this._building.size, template: this.urlTemplate, failStreak: this.failStreak };
     }
 
     // Free everything (all patches + geometry/material/texture). Rule 5: 2 asserts.

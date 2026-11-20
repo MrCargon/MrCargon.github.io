@@ -641,6 +641,11 @@
              style="position:fixed; left:50%; bottom:96px; transform:translateX(-50%); z-index:41; max-width:280px; padding:8px 30px 8px 12px; background:rgba(8,12,24,0.92); border:1px solid rgba(120,200,255,0.55); border-radius:8px; color:#dce8ff; font:13px/1.4 system-ui,-apple-system,sans-serif; text-align:center; box-shadow:0 6px 24px rgba(0,0,0,0.45);"><span class="ed-body"></span><button type="button" class="ed-close" aria-label="Close details"
              style="position:absolute; top:2px; right:2px; width:24px; height:24px; padding:0; cursor:pointer; border:0; border-radius:6px; background:transparent; color:#dce8ff; font:14px/24px system-ui,-apple-system,sans-serif;">✕</button></div>
 
+        <!-- R3 #5 (P44): shown by SpaceEnvironment._updateTileNotice only while the imagery or
+             street tile host keeps failing at a zoom that needs it. Fixed + no pointer events,
+             so showing it never shifts anything; Explore-only (index.css). -->
+        <p id="explore-tile-notice" class="explore-tile-notice" role="status" hidden>Map tiles unavailable - showing the base globe</p>
+
         <!-- Opt-in Explore Earth button — shown by SpaceEnvironment only while Earth
              is the focused planet and not already exploring (replaces auto-enter) -->
         <button type="button" id="explore-enter-btn" hidden aria-label="Enter Earth explore mode"

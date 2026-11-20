@@ -342,7 +342,7 @@ class StreetTiles {
         this._lastCover = coverKm / viewKm;   // exposed for tests / debugging
         var cover = smooth(0.45, 0.9, this._lastCover);
         var lvl = Math.max(0, Math.min(5, fetchZ - this.minZoom));          // 0..5 for z9..z14
-        var OP = [0.55, 0.62, 0.72, 0.82, 0.92, 1.0], WD = [0.5, 0.55, 0.62, 0.72, 0.85, 1.0];
+        var OP = [0.55, 0.62, 0.72, 0.82, 0.92, 1.0], WD = [0.42, 0.47, 0.56, 0.68, 0.82, 0.95];
         var op = band * cover * OP[lvl];
         var wd = WD[lvl];
         if (Math.abs(op - this._zoomOpacity) < 0.004 && wd === this._zoomWidth) return false;
@@ -615,20 +615,28 @@ class StreetTiles {
         var bytes = new Uint8Array(await res.arrayBuffer());
         if (!bytes.length) return StreetTiles.EMPTY;
         var layers = MVT.decode(bytes);
-        var verts = [], cols = [];
+        var fat = this._fatOK();
+        // Casing and per-class width need the patched fat-line shader (_widthOK).
+        var out = { verts: [], cols: [], widths: [], caseVerts: [], caseCols: [], caseWidths: [],
+            casing: fat && this._widthOK() };
         for (var li = 0; li < this.lineLayers.length; li++) {
             var layer = layers[this.lineLayers[li]];
             if (!layer || !layer.features) continue;
-            this._appendLayer(layer, this.lineLayers[li], z, x, y, verts, cols);
+            this._appendLayer(layer, this.lineLayers[li], z, x, y, out);
         }
+        var verts = out.verts, cols = out.cols;
         if (!verts.length) return StreetTiles.EMPTY;   // ocean, or no road of a drawn class
         var mesh;
-        if (this._fatOK()) {
+        if (fat) {
             // Fat lines: real PIXEL-width streets via a SHARED LineMaterial (colour/
             // opacity/linewidth + viewport resolution all live on the one material).
+            // R1 #10: casings first, then fills: one draw, drawn in buffer order.
             var fatGeo = new THREE.LineSegmentsGeometry();
-            fatGeo.setPositions(verts);
-            fatGeo.setColors(cols);          // per-class weight (see roadWeight)
+            fatGeo.setPositions(out.caseVerts.length ? out.caseVerts.concat(verts) : verts);
+            fatGeo.setColors(out.caseCols.length ? out.caseCols.concat(cols) : cols);   // per-class weight (roadWeight)
+            var widths = out.caseWidths.length ? out.caseWidths.concat(out.widths) : out.widths;
+            fatGeo.setAttribute('instanceWidth', new THREE.InstancedBufferAttribute(new Float32Array(widths), 2));
+            fatGeo.userData.casingSegments = out.caseVerts.length / 6;    // for tests / stats
             mesh = new THREE.LineSegments2(fatGeo, this._ensureLineMat());
             mesh.userData.ownGeo = fatGeo;   // dispose per-tile; material is shared
         } else {
@@ -667,21 +675,38 @@ class StreetTiles {
         return c[1];
     }
 
+    // R1 #10: width multiplier of a road class (1 = the base width) and whether it is
+    // cased. `_construction` variants map to their base class. Pure. Rule 5: 2 asserts.
+    static roadWidth(layerName, cls) {
+        console.assert(typeof layerName === 'string', 'roadWidth: layer name required');
+        console.assert(StreetTiles.ROAD_WIDTHS, 'roadWidth: width table required');
+        var key = String(cls || '').replace(/_construction$/, '');
+        var t = StreetTiles.ROAD_WIDTHS[layerName];
+        var c = StreetTiles.CASED_CLASSES[layerName];
+        return { mul: (t && t[key]) || 1, cased: !!(c && c[key]) };
+    }
+
     // Append one decoded layer's line features as sphere-projected segment pairs, with
-    // a per-vertex colour weight per road class (cols, 3 floats per vertex). Long chords
-    // are subdivided so straight roads bend with the globe. Rule 4: <=60.
-    _appendLayer(layer, layerName, z, x, y, verts, cols) {
+    // a per-vertex colour weight per road class (cols, 3 floats per vertex) and a per-
+    // segment width (widths: multiplier, extra px). Long chords are subdivided so straight
+    // roads bend with the globe. R1 #10: cased classes are also copied into the case*
+    // arrays (wider by CASING_PX, dark), which _buildTile puts FIRST in the buffer so
+    // every fill is drawn over every casing of its tile. Rule 4: <=60.
+    _appendLayer(layer, layerName, z, x, y, out) {
         console.assert(layer && layer.features, '_appendLayer: layer required');
-        console.assert(Array.isArray(verts) && Array.isArray(cols), '_appendLayer: output arrays required');
+        console.assert(out && Array.isArray(out.verts) && Array.isArray(out.cols), '_appendLayer: output arrays required');
         var extent = layer.extent || 4096;
         var r = this.radius * this.rOffset;
         var fmax = Math.min(layer.features.length, 4000);     // Rule 2: bounded
         var tint = (layerName === 'waterway') ? [0.62, 0.8, 1.0] : [1, 1, 1];
+        var verts = out.verts, cw = StreetTiles.CASING_WEIGHT;
         for (var fi = 0; fi < fmax; fi++) {
             var f = layer.features[fi];
             if (!f || f.type !== MVT.GEOM_LINESTRING || !f.geometry) continue;
-            var w = StreetTiles.roadWeight(layerName, f.properties && f.properties.class, z);
+            var cls = f.properties && f.properties.class;
+            var w = StreetTiles.roadWeight(layerName, cls, z);
             if (w <= 0) continue;
+            var rw = StreetTiles.roadWidth(layerName, cls);
             var before = verts.length;
             for (var ri = 0; ri < f.geometry.length; ri++) {
                 var ring = f.geometry[ri];
@@ -690,7 +715,15 @@ class StreetTiles {
                     this._emitSegment(ring[pi], ring[pi + 1], extent, z, x, y, r, verts);
                 }
             }
-            for (var vi = before; vi < verts.length; vi += 3) cols.push(tint[0] * w, tint[1] * w, tint[2] * w);
+            var cased = rw.cased && out.casing && z >= StreetTiles.CASING_MIN_Z;
+            for (var vi = before; vi < verts.length; vi += 6) {
+                out.cols.push(tint[0] * w, tint[1] * w, tint[2] * w, tint[0] * w, tint[1] * w, tint[2] * w);
+                out.widths.push(rw.mul, 0);
+                if (!cased) continue;
+                for (var k = 0; k < 6; k++) out.caseVerts.push(verts[vi + k]);
+                out.caseCols.push(cw, cw, cw, cw, cw, cw);
+                out.caseWidths.push(rw.mul, StreetTiles.CASING_PX);
+            }
         }
     }
 
@@ -812,6 +845,7 @@ class StreetTiles {
             vertexColors: true
         });
         this._sharedMat.visible = this._zoomOpacity > 0.005;
+        this._patchWidthShader(this._sharedMat);
         // CSS px on purpose, not device px: three's LineSegments2.onBeforeRender resets
         // resolution to renderer.getViewport() (CSS px) every draw, so linewidth stays in
         // CSS px and a pixel ratio > 1 only makes the same-width street sharper (R2 #9).
@@ -820,6 +854,42 @@ class StreetTiles {
         this._onResize = function () { if (self._sharedMat && typeof window !== 'undefined') self._sharedMat.resolution.set(window.innerWidth, window.innerHeight); };
         if (typeof window !== 'undefined') window.addEventListener('resize', this._onResize);
         return this._sharedMat;
+    }
+
+    // R1 #10: can the line shader take a per-segment width? Checks the exact r184 source
+    // lines the patch replaces, so a three.js upgrade that changes them falls back to
+    // the old look (one width, no casing) instead of drawing a wrong one. Rule 5.
+    _widthOK() {
+        console.assert(typeof THREE !== 'undefined', '_widthOK: THREE required');
+        console.assert(this !== undefined, '_widthOK: instance');
+        var lib = THREE.ShaderLib && THREE.ShaderLib.line;
+        var vs = lib && lib.vertexShader;
+        return !!(typeof vs === 'string' && THREE.InstancedBufferAttribute &&
+            vs.indexOf(StreetTiles.WIDTH_ANCHOR_ATTR) >= 0 && vs.indexOf(StreetTiles.WIDTH_ANCHOR_MUL) >= 0);
+    }
+
+    // R1 #10 PER-SEGMENT WIDTH, the cheapest robust way to draw width classes. WebGL
+    // lines are 1 px; LineMaterial already draws each segment as an instanced screen-
+    // space quad whose half-width is the `linewidth` uniform. Adding one per-instance
+    // vec2 (multiplier, extra px) to that one line keeps every class in ONE material and
+    // ONE draw per tile, at 8 bytes per segment. The alternatives cost more: a material
+    // per class = 2-3 draws per tile and the geometry split by class; casing as its own
+    // mesh = another draw per tile. Casing segments ride in the same buffer, in front of
+    // the fills, so in-order blending draws every fill over every casing. Rule 5.
+    _patchWidthShader(mat) {
+        console.assert(mat && mat.isShaderMaterial, '_patchWidthShader: line material required');
+        console.assert(typeof StreetTiles.WIDTH_ANCHOR_MUL === 'string', '_patchWidthShader: anchors required');
+        if (!this._widthOK()) { mat.userData.widthPatched = false; return false; }
+        mat.onBeforeCompile = function (shader) {
+            var vs = shader.vertexShader;
+            if (vs.indexOf(StreetTiles.WIDTH_ANCHOR_MUL) < 0) return;      // not the r184 line shader
+            vs = vs.replace(StreetTiles.WIDTH_ANCHOR_ATTR, StreetTiles.WIDTH_ANCHOR_ATTR + '\n\t\tattribute vec2 instanceWidth;');
+            shader.vertexShader = vs.replace(StreetTiles.WIDTH_ANCHOR_MUL,
+                'offset *= linewidth * instanceWidth.x + instanceWidth.y;');
+            mat.userData.widthPatched = true;
+        };
+        mat.customProgramCacheKey = function () { return 'street-width-1'; };
+        return true;
     }
 
     // User STYLE: set the street colour (hex int), opacity (0..1) and/or line WIDTH
@@ -992,6 +1062,27 @@ StreetTiles.ROAD_CLASSES = {
     },
     waterway: { river: [11, 0.6], canal: [12, 0.55], stream: [14, 0.4] }
 };
+
+// R1 #10 ROAD-CLASS WIDTH. Brightness alone did not separate a motorway from a side
+// street: every class shared one pixel width. Each class now has a width MULTIPLIER on
+// the zoom-ramped base width (classes not listed draw at 1x), and the casing classes also
+// get a dark outline drawn under them. Widths are per segment (instanceWidth attribute,
+// see _ensureLineMat), so all classes still share ONE material and ONE draw per tile.
+StreetTiles.ROAD_WIDTHS = {
+    transportation: { motorway: 1.6, trunk: 1.6, primary: 1.2, secondary: 1.1,
+        minor: 0.8, busway: 0.8, service: 0.75, rail: 0.8, transit: 0.8 }
+};
+StreetTiles.CASED_CLASSES = { transportation: { motorway: true, trunk: true } };
+// Casing = the road's own width plus CASING_PX (1 px each side), colour weight
+// CASING_WEIGHT of the street colour (a dark brown under the default sand).
+StreetTiles.CASING_PX = 2;
+// No casing below z12: there the base width is ~1 px, the outline does not read, and at
+// z9-11 motorway/trunk are most of the tile, so it would nearly double the triangles.
+StreetTiles.CASING_MIN_Z = 12;
+StreetTiles.CASING_WEIGHT = 0.16;
+// The two r184 LineMaterial vertex-shader lines _patchWidthShader hooks (screen-px path).
+StreetTiles.WIDTH_ANCHOR_ATTR = 'attribute vec3 instanceEnd;';
+StreetTiles.WIDTH_ANCHOR_MUL = 'offset *= linewidth;';
 
 // Make globally available (matches GlobeMath / SafeFetch / Earth pattern).
 if (typeof window !== 'undefined') {

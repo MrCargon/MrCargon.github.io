@@ -125,6 +125,9 @@ test('Kp 2 vs Kp 7: the oval grows toward the equator (shader + pixels, with a c
         state.kp = kp;
         if (kp !== 2) await page.reload();
         await enterExplore(page);
+        // P43: the ovals fade in daylight, so pin the clock where the north oval is in the
+        // night (December solstice, 05:00 UTC); a run at noon in America would dim it.
+        await page.evaluate(() => { const tm = window.spaceEnvironment.timeManager; tm.reset(new Date('2026-12-21T05:00:00Z')); tm.pause(); });
         await expect(page.locator('#ep-feed-aurora'))
             .toHaveText(new RegExp('^Aurora: Kp ' + kp + '\\.0 at 18:00 UTC · oval from ' + (67 - 2 * kp) + '° mag\\. lat$'),
                 { timeout: 20000 });
@@ -172,5 +175,102 @@ test('dead Kp feed: quiet default Kp 3, said in the Layers tab, nothing thrown; 
     await page.evaluate(() => window.spaceEnvironment.exitExploreMode());
     await page.waitForTimeout(1500);
     expect(await page.evaluate(() => window.spaceEnvironment.getEarthObject().auroraOval.group.visible)).toBe(false);
+    expect(errors).toEqual([]);
+});
+
+/**
+ * P43 night fade. Pin the sim clock so the north oval is mostly sunlit (June solstice,
+ * 17:00 UTC: North America's arc at noon) and mostly dark (December solstice, 05:00 UTC:
+ * the same arc at midnight). Each frame pair (aurora on minus off) is split per pixel by
+ * the sun elevation at the point on the 1.065 R shell under that pixel (ray cast, the
+ * globe's own _sunDir): day (> +6 deg), twilight, night (< -6 deg). Energy = summed RGB
+ * change. Control: the same frames with the night fade off (P42 behaviour).
+ */
+async function ringSplit(page) {
+    const strength = await page.evaluate(() => window.AuroraOval.STRENGTH);
+    const shot = async (on) => {
+        await page.evaluate((s) => { window.AuroraOval.STRENGTH = s; }, on ? strength : 0);
+        await page.waitForTimeout(700);
+        return (await page.screenshot()).toString('base64');
+    };
+    const a = await shot(true), b = await shot(false);
+    await page.evaluate((s) => { window.AuroraOval.STRENGTH = s; }, strength);
+    return page.evaluate(async ([a, b]) => {
+        const load = async (b64) => {
+            const bin = atob(b64), bytes = new Uint8Array(bin.length);
+            for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+            const img = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+            const cv = new OffscreenCanvas(img.width, img.height), cx = cv.getContext('2d');
+            cx.drawImage(img, 0, 0);
+            return cx.getImageData(0, 0, img.width, img.height);
+        };
+        const A = await load(a), B = await load(b);
+        const T = window.THREE, se = window.spaceEnvironment, e = se.getEarthObject(), m = e.getMesh();
+        const c = m.getWorldPosition(new T.Vector3()), R = e.data.radius * 1.065;
+        const sun = e._sunDir.clone().normalize(), tw = Math.sin(6 * Math.PI / 180);
+        const cam = se.camera, o = cam.position.clone(), v = new T.Vector3(), oc = o.clone().sub(c);
+        const out = { day: [0, 0], twi: [0, 0], night: [0, 0], miss: 0 };
+        for (let i = 0; i < A.data.length; i += 4) {
+            const diff = Math.abs(A.data[i] - B.data[i]) + Math.abs(A.data[i + 1] - B.data[i + 1])
+                + Math.abs(A.data[i + 2] - B.data[i + 2]);
+            if (diff < 30) continue;
+            const k = i / 4, x = k % A.width, y = (k - x) / A.width;
+            v.set(x / A.width * 2 - 1, 1 - y / A.height * 2, 0.5).unproject(cam).sub(o).normalize();
+            const bq = oc.dot(v), cq = oc.lengthSq() - R * R, disc = bq * bq - cq;
+            if (disc < 0) { out.miss++; continue; }
+            const t = -bq - Math.sqrt(disc);
+            const el = v.multiplyScalar(t).add(oc).normalize().dot(sun);
+            const bin = el > tw ? out.day : (el < -tw ? out.night : out.twi);
+            bin[0]++; bin[1] += diff;
+        }
+        return out;
+    }, [a, b]);
+}
+
+test('night fade: the oval dims on the sunlit side, from the globe sun vector (with a control)', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await routeAll(page, { kp: 7 });
+    await enterExplore(page);
+    await expect(page.locator('#ep-feed-aurora')).toHaveAttribute('data-state', 'live', { timeout: 20000 });
+    await page.waitForTimeout(3000);                     // the Explore fly-in ends first
+    const res = {};
+    for (const [name, iso] of [['lit', '2026-06-21T17:00:00Z'], ['dark', '2026-12-21T05:00:00Z']]) {
+        await page.evaluate((iso) => { const tm = window.spaceEnvironment.timeManager; tm.reset(new Date(iso)); tm.pause(); }, iso);
+        await overPole(page, 3.2, 0);
+        await page.waitForTimeout(2500);
+        // The shader gets the globe's own sun vector, not a copy of a guess.
+        const u = await page.evaluate(() => {
+            const e = window.spaceEnvironment.getEarthObject(), uu = e.auroraOval.material.uniforms;
+            return { same: uu.uSunDir.value.distanceTo(e._sunDir.clone().normalize()) < 1e-6, fade: uu.uNightFade.value };
+        });
+        expect(u.same, 'uSunDir = Earth._sunDir').toBe(true);
+        expect(u.fade).toBe(1);
+        // The Thermosphere is fully lit (same glow budget at both times).
+        expect((await ovalState(page)).amt, 'thermosphere lit').toBeGreaterThan(0.85);
+        const faded = await ringSplit(page);
+        await page.evaluate(() => { window.spaceEnvironment.getEarthObject().auroraOval.nightFade = false; });
+        const control = await ringSplit(page);
+        await page.evaluate(() => { window.spaceEnvironment.getEarthObject().auroraOval.nightFade = true; });
+        res[name] = { faded, control };
+    }
+    // P43_SHOT (optional): Kp 7 with the terminator across the oval (equinox, sun on the
+    // 0 deg meridian: the terminator runs down 90 W / 90 E through both arcs).
+    if (process.env.P43_SHOT) {
+        const iso = process.env.P43_SHOT_AT || '2026-03-20T12:00:00Z';
+        await page.evaluate((iso) => { const tm = window.spaceEnvironment.timeManager; tm.reset(new Date(iso)); tm.pause(); }, iso);
+        await overPole(page, 2.6, +(process.env.P43_SHOT_TILT || 22));
+        await page.waitForTimeout(2500);
+        await page.screenshot({ path: process.env.P43_SHOT });
+    }
+    console.log('P43 night fade', JSON.stringify(res));
+    const tot = (s) => s.day[1] + s.twi[1] + s.night[1];
+    // Control (no fade): a real ring on the day side, and both times draw a full ring.
+    expect(res.lit.control.day[1], 'control: lit ring on the day side').toBeGreaterThan(50000);
+    expect(tot(res.lit.control) / tot(res.dark.control), 'control: both rings drawn alike').toBeGreaterThan(0.5);
+    // Faded: the day side drops to a small fraction, the night side keeps its glow.
+    expect(res.lit.faded.day[1], 'day side drops').toBeLessThan(0.1 * res.lit.control.day[1]);
+    expect(res.dark.faded.night[1], 'night side keeps its glow').toBeGreaterThan(0.85 * res.dark.control.night[1]);
+    expect(tot(res.lit.faded), 'mostly-lit ring dims overall').toBeLessThan(0.5 * tot(res.dark.faded));
     expect(errors).toEqual([]);
 });

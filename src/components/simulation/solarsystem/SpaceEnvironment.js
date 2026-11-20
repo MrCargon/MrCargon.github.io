@@ -3409,11 +3409,13 @@ class SpaceEnvironment {
             earth.troposphereObjects.update(rr, dt);
         }
         // Aurora ovals (P42) glow only while the Thermosphere layer is lit (cascade x zoom
-        // fade); reduce: the ray shimmer holds still.
+        // fade); reduce: the ray shimmer holds still. P43: they fade on the sunlit side,
+        // from the globe's own sun vector (the one its day/night shader and city lights use).
         if (earth.auroraOval && typeof earth.auroraOval.update === 'function') {
             const al = earth.atmosphereLayers;
             earth.auroraOval.reducedMotion = rm;
-            earth.auroraOval.update(al && typeof al.layerLevel === 'function' ? al.layerLevel(3) : 0, dt);
+            earth.auroraOval.update(al && typeof al.layerLevel === 'function' ? al.layerLevel(3) : 0, dt,
+                earth._sunDir && earth._sunDir.isVector3 ? earth._sunDir : undefined);
         }
         // Satellites fade out below ~1.5R; while the ISS marker layer is on it owns the ISS
         // (click card), so the satellite layer skips it: one ISS on the globe (audit F8).

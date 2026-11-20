@@ -15,6 +15,11 @@
 // motion: the slow ray shimmer holds still. No per-frame allocation: update() only writes
 // numbers into uniforms.
 //
+// Night only (P43): an aurora cannot be seen in daylight, so the shader multiplies the
+// glow by a night factor from the SAME world sun vector the globe's day/night shader and
+// city lights use (Earth._sunDir, passed to update()). Full glow where the sun is below
+// -6 deg at that point, a smooth fade through twilight, and DAY_FLOOR in full day.
+//
 // global THREE (r184, republished from an ES module by index.html), classic script (no
 // modules). NASA Power-of-10 style: bounded loops, >=2 asserts/method, methods <=60 lines.
 class AuroraOval {
@@ -45,6 +50,7 @@ class AuroraOval {
         this._inFlight = null;
         this._level = 0;           // last thermosphere level (0..1)
         this._t = 0;               // shimmer clock (s)
+        this.nightFade = true;     // P43: dim on the sunlit side (false = control, as P42)
     }
 
     // Build the two pole caps (hidden) and ask for the Kp once. Rule 4: <=60 lines.
@@ -58,7 +64,13 @@ class AuroraOval {
         this.material = new THREE.ShaderMaterial({
             uniforms: {
                 uEdge: { value: 0 }, uWidth: { value: 0 },
-                uAmt: { value: 0 }, uTime: { value: 0 }
+                uAmt: { value: 0 }, uTime: { value: 0 },
+                // World sun direction (copied each frame from Earth's), and 0/1 for the
+                // night fade: 0 until a sun vector has arrived, so nothing dims on a guess.
+                uSunDir: { value: new THREE.Vector3(1, 0, 0) },
+                uNightFade: { value: 0 },
+                uTwilight: { value: Math.sin(AuroraOval.TWILIGHT_DEG * Math.PI / 180) },
+                uDayFloor: { value: AuroraOval.DAY_FLOOR }
             },
             vertexShader: AuroraOval.VERT, fragmentShader: AuroraOval.FRAG,
             transparent: true, depthWrite: false, depthTest: true, side: THREE.DoubleSide,
@@ -192,14 +204,17 @@ class AuroraOval {
     /**
      * Per frame from Explore. level = how lit the Thermosphere layer is (0..1, cascade x
      * zoom fade). Also re-asks for the Kp once its TTL has passed (sooner after a
-     * failure); no timers of its own. Rule 5: 2 asserts.
+     * failure); no timers of its own. sunDir = the world direction to the Sun that the
+     * globe's day/night shader uses this frame (copied, never kept). Rule 5: 2 asserts.
      * @param {number} level
      * @param {number} [dt] - seconds
+     * @param {THREE.Vector3} [sunDir] - world, toward the Sun
      * @returns {boolean} visible
      */
-    update(level, dt) {
+    update(level, dt, sunDir) {
         console.assert(Number.isFinite(level), 'AuroraOval.update: level required');
         console.assert(dt === undefined || Number.isFinite(dt), 'AuroraOval.update: bad dt');
+        console.assert(sunDir === undefined || (sunDir && sunDir.isVector3), 'AuroraOval.update: bad sunDir');
         if (!this.built || !this.material) return false;
         var lv = Math.max(0, Math.min(1, level));
         this._level = lv;
@@ -207,6 +222,10 @@ class AuroraOval {
         u.uAmt.value = lv * AuroraOval.STRENGTH;
         if (!this.reducedMotion && Number.isFinite(dt)) this._t = (this._t + Math.min(dt, 0.1)) % 3600;
         u.uTime.value = this._t;
+        var hasSun = !!(sunDir && sunDir.lengthSq() > 1e-8);
+        if (hasSun) u.uSunDir.value.copy(sunDir);
+        u.uNightFade.value = (hasSun && this.nightFade) ? 1 : 0;
+        u.uDayFloor.value = AuroraOval.DAY_FLOOR;
         var vis = lv > 0.01;
         this.group.visible = vis;
         if (vis) this._refreshIfDue(Date.now());
@@ -284,6 +303,11 @@ AuroraOval.WIDTH_PER_KP = 1;           // ...and its growth per Kp step
 AuroraOval.MAX_COLAT_DEG = 48;         // cap size: holds the Kp 9 oval (edge 49 deg) + feather
 AuroraOval.SHELL_R = 1.065;            // inside the exaggerated Thermosphere band (1.046-1.085 R)
 AuroraOval.STRENGTH = 0.9;
+// P43 night fade: full glow below -TWILIGHT_DEG sun elevation, gone above +TWILIGHT_DEG
+// (civil twilight, both ways), DAY_FLOOR of the glow in full day (kept as a knob).
+AuroraOval.TWILIGHT_DEG = 6;
+AuroraOval.DAY_FLOOR = 0;               // no floor: the lit day side is bright imagery, not dark blue;
+                                       // a faint green there reads as haze, not aurora
 // Approximate dipole (geomagnetic) poles; the south one is the antipode.
 AuroraOval.POLES = [
     { name: 'north', lat: 80.7, lng: -72.7 },
@@ -292,8 +316,12 @@ AuroraOval.POLES = [
 
 AuroraOval.VERT = [
     'varying vec3 vLocal;',
+    'varying vec3 vWorldDir;',
     'void main() {',
     '  vLocal = position;',
+    // The cap is centred on the globe, so its rotated position is the world up direction
+    // at that point (normalised in the fragment shader; uniform scale drops out).
+    '  vWorldDir = mat3(modelMatrix) * position;',
     '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
     '}'
 ].join('\n');
@@ -305,7 +333,12 @@ AuroraOval.FRAG = [
     'uniform float uWidth;',
     'uniform float uAmt;',
     'uniform float uTime;',
+    'uniform vec3 uSunDir;',
+    'uniform float uNightFade;',
+    'uniform float uTwilight;',
+    'uniform float uDayFloor;',
     'varying vec3 vLocal;',
+    'varying vec3 vWorldDir;',
     'void main() {',
     '  vec3 n = normalize(vLocal);',
     '  float colat = acos(clamp(n.y, -1.0, 1.0));',
@@ -317,7 +350,11 @@ AuroraOval.FRAG = [
     '  float rays = 0.86 + 0.14 * sin(lon * 23.0 + uTime * 0.7) * sin(lon * 9.0 - uTime * 0.4);',
     '  vec3 green = vec3(0.25, 1.0, 0.55);',
     '  vec3 top = vec3(0.75, 0.3, 0.75);',
-    '  vec3 col = mix(green, top, smoothstep(0.0, 1.2, -d / uWidth)) * g * rays * uAmt;',
+    // sin(sun elevation) at this point; night = 1 below -uTwilight, 0 above +uTwilight.
+    '  float sunEl = dot(normalize(vWorldDir), normalize(uSunDir));',
+    '  float night = 1.0 - smoothstep(-uTwilight, uTwilight, sunEl);',
+    '  float dark = mix(1.0, max(night, uDayFloor), uNightFade);',
+    '  vec3 col = mix(green, top, smoothstep(0.0, 1.2, -d / uWidth)) * g * rays * uAmt * dark;',
     '  gl_FragColor = vec4(col, max(col.r, max(col.g, col.b)));',
     '}'
 ].join('\n');

@@ -535,6 +535,10 @@ class SpaceEnvironment {
             // cold load a fade just reads as the page still loading.
             this.restoreSceneMode();
 
+            // R2 #7: compile shaders off the main thread and upload textures one per
+            // task BEFORE the first frame, so the first render is not one ~900 ms task.
+            await this._warmUpGPU();
+
             this.animate();
 
             console.log("SpaceEnvironment initialized successfully");
@@ -548,6 +552,68 @@ class SpaceEnvironment {
         }
     }
     
+    /**
+     * Warm the GPU up before the first frame (roast R2 #7).
+     *
+     * Measured on main a581594 (headless Edge D3D11): the first animate() was one
+     * ~900 ms task: ~600 ms waiting on shader links inside getUniforms (three compiles
+     * every program on first render, and the link-status read blocks) and ~200 ms of
+     * texSubImage2D for the planet maps. compileAsync uses KHR_parallel_shader_compile,
+     * so the driver links in the background while this task yields; then each texture
+     * goes up in its own task. Every step is optional: a missing API, an error or the
+     * time cap only means the first render does the remaining work, as before.
+     * Rule 5: 2 asserts | Rule 2: bounded (cap + texture limit) | Rule 6: never throws.
+     */
+    async _warmUpGPU() {
+        console.assert(this.renderer && this.scene, '_warmUpGPU: renderer and scene exist');
+        console.assert(this.camera, '_warmUpGPU: camera exists');
+        const r = this.renderer;
+        if (!r || !this.scene || !this.camera || this.sceneMode !== 'solar') return false;
+        const yieldTask = () => new Promise((res) => setTimeout(res, 0));
+        try {
+            if (typeof r.compileAsync === 'function') {
+                const cap = new Promise((res) => setTimeout(res, SpaceEnvironment.WARMUP_COMPILE_CAP_MS));
+                await Promise.race([r.compileAsync(this.scene, this.camera), cap]);
+            }
+            if (typeof r.initTexture !== 'function') return true;
+            const textures = this._collectSceneTextures(64);
+            for (let i = 0; i < textures.length; i++) {
+                if (this._disposed) return false;
+                r.initTexture(textures[i]);
+                await yieldTask();
+            }
+            return true;
+        } catch (e) {
+            console.warn('GPU warm-up skipped:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Unique, ready image textures used by materials in the solar scene (bounded).
+     * Rule 5: 2 asserts | Rule 2: stops at `limit`.
+     */
+    _collectSceneTextures(limit) {
+        console.assert(this.scene, '_collectSceneTextures: scene exists');
+        console.assert(limit > 0, '_collectSceneTextures: positive limit');
+        const seen = new Set();
+        const out = [];
+        const ready = (t) => t && t.isTexture && !t.isVideoTexture && !t.isRenderTargetTexture &&
+            t.image && (t.image.width > 0 || t.image.length > 0);
+        this.scene.traverse((o) => {
+            if (out.length >= limit || !o.material) return;
+            const mats = Array.isArray(o.material) ? o.material : [o.material];
+            mats.forEach((m) => {
+                if (!m) return;
+                const add = (t) => { if (out.length < limit && ready(t) && !seen.has(t)) { seen.add(t); out.push(t); } };
+                Object.keys(m).forEach((k) => add(m[k]));
+                // ShaderMaterial maps live in uniforms, not on the material itself
+                if (m.uniforms) Object.keys(m.uniforms).forEach((k) => add(m.uniforms[k] && m.uniforms[k].value));
+            });
+        });
+        return out;
+    }
+
     createContainer() {
         // Create a container for the 3D scene if it doesn't exist
         const containerId = 'solar-system-container';
@@ -6721,6 +6787,7 @@ SpaceEnvironment.EXPLORE_HOME = Object.freeze({ lat: 20, lng: 0 });
 SpaceEnvironment.EXPLORE_LOADING_DELAY_MS = 200; // R2 #7b: "Loading Explore" only if the first entry is slower
 SpaceEnvironment.LIST_QUAKES = 10; // R3 #9b: quakes in the Live markers list (nearest the view centre)
 SpaceEnvironment.DPR_GAP_MS = 250; // a gap longer than this is not a frame
+SpaceEnvironment.WARMUP_COMPILE_CAP_MS = 3000; // R2 #7: boot never waits longer on background shader links
 
 // The longest step the simulation will accept, in seconds. Anything larger did not
 // happen as a frame — it is a tab switch, a sleep, or a stall — and feeding it in as one

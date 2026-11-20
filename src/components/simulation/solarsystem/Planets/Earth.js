@@ -138,9 +138,15 @@ class Earth extends Planet {
     // X1: does this device support GLSL standard derivatives (dFdx/dFdy)? WebGL2
     // has them as core; WebGL1 needs OES_standard_derivatives (often absent on
     // older iOS Safari). Picks the bump-capable vs flat shader variant.
+    // R2 #7: ask the live renderer first. A throwaway canvas context cost ~96 ms of
+    // main thread at boot (measured, headless Edge D3D11), and three r184 only runs on
+    // WebGL2, where derivatives are core, so a live renderer already answers it.
     static _derivativesSupported() {
         try {
             if (typeof document === 'undefined') return false;
+            const r = typeof window !== 'undefined' && window.spaceEnvironment && window.spaceEnvironment.renderer;
+            if (r && typeof r.getContext === 'function' && typeof WebGL2RenderingContext !== 'undefined' &&
+                r.getContext() instanceof WebGL2RenderingContext) return true;
             const c = document.createElement('canvas');
             if (c.getContext('webgl2')) return true;
             const gl = c.getContext('webgl') || c.getContext('experimental-webgl');

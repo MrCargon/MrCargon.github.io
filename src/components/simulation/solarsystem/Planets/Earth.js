@@ -1178,7 +1178,10 @@ class Earth extends Planet {
         if (!mk) return;
         const group = mk.addLayer('iss', { clusterPx: 0 });
         // Hidden until the first position fix (it used to sit at 0,0 until then).
-        mk.setItems('iss', [{ lat: 0, lng: 0, alt: 1.06, color: 0x66ffcc, size: 9, rank: 2, hidden: true,
+        // R1 #12: the ISS is a station, so it takes the Stations pink (it replaces that
+        // group's SGP4 dot). Its old mint 0x66ffcc was 15 dE from the GPS mint 0x7dffb0.
+        const issColor = Earth.PALETTE.satStation || 0xff6ad3;
+        mk.setItems('iss', [{ lat: 0, lng: 0, alt: 1.06, color: issColor, size: 9, rank: 2, hidden: true,
             data: { type: 'iss', name: 'ISS (Zarya)', info: 'International Space Station' } }]);
         this.layers.iss = group;
     }

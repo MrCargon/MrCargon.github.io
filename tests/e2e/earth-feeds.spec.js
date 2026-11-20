@@ -182,3 +182,29 @@ test('switches still work while a feed is down', async ({ page }) => {
     expect(await pressed(page, 'iss')).toBe('false');
     expect(await page.evaluate(() => window.spaceEnvironment.getEarthObject()._issTimer)).toBeNull();
 });
+
+// R1 #12: the ISS is a station, so its marker is drawn in the Stations pink of the
+// satellite key (its old mint sat 15 dE from the GPS mint). ISS_SHOT (optional): a
+// screenshot path for the view above the fix.
+test('the ISS marker uses the Stations colour', async ({ page }) => {
+    await routeFeeds(page, { quakes: 'fail', iss: 'ok' });
+    await enterExplore(page);
+    await page.waitForFunction(() => window.spaceEnvironment.getEarthObject().issMarkerShown(), null, { timeout: 20000 });
+    const r = await page.evaluate(() => {
+        const e = window.spaceEnvironment.getEarthObject();
+        const a = e.markers.layers.iss.points.geometry.attributes.aColor.array;
+        const want = new THREE.Color().setHex(window.GlobeMarkers.PALETTE.satStation).convertSRGBToLinear();
+        return { got: [a[0], a[1], a[2]].map((v) => +v.toFixed(3)), want: [want.r, want.g, want.b].map((v) => +v.toFixed(3)) };
+    });
+    if (process.env.ISS_SHOT) {
+        await page.evaluate(() => {
+            const se = window.spaceEnvironment, e = se.getEarthObject(), m = e.getMesh();
+            const R = (e.data && e.data.radius) || 2, ep = m.getWorldPosition(new THREE.Vector3());
+            const dir = m.localToWorld(GlobeMath.latLngToVector3(12.5, -40.25, R)).sub(ep).normalize();
+            se.camera.position.copy(ep).addScaledVector(dir, R * 1.6); se.controls.target.copy(ep); se.controls.update();
+        });
+        await page.waitForTimeout(2500);
+        await page.screenshot({ path: process.env.ISS_SHOT });
+    }
+    expect(r.got).toEqual(r.want);
+});

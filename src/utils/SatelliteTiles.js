@@ -746,7 +746,10 @@ class SatelliteTiles {
         var positions = [], uvs = [], indices = [];
         for (var j = 0; j <= N; j++) {                           // Rule 2: bounded by N
             var fj = j / N;
-            var lat = north + (south - north) * fj;
+            // R1 #11: texture v is linear in Mercator y, not in latitude, so each row sits
+            // at the latitude of ITS tile row (was linear north->south: 15 km off at z5,
+            // 225 km at z3). Equirect tiles are linear anyway; _toLngLat handles both.
+            var lat = (j === 0) ? north : (j === N) ? south : this._toLngLat(x, y + fj, z).lat;
             for (var i = 0; i <= N; i++) {                       // Rule 2: bounded by N
                 var fi = i / N;
                 var lng = west + (east - west) * fi;

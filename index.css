@@ -631,6 +631,11 @@ body {
 }
 .ep-btn:hover, .ep-switch:hover { background: rgba(45, 80, 140, 0.7); }
 .ep-switch[aria-pressed="true"] { background: rgba(40, 110, 185, 0.72); border-color: var(--primary-color); color: #fff; }
+/* R3 #14: the Live tab's toggle buttons (visitors, share) show their on-state too, not only
+   through aria-pressed. The label stays the same (a toggle's name must not flip); the "on"
+   tag is decoration, hidden from screen readers, which already hear "pressed". */
+.ep-btn[aria-pressed="true"] { background: rgba(40, 110, 185, 0.72); border-color: var(--primary-color); color: #fff; }
+.ep-btn[aria-pressed="true"]::after { content: " · on"; content: " · on" / ""; font-weight: 600; }
 .ep-btn--accent { background: rgba(40, 90, 160, 0.7); }
 .ep-btn--danger { border-color: rgba(200, 120, 120, 0.5); background: rgba(120, 40, 40, 0.5); }
 .ep-sub { padding-left: 8px; border-left: 2px solid rgba(90, 150, 220, 0.3); margin-left: 2px; }

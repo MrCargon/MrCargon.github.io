@@ -50,10 +50,14 @@ async function enter(page) {
         const earth = se && se.getEarthObject && se.getEarthObject();
         return !!(earth && earth.mesh);
     }, null, { timeout: 60000 });
-    await page.waitForTimeout(2000);
-    await page.evaluate(() => { const b = document.getElementById('tab-Earth'); if (b) b.click(); });
-    await page.waitForTimeout(2500);
-    await page.locator('#explore-enter-btn').click();
+    // An early tab click is ignored while the scene boots (a fixed 2 s was too
+    // soon under CPU load), so re-click until the fly-to shows the Enter button.
+    const btn = page.locator('#explore-enter-btn');
+    for (let i = 0; i < 20 && !(await btn.isVisible()); i++) {
+        await page.evaluate(() => { const b = document.getElementById('tab-Earth'); if (b) b.click(); });
+        await page.waitForTimeout(2000);
+    }
+    await btn.click();
     await page.waitForFunction(() => window.spaceEnvironment.exploreMode === true, null, { timeout: 10000 });
     await expect(card(page)).toContainText('Drag to spin');
     await page.locator('#explore-detail .ed-close').click();

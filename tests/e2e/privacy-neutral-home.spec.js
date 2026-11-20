@@ -78,10 +78,13 @@ test('no "Based here", the identity line names the birthplace, and Explore does 
         await page.screenshot({ path: process.env.F2_SHOT.replace(/\.png$/, '-identity.png') });
     }
 
-    await page.waitForTimeout(2000);
-    await page.evaluate(() => { const b = document.getElementById('tab-Earth'); if (b) b.click(); });
-    await page.waitForTimeout(2500);
+    // An early tab click is ignored while the scene boots (a fixed 2 s was too
+    // soon under CPU load), so re-click until the fly-to shows the Enter button.
     const btn = page.locator('#explore-enter-btn');
+    for (let i = 0; i < 20 && !(await btn.isVisible()); i++) {
+        await page.evaluate(() => { const b = document.getElementById('tab-Earth'); if (b) b.click(); });
+        await page.waitForTimeout(2000);
+    }
     await expect(btn).toBeVisible({ timeout: 15000 });
     await btn.click();
     await page.waitForFunction(() => window.spaceEnvironment.exploreMode === true, null, { timeout: 10000 });
@@ -106,10 +109,13 @@ test('F3: no San Francisco-only layers, legend, toggle, credit or data request',
         const se = window.spaceEnvironment; const e = se && se.getEarthObject && se.getEarthObject();
         return !!(e && e.mesh);
     }, null, { timeout: 60000 });
-    await page.waitForTimeout(2000);
-    await page.evaluate(() => { const b = document.getElementById('tab-Earth'); if (b) b.click(); });
-    await page.waitForTimeout(2500);
+    // An early tab click is ignored while the scene boots (a fixed 2 s was too
+    // soon under CPU load), so re-click until the fly-to shows the Enter button.
     const btn = page.locator('#explore-enter-btn');
+    for (let i = 0; i < 20 && !(await btn.isVisible()); i++) {
+        await page.evaluate(() => { const b = document.getElementById('tab-Earth'); if (b) b.click(); });
+        await page.waitForTimeout(2000);
+    }
     await expect(btn).toBeVisible({ timeout: 15000 });
     await btn.click();
     await page.waitForFunction(() => window.spaceEnvironment.exploreMode === true, null, { timeout: 10000 });

@@ -1496,10 +1496,11 @@ class PageManager {
             const allBtns = document.querySelectorAll('[data-planet]');
             allBtns.forEach(btn => {
                 btn.classList.remove('active');
-                if (btn.getAttribute('role') === 'tab') btn.setAttribute('aria-selected', 'false');
+                if (btn.getAttribute('role') === 'tab') { btn.setAttribute('aria-selected', 'false'); btn.tabIndex = -1; }
             });
             button.classList.add('active');
-            if (button.getAttribute('role') === 'tab') button.setAttribute('aria-selected', 'true');
+            // Roving tabindex (R3 #14): only the selected planet is a Tab stop.
+            if (button.getAttribute('role') === 'tab') { button.setAttribute('aria-selected', 'true'); button.tabIndex = 0; }
 
             // Update selection progress indicator
             const progressEl = document.querySelector('.progress-indicator');
@@ -1519,8 +1520,36 @@ class PageManager {
         };
 
         document.addEventListener('click', this._boundHandlers.planetNavHandler);
+        this._boundHandlers.planetTabKeydown = (e) => this._planetTabKeydown(e);
+        document.addEventListener('keydown', this._boundHandlers.planetTabKeydown);
         this._singletonSetup.planetNav = true;
 
+        return true;
+    }
+
+    /**
+     * Planet chips are one ARIA tablist (R3 #14): one Tab stop (the selected planet, see
+     * the roving tabindex in setupPlanetNavigation), arrows / Home / End move focus between
+     * chips, Enter or Space selects (manual activation: a planet flies the camera, so
+     * arrowing past it must not). Rule 4: <=60 lines | Rule 5: 2 asserts.
+     * @param {KeyboardEvent} e
+     * @returns {boolean} true when the key was handled
+     */
+    _planetTabKeydown(e) {
+        console.assert(e && typeof e.key === 'string', '_planetTabKeydown: key event required');
+        console.assert(typeof document !== 'undefined', '_planetTabKeydown: document required');
+        const tab = e.target && e.target.closest ? e.target.closest('.planet-selector [role="tab"]') : null;
+        if (!tab || e.altKey || e.ctrlKey || e.metaKey) return false;
+        const tabs = Array.from(tab.closest('.planet-selector').querySelectorAll('[role="tab"]'));
+        const i = tabs.indexOf(tab), n = tabs.length;
+        let next = -1;
+        if (e.key === 'ArrowRight') next = (i + 1) % n;
+        else if (e.key === 'ArrowLeft') next = (i - 1 + n) % n;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = n - 1;
+        if (next < 0 || i < 0) return false;
+        e.preventDefault();
+        tabs[next].focus();
         return true;
     }
 
@@ -3546,6 +3575,9 @@ class PageManager {
             }
             if (this._boundHandlers.planetNavHandler) {
                 document.removeEventListener('click', this._boundHandlers.planetNavHandler);
+            }
+            if (this._boundHandlers.planetTabKeydown) {
+                document.removeEventListener('keydown', this._boundHandlers.planetTabKeydown);
             }
             if (this._boundHandlers.cameraControlHandler) {
                 const container = document.querySelector('.camera-controls, .control-panel');

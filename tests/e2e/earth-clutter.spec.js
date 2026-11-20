@@ -125,3 +125,24 @@ test('F3: live markers are one Points draw per layer, at most 15 px, not drawn w
     expect(drawn).toEqual([]);
 });
 
+test('F4: streets thin out by zoom - majors first, minor roads only up close', async ({ page }) => {
+    await enterExplore(page);
+    await page.waitForFunction(() => !!window.StreetTiles, null, { timeout: 15000 });
+    const w = await page.evaluate(() => {
+        const S = window.StreetTiles, f = (c, z) => S.roadWeight('transportation', c, z);
+        return { motorway9: f('motorway', 9), primary9: f('primary', 9), minor9: f('minor', 9),
+            minor12: f('minor', 12), minor13: f('minor', 13), service13: f('service', 13), service14: f('service', 14),
+            path14: f('path', 14), track14: f('track', 14), motorwayCons9: f('motorway_construction', 9) };
+    });
+    expect(w.motorway9).toBeGreaterThan(0);          // control: majors are drawn at z9
+    expect(w.motorwayCons9).toBe(w.motorway9);
+    expect(w.primary9).toBe(0);
+    expect(w.minor9).toBe(0);
+    expect(w.minor12).toBe(0);
+    expect(w.minor13).toBeGreaterThan(0);
+    expect(w.minor13).toBeLessThan(w.motorway9);     // hierarchy: minor roads dimmer
+    expect(w.service13).toBe(0);
+    expect(w.service14).toBeGreaterThan(0);
+    expect(w.path14).toBe(0);                        // footpaths/tracks never drawn
+    expect(w.track14).toBe(0);
+});

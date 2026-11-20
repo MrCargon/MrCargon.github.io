@@ -90,3 +90,38 @@ test('F1: troposphere objects fade out up close and stay small on screen', async
     expect(near.visible).toBe(false);
     expect(near.maxOp).toBe(0);
 });
+
+test('F3: live markers are one Points draw per layer, at most 15 px, not drawn when faded', async ({ page }) => {
+    await enterExplore(page);
+    await placeCamera(page, 1.8, 37.7749, -122.4194);
+    await page.waitForTimeout(2000);
+    const r = await page.evaluate(() => {
+        const e = window.spaceEnvironment.getEarthObject(); const mk = e.markers;
+        const out = { layers: {}, sphereMarkers: 0 };
+        for (const name of Object.keys(mk.layers)) {
+            const L = mk.layers[name]; const a = L.points && L.points.geometry.getAttribute('aSize');
+            let mx = 0; if (a) for (let i = 0; i < a.count; i++) mx = Math.max(mx, a.array[i]);
+            out.layers[name] = { isPoints: !!(L.points && L.points.isPoints), n: a ? a.count : 0, maxPx: mx };
+        }
+        // No world-size marker spheres left anywhere under the markers' groups.
+        for (const name of Object.keys(mk.layers)) mk.layers[name].group.traverse((o) => { if (o.isMesh) out.sphereMarkers++; });
+        out.max = window.GlobeMarkers.MAX_PX;
+        return out;
+    });
+    // Control: the places layer always has items (static list), so the size check is real.
+    expect(r.layers.pois && r.layers.pois.n).toBeGreaterThan(0);
+    for (const name of Object.keys(r.layers)) {
+        expect(r.layers[name].isPoints).toBe(true);
+        expect(r.layers[name].maxPx).toBeLessThanOrEqual(15);   // quakes <= 11, clusters <= 13, place diamonds 15
+    }
+    expect(r.sphereMarkers).toBe(0);
+    // Up close the marker fade reaches 0: the Points are not drawn at all.
+    await placeCamera(page, 1.05, 37.7749, -122.4194);
+    await page.waitForTimeout(2500);
+    const drawn = await page.evaluate(() => {
+        const mk = window.spaceEnvironment.getEarthObject().markers;
+        return Object.keys(mk.layers).filter((n) => mk.layers[n].points && mk.layers[n].points.visible);
+    });
+    expect(drawn).toEqual([]);
+});
+

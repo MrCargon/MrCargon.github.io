@@ -175,7 +175,20 @@ class SpaceEnvironment {
         // in handleResize() where the canvas size can actually change.
         this._cachedCanvasRect = null;
         this._onExploreClick = (e) => this._handleExploreClick(e);
-        this._onExploreMove = (e) => this._handleExploreHover(e);
+        // R2 #9: mousemove is coalesced to one hover pick per animation frame (gaming mice
+        // fire 500-1000 Hz); only the newest event of the frame is handled.
+        this._hoverEvt = null;
+        this._hoverRaf = 0;
+        this._onExploreMove = (e) => {
+            this._hoverEvt = e;
+            if (this._hoverRaf) return;
+            this._hoverRaf = requestAnimationFrame(() => {
+                const ev = this._hoverEvt;
+                this._hoverRaf = 0;
+                this._hoverEvt = null;
+                if (ev) this._handleExploreHover(ev);
+            });
+        };
         this._onExploreDblClick = (e) => this._handleExploreDblClick(e);
         // F1: where the last press started, so a drag that ends on the globe is not a click.
         this._onExploreDown = (e) => { this._exploreDownXY = { x: e.clientX, y: e.clientY }; };
@@ -3089,6 +3102,8 @@ class SpaceEnvironment {
         }
         window.removeEventListener('click', this._onExploreClick);
         window.removeEventListener('mousemove', this._onExploreMove);
+        if (this._hoverRaf) { cancelAnimationFrame(this._hoverRaf); this._hoverRaf = 0; }
+        this._hoverEvt = null;
         window.removeEventListener('dblclick', this._onExploreDblClick);
         window.removeEventListener('pointerdown', this._onExploreDown, true);
         this._setGlobeKeyboard(false);   // R3 #9a: no Tab stop, back to its old place

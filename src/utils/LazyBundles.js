@@ -152,6 +152,7 @@ LazyBundles.BUNDLES = {
         'src/utils/StreetTiles.js',
         'src/utils/AtmosphereLayers.js',
         'src/utils/TroposphereObjects.js',
+        'src/utils/AuroraOval.js',
         'src/utils/ExplorePins.js',
         'src/utils/PlaceSearch.js',
         'src/utils/PresencePins.js',

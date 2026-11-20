@@ -6,7 +6,7 @@
         <meta charset="utf-8">
         <!-- No maximum-scale: pinch-zoom must stay available (WCAG 1.4.4). -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes) used by Explore mode.
+        <!-- Defense-in-depth: restrict script/style/img origins. Allows the THREE CDNs + Unsplash project images currently in use. connect-src allows the keyless live-data feeds (ISS position + USGS earthquakes + NOAA SWPC Kp index for the aurora ovals) used by Explore mode.
              frame-src is set EXPLICITLY. The games are separate repos deployed to their own
              GitHub Pages URLs and embedded here in an iframe, and with no frame-src the
              browser falls back to default-src 'self'. That happens to pass on the live site,
@@ -31,7 +31,7 @@
              What a <meta> CSP CANNOT do (GitHub Pages sets no custom headers): frame-ancestors
              (clickjacking), report-uri/report-to, sandbox; and it only covers what is parsed
              after it, so it must stay the first thing in <head> after charset/viewport. -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Fl+TmcXI5sFSwgB/UFZS3EpwzGC0Nvdf1WWlbeaQ83E=' https://cdn.jsdelivr.net/npm/three@0.184.0/; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://i.ytimg.com https://static-cdn.jtvnw.net; font-src 'self'; frame-src 'self' https://mrcargon.github.io https://player.twitch.tv https://www.twitch.tv https://www.youtube-nocookie.com; connect-src 'self' https://celestrak.org https://api.wheretheiss.at https://earthquake.usgs.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; base-uri 'self'; object-src 'none'; form-action 'self'">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Fl+TmcXI5sFSwgB/UFZS3EpwzGC0Nvdf1WWlbeaQ83E=' https://cdn.jsdelivr.net/npm/three@0.184.0/; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://i.ytimg.com https://static-cdn.jtvnw.net; font-src 'self'; frame-src 'self' https://mrcargon.github.io https://player.twitch.tv https://www.twitch.tv https://www.youtube-nocookie.com; connect-src 'self' https://celestrak.org https://api.wheretheiss.at https://earthquake.usgs.gov https://services.swpc.noaa.gov https://tiles.openfreemap.org https://server.arcgisonline.com https://cartocdn-gusc.global.ssl.fastly.net https://trek.nasa.gov https://*.firebaseio.com https://*.firebasedatabase.app https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; base-uri 'self'; object-src 'none'; form-action 'self'">
         <meta name="description" content="MrCargon - Portfolio of Andrejs K, a creative developer and 3D designer specializing in web development, 3D modeling, and game design">
         <!-- Shown before the router runs, and by anything that reads the raw HTML.
              Was "MrCargo" — a typo for the name on the domain, the GitHub handle and
@@ -189,7 +189,7 @@
          Stays at boot: Earth.PALETTE reads GlobeMarkers.PALETTE when Earth.js loads. -->
     <script src="src/utils/GlobeMarkers.js" defer></script>
     <!-- The Explore Earth engines (GeoLOD, mvt-decoder, StreetTiles, AtmosphereLayers,
-         TroposphereObjects, ExplorePins, Presence*) are NOT loaded here (roast R2 #7b):
+         TroposphereObjects, AuroraOval, ExplorePins, Presence*) are NOT loaded here (roast R2 #7b):
          LazyBundles 'explore' brings them on the first Explore entry. SatelliteTiles
          stays, because Mars uses it outside Explore. -->
     <!-- Discord notify: contact form + calendar events -> Discord webhooks via

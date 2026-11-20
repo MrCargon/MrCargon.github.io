@@ -2461,6 +2461,10 @@ class SpaceEnvironment {
         if (earth.troposphereObjects && typeof earth.troposphereObjects.build === 'function') {
             earth.troposphereObjects.build();
         }
+        // Aurora ovals (P42): built once, follow the Thermosphere layer's light each frame.
+        if (earth.auroraOval && typeof earth.auroraOval.build === 'function') {
+            earth.auroraOval.build();
+        }
         // Attach to window so events fire regardless of canvas z-index/pointer-events.
         window.addEventListener('click', this._onExploreClick);
         window.addEventListener('mousemove', this._onExploreMove);
@@ -2806,8 +2810,8 @@ class SpaceEnvironment {
         console.assert(earth === null || typeof earth === 'object', '_renderFeedStatus: bad earth');
         if (!earth || typeof earth.feedStatus !== 'function') return false;
         const now = Date.now();
-        const rows = [['iss', 'ISS'], ['quakes', 'Quakes'], ['sats', 'Sats']];
-        console.assert(rows.length === 3, '_renderFeedStatus: three live layers');
+        const rows = [['iss', 'ISS'], ['quakes', 'Quakes'], ['sats', 'Sats'], ['aurora', 'Aurora']];
+        console.assert(rows.length === 4, '_renderFeedStatus: four live layers');
         rows.forEach((r) => {
             const s = earth.feedStatus(r[0], now);
             const el = document.getElementById('ep-feed-' + r[0]);
@@ -3057,6 +3061,10 @@ class SpaceEnvironment {
             // visible and ride the globe back into solar-system view.
             if (earth.troposphereObjects && typeof earth.troposphereObjects.setVisible === 'function') {
                 earth.troposphereObjects.setVisible(false);
+            }
+            // Same for the aurora ovals: update() owns their visibility, and it stops here.
+            if (earth.auroraOval && typeof earth.auroraOval.setVisible === 'function') {
+                earth.auroraOval.setVisible(false);
             }
             // Hide saved pins + close any open pin editor on exit.
             if (earth.explorePins && typeof earth.explorePins.setVisible === 'function') {
@@ -3399,6 +3407,13 @@ class SpaceEnvironment {
         if (earth.troposphereObjects && typeof earth.troposphereObjects.update === 'function') {
             earth.troposphereObjects.reducedMotion = rm;          // reduce: balloons + jets hold still
             earth.troposphereObjects.update(rr, dt);
+        }
+        // Aurora ovals (P42) glow only while the Thermosphere layer is lit (cascade x zoom
+        // fade); reduce: the ray shimmer holds still.
+        if (earth.auroraOval && typeof earth.auroraOval.update === 'function') {
+            const al = earth.atmosphereLayers;
+            earth.auroraOval.reducedMotion = rm;
+            earth.auroraOval.update(al && typeof al.layerLevel === 'function' ? al.layerLevel(3) : 0, dt);
         }
         // Satellites fade out below ~1.5R; while the ISS marker layer is on it owns the ISS
         // (click card), so the satellite layer skips it: one ISS on the globe (audit F8).

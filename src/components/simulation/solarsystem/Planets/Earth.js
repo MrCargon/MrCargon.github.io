@@ -108,6 +108,8 @@ class Earth extends Planet {
         this.atmosphereLayers = null;
         // Living objects inside the Troposphere shell (hot-air/weather balloons, jets).
         this.troposphereObjects = null;
+        // Aurora ovals in the Thermosphere shell, sized by the live Kp index (P42).
+        this.auroraOval = null;
         // Real satellites (src/utils/Satellites.js): even the class loads only in Explore.
         this.satellites = null;
         this.satsWanted = false;        // saved on/off state; a failed start keeps it
@@ -223,6 +225,7 @@ class Earth extends Planet {
         make('streetTiles', 'StreetTiles');               // high-zoom street tiles
         make('atmosphereLayers', 'AtmosphereLayers');     // atmospheric shells
         make('troposphereObjects', 'TroposphereObjects'); // balloons/jets
+        make('auroraOval', 'AuroraOval');                 // Kp-sized aurora ovals
         make('explorePins', 'ExplorePins');               // user-saved pins (loads persisted)
         // Live presence markers (ephemeral; online visitors). Renderer only - the
         // Presence controller + opt-in UI live in SpaceEnvironment. Hidden until enabled.
@@ -1198,14 +1201,19 @@ class Earth extends Planet {
     /**
      * One short status line per live layer for the Layers tab (roast R3 #5): what the
      * user sees on the globe and how old it is. Rule 5: 2 asserts.
-     * @param {string} name - 'iss' | 'quakes' | 'sats'
+     * @param {string} name - 'iss' | 'quakes' | 'sats' | 'aurora'
      * @param {number} [now]
      * @returns {{state:string, text:string}} state: off | loading | live | stale | offline
      */
     feedStatus(name, now) {
-        console.assert(name === 'iss' || name === 'quakes' || name === 'sats', 'Earth.feedStatus: bad name');
+        console.assert(name === 'iss' || name === 'quakes' || name === 'sats' || name === 'aurora',
+            'Earth.feedStatus: bad name');
         console.assert(this.feeds, 'Earth.feedStatus: feed state required');
         if (name === 'sats') return this._satsStatus();
+        if (name === 'aurora') {
+            // The Kp line (P42): no switch, the ovals ride the Thermosphere layer.
+            return this.auroraOval ? this.auroraOval.status(now) : { state: 'off', text: 'off' };
+        }
         const t = Number.isFinite(now) ? now : Date.now();
         const hm = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const wanted = name === 'iss' ? this.issWanted : this.quakesWanted;
@@ -1465,6 +1473,7 @@ class Earth extends Planet {
         if (this.satelliteTiles) { this.satelliteTiles.dispose(); this.satelliteTiles = null; }
         if (this.atmosphereLayers) { this.atmosphereLayers.dispose(); this.atmosphereLayers = null; }
         if (this.troposphereObjects) { this.troposphereObjects.dispose(); this.troposphereObjects = null; }
+        if (this.auroraOval) { this.auroraOval.dispose(); this.auroraOval = null; }
         if (this.satellites) { this.satellites.dispose(); this.satellites = null; }
         if (this.explorePins) { this.explorePins.dispose(); this.explorePins = null; }
         if (this.presencePins) { this.presencePins.dispose(); this.presencePins = null; }

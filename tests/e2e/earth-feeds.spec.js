@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 /**
  * Explore live feeds when they fail (roast R3 #5, R1 #7).
  *
- * Every feed is answered by a route here: USGS quakes, wheretheiss.at, CelesTrak and the
+ * Every feed is answered by a route here: USGS quakes, wheretheiss.at, CelesTrak, the NOAA Kp index and the
  * bundled satellite snapshot. Nothing reaches the real services.
  *
  * - a dead or stalled feed shows "offline - retrying" in the Layers tab, and the switch
@@ -51,6 +51,7 @@ async function routeFeeds(page, modes) {
     await page.route('**earthquake.usgs.gov/**', handle('quakes', QUAKES));
     await page.route('**api.wheretheiss.at/**', handle('iss', () => ISS_FIX));
     await page.route('**celestrak.org/**', (route) => route.abort('connectionrefused'));
+    await page.route('**services.swpc.noaa.gov/**', (route) => route.abort('connectionrefused'));   // aurora Kp (P42)
     await page.route('**/satellites-snapshot.json', (route) => (m.sats === 'fail'
         ? route.fulfill({ status: 404, body: 'gone' }) : route.continue()));
     // All three live layers on, whatever the device tier.

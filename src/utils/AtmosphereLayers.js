@@ -125,6 +125,20 @@ class AtmosphereLayers {
         return any;
     }
 
+    /**
+     * How lit one layer is right now, 0..1 (its cascade relative to its peak, times the
+     * zoom fade). Sibling layer objects (AuroraOval) follow the shell with it. Rule 5.
+     * @param {number} i - layer index (0 Troposphere .. 4 Exosphere)
+     * @returns {number}
+     */
+    layerLevel(i) {
+        console.assert(Number.isInteger(i) && i >= 0 && i < 5, 'layerLevel: bad index');
+        console.assert(typeof this._zoomFade === 'number', 'layerLevel: zoomFade expected');
+        var s = this.shells[i];
+        if (!s || !(s.peak > 0) || !this.mesh || !this.mesh.visible) return 0;
+        return Math.max(0, Math.min(1, s.cur / s.peak)) * this._zoomFade;
+    }
+
     // Create the ladder: one label per layer + one SVG of leader lines. Rule 4: <=60 lines.
     _buildLabels() {
         console.assert(Array.isArray(this.shells), '_buildLabels: shells expected');

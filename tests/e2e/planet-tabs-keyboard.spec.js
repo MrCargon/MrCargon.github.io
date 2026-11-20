@@ -14,13 +14,19 @@ test.setTimeout(90000);
 test('planet chips: one Tab stop, arrows move focus, Enter selects', async ({ page }) => {
     await page.goto('/#main');
     await page.waitForFunction(() => !!(window.spaceEnvironment && window.spaceEnvironment.camera), null, { timeout: 60000 });
+    // The boot can re-render the main page or move focus while the loading screen leaves
+    // (seen once in a full-suite run): wait for it, then for the planet chips to be stable.
+    await page.waitForFunction(() => { const l = document.getElementById('loading-screen');
+        return !l || l.hidden || getComputedStyle(l).display === 'none' || +getComputedStyle(l).opacity === 0; }, null, { timeout: 30000 });
     await page.waitForTimeout(1500);
     const tabs = page.locator('.planet-selector [role="tab"]');
     await expect(tabs).toHaveCount(9);
     const stops = () => tabs.evaluateAll((b) => b.filter((x) => x.tabIndex >= 0).map((x) => x.id));
     expect(await stops()).toEqual(['tab-Sun']);
 
-    await page.locator('#tab-Sun').focus();
+    const active = () => page.evaluate(() => document.activeElement.id);
+    await expect.poll(async () => { await page.locator('#tab-Sun').focus(); return active(); },
+        { timeout: 10000 }).toBe('tab-Sun');
     await page.keyboard.press('ArrowRight');
     expect(await page.evaluate(() => document.activeElement.id)).toBe('tab-Mercury');
     await expect(page.locator('#tab-Sun')).toHaveAttribute('aria-selected', 'true');   // focus only

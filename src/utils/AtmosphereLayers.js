@@ -35,6 +35,12 @@ class AtmosphereLayers {
         this.fadeNear = Number.isFinite(opts.fadeNear) ? opts.fadeNear : 1.35; // gone below
         this.fadeFar = Number.isFinite(opts.fadeFar) ? opts.fadeFar : 1.9;     // full above
         this._zoomFade = 1;
+        // R1 #6: the label ladder (not the glow) fades out far away, where the bands are
+        // 1-2 px thick and five labels would point at a hairline. Full at or below
+        // ladderFull radii, gone at ladderGone.
+        this.ladderFull = Number.isFinite(opts.ladderFull) ? opts.ladderFull : 3.4;
+        this.ladderGone = Number.isFinite(opts.ladderGone) ? opts.ladderGone : 4.0;
+        this._ladderFar = 1;
         // name | top radius (R) | colour | glow per unit path (R) | real altitude | note
         this.defs = [
             { name: 'Troposphere',  top: 1.012, color: 0x7cc4ff, peak: 0.55, alt: '0–12 km', info: 'weather, clouds, airliners' },
@@ -370,7 +376,7 @@ class AtmosphereLayers {
         if (!this.built || this._disposed || !this._sCenter || !this._ladder) return false;
         var lit = 0;
         for (var i = 0; i < this.shells.length; i++) lit = Math.max(lit, this.shells[i].cur / this.shells[i].peak);
-        var op = lit * this._zoomFade;
+        var op = lit * this._zoomFade * this._ladderFar;
         if (op < 0.03) return this._showLadder(false);
         var now = AtmosphereLayers._now();
         this._refreshObstacles(now);
@@ -501,6 +507,9 @@ class AtmosphereLayers {
         var k = (cameraDistInRadii - this.fadeNear) / (this.fadeFar - this.fadeNear);
         k = Math.max(0, Math.min(1, k));
         this._zoomFade = k * k * (3 - 2 * k);                 // smoothstep: no visible kink
+        var f = (cameraDistInRadii - this.ladderFull) / (this.ladderGone - this.ladderFull);
+        f = Math.max(0, Math.min(1, f));
+        this._ladderFar = 1 - f * f * (3 - 2 * f);           // R1 #6: ladder only, glow stays
         this._applyUniforms();
         return true;
     }

@@ -74,6 +74,22 @@ test('five layers draw as one shell; the ladder never overlaps', async ({ page }
     expect(near.meshVisible).toBe(false);
 });
 
+// R1 #6: far out the bands are 1-2 px thick, so the label ladder fades away above ~3.4R
+// (gone at 4R) while the glow itself stays; it is back when the camera comes closer.
+test('the ladder hides far out (4R, 6R) and returns at 3R; the glow stays', async ({ page }) => {
+    await enterExplore(page);
+    for (const k of [6, 4]) {
+        await place(page, k);
+        await page.waitForTimeout(1500);
+        const r = await ladder(page);
+        expect(r.shown, `no ladder at ${k}R`).toBe(0);
+        expect(r.meshVisible, `glow still drawn at ${k}R`).toBe(true);
+    }
+    await place(page, 3);
+    await page.waitForTimeout(1500);
+    expect((await ladder(page)).shown, 'ladder back at 3R').toBe(5);
+});
+
 test('labels carry each layer\'s altitude and note', async ({ page }) => {
     await enterExplore(page);
     const info = await page.evaluate(() => Array.from(document.querySelectorAll('.atmo-label'))

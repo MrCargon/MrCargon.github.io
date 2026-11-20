@@ -87,6 +87,9 @@ class AtmosphereLayers {
             },
             vertexShader: AtmosphereLayers.VERT, fragmentShader: AtmosphereLayers.FRAG,
             transparent: true, depthWrite: false, side: THREE.DoubleSide,
+            // R2 #3: ONE+ONE blending is order-free, so the back/front split pass gains
+            // nothing; one pass also stops three re-validating the program twice a frame.
+            forceSinglePass: true,
             // Pure additive light on a transparent canvas: colour ONE+ONE, and alpha grows
             // only by the glow's own strength, so the halo never turns the canvas opaque
             // (plain AdditiveBlending with alpha 1 hid the page backdrop around the globe).

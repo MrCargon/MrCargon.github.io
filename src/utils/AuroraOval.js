@@ -74,6 +74,7 @@ class AuroraOval {
             },
             vertexShader: AuroraOval.VERT, fragmentShader: AuroraOval.FRAG,
             transparent: true, depthWrite: false, depthTest: true, side: THREE.DoubleSide,
+            forceSinglePass: true,      // R2 #3: additive = order-free, one pass is pixel-identical
             // Same pure-additive blend as the atmosphere shell: light only, the canvas
             // never turns opaque around the globe.
             blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,

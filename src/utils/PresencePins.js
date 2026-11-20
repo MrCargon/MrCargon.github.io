@@ -70,7 +70,8 @@ class PresencePins {
         head.position.y = r * 2.0;
         var ring = new THREE.Mesh(new THREE.RingGeometry(r * 1.6, r * 2.4, 24),
             new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.6,
-                side: THREE.DoubleSide, depthWrite: false }));
+                side: THREE.DoubleSide, depthWrite: false,
+                forceSinglePass: true }));     // flat ring: one draw, no per-frame program re-check (R2 #3)
         ring.rotation.x = -Math.PI / 2;
         holder.add(head); holder.add(ring);
         holder.userData = { presenceId: id, self: !!u.self, ring: ring, head: head, phase: Math.random() * 6.28 };

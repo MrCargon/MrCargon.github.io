@@ -14,7 +14,8 @@ class HabitableZone {
             color: 0x00ff00,
             transparent: true,
             opacity: 0.1,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            forceSinglePass: true // flat ring: one draw, no per-frame program re-check (R2 #3)
         });
         
         this.mesh = new THREE.Mesh(geometry, material);

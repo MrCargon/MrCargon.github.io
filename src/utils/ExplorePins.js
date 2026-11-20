@@ -172,7 +172,7 @@ class ExplorePins {
         var stem = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.18, r * 0.18, r * 2.4, 6), stemMat);
         stem.position.y = r * 1.2;
         var ringMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5,
-            side: THREE.DoubleSide, depthWrite: false });
+            side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true });   // flat: one draw (R2 #3)
         var ring = new THREE.Mesh(new THREE.RingGeometry(r * 1.4, r * 2.0, 24), ringMat);
         ring.rotation.x = -Math.PI / 2;
         holder.add(stem); holder.add(head); holder.add(ring);
@@ -187,10 +187,10 @@ class ExplorePins {
         var col = new THREE.Color(pin.color);
         var rU = Math.max(this.radius * 0.004, pin.radiusKm / this.kmPerUnit);
         var fillMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22,
-            side: THREE.DoubleSide, depthWrite: false });
+            side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true });   // flat: one draw (R2 #3)
         var fill = new THREE.Mesh(new THREE.CircleGeometry(rU, 48), fillMat);
         var ringMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8,
-            side: THREE.DoubleSide, depthWrite: false });
+            side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true });   // flat: one draw (R2 #3)
         var ring = new THREE.Mesh(new THREE.RingGeometry(rU * 0.97, rU, 48), ringMat);
         // disc lies in the XZ plane facing +Y; _placeMarker orients +Y to the normal.
         fill.rotation.x = -Math.PI / 2; ring.rotation.x = -Math.PI / 2;

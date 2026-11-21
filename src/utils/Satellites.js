@@ -457,22 +457,46 @@ class Satellites {
         for (let i = 0; i < this._records.length; i++) {
             const state = satellite.propagate(this._records[i].satrec, date);
             const eci = state && state.position;
-            let x = 0, y = 0, z = 0;
-            if (eci) {
-                const ecf = satellite.eciToEcf(eci, gmst);
-                // GlobeMath: lng 0 is +x, lng 90E is -z, north is +y.
-                if (Number.isFinite(ecf.x + ecf.y + ecf.z)) {
-                    x = ecf.x * k;
-                    y = ecf.z * k;
-                    z = -ecf.y * k;
-                }
+            const ecf = eci ? satellite.eciToEcf(eci, gmst) : null;
+            if (!ecf || !Satellites._ecfToGlobe(ecf.x, ecf.y, ecf.z, k, pos, i * 3)) {
+                pos[i * 3] = 0;
+                pos[i * 3 + 1] = 0;
+                pos[i * 3 + 2] = 0;
             }
-            pos[i * 3] = x;
-            pos[i * 3 + 1] = y;
-            pos[i * 3 + 2] = z;
         }
         this.points.geometry.attributes.position.needsUpdate = true;
         this._markHidden();
+    }
+
+    /**
+     * Earth-fixed km (WGS84) -> globe-local units, written into out[o..o+2]. The globe is a
+     * sphere and every lat/lng layer puts GEODETIC latitude straight onto it, so the dot goes
+     * through geodetic latitude + height (radius 1 + h/R, like the ISS marker) rather than the
+     * raw vector, whose direction is the geocentric latitude: up to 0.19 deg (~21 km) away
+     * from the map point the satellite is over (roast R1 #12). GlobeMath axes: lng 0 is +x,
+     * lng 90E is -z, north is +y. No allocation. Rule 5: 2 asserts.
+     * @returns {boolean} false for a non-finite or zero vector (out untouched)
+     */
+    static _ecfToGlobe(ex, ey, ez, k, out, o) {
+        console.assert(Number.isFinite(k) && k > 0, 'Satellites._ecfToGlobe: scale required');
+        console.assert(out && out.length >= o + 3, 'Satellites._ecfToGlobe: buffer required');
+        const p = Math.sqrt(ex * ex + ey * ey);
+        if (!Number.isFinite(p + ez) || p + Math.abs(ez) === 0) return false;
+        const A = 6378.137, E2 = 0.00669437999014;               // WGS84 a, e^2
+        let lat = Math.atan2(ez, p * (1 - E2)), n = A;
+        for (let it = 0; it < 4; it++) {                         // converges to < 1 mm in 3
+            const s = Math.sin(lat);
+            n = A / Math.sqrt(1 - E2 * s * s);
+            lat = Math.atan2(ez + E2 * n * s, p);
+        }
+        const c = Math.cos(lat);
+        const h = Math.abs(c) > 1e-9 ? p / c - n : Math.abs(ez) - n * (1 - E2);
+        const r = (Satellites.EARTH_RADIUS_KM + h) * k;
+        const cl = p > 0 ? ex / p : 1, sl = p > 0 ? ey / p : 0;  // cos/sin longitude
+        out[o] = r * c * cl;
+        out[o + 1] = r * Math.sin(lat);
+        out[o + 2] = -r * c * sl;
+        return true;
     }
 
     // The single live request of this window of FETCH_GAP_MS, for the stalest group.

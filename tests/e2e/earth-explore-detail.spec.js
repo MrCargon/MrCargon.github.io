@@ -81,3 +81,22 @@ test('a phone gets neither the 4k map nor shadows', async ({ page }) => {
     expect(hits).toHaveLength(0);
     expect(await surface(page)).toEqual({ width: 1000, shadow: 0 });
 });
+
+// Roast R1 #12: the cloud shell is one still picture drifting 2%/day against the ground,
+// shown beside live feeds, so the Detail tab says so. The note must sit beside a cloud
+// layer that is really drawn (control: the shell exists and is visible in Explore).
+test('the Detail tab marks the clouds as illustrative', async ({ page }) => {
+    await bootMain(page);
+    await enter(page);
+    await page.waitForTimeout(1500);
+    const shell = await page.evaluate(() => {
+        const c = window.spaceEnvironment.getEarthObject().cloudsMesh;
+        return !!(c && c.visible && c.material && c.material.map);
+    });
+    expect(shell, 'a cloud shell is drawn in Explore').toBe(true);
+    await page.click('#ep-tab-detail');
+    const note = page.locator('#ep-clouds-note');
+    await expect(note).toBeVisible();
+    await expect(note).toContainText('illustrative');
+    await expect(note).toContainText("not today's weather");
+});

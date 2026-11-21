@@ -140,9 +140,11 @@ class SolarSystem {
                     axialTilt: 23.4,
                     orbitalPeriodDays: 365.25636, // Phase 2: NASA JPL Horizons orbital period (includes leap years)
                     texturePath: "src/assets/textures/planets/earth/earth_day.jpg",
-                    // Explore only. NASA Blue Marble Next Generation, June 2004: 5400x2700
-                    // scaled to 4096x2048 and graded to sit close to earth_day.jpg.
-                    dayHighResPath: "src/assets/textures/planets/earth/earth_day_4k.jpg",
+                    // Explore only. NASA Blue Marble Next Generation, the 2004 monthly
+                    // composites: 5400x2700 scaled to 4096x2048 and graded to sit close to
+                    // earth_day.jpg. {MM} = the sim clock's UTC month (Earth.dayMapPathFor);
+                    // only that one month is fetched.
+                    dayHighResPath: "src/assets/textures/planets/earth/earth_day_4k_{MM}.jpg",
                     nightLightsPath: "src/assets/textures/planets/earth/earth_night.jpg",
                     bumpMapPath: "src/assets/textures/planets/earth/earth_bump.jpg", // day-side relief for the custom Earth shader (derivative-bump path)
                     cloudsPath: "src/assets/textures/planets/earth/earth_clouds.jpg",

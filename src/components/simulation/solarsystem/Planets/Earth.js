@@ -66,6 +66,12 @@ class Earth extends Planet {
         this._cloudCut = { value: 0 };      // 0 = shell as it always was, 1 = real clouds
         this._dayLow = null;
         this._dayHigh = null;
+        this._dayHighPath = null; // the month file _dayHigh came from
+        this._dayHighWant = null; // the month file last asked for
+        this._highResAllowed = false;
+        // Sim-time span (J2000 days) of the shown month; empty = pick one on the next frame.
+        this._dayMonthFrom = Infinity;
+        this._dayMonthTo = -Infinity;
         this._sunLocal = new THREE.Vector3(1, 0, 0);
         this._invRotation = new THREE.Matrix3();
         // Orbit state (also set in buildSurface; Planet.updatePosition reads .angle).
@@ -473,33 +479,92 @@ class Earth extends Planet {
         this._cloudShadowsAllowed = !!(on && allow && allow.cloudShadows);
         if (!this._cloudShadowsAllowed) uniforms.uCloudShadow.value = 0;
         this._cloudCut.value = on ? 1 : 0;       // costs nothing, so every device gets it
-        if (on) {
-            if (allow && allow.highRes) this._useHighResDay();
-        } else {
+        // The 4k map is picked by update() on the next frame, from the sim clock that
+        // Explore has just pinned to the wall clock (the clock here may still be stale).
+        this._highResAllowed = Boolean(on && allow && allow.highRes);
+        this._dayMonthFrom = Infinity;
+        this._dayMonthTo = -Infinity;
+        if (!on) {
             uniforms.dayTexture.value = this._dayLow;
             if (this._dayHigh) this._dayHigh.dispose();
         }
         return on;
     }
 
-    // Load (once) and swap in the 4k day map. Never throws: failure leaves the 1k map on.
-    async _useHighResDay() {
+    /**
+     * The UTC calendar month holding a sim time, and its span in J2000 days.
+     * Same clock and epoch as TimeConverter (J2000 = 2000-01-01 12:00 UTC).
+     * @param {number} j2000Days
+     * @returns {{month:number, from:number, to:number}} month 1..12, span [from, to)
+     */
+    static monthSpanJ2000(j2000Days) {
+        console.assert(Number.isFinite(j2000Days), 'Earth.monthSpanJ2000: finite days required');
+        const ms = Earth.J2000_UTC_MS + (j2000Days * 86400000);
+        const d = new Date(ms);
+        console.assert(!isNaN(d.getTime()), 'Earth.monthSpanJ2000: bad date');
+        const y = d.getUTCFullYear(), m = d.getUTCMonth();
+        const toDays = (t) => (t - Earth.J2000_UTC_MS) / 86400000;
+        return { month: m + 1, from: toDays(Date.UTC(y, m, 1)), to: toDays(Date.UTC(y, m + 1, 1)) };
+    }
+
+    /**
+     * The day-map file for a month: '{MM}' in the template becomes 01..12. A template
+     * without '{MM}' is one fixed map and comes back as it is.
+     * @param {string} template
+     * @param {number} month - 1..12
+     * @returns {string}
+     */
+    static dayMapPathFor(template, month) {
+        console.assert(typeof template === 'string', 'Earth.dayMapPathFor: template required');
+        console.assert(month >= 1 && month <= 12, 'Earth.dayMapPathFor: month 1..12 required');
+        return template.replace('{MM}', (month < 10 ? '0' : '') + month);
+    }
+
+    // Load the 4k day map for the sim month holding j2000Days and swap it in; the month
+    // before it leaves the GPU and the loader cache, so at most one 4k month is kept.
+    // Never throws: failure leaves the map that was on (1k or the last month).
+    async _useHighResDay(j2000Days) {
         console.assert(this.resourceLoader, 'Earth._useHighResDay: loader required');
         console.assert(this._dayLow, 'Earth._useHighResDay: low-res map required');
         if (!this.data.dayHighResPath) return false;
+        // Set the span first, so update() does not ask again every frame while this loads.
+        const span = Earth.monthSpanJ2000(j2000Days);
+        this._dayMonthFrom = span.from;
+        this._dayMonthTo = span.to;
+        const path = Earth.dayMapPathFor(this.data.dayHighResPath, span.month);
+        this._dayHighWant = path;
         try {
-            const tex = await this.resourceLoader.loadTexture(this.data.dayHighResPath);
+            const tex = await this.resourceLoader.loadTexture(path);
+            if (this._dayHighWant !== path) { // a newer month was asked for meanwhile
+                if (tex !== this._dayHigh) this._forgetDayMap(path, tex);
+                return false;
+            }
             tex.anisotropy = 8;
             tex.wrapS = THREE.RepeatWrapping;
+            const old = this._dayHigh, oldPath = this._dayHighPath;
             this._dayHigh = tex;
+            this._dayHighPath = path;
             const uniforms = this.mesh && this.mesh.material && this.mesh.material.uniforms;
             // The user may have left Explore while this was loading.
             if (uniforms && this._exploreDetailOn) uniforms.dayTexture.value = tex;
+            if (old && old !== tex) this._forgetDayMap(oldPath, old); // after the swap
             return true;
         } catch (err) {
-            console.warn('Earth: 4k day map unavailable, keeping 1k:', err);
+            console.warn('Earth: 4k day map unavailable, keeping the current map:', err);
             return false;
         }
+    }
+
+    // Drop one month's 4k map: off the GPU and out of the loader's cache (its image too).
+    _forgetDayMap(path, tex) {
+        console.assert(typeof path === 'string', 'Earth._forgetDayMap: path required');
+        console.assert(tex && typeof tex.dispose === 'function', 'Earth._forgetDayMap: texture required');
+        const uniforms = this.mesh && this.mesh.material && this.mesh.material.uniforms;
+        if (uniforms && uniforms.dayTexture.value === tex) return false; // still on screen
+        tex.dispose();
+        const cache = this.resourceLoader && this.resourceLoader.textureCache;
+        if (cache && typeof cache.delete === 'function') cache.delete(path);
+        return true;
     }
 
     /**
@@ -834,6 +899,14 @@ class Earth extends Planet {
             if (this.moons[i].update) {
                 this.moons[i].update(deltaTime, j2000Days);
             }
+        }
+
+        // Explore's 4k day map follows the month of the same sim clock (a number compare
+        // per frame; a load only when the month changes). No clock: the wall clock.
+        if (this._exploreDetailOn && this._highResAllowed) {
+            const t = (j2000Days !== null) ? j2000Days
+                : (Date.now() - Earth.J2000_UTC_MS) / 86400000;
+            if (t < this._dayMonthFrom || t >= this._dayMonthTo) this._useHighResDay(t);
         }
 
         // Refresh sun direction for the day/night shader (no per-frame alloc).
@@ -1540,6 +1613,9 @@ Earth.REGION_TIER_DEFS = [
 // The globe palette lives in GlobeMarkers.PALETTE (loaded first, see index.html).
 Earth.PALETTE = (typeof GlobeMarkers !== 'undefined' && GlobeMarkers.PALETTE) ? GlobeMarkers.PALETTE
     : { place: 0xffe14a, border: 0x8fe3ff, grid: 0xb4bcc6 };
+
+// J2000.0 as UTC milliseconds: (TimeConverter.J2000_JD - EPOCH_JD) days = 10957.5 days.
+Earth.J2000_UTC_MS = 946728000000;
 
 // Live feeds. USGS rebuilds its day feed every minute; five minutes is plenty for a globe.
 Earth.QUAKES_URL = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson';

@@ -47,11 +47,14 @@ test('4k map and shadows arrive with Explore and leave with it', async ({ page }
     await page.waitForTimeout(500);
     expect(await surface(page)).toEqual({ width: 1000, shadow: 0 });
     expect(hits).toHaveLength(1);
+    // Explore pins the sim clock to the wall clock, so the one map fetched is this month's.
+    const mm = String(new Date().getUTCMonth() + 1).padStart(2, '0');
+    expect(hits[0]).toContain('earth_day_4k_' + mm + '.jpg');
 });
 
 test('a missing 4k map leaves the 1k globe working', async ({ page }) => {
     let blocked = 0;
-    await page.route('**/earth_day_4k.jpg', (route) => {
+    await page.route('**/earth_day_4k_*.jpg', (route) => {
         blocked++;
         return route.fulfill({ status: 404, body: 'x' });
     });
@@ -99,6 +102,6 @@ test('the Detail tab marks the clouds as illustrative and dates the base map', a
     await expect(note).toBeVisible();
     await expect(note).toContainText('illustrative');
     await expect(note).toContainText("not today's weather");
-    // The base map is one month (June 2004), so it says which: no snow in a northern winter.
-    await expect(page.locator('#ep-texture-note')).toContainText('June 2004');
+    // The base map follows the sim month (Blue Marble NG 2004 monthly composites), so it says so.
+    await expect(page.locator('#ep-texture-note')).toContainText('Monthly composites from 2004');
 });

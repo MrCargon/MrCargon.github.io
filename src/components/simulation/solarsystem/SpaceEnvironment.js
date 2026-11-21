@@ -571,9 +571,18 @@ class SpaceEnvironment {
         if (!r || !this.scene || !this.camera || this.sceneMode !== 'solar') return false;
         const yieldTask = () => new Promise((res) => setTimeout(res, 0));
         try {
-            if (typeof r.compileAsync === 'function') {
+            // three's compileAsync calls extensions.get(), which console-warns "extension not
+            // supported" on GPUs without KHR_parallel_shader_compile (headless SwiftShader,
+            // some mobiles). has() asks silently; without the extension a plain compile()
+            // still moves program building out of the first frame, with no warning.
+            const parallel = !!(r.extensions && typeof r.extensions.has === 'function' &&
+                r.extensions.has('KHR_parallel_shader_compile'));
+            if (parallel && typeof r.compileAsync === 'function') {
                 const cap = new Promise((res) => setTimeout(res, SpaceEnvironment.WARMUP_COMPILE_CAP_MS));
                 await Promise.race([r.compileAsync(this.scene, this.camera), cap]);
+            } else if (typeof r.compile === 'function') {
+                r.compile(this.scene, this.camera);
+                await yieldTask();
             }
             if (typeof r.initTexture !== 'function') return true;
             const textures = this._collectSceneTextures(64);

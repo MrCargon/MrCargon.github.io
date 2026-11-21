@@ -1589,7 +1589,10 @@ html {
 
 @media (max-width: 600px) {
     /* Phone: full width of the hero, under the Sun, above the footer. */
-    .identity-card { right: 0; width: auto; padding: 10px 12px 12px; }
+    /* right: 34px keeps the card clear of the right panel's handle (.popup-tab sticks
+       30px into the screen at mid-height); at right: 0 it covered the card's Hide
+       button on an iPhone SE (layout-audit "control covered", 2026-11-21). */
+    .identity-card { right: 34px; width: auto; padding: 10px 12px 12px; }
     .identity-card.idc-collapsed { right: auto; }
     .idc-name { font-size: 1.2rem; }
     .idc-role { font-size: 0.9rem; }

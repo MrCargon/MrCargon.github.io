@@ -24,7 +24,7 @@
 // reliably beat a service worker. Bumping this name deletes every old cache in
 // the activate handler below, forcing a clean fetch.
 // ALWAYS bump this when shipping asset changes, or nobody sees them.
-const CACHE_NAME = 'mrcargon-hub-7fadfa9fdfe2';
+const CACHE_NAME = 'mrcargon-hub-42a660be44ee';
 const CORE_SHELL = ['./', './index.html', './index.css'];
 // Page-specific scripts that index.html no longer loads at boot (roast R2 #7a), and the
 // Explore globe engines (R2 #7b): the page fetches them on first navigation or first

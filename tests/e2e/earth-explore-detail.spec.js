@@ -85,7 +85,7 @@ test('a phone gets neither the 4k map nor shadows', async ({ page }) => {
 // Roast R1 #12: the cloud shell is one still picture drifting 2%/day against the ground,
 // shown beside live feeds, so the Detail tab says so. The note must sit beside a cloud
 // layer that is really drawn (control: the shell exists and is visible in Explore).
-test('the Detail tab marks the clouds as illustrative', async ({ page }) => {
+test('the Detail tab marks the clouds as illustrative and dates the base map', async ({ page }) => {
     await bootMain(page);
     await enter(page);
     await page.waitForTimeout(1500);
@@ -99,4 +99,6 @@ test('the Detail tab marks the clouds as illustrative', async ({ page }) => {
     await expect(note).toBeVisible();
     await expect(note).toContainText('illustrative');
     await expect(note).toContainText("not today's weather");
+    // The base map is one month (June 2004), so it says which: no snow in a northern winter.
+    await expect(page.locator('#ep-texture-note')).toContainText('June 2004');
 });
